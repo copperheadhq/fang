@@ -9,14 +9,16 @@ for it. The kernel elaborates a Fang program into the Engineering Intermediate R
 (EIR), holds it as a live typed graph, mutates it only through validated
 transactions, and lowers it into downstream artifacts.
 
-Pure Python 3.11+, standard library only. NetworkX is an optional extra used for graph *analysis*
-only — it is never a persisted or public representation.
+Pure Python 3.11+, and the core install has no runtime dependencies. Two optional extras exist and
+neither is imported outside the one module that needs it: NetworkX, used for graph *analysis* only —
+it is never a persisted or public representation — and the MCP SDK, which only
+[fang/mcp.py](fang/mcp.py)'s registration layer imports.
 
 ## Commands
 
 ```bash
-pip install -e ".[dev]"          # add ",analysis" for the NetworkX-backed queries
-python -m pytest                 # whole suite (504 tests, ~10s); addopts = -q, testpaths = tests
+pip install -e ".[dev]"          # add ",analysis" for the NetworkX-backed queries, ",mcp" for `fang mcp`
+python -m pytest                 # whole suite (553 tests, ~10s); addopts = -q, testpaths = tests
 fang build examples/sensor_board/sensor_board.py   # the console script, after an editable install
 python -m pytest -rs             # also lists the acceptance tests deferred to later phases
 python -m pytest tests/test_graph.py::test_name -x
@@ -112,8 +114,19 @@ change as electrical or presentation-only and propagates invalidation.
 [fang/queries.py](fang/queries.py) answers rationale questions on demand.
 [fang/serialization.py](fang/serialization.py) is canonical JSON and the record stream.
 [fang/diagnostics.py](fang/diagnostics.py) is a code registry over the areas
-`ELAB IFACE TOPO UNIT TXN SIM IMPORT`; **codes are allocated, never reused, and retired rather
+`ELAB IFACE TOPO UNIT TXN SIM IMPORT MCP`; **codes are allocated, never reused, and retired rather
 than deleted** — add new ones via `_allocate` at the bottom of the relevant area block.
+
+**The agent surface.** [fang/mcp.py](fang/mcp.py) serves the kernel over the Model Context Protocol,
+as `fang mcp`. It is two layers, and the split is load-bearing: everything above `build_server` is a
+projection from kernel state to canonical-JSON-ready dictionaries and imports nothing from the SDK,
+so the surface is testable without a client and the core install stays dependency-free;
+`build_server` is the only place that imports `mcp`. A `Session` is bound to one project root named
+when the server starts, and `Session.resolve` is the single gate every client-named path passes.
+Mutation is `KernelGraph.propose` and `KernelGraph.commit` — never `apply()`, because splitting them
+is what makes the rejection's explanation available before the state moves. An agent may advance the
+head, and what bounds it is the gate's policy condition, not a check in the adapter, so **never
+construct a more permissive `Policy` here than the project's**.
 
 ## The spec is the contract
 

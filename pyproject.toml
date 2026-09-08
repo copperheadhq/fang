@@ -52,6 +52,7 @@ fang = "fang.cli:main"
 
 [project.optional-dependencies]
 analysis = ["networkx>=3.0"]
+mcp = ["mcp>=2.2"]
 dev = ["pytest>=8.0", "build>=1.2", "twine>=5.1"]
 
 [tool.setuptools.dynamic]

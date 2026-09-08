@@ -14,7 +14,7 @@ from typing import Iterable
 
 #: The areas this specification allocates within. A vendor may add an area under
 #: its own namespace but must not allocate within these.
-AREAS = ("ELAB", "IFACE", "TOPO", "UNIT", "TXN", "SIM", "IMPORT")
+AREAS = ("ELAB", "IFACE", "TOPO", "UNIT", "TXN", "SIM", "IMPORT", "MCP")
 
 
 class Severity(Enum):
@@ -172,6 +172,23 @@ IFACE_MEMBERSHIP_DISAGREEMENT = _allocate(
 
 # Import conditions.
 IMPORT_LOSSY = _allocate("IMPORT-0001", "adapter could not represent a construct")
+
+# Agent surface conditions. A refusal at the protocol boundary is its own area:
+# it describes the boundary, not the transaction the boundary was asked about.
+MCP_PATH_OUTSIDE_ROOT = _allocate(
+    "MCP-0001", "a path outside the bound project root was named"
+)
+MCP_UNKNOWN_TOOL = _allocate("MCP-0002", "no tool by that name is exposed")
+MCP_MALFORMED_ARGUMENT = _allocate("MCP-0003", "an argument did not parse")
+MCP_UNACCEPTED_PROPOSAL = _allocate(
+    "MCP-0004", "commit named a proposal the gate did not accept"
+)
+MCP_DEPENDENCY_MISSING = _allocate(
+    "MCP-0005", "the protocol dependency is not installed"
+)
+MCP_UNKNOWN_OPERATION = _allocate(
+    "MCP-0006", "operation kind is not one the commit gate evaluates"
+)
 
 
 @dataclass(frozen=True)

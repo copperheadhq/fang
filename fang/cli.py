@@ -291,6 +291,39 @@ def cmd_sim(args) -> int:
     return EXIT_OK if normalized.passed else EXIT_FAILED
 
 
+def cmd_mcp(args) -> int:
+    """Serve the agent surface over stdio, bound to one project root."""
+    from .diagnostics import MCP_DEPENDENCY_MISSING
+
+    try:
+        from .mcp import Session, serve
+    except ImportError:
+        # Named rather than degraded: a server that cannot speak the protocol
+        # is not a smaller server, it is a broken one.
+        print(
+            f"fang: {MCP_DEPENDENCY_MISSING}: the agent surface needs the "
+            "protocol dependency, which is not installed; install it with "
+            "'pip install \"copperhead-fang[mcp]\"'",
+            file=sys.stderr,
+        )
+        return EXIT_FAILED
+
+    try:
+        session = Session(
+            args.directory,
+            args.program,
+            system=getattr(args, "system", None),
+            project_id=args.project,
+            checks=DEFAULT_CHECKS,
+        )
+    except FangError as exc:
+        report_diagnostics([exc.diagnostic])
+        return EXIT_FAILED
+
+    serve(session)
+    return EXIT_OK
+
+
 def cmd_diff(args) -> int:
     """Diff a program against the workspace's persisted design."""
     workspace = find_workspace(args.directory)
@@ -340,6 +373,7 @@ def build_parser() -> argparse.ArgumentParser:
     program_arguments(subparsers.add_parser("netlist", help="show the compiled netlist")).set_defaults(handler=cmd_netlist)
     program_arguments(subparsers.add_parser("graph", help="summarize the kernel graph")).set_defaults(handler=cmd_graph)
     program_arguments(subparsers.add_parser("diff", help="diff a program against the workspace")).set_defaults(handler=cmd_diff)
+    program_arguments(subparsers.add_parser("mcp", help="serve the agent surface over stdio")).set_defaults(handler=cmd_mcp)
 
     view_command = subparsers.add_parser("view", help="compile and render a view")
     view_command.add_argument("program", nargs="?", help="the Fang program to elaborate")
