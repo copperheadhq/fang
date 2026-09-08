@@ -267,7 +267,7 @@ def test_the_build_time_is_a_declared_input_not_a_wall_clock_read():
 
 
 def test_the_example_program_elaborates():
-    from examples.divider import Divider
+    from examples.divider.divider import Divider
 
     result = elaborate(Divider, project_id="PRJ-DIVIDER")
     assert result.ok

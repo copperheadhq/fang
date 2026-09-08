@@ -1,10 +1,51 @@
+# Python bytecode and caches
 __pycache__/
 *.py[cod]
-.pytest_cache/
-*.egg-info/
+*$py.class
+*.so
+
+# Packaging and build artifacts
 build/
 dist/
+sdist/
+wheels/
+*.egg-info/
+*.egg
+.eggs/
+MANIFEST
+
+# Test, coverage, and type-checker caches
+.pytest_cache/
+.tox/
+.nox/
+.cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.hypothesis/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+
+# Virtual environments
 .venv/
+venv/
+env/
+ENV/
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
 .claude/settings.local.json
 
 # the workspace `fang build` writes beside the sources

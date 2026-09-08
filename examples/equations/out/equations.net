@@ -1,0 +1,76 @@
+(export "version" "E"
+  (design
+    (source "equations.py")
+    (tool "fang 0.1.0")
+    (snapshot "sha256:fb5cdccbc1e2853897ad576defd04c5573c25a242d5a5edb9016de8f89663611")
+    (project "PRJ-EXAMPLES")
+  )
+  (components
+    (comp
+      (ref "J1")
+      (value "TerminalBlock")
+      (footprint "Package:TerminalBlock_1x04_P5.08mm")
+      (property "name" "fang_id" "CMP-06df4b26f468")
+    )
+    (comp
+      (ref "R1")
+      (value "22 +/- 0.01 kOhm")
+      (footprint "Package:R_0402")
+      (property "name" "fang_id" "CMP-1d4b5fe0e6f9")
+    )
+    (comp
+      (ref "R2")
+      (value "82 +/- 0.01 kOhm")
+      (footprint "Package:R_0402")
+      (property "name" "fang_id" "CMP-be11135b7285")
+    )
+    (comp
+      (ref "R3")
+      (value "20 +/- 0.01 kOhm")
+      (footprint "Package:R_0402")
+      (property "name" "fang_id" "CMP-3d20013e6afc")
+    )
+    (comp
+      (ref "R4")
+      (value "180 +/- 0.01 kOhm")
+      (footprint "Package:R_0402")
+      (property "name" "fang_id" "CMP-714dc871bb0d")
+    )
+    (comp
+      (ref "U1")
+      (value "ADC")
+      (footprint "Package:MSOP-10")
+      (property "name" "fang_id" "CMP-ea02c0cebe19")
+    )
+  )
+  (nets
+    (net "code" "1" "name" "Net-(J1-Pad12V)"
+      (node "ref" "J1" "pin" "12V")
+      (node "ref" "R2" "pin" "1")
+    )
+    (net "code" "2" "name" "Net-(J1-Pad24V)"
+      (node "ref" "J1" "pin" "24V")
+      (node "ref" "R4" "pin" "1")
+    )
+    (net "code" "3" "name" "Net-(J1-Pad3V3)"
+      (node "ref" "J1" "pin" "3V3")
+      (node "ref" "U1" "pin" "VDD")
+    )
+    (net "code" "4" "name" "Net-(J1-PadGND)"
+      (node "ref" "J1" "pin" "GND")
+      (node "ref" "R1" "pin" "2")
+      (node "ref" "R3" "pin" "2")
+      (node "ref" "U1" "pin" "GND")
+    )
+    (net "code" "5" "name" "Net-(R1-Pad1)"
+      (node "ref" "R1" "pin" "1")
+      (node "ref" "R2" "pin" "2")
+      (node "ref" "U1" "pin" "AIN0")
+    )
+    (net "code" "6" "name" "Net-(R3-Pad1)"
+      (node "ref" "R3" "pin" "1")
+      (node "ref" "R4" "pin" "2")
+      (node "ref" "U1" "pin" "AIN1")
+    )
+  )
+)

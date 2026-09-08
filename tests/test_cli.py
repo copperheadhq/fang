@@ -9,8 +9,8 @@ from fang.cli import EXIT_FAILED, EXIT_OK, load_system, main
 from fang.workspace import Workspace
 
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
-DIVIDER = str(EXAMPLES / "divider.py")
-SENSOR = str(EXAMPLES / "sensor_board.py")
+DIVIDER = str(EXAMPLES / "divider" / "divider.py")
+SENSOR = str(EXAMPLES / "sensor_board" / "sensor_board.py")
 
 
 def test_init_creates_a_workspace(tmp_path):

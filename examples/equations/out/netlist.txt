@@ -1,0 +1,12 @@
+J1     TerminalBlock    Package:TerminalBlock_1x04_P5.08mm
+R1     22 +/- 0.01 kOhm Package:R_0402
+R2     82 +/- 0.01 kOhm Package:R_0402
+R3     20 +/- 0.01 kOhm Package:R_0402
+R4     180 +/- 0.01 kOhm Package:R_0402
+U1     ADC              Package:MSOP-10
+Net-(J1-Pad12V)          J1.12V R2.1
+Net-(J1-Pad24V)          J1.24V R4.1
+Net-(J1-Pad3V3)          J1.3V3 U1.VDD
+Net-(J1-PadGND)          J1.GND R1.2 R3.2 U1.GND
+Net-(R1-Pad1)            R1.1 R2.2 U1.AIN0
+Net-(R3-Pad1)            R3.1 R4.2 U1.AIN1

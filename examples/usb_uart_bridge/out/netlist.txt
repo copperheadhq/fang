@@ -1,0 +1,27 @@
+C1     10 uF            Package:C_0805
+C2     10 uF            Package:C_0805
+C3     100 nF           Package:C_0402
+C4     22 pF            Package:C_0402
+C5     22 pF            Package:C_0402
+D1     1 V              Package:SOD-523
+D2     1 V              Package:SOD-523
+J1     USBReceptacle    Package:USB_C_Receptacle_16P
+R1     22 Ohm           Package:R_0402
+R2     22 Ohm           Package:R_0402
+TP1    TestPoint        Package:TestPoint_Pad_1.5x1.5mm
+TP2    TestPoint        Package:TestPoint_Pad_1.5x1.5mm
+U1     Bridge           Package:SOP-16
+U2     Regulator        Package:SOT-23-5
+U3     Target           Package:LQFP-48
+Y1     12 MHz           Package:HC-49S
+Net-(C1-Pad1)            C1.1 J1.VBUS U2.VIN
+Net-(C1-Pad2)            C1.2 C2.2 C3.2 C4.2 C5.2 D1.A D2.A J1.GND U1.GND U2.GND U3.VSS
+Net-(C2-Pad1)            C2.1 C3.1 U1.VDD U2.VOUT U3.VDD
+Net-(C4-Pad1)            C4.1 U1.XI Y1.1
+Net-(C5-Pad1)            C5.1 U1.XO Y1.2
+Net-(D1-PadK)            D1.K J1.D- R1.1
+Net-(D2-PadK)            D2.K J1.D+ R2.1
+Net-(R1-Pad2)            R1.2 U1.UD-
+Net-(R2-Pad2)            R2.2 U1.UD+
+Net-(TP1-Pad1)           TP1.1 U1.RXD U3.PA9
+Net-(TP2-Pad1)           TP2.1 U1.TXD U3.PA10

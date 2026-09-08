@@ -9,7 +9,7 @@ from fang.importing import MappingTable
 from fang.serialization import canonical_record_stream
 from fang.workspace import DIRECTORIES, Manifest, Workspace, find_workspace
 from fang.diagnostics import FangError
-from examples.divider import Divider
+from examples.divider.divider import Divider
 
 PROJECT = "PRJ-WS"
 

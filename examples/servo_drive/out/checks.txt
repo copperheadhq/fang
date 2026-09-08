@@ -1,0 +1,8 @@
+UNDECIDED interface_compatibility: current capability is undecided on electrical: current_demand unknown
+UNDECIDED interface_compatibility: voltage domain is undecided on electrical: voltage unknown; on PORT-278c14e1e5e7
+UNDECIDED interface_compatibility: current capability is undecided on power_output: current_capability unknown
+UNDECIDED interface_compatibility: voltage domain is undecided on power_output: voltage unknown; on PORT-15f7df6602b0, PORT-9f797509605f
+UNDECIDED interface_compatibility: current capability is undecided on power_input: current_capability unknown
+UNDECIDED interface_compatibility: voltage domain is undecided on power_input: voltage unknown; on PORT-98da99673f80
+UNDECIDED interface_compatibility: current capability is undecided on power_input: current_demand unknown
+46 checks, 0 failed, 7 undecided

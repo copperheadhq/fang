@@ -1,8 +1,8 @@
 # fang
 
 Fang is a code-defined electronics toolchain: a Python-embedded language for
-authoring hardware, a typed kernel that holds the design, and compilers that
-lower it into netlists, views, simulation decks, and CAD.
+authoring hardware, a typed kernel that holds the design and compilers that
+lower it into netlists, views, simulation decks and CAD.
 
 ```python
 from fang.interfaces import I2CPort, Pin, PinMap
@@ -38,7 +38,7 @@ class SensorBoard(System):
         require(self.regulator.output_voltage == 3.3 * V)
 ```
 
-The full version is [examples/sensor_board.py](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board.py).
+The full version is [examples/sensor_board/](https://github.com/copperheadhq/fang/tree/main/examples/sensor_board/).
 
 ```bash
 fang build   board.py     # elaborate, gate, persist, run the plan
@@ -56,21 +56,21 @@ fang sim     board.py --analysis transient --probe "V(1)"
 | Kernel | Entity model, stable identity, units, values, constraints, transactions, the commit gate, canonical serialization, semantic diff, topology intent |
 | Language | `Module`, `System`, `Part`, parameters with units, traits, `require()`, the connect operator, deterministic sandboxed elaboration |
 | Interfaces | A catalogue of 17 typed interfaces, ports, buses, deterministic pin lowering, compatibility checks |
-| Parts | Designators, packages, footprints, sourcing, and a standard library of generic parts |
+| Parts | Designators, packages, footprints, sourcing and a standard library of generic parts |
 | Netlist | Net inference, designator assignment, KiCad netlist emission |
 | CAD | KiCad s-expression reading, project import, the mapping table, loss reporting, one safe round trip |
 | Tool plan | Handles as symbolic conditions, the tool contract, the operation phase, realizations |
 | Views | Six required views, the layout boundary, SVG rendering, placement seeds |
 | Simulation | Models as traits, explicit plans, SPICE lowering, the ngspice backend, normalized results |
 | Rationale | Requirements, assumptions, decisions, evidence, calculations, the verification graph, impact propagation |
-| CLI | The `.copperhead/` workspace, the manifest, and the commands above |
+| CLI | The `.copperhead/` workspace, the manifest and the commands above |
 
 ## The specification
 
 The contract is one document:
 [openspec/specs/fang-kernel/spec.md](https://github.com/copperheadhq/fang/blob/main/openspec/specs/fang-kernel/spec.md).
-It is self-contained and normative — the terminology, the design principles, the
-layers of representation, the kernel architecture, and the project root, followed
+It is self-contained and normative, covering the terminology, the design principles, the
+layers of representation, the kernel architecture and the project root, followed
 by 81 requirements over 217 scenarios covering the Engineering Intermediate
 Representation (identity, quantities, constraints, provenance, serialization,
 diff) and the kernel and language over it, with all 23 acceptance criteria.
@@ -151,17 +151,17 @@ says so rather than substituting anything.
   makes a check undecided rather than passing.
 - **Undecided is a third truth value.** Never silently a pass, never silently a
   failure; whether it blocks is the gate's decision.
-- **Transactional mutation.** Every path — program, human, agent, import —
+- **Transactional mutation.** Every path, whether program, human, agent or import,
   passes the same gate, differing only in recorded provenance.
 - **Dimensional rejection at write time.** A dimensionally invalid expression
   cannot be stored, let alone evaluated.
 - **Nothing invented.** A missing model, an absent simulator, an unmodelled CAD
-  construct, and an uncited claim are each reported as what they are.
+  construct and an uncited claim are each reported as what they are.
 
 ## Tests
 
 ```bash
-python -m pytest          # 477 passing; 478 with the 'analysis' extra installed
+python -m pytest          # 502 passing; 503 with the 'analysis' extra installed
 python -m pytest -rs      # names each environment-dependent skip
 ```
 
@@ -171,28 +171,34 @@ not installed here: NetworkX and ngspice.
 
 ## Examples
 
-Each one builds, checks, and exports a KiCad netlist; the suite proves it in
-[tests/test_examples.py](https://github.com/copperheadhq/fang/blob/main/tests/test_examples.py).
+Each example is a folder: the program, a document explaining it and the files
+`fang` produces from it under `out/`: the KiCad netlist, the check and graph
+listings, the views and the rationale where there is any. Each one builds,
+checks and exports; the suite rebuilds the committed outputs and compares them
+in [tests/test_examples.py](https://github.com/copperheadhq/fang/blob/main/tests/test_examples.py).
 
-- [examples/divider.py](https://github.com/copperheadhq/fang/blob/main/examples/divider.py) — a voltage divider with a filter cap
-- [examples/blinky.py](https://github.com/copperheadhq/fang/blob/main/examples/blinky.py) — an MCU pin, a resistor and an LED:
-  the shape of a program with nothing else in the way
-- [examples/equations.py](https://github.com/copperheadhq/fang/blob/main/examples/equations.py) — a divider written as the ratio it
+- [examples/divider/](https://github.com/copperheadhq/fang/tree/main/examples/divider/): a voltage divider with a filter cap
+- [examples/blinky/](https://github.com/copperheadhq/fang/tree/main/examples/blinky/): an MCU pin, a resistor
+  and an LED, showing the shape of a program with nothing else in the way
+- [examples/equations/](https://github.com/copperheadhq/fang/tree/main/examples/equations/): a divider written as the ratio it
   must satisfy, reused by inheritance with different values
-- [examples/i2c_bus.py](https://github.com/copperheadhq/fang/blob/main/examples/i2c_bus.py) — one controller and three targets on a
+- [examples/i2c_bus/](https://github.com/copperheadhq/fang/tree/main/examples/i2c_bus/): one controller and three targets on a
   multi-drop bus, with address uniqueness as a constraint and one device whose
   thresholds are an assumption rather than a number
-- [examples/sensor_board.py](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board.py) — a regulated board with an
+- [examples/sensor_board/](https://github.com/copperheadhq/fang/tree/main/examples/sensor_board/): a regulated board with an
   MCU and an I2C sensor, showing pin lowering and recorded decisions
-- [examples/usb_uart_bridge.py](https://github.com/copperheadhq/fang/blob/main/examples/usb_uart_bridge.py) — USB to serial, with
-  chosen vendor parts, a crystal, and a UART crossover named wire by wire
-- [examples/buck_regulator.py](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator.py) — 12 V to 3.3 V, with the
+- [examples/usb_uart_bridge/](https://github.com/copperheadhq/fang/tree/main/examples/usb_uart_bridge/): USB to serial, with
+  chosen vendor parts, a crystal and a UART crossover named wire by wire
+- [examples/buck_regulator/](https://github.com/copperheadhq/fang/tree/main/examples/buck_regulator/): 12 V to 3.3 V, with the
   requirement, the part decision, the datasheet citations, the two calculations
   and the verification in the same graph as the inductor
-- [examples/servo_drive.py](https://github.com/copperheadhq/fang/blob/main/examples/servo_drive.py) — three half-bridges, CAN, and a
-  quadrature encoder: one block declaration, three instances
-- [examples/imported/reference.net](https://github.com/copperheadhq/fang/blob/main/examples/imported/reference.net) — a KiCad
+- [examples/servo_drive/](https://github.com/copperheadhq/fang/tree/main/examples/servo_drive/): three half-bridges, CAN and a
+  quadrature encoder, from one block declaration instantiated three times
+- [examples/imported/](https://github.com/copperheadhq/fang/tree/main/examples/imported/): a KiCad
   netlist the import path reads
+- [examples/parity/](https://github.com/copperheadhq/fang/tree/main/examples/parity/): the divider and
+  blinky built again in atopile, so the two toolchains' components and nets can be
+  asserted equal
 
 ## License
 

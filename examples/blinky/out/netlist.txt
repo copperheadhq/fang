@@ -1,0 +1,9 @@
+C1     100 nF           Package:C_0402
+DS1    2 V              Package:LED_0603
+J1     PowerHeader      Package:PinHeader_1x02_P2.54mm
+R1     330 Ohm          Package:R_0603
+U1     MCU              Package:SOIC-8
+Net-(C1-Pad1)            C1.1 J1.VCC U1.VDD
+Net-(C1-Pad2)            C1.2 DS1.K J1.GND U1.VSS
+Net-(DS1-PadA)           DS1.A R1.2
+Net-(R1-Pad1)            R1.1 U1.PA5

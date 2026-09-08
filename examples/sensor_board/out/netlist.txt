@@ -1,0 +1,10 @@
+C1     10 uF            Package:C_0805
+R1     4.7 kOhm         Package:R_0402
+R2     4.7 kOhm         Package:R_0402
+U1     IMU              Package:LGA-14
+U2     MCU              Package:LQFP-64
+U3     Regulator        Package:SOT-23-5
+Net-(C1-Pad1)            C1.1 R1.1 R2.1 U1.VDD U2.VDD U3.VOUT
+Net-(C1-Pad2)            C1.2 U1.GND U2.VSS U3.GND
+Net-(R1-Pad2)            R1.2 U1.SCL U2.PB8
+Net-(R2-Pad2)            R2.2 U1.SDA U2.PB9

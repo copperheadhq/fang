@@ -1,0 +1,5 @@
+C1     100 uF           Package:C_0805_2012Metric
+R1     4.7 kOhm         Package:R_0603_1608Metric
+R2     10 kOhm          Package:R_0603_1608Metric
+Net-(C1-Pad1)            C1.1 R1.1 R2.2
+Net-(C1-Pad2)            C1.2 R1.2

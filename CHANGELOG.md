@@ -11,14 +11,23 @@ tracked separately and moves only when the serialized form changes.
 
 ### Added
 
-- Six worked examples beyond the divider and the sensor board: `blinky.py`, `equations.py`,
-  `i2c_bus.py`, `usb_uart_bridge.py`, `buck_regulator.py`, and `servo_drive.py`,
+- Six worked examples beyond the divider and the sensor board: `blinky/`, `equations/`,
+  `i2c_bus/`, `usb_uart_bridge/`, `buck_regulator/`, and `servo_drive/`,
   covering the ground atopile's own example set covers — a first board, design by
   equation, a multi-drop bus with addresses, chosen vendor parts, and a
   three-phase drive built from one reusable block.
 - `tests/test_examples.py`, which builds every example in `examples/`: it must
   elaborate, validate, fail no check, project to a netlist that leaves no
   component unconnected, emit a KiCad netlist, and do it identically twice.
+- Every example is now a folder — the program, a `README.md` explaining what it
+  is for, and the files `fang` produces from it under `out/`: the KiCad netlist,
+  the netlist, check and graph listings, the views worth looking at, and a
+  `rationale.md` projecting the requirements, decisions, calculations and
+  evidence the design records. `python examples/regenerate.py` rewrites them,
+  and `tests/test_examples.py` rebuilds and compares them, so a committed output
+  cannot drift from the program beside it.
+- `examples/README.md`, indexing the eight programs and saying what is in an
+  `out/` and how it got there.
 - A regression test that two hard constraints bounding *different* parameters of
   one target are not read as a contradiction — the grouping this relies on has
   always been keyed by parameter, and nothing said so.
@@ -27,6 +36,15 @@ tracked separately and moves only when the serialized form changes.
 
 ### Changed
 
+- Views are drawn to be read. A node carries the name it has in the program
+  rather than its class — `bridge_u.high`, not a third box saying `Transistor` —
+  with the class underneath; rows within a layer are ordered to reduce crossings
+  and columns are centred; a node this view connects to nothing is packed into a
+  grid below a rule that says so, instead of lengthening the first column; edges
+  leave the side of the box they are heading for and curve to it rather than
+  cutting through whatever is between, and parallel edges fan out so that three
+  connections do not read as one. Each diagram now carries the question it
+  answers, a key for the edge colours, and its own incompleteness.
 - Interface compatibility now checks a link only over the parameters every party
   to it declares, and treats a port whose interface declares none — a passive
   pad, a test point — as a wire on the link rather than a participant in it.
@@ -34,7 +52,7 @@ tracked separately and moves only when the serialized form changes.
   levels, bit rate and voltage domain, and answered undecided to all three.
 - An interface link now continues through a part that declares it bridges its
   own terminals, so the two ends of a series path are compared with each other.
-  On [examples/usb_uart_bridge.py](examples/usb_uart_bridge.py) the receptacle
+  On [examples/usb_uart_bridge/](examples/usb_uart_bridge/) the receptacle
   and the bridge IC were never compared at all, because two series resistors
   stood between them; the same file went from 46 undecided results to 7, and the
   one check that matters now runs.
@@ -48,7 +66,7 @@ tracked separately and moves only when the serialized form changes.
 
 ### Fixed
 
-- `examples/sensor_board.py` declared a bulk capacitor and two pull-up resistors
+- `examples/sensor_board/` declared a bulk capacitor and two pull-up resistors
   and never connected them.
 
 ## [0.1.0] - 2026-09-08

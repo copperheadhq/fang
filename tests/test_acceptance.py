@@ -360,7 +360,7 @@ def test_at_k6_one_safe_edit_round_tripped_to_cad():
     from fang.netlist import compile_netlist
     from fang.graph import RemoveEntity
 
-    from examples.divider import Divider
+    from examples.divider.divider import Divider
 
     original = elaborate(Divider, project_id=PROJECT)
     before = compile_netlist(original.snapshot, traits=original.traits)
@@ -513,7 +513,7 @@ def test_at_k10_a_simulation_result_names_its_plan_backend_models_and_gaps():
         normalize,
     )
 
-    from examples.divider import Divider
+    from examples.divider.divider import Divider
 
     result = elaborate(Divider, project_id=PROJECT)
     plan = compile_plan(

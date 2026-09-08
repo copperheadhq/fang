@@ -1,0 +1,125 @@
+(export "version" "E"
+  (design
+    (source "buck_regulator.py")
+    (tool "fang 0.1.0")
+    (snapshot "sha256:4e0d69731dab5362aad836d3303a37ed478175e4006576dd482e69484a1af9df")
+    (project "PRJ-EXAMPLES")
+  )
+  (components
+    (comp
+      (ref "C1")
+      (value "100 nF")
+      (footprint "Package:C_0402")
+      (property "name" "fang_id" "CMP-6db0a7be2c6a")
+    )
+    (comp
+      (ref "C2")
+      (value "22 uF")
+      (footprint "Package:C_1210")
+      (property "name" "fang_id" "CMP-11a1f46732b5")
+    )
+    (comp
+      (ref "C3")
+      (value "22 uF")
+      (footprint "Package:C_1206")
+      (property "name" "fang_id" "CMP-5e09afeabb1b")
+    )
+    (comp
+      (ref "D1")
+      (value "550 mV")
+      (footprint "Package:SMA")
+      (property "name" "fang_id" "CMP-9795ae7c35d8")
+    )
+    (comp
+      (ref "F1")
+      (value "2 A")
+      (footprint "Package:F_1206")
+      (property "name" "fang_id" "CMP-a24fc836b7b9")
+    )
+    (comp
+      (ref "J1")
+      (value "InputTerminal")
+      (footprint "Package:TerminalBlock_1x02_P5.08mm")
+      (property "name" "fang_id" "CMP-98de96603cbc")
+    )
+    (comp
+      (ref "J2")
+      (value "RailHeader")
+      (footprint "Package:PinHeader_1x02_P2.54mm")
+      (property "name" "fang_id" "CMP-4ad80a6dc0e4")
+    )
+    (comp
+      (ref "L1")
+      (value "4.7 uH")
+      (footprint "Package:L_4x4mm")
+      (property "name" "fang_id" "CMP-64dfc4cd840c")
+    )
+    (comp
+      (ref "R1")
+      (value "64 kOhm")
+      (footprint "Package:R_0402")
+      (property "name" "fang_id" "CMP-fbfdf0649f0c")
+    )
+    (comp
+      (ref "R2")
+      (value "200 kOhm")
+      (footprint "Package:R_0402")
+      (property "name" "fang_id" "CMP-427611a561a7")
+    )
+    (comp
+      (ref "U1")
+      (value "BuckController")
+      (footprint "Package:VQFN-16")
+      (fields
+        (field "name" "Manufacturer" "TI")
+        (field "name" "MPN" "TPS62130RGTR")
+      )
+      (property "name" "fang_id" "CMP-78f22adc1404")
+    )
+  )
+  (nets
+    (net "code" "1" "name" "Net-(C1-Pad1)"
+      (node "ref" "C1" "pin" "1")
+      (node "ref" "L1" "pin" "1")
+      (node "ref" "U1" "pin" "SW")
+    )
+    (net "code" "2" "name" "Net-(C1-Pad2)"
+      (node "ref" "C1" "pin" "2")
+      (node "ref" "U1" "pin" "BOOT")
+    )
+    (net "code" "3" "name" "Net-(C2-Pad1)"
+      (node "ref" "C2" "pin" "1")
+      (node "ref" "D1" "pin" "K")
+      (node "ref" "U1" "pin" "VIN")
+    )
+    (net "code" "4" "name" "Net-(C2-Pad2)"
+      (node "ref" "C2" "pin" "2")
+      (node "ref" "J1" "pin" "GND")
+      (node "ref" "U1" "pin" "GND")
+    )
+    (net "code" "5" "name" "Net-(C3-Pad1)"
+      (node "ref" "C3" "pin" "1")
+      (node "ref" "J2" "pin" "3V3")
+      (node "ref" "L1" "pin" "2")
+      (node "ref" "R2" "pin" "1")
+    )
+    (net "code" "6" "name" "Net-(C3-Pad2)"
+      (node "ref" "C3" "pin" "2")
+      (node "ref" "J2" "pin" "GND")
+      (node "ref" "R1" "pin" "2")
+    )
+    (net "code" "7" "name" "Net-(D1-PadA)"
+      (node "ref" "D1" "pin" "A")
+      (node "ref" "F1" "pin" "2")
+    )
+    (net "code" "8" "name" "Net-(F1-Pad1)"
+      (node "ref" "F1" "pin" "1")
+      (node "ref" "J1" "pin" "VIN")
+    )
+    (net "code" "9" "name" "Net-(R1-Pad1)"
+      (node "ref" "R1" "pin" "1")
+      (node "ref" "R2" "pin" "2")
+      (node "ref" "U1" "pin" "FB")
+    )
+  )
+)

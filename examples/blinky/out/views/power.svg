@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="328" viewBox="0 0 900 328" font-family="system-ui, sans-serif">
+<title>power: Where does power come from and where does it go?</title>
+<rect width="900" height="328" fill="#ffffff"/>
+<text x="28" y="26" font-size="15" font-weight="600" fill="#1b1b1f">power</text>
+<text x="28" y="43" font-size="11.5" fill="#5f6368">Where does power come from and where does it go?</text>
+<line x1="28" y1="152" x2="872" y2="152" stroke="#c4c7cc" stroke-width="1" stroke-dasharray="3 4"/>
+<text x="28" y="144" font-size="11" fill="#5f6368">nothing in this view connects to these</text>
+<path d="M160.0,84.0 C206.8,84.0 217.2,84.0 264.0,84.0" fill="none" stroke="#b3261e" stroke-width="2" stroke-linecap="round" opacity="0.85"><title>power: NET-dd1fe7b3f522</title></path>
+<path d="M400.0,77.0 C446.8,77.0 457.2,77.0 504.0,77.0" fill="none" stroke="#b3261e" stroke-width="2" stroke-linecap="round" opacity="0.85"><title>power: NET-59321d691cbc</title></path>
+<path d="M400.0,84.0 C446.8,84.0 457.2,84.0 504.0,84.0" fill="none" stroke="#b3261e" stroke-width="2" stroke-linecap="round" opacity="0.85"><title>power: NET-6602c9ac8517</title></path>
+<path d="M400.0,91.0 C446.8,91.0 457.2,91.0 504.0,91.0" fill="none" stroke="#b3261e" stroke-width="2" stroke-linecap="round" opacity="0.85"><title>power: NET-97fc96ee83b8</title></path>
+<path d="M636.0,80.5 C682.8,80.5 693.2,80.5 740.0,80.5" fill="none" stroke="#b3261e" stroke-width="2" stroke-linecap="round" opacity="0.85"><title>power: NET-4411ae54eb05</title></path>
+<path d="M636.0,87.5 C682.8,87.5 693.2,87.5 740.0,87.5" fill="none" stroke="#b3261e" stroke-width="2" stroke-linecap="round" opacity="0.85"><title>power: NET-71b628a325a2</title></path>
+<g><rect x="28" y="54" width="132" height="60" rx="8" fill="#f1f3f4" stroke="#c4c7cc" stroke-width="1"/><text x="94" y="80" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">Blinky</text><text x="94" y="97" text-anchor="middle" font-size="10.5" fill="#5f6368">block</text><title>BLK-42978eb8675a</title></g>
+<g><rect x="28" y="178" width="132" height="60" rx="8" fill="#ffffff" stroke="#b3261e" stroke-dasharray="4 3" stroke-width="1"/><text x="94" y="204" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">indicator</text><text x="94" y="221" text-anchor="middle" font-size="10.5" fill="#5f6368">LED</text><title>CMP-494741b2b3a0 — unknown: luminous_intensity, reverse_voltage</title></g>
+<g><rect x="740" y="54" width="132" height="60" rx="8" fill="#ffffff" stroke="#b3261e" stroke-dasharray="4 3" stroke-width="1"/><text x="806" y="80" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">bypass</text><text x="806" y="97" text-anchor="middle" font-size="10.5" fill="#5f6368">Capacitor</text><title>CMP-64288fd28572 — unknown: tolerance_pct</title></g>
+<g><rect x="264" y="54" width="136" height="60" rx="8" fill="#ffffff" stroke="#c4c7cc" stroke-width="1"/><text x="332" y="80" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">header</text><text x="332" y="97" text-anchor="middle" font-size="10.5" fill="#5f6368">PowerHeader</text><title>CMP-8c7329903870</title></g>
+<g><rect x="188" y="178" width="132" height="60" rx="8" fill="#ffffff" stroke="#b3261e" stroke-dasharray="4 3" stroke-width="1"/><text x="254" y="204" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">series</text><text x="254" y="221" text-anchor="middle" font-size="10.5" fill="#5f6368">Resistor</text><title>CMP-8ce1dec933e0 — unknown: tolerance_pct</title></g>
+<g><rect x="504" y="54" width="132" height="60" rx="8" fill="#ffffff" stroke="#c4c7cc" stroke-width="1"/><text x="570" y="80" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">mcu</text><text x="570" y="97" text-anchor="middle" font-size="10.5" fill="#5f6368">MCU</text><title>CMP-91431a8f1d4e</title></g>
+<line x1="28" y1="266" x2="48" y2="266" stroke="#b3261e" stroke-width="2" stroke-linecap="round"/>
+<text x="54" y="270" font-size="11" fill="#5f6368">power</text>
+<text x="28" y="294" font-size="11" fill="#b3261e">3 node(s) carry unknown parameters; a dashed border marks them</text>
+</svg>

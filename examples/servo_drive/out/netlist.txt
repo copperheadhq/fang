@@ -1,0 +1,49 @@
+C1     470 uF           Package:Radial_D10
+C2     100 nF           Package:C_0402
+J1     BusTerminal      Package:TerminalBlock_1x02_P7.62mm
+J2     BusConnector     Package:JST_PH_1x02_P2.00mm
+J3     EncoderConnector Package:JST_PH_1x03_P2.00mm
+J4     MotorConnector   Package:TerminalBlock_1x03_P7.62mm
+Q1     Transistor       Package:PowerPAK-SO8
+Q2     Transistor       Package:PowerPAK-SO8
+Q3     Transistor       Package:PowerPAK-SO8
+Q4     Transistor       Package:PowerPAK-SO8
+Q5     Transistor       Package:PowerPAK-SO8
+Q6     Transistor       Package:PowerPAK-SO8
+R1     2 mOhm           Package:R_2512
+R2     2 mOhm           Package:R_2512
+R3     2 mOhm           Package:R_2512
+R4     120 Ohm          Package:R_0805
+U1     Controller       Package:LQFP-64
+U2     GateDriver       Package:SOIC-8
+U3     GateDriver       Package:SOIC-8
+U4     GateDriver       Package:SOIC-8
+U5     Regulator        Package:SOT-223
+U6     Regulator        Package:SOT-23-5
+U7     CANTransceiver   Package:SOIC-8
+Net-(C1-Pad1)            C1.1 J1.V+ Q1.D Q3.D Q5.D U5.VIN
+Net-(C1-Pad2)            C1.2 C2.2 J1.V- R1.2 R2.2 R3.2 U1.VSS U2.GND U3.GND U4.GND U5.GND U6.GND U7.GND
+Net-(C2-Pad1)            C2.1 U1.VDD U6.VOUT U7.VCC
+Net-(J2-PadCANH)         J2.CANH R4.1 U7.CANH
+Net-(J2-PadCANL)         J2.CANL R4.2 U7.CANL
+Net-(J3-PadA)            J3.A U1.PB4
+Net-(J3-PadB)            J3.B U1.PB5
+Net-(J3-PadZ)            J3.Z U1.PB6
+Net-(J4-PadU)            J4.U Q1.S Q2.D
+Net-(J4-PadV)            J4.V Q3.S Q4.D
+Net-(J4-PadW)            J4.W Q5.S Q6.D
+Net-(Q1-PadG)            Q1.G U2.HO
+Net-(Q2-PadG)            Q2.G U2.LO
+Net-(Q2-PadS)            Q2.S R1.1 U1.PC0
+Net-(Q3-PadG)            Q3.G U3.HO
+Net-(Q4-PadG)            Q4.G U3.LO
+Net-(Q4-PadS)            Q4.S R2.1 U1.PC1
+Net-(Q5-PadG)            Q5.G U4.HO
+Net-(Q6-PadG)            Q6.G U4.LO
+Net-(Q6-PadS)            Q6.S R3.1 U1.PC2
+Net-(U1-PadPA10)         U1.PA10 U4.IN
+Net-(U1-PadPA8)          U1.PA8 U2.IN
+Net-(U1-PadPA9)          U1.PA9 U3.IN
+Net-(U1-PadPB8)          U1.PB8 U7.RXD
+Net-(U1-PadPB9)          U1.PB9 U7.TXD
+Net-(U2-PadVCC)          U2.VCC U3.VCC U4.VCC U5.VOUT U6.VIN

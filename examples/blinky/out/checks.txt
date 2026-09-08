@@ -1,0 +1,2 @@
+UNDECIDED interface_compatibility: current capability is undecided on power_input: current_demand unknown
+6 checks, 0 failed, 1 undecided

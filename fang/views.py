@@ -61,6 +61,7 @@ class ViewNode:
     id: str                 # the entity this node is
     label: str
     kind: str
+    detail: str = ""        # the second line: what the label alone leaves out
     parent: str | None = None
     ports: tuple[str, ...] = ()
     annotations: tuple[str, ...] = ()
@@ -68,6 +69,8 @@ class ViewNode:
 
     def as_dict(self) -> dict:
         out: dict = {"id": self.id, "label": self.label, "kind": self.kind}
+        if self.detail:
+            out["detail"] = self.detail
         if self.parent:
             out["parent"] = self.parent
         if self.ports:
@@ -148,16 +151,40 @@ def _incomplete_parameters(entity: Entity) -> tuple[str, ...]:
     )
 
 
-def _label(entity: Entity) -> str:
-    for candidate in (
-        getattr(entity, "designator", None),
-        entity.identity.display_name,
-        getattr(entity, "vendor_name", None),
-        getattr(entity, "interface_type", None),
-    ):
-        if candidate:
-            return str(candidate)
-    return entity.id
+def _label(entity: Entity) -> tuple[str, str]:
+    """What to write on a node: a name, and the line under it.
+
+    The name has to be the one the reader can find again — the instance name
+    the program gave it. A class name is not that: a board with four resistors
+    on it draws four boxes that all say Resistor, which tells the reader
+    nothing about which one carries the fault. So the instance name leads and
+    the class goes underneath, where it is still worth having.
+    """
+    path = str(entity.identity.path) if entity.identity.path else ""
+    name = entity.identity.display_name
+    leaf = path.rsplit(".", 1)[-1] if path else ""
+    kind = str(
+        getattr(entity, "interface_type", None)
+        or getattr(entity, "vendor_name", None)
+        or entity.kind
+    )
+
+    # Inside a repeated block the leaf alone is ambiguous — three half bridges
+    # each own a transistor called `high` — so a nested node carries its parent
+    # with it, which is also how the program names it.
+    segments = path.split(".")
+    qualified = ".".join(segments[-2:]) if len(segments) > 2 else leaf
+
+    if designator := getattr(entity, "designator", None):
+        label, detail = str(designator), name or kind
+    elif name and leaf and leaf != name and "." in path:
+        label, detail = qualified, name
+    else:
+        label, detail = name or leaf or entity.id, kind
+
+    # A second line repeating the first one is a line that says nothing; the
+    # renderer falls back to the entity kind, which at least says what it is.
+    return label, "" if detail == label else detail
 
 
 def compile_view(snapshot, spec: ViewSpec) -> ViewGraph:
@@ -181,17 +208,20 @@ def compile_view(snapshot, spec: ViewSpec) -> ViewGraph:
 
     annotations = _annotations(entities, spec)
 
-    nodes = tuple(
-        ViewNode(
-            entity.id,
-            _label(entity),
-            entity.kind,
-            ports=tuple(sorted(k for k, v in owner_of.items() if v == entity.id)),
-            annotations=tuple(sorted(annotations.get(entity.id, ()))),
-            incomplete=_incomplete_parameters(entity),
+    nodes = []
+    for entity in included.values():
+        label, detail = _label(entity)
+        nodes.append(
+            ViewNode(
+                entity.id,
+                label,
+                entity.kind,
+                detail=detail,
+                ports=tuple(sorted(k for k, v in owner_of.items() if v == entity.id)),
+                annotations=tuple(sorted(annotations.get(entity.id, ()))),
+                incomplete=_incomplete_parameters(entity),
+            )
         )
-        for entity in included.values()
-    )
 
     edges: list[ViewEdge] = []
     for entity in sorted(entities.values(), key=lambda e: e.id):
@@ -214,7 +244,7 @@ def compile_view(snapshot, spec: ViewSpec) -> ViewGraph:
         )
 
     notes = _notes(entities, spec)
-    return ViewGraph(spec, snapshot.hash, nodes, tuple(edges), notes)
+    return ViewGraph(spec, snapshot.hash, tuple(nodes), tuple(edges), notes)
 
 
 def _annotations(entities: Mapping[str, Entity], spec: ViewSpec) -> dict[str, list[str]]:

@@ -1,0 +1,8 @@
+UNDECIDED interface_compatibility: logic high margin is undecided on i2c: vih_min unknown
+UNDECIDED interface_compatibility: logic high margin is undecided on i2c: voh_min unknown
+UNDECIDED interface_compatibility: logic high margin is undecided on i2c: voh_min unknown
+UNDECIDED interface_compatibility: logic high margin is undecided on i2c: voh_min unknown
+UNDECIDED interface_compatibility: logic high margin is undecided on i2c: vih_min unknown
+UNDECIDED interface_compatibility: logic high margin is undecided on i2c: vih_min unknown
+UNDECIDED interface_compatibility: current capability is undecided on power_input: current_demand unknown
+39 checks, 0 failed, 7 undecided

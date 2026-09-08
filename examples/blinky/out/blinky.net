@@ -1,0 +1,61 @@
+(export "version" "E"
+  (design
+    (source "blinky.py")
+    (tool "fang 0.1.0")
+    (snapshot "sha256:b9d3406a7ccee9d1cc9ca95191d79213a7d69e14e5a36b1112afadb62dffde74")
+    (project "PRJ-EXAMPLES")
+  )
+  (components
+    (comp
+      (ref "C1")
+      (value "100 nF")
+      (footprint "Package:C_0402")
+      (property "name" "fang_id" "CMP-64288fd28572")
+    )
+    (comp
+      (ref "DS1")
+      (value "2 V")
+      (footprint "Package:LED_0603")
+      (property "name" "fang_id" "CMP-494741b2b3a0")
+    )
+    (comp
+      (ref "J1")
+      (value "PowerHeader")
+      (footprint "Package:PinHeader_1x02_P2.54mm")
+      (property "name" "fang_id" "CMP-8c7329903870")
+    )
+    (comp
+      (ref "R1")
+      (value "330 Ohm")
+      (footprint "Package:R_0603")
+      (property "name" "fang_id" "CMP-8ce1dec933e0")
+    )
+    (comp
+      (ref "U1")
+      (value "MCU")
+      (footprint "Package:SOIC-8")
+      (property "name" "fang_id" "CMP-91431a8f1d4e")
+    )
+  )
+  (nets
+    (net "code" "1" "name" "Net-(C1-Pad1)"
+      (node "ref" "C1" "pin" "1")
+      (node "ref" "J1" "pin" "VCC")
+      (node "ref" "U1" "pin" "VDD")
+    )
+    (net "code" "2" "name" "Net-(C1-Pad2)"
+      (node "ref" "C1" "pin" "2")
+      (node "ref" "DS1" "pin" "K")
+      (node "ref" "J1" "pin" "GND")
+      (node "ref" "U1" "pin" "VSS")
+    )
+    (net "code" "3" "name" "Net-(DS1-PadA)"
+      (node "ref" "DS1" "pin" "A")
+      (node "ref" "R1" "pin" "2")
+    )
+    (net "code" "4" "name" "Net-(R1-Pad1)"
+      (node "ref" "R1" "pin" "1")
+      (node "ref" "U1" "pin" "PA5")
+    )
+  )
+)

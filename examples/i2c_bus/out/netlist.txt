@@ -1,0 +1,12 @@
+C1     1 uF             Package:C_0603
+J1     PowerHeader      Package:PinHeader_1x02_P2.54mm
+R1     2.2 kOhm         Package:R_0402
+R2     2.2 kOhm         Package:R_0402
+U1     RTC              Package:SOIC-8
+U2     Controller       Package:LQFP-64
+U3     EEPROM           Package:SOT-23-5
+U4     TempSensor       Package:SOT-563
+Net-(C1-Pad1)            C1.1 J1.VCC R1.1 R2.1 U1.VDD U2.VDD U3.VDD U4.VDD
+Net-(C1-Pad2)            C1.2 J1.GND U1.GND U2.VSS U3.GND U4.GND
+Net-(R1-Pad2)            R1.2 U1.SCL U2.PB6 U3.SCL U4.SCL
+Net-(R2-Pad2)            R2.2 U1.SDA U2.PB7 U3.SDA U4.SDA

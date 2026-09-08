@@ -16,8 +16,8 @@ only — it is never a persisted or public representation.
 
 ```bash
 pip install -e ".[dev]"          # add ",analysis" for the NetworkX-backed queries
-python -m pytest                 # whole suite (477 tests, ~5s); addopts = -q, testpaths = tests
-fang build examples/sensor_board.py   # the console script, after an editable install
+python -m pytest                 # whole suite (504 tests, ~10s); addopts = -q, testpaths = tests
+fang build examples/sensor_board/sensor_board.py   # the console script, after an editable install
 python -m pytest -rs             # also lists the acceptance tests deferred to later phases
 python -m pytest tests/test_graph.py::test_name -x
 python -m pytest -k "at_k7"      # acceptance criteria are named test_at_r*/test_at_k*
@@ -135,6 +135,20 @@ slice (regulator, controller, rail, ground domains). Its identifiers are *comput
 rather than written down, so fixtures cannot drift from the derivation rules; time is pinned to
 `FIXED_TIME`; and an autouse fixture releases the project's `ConstraintRegistry` after each test.
 Tests import it as `from conftest import ...`.
+
+## Examples are folders, and they carry their outputs
+
+Every example under [examples/](examples/) is a folder: `<name>/<name>.py`, a
+`README.md` explaining what it is for, and the files `fang` produces from it
+under `out/` — the KiCad netlist, the netlist and check and graph listings, the
+views worth looking at, and a `rationale.md` for the examples that record any
+reasoning. `python examples/regenerate.py` rewrites them all;
+[tests/test_examples.py](tests/test_examples.py) rebuilds them and compares, so
+a committed output cannot drift from the program beside it. Two things in an
+output are normalized before that comparison and only two: the compiler version
+and the snapshot hash, which covers provenance and so covers this checkout's
+absolute path. Add an example by adding the folder — the suite discovers it —
+and give it a `README.md` and an `out/`, or it is not an example.
 
 ## Work is organized as OpenSpec changes
 

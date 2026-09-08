@@ -1,0 +1,7 @@
+UNDECIDED interface_compatibility: current capability is undecided on electrical: current_capability unknown
+UNDECIDED interface_compatibility: voltage domain is undecided on electrical: voltage unknown; on PORT-c75102d9787d
+UNDECIDED interface_compatibility: current capability is undecided on usb2: current_demand unknown
+UNDECIDED interface_compatibility: voltage domain is undecided on usb2: voltage unknown; on PORT-b2153fd0d1b8
+UNDECIDED interface_compatibility: current capability is undecided on usb2: current_demand unknown
+UNDECIDED interface_compatibility: voltage domain is undecided on usb2: voltage unknown; on PORT-b2153fd0d1b8
+24 checks, 0 failed, 6 undecided
