@@ -107,7 +107,7 @@ def test_an_example_ships_the_outputs_it_documents(example):
     """A folder with no out/ is a folder that documents nothing."""
     out = example.parent / "out"
     committed = {
-        str(path.relative_to(out)) for path in out.rglob("*") if path.is_file()
+        path.relative_to(out).as_posix() for path in out.rglob("*") if path.is_file()
     }
     assert committed == set(render(example.parent.name))
 
@@ -117,4 +117,4 @@ def test_a_committed_output_still_matches_the_program(example):
     is the fix when this fails."""
     out = example.parent / "out"
     for relative, text in sorted(render(example.parent.name).items()):
-        assert stable((out / relative).read_text()) == stable(text), relative
+        assert stable((out / relative).read_text(encoding="utf-8")) == stable(text), relative

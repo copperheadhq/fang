@@ -182,7 +182,7 @@ def cmd_export(args) -> int:
     netlist = compile_netlist(result.snapshot, traits=result.traits)
     text = emit_netlist(netlist, source=Path(args.program).name)
     if args.output:
-        Path(args.output).write_text(text)
+        Path(args.output).write_text(text, encoding="utf-8")
         print(f"wrote {args.output}")
     else:
         sys.stdout.write(text)
@@ -217,7 +217,9 @@ def cmd_view(args) -> int:
 
     graph = view(result.snapshot, args.name)
     if args.output:
-        Path(args.output).write_text(to_svg(place(graph, seeds=PlacementSeeds())))
+        Path(args.output).write_text(
+            to_svg(place(graph, seeds=PlacementSeeds())), encoding="utf-8"
+        )
         print(f"wrote {args.output}")
     else:
         print(f"{graph.spec.name}: {graph.spec.question}")
@@ -265,7 +267,7 @@ def cmd_sim(args) -> int:
         result.snapshot, plan, traits=result.traits, title=Path(args.program).name
     )
     if args.output:
-        Path(args.output).write_text(deck)
+        Path(args.output).write_text(deck, encoding="utf-8")
         print(f"wrote {args.output}")
 
     for gap in plan.coverage_gaps:

@@ -270,7 +270,7 @@ def write(name: str) -> list[Path]:
     for relative, text in sorted(render(name).items()):
         path = out / relative
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text)
+        path.write_text(text, encoding="utf-8")
         written.append(path)
     return written
 
