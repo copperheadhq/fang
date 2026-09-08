@@ -1,0 +1,109 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   The copperhead theme for Starlight.
+
+   INTERIM FILE. These tokens were recovered from the built stylesheet at
+   docs.copperhead.sh (Astro 7.1.1, Starlight 0.41.3) so that fang could ship
+   looking right today. It is not the place this should live.
+
+   Replace it with the theme source from the copperhead docs repository, and
+   publish that as a package both sites depend on — see site/docs/README.md.
+   What is here carries the palette and the type. What it cannot carry is the
+   component layer: copperhead's own nav, cards and CTA styles are compiled
+   under Astro's scoped class hashes (.astro-nen7h5rs and friends), which are
+   build-specific and meaningless outside that build.
+
+   Fonts: docs.copperhead.sh self-hosts Inter Variable and IBM Plex Mono as
+   @font-face. This file names them and falls back to system faces; the shared
+   package should ship the font files so the fallback never shows.
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --sl-font: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  --sl-font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --sl-color-white: #f7f8f8;
+  --sl-color-gray-1: #e3e5e8;
+  --sl-color-gray-2: #b3b8be;
+  --sl-color-gray-3: #8a9098;
+  --sl-color-gray-4: #4c4f53;
+  --sl-color-gray-5: #343638;
+  --sl-color-gray-6: #232425;
+  --sl-color-black: #1b1b1c;
+
+  --sl-color-accent-low: #3b2614;
+  --sl-color-accent: #c47a3a;
+  --sl-color-accent-high: #f2b57e;
+
+  --sl-color-text: var(--sl-color-gray-1);
+  --sl-color-text-accent: #e6a366;
+  --sl-color-text-invert: var(--sl-color-black);
+
+  --sl-color-bg: var(--sl-color-black);
+  --sl-color-bg-nav: var(--sl-color-black);
+  --sl-color-bg-sidebar: var(--sl-color-gray-6);
+  --sl-color-bg-inline-code: var(--sl-color-gray-6);
+  --sl-color-bg-accent: var(--sl-color-accent);
+
+  --sl-color-hairline-light: var(--sl-color-gray-5);
+  --sl-color-hairline: var(--sl-color-gray-5);
+  --sl-color-hairline-shade: var(--sl-color-gray-5);
+  --sl-color-backdrop-overlay: #0009;
+
+  /* copperhead's own additions, kept namespaced */
+  --ch-hover-bg: #ffffff0d;
+  --ch-pill-bg: color-mix(in srgb, var(--sl-color-accent) 16%, transparent);
+  --ch-panel-ring: #ffffff0a;
+  --ch-on-accent: #1b1b1c;
+  --ch-accent-hover: #d48a48;
+  --ch-sidebar-inset: 1rem;
+
+  --sl-text-h1: 2.125rem;
+  --sl-text-h2: 1.5rem;
+  --sl-text-h3: 1.25rem;
+  --sl-text-h4: 1.0625rem;
+  --sl-text-h5: 1rem;
+  --sl-text-code: 0.875rem;
+  --sl-text-code-sm: 0.8125rem;
+
+  --sl-line-height: 1.65;
+  --sl-line-height-headings: 1.25;
+  --sl-sidebar-width: 18rem;
+  --sl-content-width: 48rem;
+}
+
+:root[data-theme="light"] {
+  --sl-color-white: #1a1b1e;
+  --sl-color-gray-1: #2b2d32;
+  --sl-color-gray-2: #545962;
+  /* copperhead ships #6d747f here; it lands at 4.44 against the raised
+     surface, just under 4.5. Corrected on fang's side pending an upstream fix. */
+  --sl-color-gray-3: #686f7a;
+  --sl-color-gray-4: #c2c8d2;
+  --sl-color-gray-5: #e3e7ed;
+  --sl-color-gray-6: #eff2f6;
+  --sl-color-gray-7: #f7f8fa;
+  --sl-color-black: #fff;
+
+  --sl-color-accent-low: #f8e9db;
+  --sl-color-accent: #a35d1f;
+  --sl-color-accent-high: #5d3411;
+
+  --sl-color-text-accent: #9a5619;
+  --sl-color-text-invert: #fff;
+
+  --sl-color-bg-nav: #fff;
+  --sl-color-bg-sidebar: var(--sl-color-gray-7);
+  --sl-color-bg-inline-code: var(--sl-color-gray-6);
+
+  --sl-color-hairline-light: var(--sl-color-gray-5);
+  --sl-color-hairline: var(--sl-color-gray-5);
+  --sl-color-hairline-shade: var(--sl-color-gray-5);
+  --sl-color-backdrop-overlay: #14161a80;
+
+  --ch-hover-bg: #0000000b;
+  --ch-pill-bg: color-mix(in srgb, var(--sl-color-accent) 11%, transparent);
+  --ch-panel-ring: #0000000d;
+  --ch-on-accent: #fff;
+  --ch-accent-hover: #8f4f18;
+}

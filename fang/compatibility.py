@@ -6,6 +6,18 @@ Evaluation".
 A check whose inputs are unknown returns undecided and names the missing input.
 It never passes by default, because a check that passes on absent data is worse
 than no check.
+
+Two rules decide what a link is, and both exist to keep that promise honest:
+
+- The parties to a link are the ports whose interface declares parameters. A
+  resistor pad or a test point is a wire on the link, not a party to it, and a
+  check is run only over the parameters every party declares. An undecided
+  result about a fact one side was never supposed to carry reads like a finding
+  and is not one.
+- An interface continues through a part that declares it bridges its terminals,
+  so a connector and the device behind two series resistors are the two ends of
+  one link and are compared with each other. Without that, the only thing the
+  check has to say about the pair is what the resistors think of it.
 """
 
 from __future__ import annotations
@@ -69,6 +81,38 @@ def _evidence(*values: Value | None) -> tuple[str, ...]:
     )
 
 
+def _port_interface(port: Port, entities: Mapping[str, Entity]) -> InterfaceType | None:
+    entity = entities.get(port.interface)
+    return _interface_type(entity) if isinstance(entity, Interface) else None
+
+
+def _declared_parameters(port: Port, entities: Mapping[str, Entity]) -> frozenset[str]:
+    """The parameters this port's interface is supposed to carry.
+
+    A plain pad declares none, which is the difference between a wire and a
+    contract.
+    """
+    interface = _port_interface(port, entities)
+    return frozenset(interface.parameters) if interface is not None else frozenset()
+
+
+def _shared_parameters(
+    ports: Sequence[Port], entities: Mapping[str, Entity]
+) -> frozenset[str]:
+    """The parameters every participant declares.
+
+    A comparison is only meaningful over a fact both sides are supposed to hold.
+    A 22 Ohm resistor in series with a USB pair declares no logic levels and no
+    bit rate, so asking it for them yields an undecided result about nothing —
+    which is worse than silence, because it reads like a finding.
+    """
+    shared: frozenset[str] | None = None
+    for port in ports:
+        declared = _declared_parameters(port, entities)
+        shared = declared if shared is None else (shared & declared)
+    return shared if shared is not None else frozenset()
+
+
 def find_links(entities: Mapping[str, Entity]) -> list[Link]:
     """Group port-to-port connections into links, merging a bus's participants."""
     interfaces = {
@@ -112,7 +156,105 @@ def find_links(entities: Mapping[str, Entity]) -> list[Link]:
         if interface is not None:
             links.append(Link(key, interface, tuple(sorted(merged[key]))))
 
-    return sorted(links, key=lambda link: link.connection)
+    links.extend(_series_links(entities, ports, links))
+    return sorted(links, key=lambda link: (link.connection, link.participants))
+
+
+def _bridged_ports(entities: Mapping[str, Entity], ports: Mapping[str, Port]) -> dict[str, set[str]]:
+    """Port adjacency across the parts that declare they conduct between them.
+
+    A part says which of its own surfaces it bridges; nothing else in the graph
+    does, because a component's body is not a connection.
+    """
+    by_owner: dict[str, dict[str, str]] = {}
+    for port in ports.values():
+        name = port.identity.display_name
+        if name:
+            by_owner.setdefault(port.owner, {})[name] = port.id
+
+    adjacency: dict[str, set[str]] = {}
+    for entity in entities.values():
+        pairs = getattr(entity, "extensions", {}).get("bridges") or ()
+        names = by_owner.get(entity.id, {})
+        for pair in pairs:
+            left, right = (names.get(pair[0]), names.get(pair[1]))
+            if left and right:
+                adjacency.setdefault(left, set()).add(right)
+                adjacency.setdefault(right, set()).add(left)
+    return adjacency
+
+
+def _series_links(
+    entities: Mapping[str, Entity],
+    ports: Mapping[str, Port],
+    direct: Sequence[Link],
+) -> list[Link]:
+    """Links between two interfaces that a series part stands between.
+
+    A connector and the bridge IC behind two 22 Ohm resistors are the two ends of
+    one USB link. Without this they are never compared with each other, and the
+    only thing the check has to say about that pair is what the resistors think.
+    """
+    from .topology import CONDUCTIVE_KINDS
+
+    wire: dict[str, set[str]] = {}
+    connection_of: dict[tuple[str, str], str] = {}
+    for connection in sorted(
+        (e for e in entities.values() if isinstance(e, Connection)), key=lambda c: c.id
+    ):
+        if connection.connection_kind not in CONDUCTIVE_KINDS:
+            continue
+        source, target = connection.source, connection.target
+        if source not in ports or target not in ports:
+            continue
+        wire.setdefault(source, set()).add(target)
+        wire.setdefault(target, set()).add(source)
+        connection_of.setdefault((source, target), connection.id)
+        connection_of.setdefault((target, source), connection.id)
+
+    bridges = _bridged_ports(entities, ports)
+    carries = {
+        port_id: _declared_parameters(port, entities) for port_id, port in ports.items()
+    }
+    already = {frozenset(link.participants) for link in direct}
+    found: dict[frozenset, tuple[str, InterfaceType]] = {}
+
+    for start in sorted(pid for pid, declared in carries.items() if declared):
+        # Breadth-first through pads only: a contract-carrying port is an end of
+        # the link, never a waypoint in it. The walk starts on a pad, so a link
+        # that already exists directly is not rediscovered as a traced one.
+        queue: list[tuple[str, str]] = [
+            (neighbour, connection_of[(start, neighbour)])
+            for neighbour in sorted(wire.get(start, ()))
+            if not carries[neighbour]
+        ]
+        seen = {start}
+        while queue:
+            node, subject = queue.pop(0)
+            if node in seen:
+                continue
+            seen.add(node)
+            if carries[node]:
+                pair = frozenset({start, node})
+                left, right = _port_interface(ports[start], entities), _port_interface(ports[node], entities)
+                # Two ends of one link are the same interface. Anything else is
+                # a rail meeting a bus, which the direct link already covers.
+                if left is not None and left is right and pair not in already:
+                    existing = found.get(pair)
+                    if existing is None or subject < existing[0]:
+                        found[pair] = (subject, left)
+                continue
+            for neighbour in sorted(wire.get(node, set()) | bridges.get(node, set())):
+                if neighbour in seen:
+                    continue
+                queue.append((neighbour, min(subject, connection_of.get((node, neighbour), subject))))
+
+    return [
+        Link(subject, interface, tuple(sorted(pair)))
+        for pair, (subject, interface) in sorted(
+            found.items(), key=lambda item: (item[1][0], sorted(item[0]))
+        )
+    ]
 
 
 def _interface_type(entity: Interface) -> InterfaceType | None:
@@ -131,6 +273,14 @@ def check_link(
     from .graph import CheckResult
 
     ports = [entities[pid] for pid in link.participants if pid in entities]
+
+    # A pad on the link is a wire, not a party to it. A capacitor sitting on a
+    # rail is not a second opinion about that rail's voltage, and a link with
+    # only one party has nothing to compare against anything.
+    parties = [port for port in ports if _declared_parameters(port, entities)]
+    if len(parties) < 2:
+        return []
+
     results: list[CheckResult] = []
     subject = link.connection
 
@@ -146,11 +296,20 @@ def check_link(
             missing=tuple(missing),
         )
 
-    results.extend(_check_logic_levels(link, ports, subject, margin, undecided))
-    results.extend(_check_current(link, ports, subject, undecided))
-    results.extend(_check_domains(link, ports, subject, undecided))
-    results.extend(_check_pull_up(link, ports, subject, undecided))
-    results.extend(_check_protocol(link, ports, subject, undecided))
+    # And only over what every party is supposed to declare: asking one side for
+    # a fact its interface never carries produces an undecided result about
+    # nothing, which reads like a finding and is not one.
+    shared = _shared_parameters(parties, entities)
+
+    if {"voh_min", "vih_min", "vol_max", "vil_max"} & shared:
+        results.extend(_check_logic_levels(link, parties, subject, margin, undecided))
+    if {"current_capability", "current_demand"} & shared:
+        results.extend(_check_current(link, parties, subject, undecided))
+    if "voltage" in shared:
+        results.extend(_check_domains(link, parties, subject, undecided))
+    if {"pull_up_resistance", "pull_up_supply"} & shared:
+        results.extend(_check_pull_up(link, parties, subject, undecided))
+    results.extend(_check_protocol(link, parties, subject, undecided, shared))
     return results
 
 
@@ -371,12 +530,12 @@ def _check_pull_up(link, ports, subject, undecided):
     return results
 
 
-def _check_protocol(link, ports, subject, undecided):
+def _check_protocol(link, ports, subject, undecided, shared=frozenset({"bit_rate"})):
     """Protocol, rate, and addressing must agree."""
     from .graph import CheckResult
 
     results = []
-    rates = [(p, _value(p, "bit_rate")) for p in ports]
+    rates = [(p, _value(p, "bit_rate")) for p in ports] if "bit_rate" in shared else []
     known = [(p, v) for p, v in rates if _interval(v) is not None]
     if known and len(known) < len(rates):
         results.append(undecided("bit rate", ["bit_rate"]))

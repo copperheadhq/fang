@@ -5,8 +5,8 @@ pins, a decision recorded where the MCU offered a choice, and constraints that
 stay undecided until someone supplies the missing datasheet number.
 """
 
-from fang.interfaces import I2CPort, Pin, PinMap, PowerIn, PowerOut
-from fang.lang import A, Parameter, Part, System, V, kHz, kOhm, mA, require, uF
+from fang.interfaces import I2CPort, Pin, PinMap, PowerIn
+from fang.lang import A, Part, System, V, kHz, kOhm, mA, require, uF
 from fang.parts import Capacitor, Regulator, Resistor
 
 
@@ -82,6 +82,15 @@ class SensorBoard(System):
         self.regulator.vout >> self.mcu.power
         self.regulator.vout >> self.imu.power
         self.mcu.i2c >> self.imu.i2c
+
+        self.regulator.vout.vcc >> self.bulk.p1
+        self.regulator.vout.gnd >> self.bulk.p2
+
+        # Open drain: without these the bus never comes back up.
+        self.regulator.vout.vcc >> self.scl_pullup.p1
+        self.scl_pullup.p2 >> self.mcu.i2c.scl
+        self.regulator.vout.vcc >> self.sda_pullup.p1
+        self.sda_pullup.p2 >> self.mcu.i2c.sda
 
     def constraints(self):
         require(self.regulator.output_voltage == 3.3 * V)

@@ -36,10 +36,15 @@ class GenericPart(Part):
 
 
 class TwoPin(GenericPart):
-    """The shape most of a board is made of: two surfaces, two pins."""
+    """The shape most of a board is made of: two surfaces, two pins.
+
+    A two-terminal part conducts between its terminals, which is what makes a
+    series resistor part of the link it sits in rather than the end of it.
+    """
 
     p1 = Electrical()
     p2 = Electrical()
+    bridges = (("p1", "p2"),)
     PIN1 = Pin("1", role="unknown", number="1")
     PIN2 = Pin("2", role="unknown", number="2")
     pinmap = PinMap({"p1.line": "1", "p2.line": "2"})

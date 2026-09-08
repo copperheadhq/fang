@@ -627,6 +627,13 @@ class Part(Module):
     designator_prefix = "U"
     package: str | None = None
 
+    #: Which of its own surfaces this part conducts between, as pairs of surface
+    #: names. A resistor bridges its two terminals; a connector bridges nothing.
+    #: Declared, because nothing else in the graph says that what enters one
+    #: terminal leaves at the other, and an interface that continues through a
+    #: series part is otherwise indistinguishable from one that stops there.
+    bridges: tuple[tuple[str, str], ...] = ()
+
     def __init__(self, *, package: str | None = None, **parameters) -> None:
         super().__init__(**parameters)
         if package is not None:

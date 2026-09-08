@@ -16,7 +16,7 @@ only — it is never a persisted or public representation.
 
 ```bash
 pip install -e ".[dev]"          # add ",analysis" for the NetworkX-backed queries
-python -m pytest                 # whole suite (430 tests, ~2.5s); addopts = -q, testpaths = tests
+python -m pytest                 # whole suite (477 tests, ~5s); addopts = -q, testpaths = tests
 fang build examples/sensor_board.py   # the console script, after an editable install
 python -m pytest -rs             # also lists the acceptance tests deferred to later phases
 python -m pytest tests/test_graph.py::test_name -x

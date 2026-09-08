@@ -5,12 +5,13 @@ constraints are. Ohm's law is written down as a constraint rather than left in a
 comment, so substituting a part re-checks the arithmetic instead of trusting it.
 
 Inheritance is how a second divider reuses the first: `SenseDivider` keeps the
-equations and replaces the two values.
+equations and replaces the two values. A block owns its interior — its parts, its
+parameters, and the constraints over them — and the board connects to the pads at
+its edge.
 """
 
-from fang.interfaces import AnalogIn, Pin, PinMap, PowerIn
+from fang.interfaces import AnalogIn, Pin, PinMap, PowerIn, PowerOut
 from fang.lang import (
-    Electrical,
     MOhm,
     Module,
     Parameter,
@@ -40,10 +41,6 @@ class FeedbackDivider(Module):
     ratio_min = Parameter("", description="lower bound on tap / rail")
     ratio_max = Parameter("", description="upper bound on tap / rail")
 
-    high = Electrical()
-    tap = Electrical()
-    low = Electrical()
-
     top = Resistor(
         resistance=tolerance(82 * kOhm, "1%"), power_rating=100 * mW, package="R_0402"
     )
@@ -52,10 +49,8 @@ class FeedbackDivider(Module):
     )
 
     def architecture(self):
-        self.high >> self.top.p1
-        self.top.p2 >> self.tap
-        self.tap >> self.bottom.p1
-        self.bottom.p2 >> self.low
+        # The interior: the tap is the node between the two legs.
+        self.top.p2 >> self.bottom.p1
 
     def constraints(self):
         division = self.bottom.resistance / (
@@ -114,10 +109,36 @@ class ADC(Part):
     )
 
 
+class TerminalBlock(Part):
+    """The board's edge: two measured rails, the logic supply, one return."""
+
+    designator_prefix = "J"
+
+    rail_a = PowerOut(voltage=12 * V, current_capability=2000 * mA)
+    rail_b = PowerOut(voltage=24 * V, current_capability=2000 * mA)
+    logic = PowerOut(voltage=3.3 * V, current_capability=100 * mA)
+
+    V12 = Pin("12V", role="power", number="1")
+    V24 = Pin("24V", role="power", number="2")
+    V3V3 = Pin("3V3", role="power", number="3")
+    GND = Pin("GND", role="ground", number="4")
+
+    pinmap = PinMap(
+        {
+            "rail_a.vcc": "12V",
+            "rail_a.gnd": "GND",
+            "rail_b.vcc": "24V",
+            "rail_b.gnd": "GND",
+            "logic.vcc": "3V3",
+            "logic.gnd": "GND",
+        }
+    )
+
+
 class MeasuredRail(System):
     """A 12 V rail and a 24 V rail, both measured by the same converter."""
 
-    supply = PowerIn(voltage=12 * V, current_capability=2000 * mA)
+    terminals = TerminalBlock(package="TerminalBlock_1x04_P5.08mm")
 
     feedback = FeedbackDivider(
         v_in=12 * V,
@@ -134,9 +155,12 @@ class MeasuredRail(System):
     adc = ADC(package="MSOP-10")
 
     def architecture(self):
-        self.supply.vcc >> self.feedback.high
-        self.supply.gnd >> self.feedback.low
-        self.supply.gnd >> self.sense.low
+        self.terminals.logic >> self.adc.power
 
-        self.feedback.tap >> self.adc.channel_a.signal
-        self.sense.tap >> self.adc.channel_b.signal
+        self.terminals.rail_a.vcc >> self.feedback.top.p1
+        self.terminals.rail_a.gnd >> self.feedback.bottom.p2
+        self.terminals.rail_b.vcc >> self.sense.top.p1
+        self.terminals.rail_b.gnd >> self.sense.bottom.p2
+
+        self.feedback.top.p2 >> self.adc.channel_a.signal
+        self.sense.top.p2 >> self.adc.channel_b.signal

@@ -9,6 +9,48 @@ tracked separately and moves only when the serialized form changes.
 
 ## [Unreleased]
 
+### Added
+
+- Six worked examples beyond the divider and the sensor board: `blinky.py`, `equations.py`,
+  `i2c_bus.py`, `usb_uart_bridge.py`, `buck_regulator.py`, and `servo_drive.py`,
+  covering the ground atopile's own example set covers — a first board, design by
+  equation, a multi-drop bus with addresses, chosen vendor parts, and a
+  three-phase drive built from one reusable block.
+- `tests/test_examples.py`, which builds every example in `examples/`: it must
+  elaborate, validate, fail no check, project to a netlist that leaves no
+  component unconnected, emit a KiCad netlist, and do it identically twice.
+- A regression test that two hard constraints bounding *different* parameters of
+  one target are not read as a contradiction — the grouping this relies on has
+  always been keyed by parameter, and nothing said so.
+- [site/docs/](site/docs/), an Astro + Starlight documentation site for
+  `fang.copperhead.sh`, pinned to the versions `docs.copperhead.sh` runs.
+
+### Changed
+
+- Interface compatibility now checks a link only over the parameters every party
+  to it declares, and treats a port whose interface declares none — a passive
+  pad, a test point — as a wire on the link rather than a participant in it.
+  A 22 Ohm resistor in series with a USB pair was previously asked for its logic
+  levels, bit rate and voltage domain, and answered undecided to all three.
+- An interface link now continues through a part that declares it bridges its
+  own terminals, so the two ends of a series path are compared with each other.
+  On [examples/usb_uart_bridge.py](examples/usb_uart_bridge.py) the receptacle
+  and the bridge IC were never compared at all, because two series resistors
+  stood between them; the same file went from 46 undecided results to 7, and the
+  one check that matters now runs.
+- `Part.bridges` declares which of a part's surfaces it conducts between;
+  `TwoPin` and everything built on it bridge their two terminals, `Transistor`
+  and `Connector` bridge nothing. The fact reaches the component entity as an
+  extension, because a component's body is not a connection and nothing else in
+  the graph said current entering one terminal leaves at the other.
+- `DIGITAL_PARAMETERS` gained `voltage`, which the voltage-domain check has
+  always read and the catalogue never declared.
+
+### Fixed
+
+- `examples/sensor_board.py` declared a bulk capacitor and two pull-up resistors
+  and never connected them.
+
 ## [0.1.0] - 2026-09-08
 
 The first packaged release. All eleven roadmap stages are delivered and all 23

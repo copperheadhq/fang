@@ -525,6 +525,11 @@ def _part_extensions(module: Module) -> dict:
     other than the netlist wants it.
     """
     extensions: dict = {"designator_prefix": getattr(module, "designator_prefix", "U")}
+    bridges = getattr(module, "bridges", ())
+    if bridges:
+        # Sorted pairs of sorted names, so the same part gives the same record
+        # whichever order its terminals were written in.
+        extensions["bridges"] = sorted(sorted(pair) for pair in bridges)
     manufacturer = getattr(module, "manufacturer", None)
     mpn = getattr(module, "mpn", None)
     if manufacturer:

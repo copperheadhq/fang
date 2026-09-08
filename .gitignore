@@ -6,3 +6,11 @@ build/
 dist/
 .venv/
 .claude/settings.local.json
+
+# the workspace `fang build` writes beside the sources
+.copperhead/
+
+# the docs site
+node_modules/
+site/docs/dist/
+site/docs/.astro/

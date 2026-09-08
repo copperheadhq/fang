@@ -5,7 +5,7 @@ declared surfaces, connections between them, and a constraint that states the
 engineering intent rather than the answer.
 """
 
-from fang.interfaces import Pin, PinMap, PowerIn
+from fang.interfaces import Pin, PinMap, PowerIn, PowerOut
 from fang.lang import Ohm, Part, Signal, System, V, mA, mW, nF, require
 from fang.parts import LED, Capacitor, Resistor
 
@@ -25,9 +25,23 @@ class MCU(Part):
     pinmap = PinMap({"power.vcc": "VDD", "power.gnd": "VSS", "blink.line": "PA5"})
 
 
+class PowerHeader(Part):
+    """Two pins and a rail: the board's power has to arrive on a pad."""
+
+    designator_prefix = "J"
+
+    dc = PowerOut(voltage=3.3 * V, current_capability=200 * mA)
+
+    VCC = Pin("VCC", role="power", number="1")
+    GND = Pin("GND", role="ground", number="2")
+
+    pinmap = PinMap({"dc.vcc": "VCC", "dc.gnd": "GND"})
+
+
 class Blinky(System):
     supply = PowerIn(voltage=3.3 * V, current_capability=200 * mA)
 
+    header = PowerHeader(package="PinHeader_1x02_P2.54mm")
     mcu = MCU(package="SOIC-8")
     series = Resistor(resistance=330 * Ohm, power_rating=125 * mW, package="R_0603")
     indicator = LED(
@@ -36,13 +50,14 @@ class Blinky(System):
     bypass = Capacitor(capacitance=100 * nF, voltage_rating=16 * V, package="C_0402")
 
     def architecture(self):
-        self.supply >> self.mcu.power
+        self.supply >> self.header.dc
+        self.header.dc >> self.mcu.power
 
         # The pin drives the anode through the series resistor; the cathode
         # returns to the rail's ground rather than to a second ground of its own.
         self.mcu.blink >> self.series.p1
         self.series.p2 >> self.indicator.p1
-        self.indicator.p2 >> self.supply.gnd
+        self.indicator.p2 >> self.header.dc.gnd
 
         # Decoupling belongs to the pin it decouples, so a checker can find it.
         self.mcu.power.vcc >> self.bypass.p1

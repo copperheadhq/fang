@@ -161,7 +161,7 @@ says so rather than substituting anything.
 ## Tests
 
 ```bash
-python -m pytest          # 430 passing; 431 with the 'analysis' extra installed
+python -m pytest          # 477 passing; 478 with the 'analysis' extra installed
 python -m pytest -rs      # names each environment-dependent skip
 ```
 
@@ -171,9 +171,26 @@ not installed here: NetworkX and ngspice.
 
 ## Examples
 
+Each one builds, checks, and exports a KiCad netlist; the suite proves it in
+[tests/test_examples.py](https://github.com/copperheadhq/fang/blob/main/tests/test_examples.py).
+
 - [examples/divider.py](https://github.com/copperheadhq/fang/blob/main/examples/divider.py) — a voltage divider with a filter cap
+- [examples/blinky.py](https://github.com/copperheadhq/fang/blob/main/examples/blinky.py) — an MCU pin, a resistor and an LED:
+  the shape of a program with nothing else in the way
+- [examples/equations.py](https://github.com/copperheadhq/fang/blob/main/examples/equations.py) — a divider written as the ratio it
+  must satisfy, reused by inheritance with different values
+- [examples/i2c_bus.py](https://github.com/copperheadhq/fang/blob/main/examples/i2c_bus.py) — one controller and three targets on a
+  multi-drop bus, with address uniqueness as a constraint and one device whose
+  thresholds are an assumption rather than a number
 - [examples/sensor_board.py](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board.py) — a regulated board with an
   MCU and an I2C sensor, showing pin lowering and recorded decisions
+- [examples/usb_uart_bridge.py](https://github.com/copperheadhq/fang/blob/main/examples/usb_uart_bridge.py) — USB to serial, with
+  chosen vendor parts, a crystal, and a UART crossover named wire by wire
+- [examples/buck_regulator.py](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator.py) — 12 V to 3.3 V, with the
+  requirement, the part decision, the datasheet citations, the two calculations
+  and the verification in the same graph as the inductor
+- [examples/servo_drive.py](https://github.com/copperheadhq/fang/blob/main/examples/servo_drive.py) — three half-bridges, CAN, and a
+  quadrature encoder: one block declaration, three instances
 - [examples/imported/reference.net](https://github.com/copperheadhq/fang/blob/main/examples/imported/reference.net) — a KiCad
   netlist the import path reads
 

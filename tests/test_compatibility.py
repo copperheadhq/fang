@@ -6,7 +6,8 @@ from fang.constraints import CheckStatus
 from fang.compatibility import compatibility_check, find_links
 from fang.elaborate import elaborate
 from fang.interfaces import I2CPort, Pin, PinMap, PowerIn, PowerOut, SPIPort
-from fang.lang import Part, System, A, V, kHz, kOhm, mA
+from fang.lang import Part, System, A, Ohm, V, kHz, kOhm, mA
+from fang.parts import Resistor, Transistor
 from fang.units import Quantity
 from fang.values import Value
 
@@ -260,6 +261,131 @@ def test_a_bus_merges_its_participants_into_one_link():
     links = find_links(result.snapshot.entities)
     assert len(links) == 1
     assert len(links[0].participants) == 3
+
+
+# -- what a link is, and is not --------------------------------------------
+
+
+def test_a_pad_in_the_path_is_not_asked_what_it_thinks_of_the_bus():
+    """A resistor declares no logic levels, so it is not undecided about them.
+
+    A check over a fact one side was never supposed to carry is not a finding;
+    it is noise that reads like one.
+    """
+
+    class Source(Part):
+        spi = SPIPort(voh_min=3.0 * V, vol_max=0.4 * V, voltage=3.3 * V)
+
+    class Series(System):
+        a = Source()
+        r = Resistor(resistance=33 * Ohm)
+
+        def architecture(self):
+            self.a.spi.sck >> self.r.p1
+
+    assert build(Series) == []
+
+
+def test_a_series_part_joins_the_two_interfaces_it_stands_between():
+    """The two ends of the link are compared with each other, not with the part."""
+
+    class Source(Part):
+        spi = SPIPort(voh_min=3.0 * V, vol_max=0.4 * V, voltage=3.3 * V)
+
+    class Sink(Part):
+        spi = SPIPort(vih_min=2.0 * V, vil_max=0.8 * V, voltage=3.3 * V)
+
+    class Series(System):
+        a = Source()
+        b = Sink()
+        r = Resistor(resistance=33 * Ohm)
+
+        def architecture(self):
+            self.a.spi.sck >> self.r.p1
+            self.r.p2 >> self.b.spi.sck
+
+    result = elaborate(Series, project_id=PROJECT)
+    ends = {
+        frozenset(link.participants)
+        for link in find_links(result.snapshot.entities)
+        if link.interface.name == "spi"
+    }
+    ports = {
+        e.id
+        for e in result.snapshot.entities.values()
+        if e.kind == "port" and e.identity.display_name == "spi"
+    }
+    assert frozenset(ports) in ends
+    assert any(r.status is CheckStatus.PASS for r in build(Series))
+
+
+def test_a_series_part_carries_a_mismatch_between_the_ends_through():
+    class Source(Part):
+        spi = SPIPort(voh_min=4.5 * V, vol_max=0.4 * V, voltage=5 * V)
+
+    class Sink(Part):
+        spi = SPIPort(vih_min=2.0 * V, vil_max=0.8 * V, voltage=3.3 * V)
+
+    class Series(System):
+        a = Source()
+        b = Sink()
+        r = Resistor(resistance=33 * Ohm)
+
+        def architecture(self):
+            self.a.spi.sck >> self.r.p1
+            self.r.p2 >> self.b.spi.sck
+
+    domain = [r for r in build(Series) if "voltage domain" in r.message]
+    assert domain and domain[0].status is CheckStatus.FAIL
+
+
+def test_a_part_that_declares_no_bridge_ends_the_link():
+    """A transistor is a switch, so the interface does not continue through it.
+
+    Two pads of one part are joined only where the part says they are; a shared
+    pad is a different matter, and joins whatever lands on it.
+    """
+
+    class Source(Part):
+        spi = SPIPort(voh_min=3.0 * V, vol_max=0.4 * V, voltage=3.3 * V)
+
+    class Sink(Part):
+        spi = SPIPort(vih_min=2.0 * V, vil_max=0.8 * V, voltage=3.3 * V)
+
+    class Switched(System):
+        a = Source()
+        b = Sink()
+        q = Transistor(vds_max=20 * V)
+
+        def architecture(self):
+            self.a.spi.sck >> self.q.drain
+            self.q.source >> self.b.spi.sck
+
+    result = elaborate(Switched, project_id=PROJECT)
+    assert Transistor.bridges == ()
+    spi_ports = {
+        e.id
+        for e in result.snapshot.entities.values()
+        if e.kind == "port" and e.identity.display_name == "spi"
+    }
+    assert not [
+        link
+        for link in find_links(result.snapshot.entities)
+        if set(link.participants) == spi_ports
+    ]
+
+
+def test_a_part_records_what_it_bridges():
+    """The graph carries the fact, because a component's body is not a connection."""
+
+    class Board(System):
+        r = Resistor(resistance=33 * Ohm)
+
+    result = elaborate(Board, project_id=PROJECT)
+    component = next(
+        e for e in result.snapshot.entities.values() if e.kind == "component"
+    )
+    assert component.extensions["bridges"] == [["p1", "p2"]]
 
 
 def test_compatibility_is_a_check_class_the_gate_can_require():

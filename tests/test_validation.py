@@ -3,7 +3,7 @@ Versioning; Provenance; Typed Connections."""
 
 import pytest
 
-from conftest import REGULATOR, WATTS, tool_provenance
+from conftest import REGULATOR, VOLTS, WATTS, tool_provenance
 
 from fang.constraints import Constraint, Enforcement, Literal, Ref, compare, ge, le
 from fang.diagnostics import FangError, SourceLocation
@@ -111,6 +111,31 @@ def test_compatible_mandatory_constraints_are_not_flagged():
         expression=ge(Ref("CMP-1", "p", WATTS), Literal.of(Quantity.scalar("0.1", "W"))),
     )
     assert validate({"CMP-1": component, "RULE-LOW": low, "RULE-HIGH": high}).ok
+
+
+def test_constraints_bounding_different_parameters_are_not_compared():
+    """A floor on one quantity says nothing about a ceiling on another.
+
+    Both constraints sit on the same target and are of the same kind, so only
+    the parameter each one references separates them.
+    """
+    component = Component(authored("CMP-1"))
+    voltage_floor = Constraint(
+        authored("RULE-V"),
+        constraint_kind="declared",
+        targets=("CMP-1",),
+        expression=ge(Ref("CMP-1", "v", VOLTS), Literal.of(Quantity.scalar("5", "V"))),
+        enforcement=Enforcement.HARD,
+    )
+    power_ceiling = Constraint(
+        authored("RULE-P"),
+        constraint_kind="declared",
+        targets=("CMP-1",),
+        expression=le(Ref("CMP-1", "p", WATTS), Literal.of(Quantity.scalar("0.5", "W"))),
+        enforcement=Enforcement.HARD,
+    )
+    entities = {"CMP-1": component, "RULE-V": voltage_floor, "RULE-P": power_ceiling}
+    assert validate(entities).ok
 
 
 # -- requirement state machine ---------------------------------------------

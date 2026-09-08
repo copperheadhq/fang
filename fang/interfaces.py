@@ -97,6 +97,9 @@ class InterfaceType:
 #: Electrical parameters a digital interface carries. Each is a value record and
 #: is therefore unknown-representable rather than defaulted.
 DIGITAL_PARAMETERS: Mapping[str, str] = {
+    # The rail the interface signals against. A digital interface has a voltage
+    # domain like any other, and the domain check reads it.
+    "voltage": "V",
     "voh_min": "V",
     "vol_max": "V",
     "vih_min": "V",

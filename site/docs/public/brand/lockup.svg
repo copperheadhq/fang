@@ -1,0 +1,7 @@
+<!-- The horizontal lockup. Set in IBM Plex Mono; outline the text before
+     shipping this to anywhere the webfont is not loaded. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 132 32" width="132" height="32" role="img" aria-label="fang">
+  <path d="M5.75 7.5h20.5" fill="none" stroke="#b87333" stroke-width="2.25" stroke-linecap="round"/>
+  <path d="M10.5 7.5 16 24.5l5.5-17" fill="none" stroke="#b87333" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="38" y="22.5" font-family="'IBM Plex Mono', ui-monospace, monospace" font-size="20" font-weight="500" letter-spacing="0.5" fill="#e3e5e8">fang</text>
+</svg>
