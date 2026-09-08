@@ -3,6 +3,8 @@ title: Welcome
 description: The language and kernel under copperhead.
 sidebar:
   order: 0
+  attrs:
+    data-icon: star
 ---
 
 Fang is a Python-embedded language for circuit boards and the typed kernel that

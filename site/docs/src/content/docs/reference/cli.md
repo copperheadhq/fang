@@ -3,6 +3,8 @@ title: CLI
 description: Every fang command.
 sidebar:
   order: 1
+  attrs:
+    data-icon: forward-slash
 ---
 
 Every command exits non-zero when the work it names did not succeed, so a build

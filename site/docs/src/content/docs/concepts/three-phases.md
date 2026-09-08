@@ -3,6 +3,8 @@ title: Three phases
 description: Why elaboration, operation and commit happen in that order.
 sidebar:
   order: 1
+  attrs:
+    data-icon: clock
 ---
 
 The order is the whole point. A program that could observe a tool's result would

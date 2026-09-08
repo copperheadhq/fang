@@ -3,6 +3,8 @@ title: Views
 description: Six required views, each answering one engineering question.
 sidebar:
   order: 5
+  attrs:
+    data-icon: window
 ---
 
 A view is a deterministic projection of graph state. It is generated rather than

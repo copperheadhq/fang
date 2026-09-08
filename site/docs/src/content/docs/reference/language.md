@@ -3,6 +3,8 @@ title: Language
 description: The authoring surface, in full.
 sidebar:
   order: 2
+  attrs:
+    data-icon: pencil
 ---
 
 A Fang program is ordinary Python. What makes it a design is the declarations in

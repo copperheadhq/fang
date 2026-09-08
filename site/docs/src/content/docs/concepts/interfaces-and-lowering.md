@@ -3,6 +3,8 @@ title: Interfaces and lowering
 description: A connection says what it carries. Pins are a result.
 sidebar:
   order: 5
+  attrs:
+    data-icon: link
 ---
 
 ```python

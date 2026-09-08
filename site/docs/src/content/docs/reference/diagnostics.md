@@ -3,6 +3,8 @@ title: Diagnostics
 description: Every code fang emits, by area.
 sidebar:
   order: 8
+  attrs:
+    data-icon: warning
 ---
 
 Diagnostic codes are stable. They are **allocated, never reused and retired

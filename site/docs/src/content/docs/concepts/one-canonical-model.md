@@ -3,6 +3,8 @@ title: One canonical model
 description: The governing invariant and what it costs to hold.
 sidebar:
   order: 2
+  attrs:
+    data-icon: database
 ---
 
 There is exactly one canonical model: the Engineering Intermediate

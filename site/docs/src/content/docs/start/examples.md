@@ -3,6 +3,8 @@ title: Examples
 description: Eight programs in the repository, smallest first.
 sidebar:
   order: 3
+  attrs:
+    data-icon: list-format
 ---
 
 Every example in [`examples/`](https://github.com/copperheadhq/fang/tree/main/examples)

@@ -3,6 +3,8 @@ title: Interfaces
 description: The shipped catalogue, its signals and its parameters.
 sidebar:
   order: 3
+  attrs:
+    data-icon: link-alt
 ---
 
 The catalogue holds 21 interface types. Seventeen have a port class, so a

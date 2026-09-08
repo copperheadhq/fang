@@ -3,6 +3,8 @@ title: The commit gate
 description: The six conditions every change passes, and why a rejection helps.
 sidebar:
   order: 4
+  attrs:
+    data-icon: padlock
 ---
 
 Nothing enters canonical state except through the gate. A human edit, a

@@ -3,6 +3,8 @@ title: Introduction
 description: What fang is and what it refuses to do.
 sidebar:
   order: 1
+  attrs:
+    data-icon: information
 ---
 
 Fang is a Python-embedded language for circuit boards and the kernel that holds

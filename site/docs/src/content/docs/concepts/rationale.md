@@ -3,6 +3,8 @@ title: Rationale
 description: Why a value is what it is, as entities rather than prose.
 sidebar:
   order: 6
+  attrs:
+    data-icon: open-book
 ---
 
 The reason a component has the value it has is usually the most expensive thing

@@ -3,6 +3,8 @@ title: Values and undecided
 description: Unknown is a status, and undecided is a third truth value.
 sidebar:
   order: 3
+  attrs:
+    data-icon: question-circle
 ---
 
 A number in an engineering model is never only a number. How well it is known

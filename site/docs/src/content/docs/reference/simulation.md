@@ -3,6 +3,8 @@ title: Simulation
 description: Explicit plans and what happens when the simulator is missing.
 sidebar:
   order: 6
+  attrs:
+    data-icon: analytics
 ---
 
 Simulation is a compiler target, not a side trip. A design lowers to a SPICE

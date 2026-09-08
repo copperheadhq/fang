@@ -3,6 +3,8 @@ title: Installation
 description: Install fang and build your first board.
 sidebar:
   order: 2
+  attrs:
+    data-icon: rocket
 ---
 
 Fang is pure Python 3.11+ with no required dependencies.

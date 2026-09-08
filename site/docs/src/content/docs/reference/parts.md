@@ -3,6 +3,8 @@ title: Parts
 description: The standard library and what a generic part deliberately lacks.
 sidebar:
   order: 4
+  attrs:
+    data-icon: puzzle
 ---
 
 ```python

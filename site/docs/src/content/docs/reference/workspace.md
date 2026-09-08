@@ -3,6 +3,8 @@ title: Workspace
 description: What `.copperhead/` holds and what may be deleted.
 sidebar:
   order: 7
+  attrs:
+    data-icon: laptop
 ---
 
 `fang init` creates a workspace beside your sources; `fang build` fills it.
