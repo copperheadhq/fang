@@ -47,6 +47,7 @@ fang netlist board.py     # components and nets
 fang export  board.py -o board.net   # a KiCad netlist
 fang view    board.py ground -o ground.svg
 fang sim     board.py --analysis transient --probe "V(1)"
+fang mcp     board.py     # serve the agent surface over stdio
 ```
 
 ## What it does
@@ -124,6 +125,7 @@ fang/
 ```bash
 pip install copperhead-fang               # the toolchain and the `fang` command
 pip install "copperhead-fang[analysis]"   # add NetworkX for the graph queries
+pip install "copperhead-fang[mcp]"       # add the agent surface, `fang mcp`
 ```
 
 The distribution is named `copperhead-fang`; the import name is `fang`.
@@ -133,14 +135,15 @@ To work on it:
 ```bash
 git clone https://github.com/copperheadhq/fang
 cd fang
-pip install -e ".[dev,analysis]"
+pip install -e ".[dev,analysis,mcp]"
 python -m pytest
 ```
 
-Pure Python 3.11+, standard library only. NetworkX is an optional extra used for
-graph *analysis*; ngspice is an optional external simulator reached across a
-process boundary. Neither is required, and when either is absent the toolchain
-says so rather than substituting anything.
+Pure Python 3.11+, and the core install has no dependencies at all. Three things
+are optional and none is required: NetworkX, an extra used for graph *analysis*;
+the MCP SDK, the extra behind `fang mcp`; and ngspice, an external simulator
+reached across a process boundary. When any of them is absent the toolchain says
+so rather than substituting anything.
 
 ## Invariants the tests hold
 
@@ -161,13 +164,13 @@ says so rather than substituting anything.
 ## Tests
 
 ```bash
-python -m pytest          # 502 passing; 503 with the 'analysis' extra installed
+python -m pytest          # 553 tests; 551 pass here, the rest skip by name
 python -m pytest -rs      # names each environment-dependent skip
 ```
 
 The suite includes one test per acceptance criterion (AT-R1 to AT-R13 and AT-K1
-to AT-K10). **All 23 pass.** The only skips are for optional binaries that are
-not installed here: NetworkX and ngspice.
+to AT-K10). **All 23 pass.** The only skips name what is missing: the NetworkX
+and MCP extras, and the ngspice binary.
 
 ## Examples
 
