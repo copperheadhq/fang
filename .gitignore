@@ -55,3 +55,8 @@ Thumbs.db
 node_modules/
 site/docs/dist/
 site/docs/.astro/
+
+# atopile build artifacts from the parity harness; the checked-in artifact is
+# the layout each build updates in place.
+examples/parity/build/
+examples/parity/elec/layout/*/backups/

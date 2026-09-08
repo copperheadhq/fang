@@ -1,0 +1,20 @@
+"""The same board as examples/blinky.py, instance for instance."""
+
+from "parts/parts.ato" import Capacitor100nF, LedRed, MCU, PowerHeader, Resistor330
+
+module Blinky:
+    header = new PowerHeader
+    mcu = new MCU
+    series = new Resistor330
+    indicator = new LedRed
+    bypass = new Capacitor100nF
+
+    header.vcc ~ mcu.vdd
+    header.gnd ~ mcu.vss
+
+    mcu.blink ~ series.p1
+    series.p2 ~ indicator.p1
+    indicator.p2 ~ header.gnd
+
+    mcu.vdd ~ bypass.p1
+    mcu.vss ~ bypass.p2

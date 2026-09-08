@@ -19,6 +19,14 @@ tracked separately and moves only when the serialized form changes.
 - `tests/test_examples.py`, which builds every example in `examples/`: it must
   elaborate, validate, fail no check, project to a netlist that leaves no
   component unconnected, emit a KiCad netlist, and do it identically twice.
+- A parity harness against atopile. `examples/parity/` is an atopile project
+  whose boards mirror `divider/` and `blinky/` instance for instance, and
+  `tests/test_parity.py` asserts that both toolchains produce the same
+  components and the same partition of pads into nets. Designators, net names,
+  and part identity are deliberately not compared — each is the toolchain's own
+  business. The atopile artifact is checked in, so the suite needs neither
+  atopile nor a network; the parts are atomic so that refreshing it needs no
+  account either.
 - Every example is now a folder — the program, a `README.md` explaining what it
   is for, and the files `fang` produces from it under `out/`: the KiCad netlist,
   the netlist, check and graph listings, the views worth looking at, and a

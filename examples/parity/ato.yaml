@@ -1,0 +1,9 @@
+# The atopile half of the parity harness. Both boards mirror a Fang example
+# instance for instance, so the two toolchains can be given the same design and
+# their outputs compared.
+requires-atopile: ">=0.15.0"
+builds:
+  divider:
+    entry: elec/src/divider.ato:Divider
+  blinky:
+    entry: elec/src/blinky.ato:Blinky

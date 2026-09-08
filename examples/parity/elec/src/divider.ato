@@ -1,0 +1,17 @@
+"""The same board as examples/divider.py, instance for instance."""
+
+from "parts/parts.ato" import Capacitor100uF, Resistor10k, Resistor4k7
+import Electrical
+
+module Divider:
+    supply = new Electrical
+    output = new Electrical
+    ground = new Electrical
+
+    top = new Resistor10k
+    bottom = new Resistor4k7
+    filter_cap = new Capacitor100uF
+
+    top.p2 ~ bottom.p1
+    bottom.p1 ~ filter_cap.p1
+    bottom.p2 ~ filter_cap.p2

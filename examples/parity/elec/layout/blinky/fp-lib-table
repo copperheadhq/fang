@@ -1,0 +1,10 @@
+(fp_lib_table
+	(version 7)
+	(lib
+		(name "parts")
+		(type "KiCad")
+		(uri "${KIPRJMOD}/../../src/parts")
+		(options "")
+		(descr "atopile: part lib: parts")
+	)
+)

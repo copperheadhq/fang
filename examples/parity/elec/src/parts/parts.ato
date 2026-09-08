@@ -1,0 +1,100 @@
+"""The parts both toolchains build these boards from.
+
+Every part is atomic: its footprint and its pins are declared here rather than
+picked, so a build needs no network and no account, and so the two toolchains
+are given exactly the same parts to work with. The LCSC codes are the real codes
+for these values; nothing looks them up.
+"""
+
+import has_designator_prefix
+import has_part_picked
+import is_atomic_part
+
+
+component Resistor10k:
+    trait is_atomic_part<manufacturer="Yageo", partnumber="RC0603FR-0710KL", footprint="R0603.kicad_mod", symbol="R.kicad_sym">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C25804", manufacturer="Yageo", partno="RC0603FR-0710KL">
+    trait has_designator_prefix<prefix="R">
+    pin 1
+    pin 2
+    signal p1 ~ pin 1
+    signal p2 ~ pin 2
+
+
+component Resistor4k7:
+    trait is_atomic_part<manufacturer="Yageo", partnumber="RC0603FR-074K7L", footprint="R0603.kicad_mod", symbol="R.kicad_sym">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C23162", manufacturer="Yageo", partno="RC0603FR-074K7L">
+    trait has_designator_prefix<prefix="R">
+    pin 1
+    pin 2
+    signal p1 ~ pin 1
+    signal p2 ~ pin 2
+
+
+component Resistor330:
+    trait is_atomic_part<manufacturer="Yageo", partnumber="RC0603FR-07330RL", footprint="R0603.kicad_mod", symbol="R.kicad_sym">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C23138", manufacturer="Yageo", partno="RC0603FR-07330RL">
+    trait has_designator_prefix<prefix="R">
+    pin 1
+    pin 2
+    signal p1 ~ pin 1
+    signal p2 ~ pin 2
+
+
+component Capacitor100uF:
+    trait is_atomic_part<manufacturer="Samsung", partnumber="CL21A106KOQNNNE", footprint="C0805.kicad_mod", symbol="C.kicad_sym">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C15850", manufacturer="Samsung", partno="CL21A106KOQNNNE">
+    trait has_designator_prefix<prefix="C">
+    pin 1
+    pin 2
+    signal p1 ~ pin 1
+    signal p2 ~ pin 2
+
+
+component Capacitor100nF:
+    trait is_atomic_part<manufacturer="Samsung", partnumber="CL05B104KO5NNNC", footprint="C0402.kicad_mod", symbol="C.kicad_sym">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C1525", manufacturer="Samsung", partno="CL05B104KO5NNNC">
+    trait has_designator_prefix<prefix="C">
+    pin 1
+    pin 2
+    signal p1 ~ pin 1
+    signal p2 ~ pin 2
+
+
+component LedRed:
+    trait is_atomic_part<manufacturer="Everlight", partnumber="19-217-R6C-AL1M2VY-3T", footprint="LED0603.kicad_mod", symbol="LED.kicad_sym">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C72043", manufacturer="Everlight", partno="19-217-R6C-AL1M2VY-3T">
+    trait has_designator_prefix<prefix="DS">
+    pin 1
+    pin 2
+    signal p1 ~ pin 1
+    signal p2 ~ pin 2
+
+
+component PowerHeader:
+    """Two pins and a rail: where the board's power arrives."""
+    trait is_atomic_part<manufacturer="Generic", partnumber="HDR-1x02-2.54", footprint="PinHeader_1x02.kicad_mod", symbol="Conn.kicad_sym">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C124375", manufacturer="Generic", partno="HDR-1x02-2.54">
+    trait has_designator_prefix<prefix="J">
+    pin 1
+    pin 2
+    signal vcc ~ pin 1
+    signal gnd ~ pin 2
+
+
+component MCU:
+    """A microcontroller, reduced to the three pins these boards use."""
+    trait is_atomic_part<manufacturer="STMicroelectronics", partnumber="STM8S001J3M3", footprint="SOIC8.kicad_mod", symbol="MCU.kicad_sym">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C92450", manufacturer="STMicroelectronics", partno="STM8S001J3M3">
+    trait has_designator_prefix<prefix="U">
+    pin 1
+    pin 2
+    pin 3
+    pin 4
+    pin 5
+    pin 6
+    pin 7
+    pin 8
+    signal vdd ~ pin 1
+    signal vss ~ pin 8
+    signal blink ~ pin 5
