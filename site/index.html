@@ -1,0 +1,591 @@
+<title>fang</title>
+<meta name="description" content="The language and kernel under copperhead. Write hardware in Python; the kernel decides what is true about it.">
+<link rel="icon" href="/brand/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+  /* ── Tokens ───────────────────────────────────────────────────────────
+     Lifted from docs.copperhead.sh so the two properties are one system.
+     Dark is the ground state; light is the deliberate swap. */
+  :root {
+    --copper: #c47a3a;
+    --copper-bright: #e6a366;
+    --copper-pale: #f2b57e;
+    --copper-deep: #3b2614;
+    --copper-hover: #d48a48;
+
+    --bg: #1b1b1c;
+    --bg-raised: #232425;
+    --bg-sunken: #151516;
+    --hairline: #343638;
+    --hairline-soft: #2a2b2c;
+
+    --text: #e3e5e8;
+    --text-muted: #b3b8be;
+    --text-dim: #8a9098;
+    --on-accent: #1b1b1c;
+
+    --ok: #6fbf73;
+    --warn: #d9a441;
+    --stop: #d56b62;
+
+    --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+    --page: 64rem;
+    --prose: 44rem;
+    --rule: 1px solid var(--hairline);
+    color-scheme: dark;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --copper: #a35d1f;
+      --copper-bright: #9a5619;
+      --copper-pale: #5d3411;
+      --copper-deep: #f8e9db;
+      --copper-hover: #8f4f18;
+
+      --bg: #ffffff;
+      --bg-raised: #f7f8fa;
+      --bg-sunken: #eff2f6;
+      --hairline: #e3e7ed;
+      --hairline-soft: #eff2f6;
+
+      --text: #2b2d32;
+      --text-muted: #545962;
+      --text-dim: #686f7a;   /* nudged from copperhead's #6d747f: that value
+                                 lands at 4.44 on the raised surface, just under 4.5 */
+      --on-accent: #ffffff;
+
+      --ok: #2f7d3a;
+      --warn: #8a6410;
+      --stop: #a83b32;
+      color-scheme: light;
+    }
+  }
+
+  :root[data-theme="light"] {
+    --copper: #a35d1f;
+    --copper-bright: #9a5619;
+    --copper-pale: #5d3411;
+    --copper-deep: #f8e9db;
+    --copper-hover: #8f4f18;
+
+    --bg: #ffffff;
+    --bg-raised: #f7f8fa;
+    --bg-sunken: #eff2f6;
+    --hairline: #e3e7ed;
+    --hairline-soft: #eff2f6;
+
+    --text: #2b2d32;
+    --text-muted: #545962;
+    --text-dim: #686f7a;
+    --on-accent: #ffffff;
+
+    --ok: #2f7d3a;
+    --warn: #8a6410;
+    --stop: #a83b32;
+    color-scheme: light;
+  }
+
+  /* ── Base ─────────────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--copper-bright); text-decoration: none; }
+  a:hover { color: var(--copper-hover); }
+  :focus-visible { outline: 2px solid var(--copper); outline-offset: 3px; border-radius: 3px; }
+
+  h1, h2, h3 { line-height: 1.25; text-wrap: balance; margin: 0; font-weight: 600; letter-spacing: -0.011em; }
+  p { margin: 0; }
+
+  code, pre, .mono { font-family: var(--mono); font-variant-ligatures: none; }
+
+  .wrap { width: 100%; max-width: var(--page); margin-inline: auto; padding-inline: 1.5rem; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin: 0;
+  }
+
+  /* ── Header ───────────────────────────────────────────────────────── */
+  header.site {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: var(--rule);
+  }
+  .bar { display: flex; align-items: center; gap: 1.25rem; height: 3.5rem; }
+  .lockup { display: flex; align-items: center; gap: 0.55rem; color: var(--text); font-family: var(--mono); font-size: 1.0625rem; font-weight: 500; }
+  .lockup svg { display: block; color: var(--copper); }
+  .lockup .parent { color: var(--text-dim); font-weight: 400; }
+  .bar nav { margin-left: auto; display: flex; align-items: center; gap: 0.25rem; }
+  .bar nav a {
+    color: var(--text-muted); font-size: 0.875rem;
+    padding: 0.375rem 0.625rem; border-radius: 0.375rem;
+  }
+  .bar nav a:hover { color: var(--text); background: color-mix(in srgb, var(--text) 7%, transparent); }
+  .toggle {
+    display: grid; place-items: center;
+    width: 2rem; height: 2rem; margin-left: 0.25rem;
+    background: none; border: var(--rule); border-radius: 0.375rem;
+    color: var(--text-muted); cursor: pointer;
+  }
+  .toggle:hover { color: var(--text); border-color: var(--text-dim); }
+
+  /* ── Hero ─────────────────────────────────────────────────────────── */
+  .hero { padding-block: 4rem 3rem; border-bottom: var(--rule); }
+  .hero h1 { font-size: clamp(2.25rem, 5.5vw, 3.25rem); letter-spacing: -0.025em; margin-top: 0.75rem; }
+  .hero h1 em { font-style: normal; color: var(--copper-bright); }
+  .hero .lede { max-width: var(--prose); color: var(--text-muted); font-size: 1.125rem; margin-top: 1.125rem; }
+  .hero .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.75rem; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    font-family: var(--mono); font-size: 0.875rem;
+    padding: 0.5rem 0.9rem; border-radius: 0.375rem;
+    border: var(--rule);
+  }
+  .btn.primary { background: var(--copper); border-color: var(--copper); color: var(--on-accent); font-weight: 500; }
+  .btn.primary:hover { background: var(--copper-hover); border-color: var(--copper-hover); color: var(--on-accent); }
+  .btn.ghost { color: var(--text); }
+  .btn.ghost:hover { color: var(--text); border-color: var(--text-dim); background: color-mix(in srgb, var(--text) 5%, transparent); }
+
+  /* ── The transformation: the one place boldness is spent ──────────── */
+  .transform {
+    margin-top: 3rem;
+    border: var(--rule); border-radius: 0.75rem;
+    background: var(--bg-raised);
+    overflow: hidden;
+  }
+  .transform-grid { display: grid; grid-template-columns: 1fr; }
+  @media (min-width: 56rem) { .transform-grid { grid-template-columns: 1fr 1fr; } }
+
+  .pane { padding: 1.25rem 1.375rem 1.5rem; min-width: 0; }
+  .pane + .pane { border-top: var(--rule); }
+  @media (min-width: 56rem) { .pane + .pane { border-top: 0; border-left: var(--rule); } }
+
+  .pane-head { display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.9rem; }
+  .pane-head .n {
+    font-family: var(--mono); font-size: 0.6875rem; font-weight: 600;
+    color: var(--copper); letter-spacing: 0.06em;
+  }
+  .pane-head h2 { font-size: 0.9375rem; font-weight: 500; }
+  .pane-head .note { margin-left: auto; font-size: 0.75rem; color: var(--text-dim); font-family: var(--mono); }
+
+  pre {
+    margin: 0; overflow-x: auto;
+    font-size: 0.8125rem; line-height: 1.7;
+    color: var(--text-muted);
+    tab-size: 2;
+  }
+  pre .k { color: var(--copper-bright); }
+  pre .s { color: var(--text); }
+  pre .c { color: var(--text-dim); font-style: italic; }
+  pre .hl { color: var(--text); font-weight: 600; }
+
+  .out-row {
+    display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 0.9rem;
+    font-family: var(--mono); font-size: 0.8125rem; line-height: 1.9;
+  }
+  .out-row dt { color: var(--copper-bright); }
+  .out-row dd { margin: 0; color: var(--text-muted); }
+
+  .verdict {
+    display: flex; align-items: flex-start; gap: 0.6rem;
+    border-top: var(--rule); margin-top: 1.125rem; padding-top: 1rem;
+    font-size: 0.8125rem; color: var(--text-dim);
+  }
+  .verdict .dot { width: 0.5rem; height: 0.5rem; border-radius: 999px; background: var(--ok); margin-top: 0.45rem; flex: none; }
+
+  /* ── Sections ─────────────────────────────────────────────────────── */
+  section.band { padding-block: 3.5rem; border-bottom: var(--rule); }
+  section.band > .wrap > .eyebrow + h2 { margin-top: 0.5rem; }
+  section.band h2 { font-size: 1.5rem; letter-spacing: -0.015em; }
+  section.band .intro { max-width: var(--prose); color: var(--text-muted); margin-top: 0.875rem; }
+
+  /* Phases: a real sequence, so it is numbered. */
+  .phases { display: grid; gap: 0; margin-top: 2rem; border: var(--rule); border-radius: 0.75rem; overflow: hidden; }
+  @media (min-width: 52rem) { .phases { grid-template-columns: repeat(3, 1fr); } }
+  .phase { padding: 1.25rem 1.375rem 1.5rem; background: var(--bg-raised); }
+  .phase + .phase { border-top: var(--rule); }
+  @media (min-width: 52rem) { .phase + .phase { border-top: 0; border-left: var(--rule); } }
+  .phase .step {
+    font-family: var(--mono); font-size: 0.6875rem; font-weight: 600;
+    color: var(--copper); letter-spacing: 0.08em;
+  }
+  .phase h3 { font-size: 1rem; margin-top: 0.4rem; }
+  .phase p { font-size: 0.875rem; color: var(--text-muted); margin-top: 0.5rem; }
+  .phase .rule { font-family: var(--mono); font-size: 0.75rem; color: var(--text-dim); margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid var(--hairline-soft); }
+
+  /* Refusals: the differentiator, in the tool's own voice. */
+  .terminal {
+    margin-top: 2rem; border: var(--rule); border-radius: 0.75rem;
+    background: var(--bg-sunken); overflow: hidden;
+  }
+  .terminal-bar {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.55rem 1rem; border-bottom: var(--rule);
+    font-family: var(--mono); font-size: 0.75rem; color: var(--text-dim);
+    background: var(--bg-raised);
+  }
+  .terminal-body { padding: 1.125rem 1.25rem; overflow-x: auto; }
+  .diag { font-family: var(--mono); font-size: 0.8125rem; line-height: 1.85; white-space: pre; }
+  .diag .loc { color: var(--text-dim); }
+  .diag .sev-error { color: var(--stop); }
+  .diag .sev-undecided { color: var(--warn); }
+  .diag .code { color: var(--copper-bright); }
+  .diag .msg { color: var(--text-muted); }
+  .refusal-note { margin-top: 1.5rem; max-width: var(--prose); color: var(--text-muted); font-size: 0.9375rem; }
+
+  /* Stage table */
+  .table-scroll { overflow-x: auto; margin-top: 2rem; border: var(--rule); border-radius: 0.75rem; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.875rem; }
+  th, td { text-align: left; padding: 0.7rem 1rem; border-bottom: 1px solid var(--hairline-soft); vertical-align: top; }
+  thead th {
+    font-family: var(--mono); font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--text-dim); font-weight: 500; background: var(--bg-raised);
+    border-bottom: var(--rule); white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.stage { font-family: var(--mono); color: var(--copper-bright); white-space: nowrap; }
+  td.what { color: var(--text-muted); }
+  td.count { font-family: var(--mono); color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* Numbers */
+  .figures { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; margin-top: 2rem; background: var(--hairline); border: var(--rule); border-radius: 0.75rem; overflow: hidden; }
+  @media (min-width: 44rem) { .figures { grid-template-columns: repeat(4, 1fr); } }
+  .figure { background: var(--bg-raised); padding: 1.1rem 1.25rem 1.25rem; }
+  .figure .v { font-family: var(--mono); font-size: 1.5rem; font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; }
+  .figure .l { font-size: 0.8125rem; color: var(--text-dim); margin-top: 0.2rem; }
+
+  /* Install */
+  .cmds { margin-top: 1.75rem; border: var(--rule); border-radius: 0.75rem; overflow: hidden; }
+  .cmd { display: grid; grid-template-columns: 1fr; gap: 0.15rem; padding: 0.85rem 1.125rem; background: var(--bg-raised); }
+  .cmd + .cmd { border-top: 1px solid var(--hairline-soft); }
+  .cmd code { font-size: 0.8125rem; color: var(--text); }
+  .cmd code .p { color: var(--copper); user-select: none; }
+  .cmd .say { font-size: 0.8125rem; color: var(--text-dim); }
+
+  /* Footer */
+  footer.site { padding-block: 2.5rem 3.5rem; }
+  .foot { display: flex; flex-wrap: wrap; gap: 1rem 2rem; align-items: center; }
+  .foot .made { color: var(--text-dim); font-size: 0.875rem; }
+  .foot nav { margin-left: auto; display: flex; flex-wrap: wrap; gap: 1.25rem; }
+  .foot nav a { color: var(--text-muted); font-size: 0.875rem; }
+  .foot nav a:hover { color: var(--text); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+
+<header class="site">
+  <div class="wrap bar">
+    <a class="lockup" href="/">
+      <svg viewBox="4.625 4.625 22.75 22.75" width="22" height="22" aria-hidden="true">
+        <path d="M5.75 7.5h20.5" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round"/>
+        <path d="M10.5 7.5 16 24.5l5.5-17" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span><span class="parent">copperhead&nbsp;/&nbsp;</span>fang</span>
+    </a>
+    <nav>
+      <a href="https://docs.copperhead.sh">docs</a>
+      <a href="#toolchain">toolchain</a>
+      <a href="#install">install</a>
+      <a href="https://github.com/copperhead-sh/fang">github</a>
+      <button class="toggle" id="theme" type="button" aria-label="Switch between light and dark">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4.5"/>
+          <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <p class="eyebrow">The language and kernel under copperhead</p>
+      <h1>Write the hardware.<br>Let the kernel decide <em>what is true</em>.</h1>
+      <p class="lede">
+        Fang is a Python-embedded language for circuit boards. You author intent — typed
+        interfaces, parameters with units, constraints. The kernel elaborates it into one
+        canonical model, refuses anything it cannot justify, and lowers what survives into
+        netlists, views, simulation decks, and KiCad.
+      </p>
+      <div class="actions">
+        <a class="btn primary" href="#install">Get started</a>
+        <a class="btn ghost" href="https://docs.copperhead.sh">Read the docs</a>
+        <a class="btn ghost" href="https://github.com/copperhead-sh/fang">Source</a>
+      </div>
+
+      <div class="transform">
+        <div class="transform-grid">
+          <div class="pane">
+            <div class="pane-head">
+              <span class="n">YOU WRITE</span>
+              <h2>sensor_board.py</h2>
+            </div>
+<pre><code><span class="c"># Two candidate pin pairs for the I2C peripheral.</span>
+<span class="k">class</span> <span class="s">MCU</span>(Part):
+    i2c = I2CPort(voh_min=<span class="s">2.4 * V</span>, voltage=<span class="s">3.3 * V</span>)
+    PB8 = Pin(<span class="s">"PB8"</span>, role=<span class="s">"clock"</span>)
+    PB6 = Pin(<span class="s">"PB6"</span>, role=<span class="s">"clock"</span>)
+    PB9 = Pin(<span class="s">"PB9"</span>, role=<span class="s">"data"</span>)
+    PB7 = Pin(<span class="s">"PB7"</span>, role=<span class="s">"data"</span>)
+    pinmap = PinMap({
+        <span class="s">"i2c.scl"</span>: [<span class="s">"PB8"</span>, <span class="s">"PB6"</span>],
+        <span class="s">"i2c.sda"</span>: [<span class="s">"PB9"</span>, <span class="s">"PB7"</span>],
+    })
+
+<span class="k">class</span> <span class="s">SensorBoard</span>(System):
+    mcu = MCU(package=<span class="s">"LQFP-64"</span>)
+    imu = IMU(package=<span class="s">"LGA-14"</span>)
+
+    <span class="k">def</span> <span class="s">architecture</span>(self):
+        <span class="hl">self.mcu.i2c &gt;&gt; self.imu.i2c</span>
+</code></pre>
+          </div>
+
+          <div class="pane">
+            <div class="pane-head">
+              <span class="n">THE KERNEL DECIDES</span>
+              <h2>lowering</h2>
+              <span class="note">deterministic</span>
+            </div>
+            <dl class="out-row">
+              <dt>PB8 → SCL</dt><dd>i2c.scl, lowered from the interface connection</dd>
+              <dt>PB9 → SDA</dt><dd>i2c.sda, lowered from the interface connection</dd>
+              <dt>DEC-4a1c…</dt><dd>chose PB8 over PB6 — rationale recorded</dd>
+              <dt>DEC-9f30…</dt><dd>chose PB9 over PB7 — rationale recorded</dd>
+            </dl>
+            <div class="verdict">
+              <span class="dot" aria-hidden="true"></span>
+              <p>
+                Pin assignment is a lowering result, never an authoring input. Because a
+                choice existed, it became a decision entity naming what it rejected — so a
+                part substitution later can be argued with rather than guessed at.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="phases">
+    <div class="wrap">
+      <p class="eyebrow">Elaboration → operation → commit</p>
+      <h2>Three phases, never interleaved</h2>
+      <p class="intro">
+        The order is the whole point. A program that could observe a tool's result would
+        not be reproducible, so it never can — it records what it wants done and stops.
+      </p>
+
+      <div class="phases">
+        <article class="phase">
+          <p class="step">PHASE 1</p>
+          <h3>Elaborate</h3>
+          <p>
+            Your program runs in a sandbox with no network and only declared, hashed file
+            inputs. It builds a graph and a tool plan. It calls no engine and touches no
+            geometry.
+          </p>
+          <p class="rule">A tool call returns a handle, not a result.</p>
+        </article>
+        <article class="phase">
+          <p class="step">PHASE 2</p>
+          <h3>Operate</h3>
+          <p>
+            The recorded plan runs against immutable snapshots. Placers, routers, checkers
+            and simulators are reached across a process boundary and produce candidate
+            realizations.
+          </p>
+          <p class="rule">Nothing here mutates canonical state.</p>
+        </article>
+        <article class="phase">
+          <p class="step">PHASE 3</p>
+          <h3>Commit</h3>
+          <p>
+            One gate, six conditions, and the same path for a human edit, a re-elaboration,
+            a CAD import and an agent proposal. A rejection still returns its diagnostics
+            and its diff.
+          </p>
+          <p class="rule">Only then are downstream artifacts written.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="refuses">
+    <div class="wrap">
+      <p class="eyebrow">Diagnostics</p>
+      <h2>What it refuses to do</h2>
+      <p class="intro">
+        Most of the value is in the answers the kernel declines to give. Every refusal
+        carries a stable code, a severity, and the line that caused it.
+      </p>
+
+      <div class="terminal">
+        <div class="terminal-bar">
+          <svg viewBox="4.625 4.625 22.75 22.75" width="13" height="13" aria-hidden="true" style="color: var(--copper)">
+            <path d="M5.75 7.5h20.5" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round"/>
+            <path d="M10.5 7.5 16 24.5l5.5-17" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>fang check sensor_board.py</span>
+        </div>
+        <div class="terminal-body">
+<p class="diag"><span class="loc">sensor_board.py:31:</span> <span class="sev-error">error</span>: <span class="code">UNIT-0001</span>  <span class="msg">le requires operands of equal dimension: V is not A</span></p>
+<p class="diag"><span class="loc">sensor_board.py:47:</span> <span class="sev-error">error</span>: <span class="code">IFACE-0001</span> <span class="msg">the required signal 'sda' has no candidate pin on the right side</span></p>
+<p class="diag"><span class="loc">sensor_board.py:12:</span> <span class="sev-error">error</span>: <span class="code">ELAB-0005</span>  <span class="msg">a power_output surface does not connect to a mechanical surface</span></p>
+<p class="diag"><span class="loc">                  </span> <span class="sev-undecided">undecided</span>: <span class="code">IFACE</span>      <span class="msg">logic high margin is undecided: vih_min unknown</span></p>
+<p class="diag"><span class="loc">                  </span> <span class="sev-error">blocked</span>: <span class="code">TXN-0002</span>   <span class="msg">a required check reported a blocking severity — nothing committed</span></p>
+        </div>
+      </div>
+
+      <p class="refusal-note">
+        <strong>Undecided is a third truth value.</strong> An unknown datasheet number makes a
+        check undecided — never a quiet pass. Whether undecided blocks is the gate's policy
+        decision, not the evaluator's. A dimensionally invalid expression is rejected where
+        it is written, so it can never be stored. A missing simulator reports unsupported
+        rather than substituting a model. An unmodelled CAD construct is named in the import
+        report rather than dropped. Nothing is invented to make an answer available.
+      </p>
+    </div>
+  </section>
+
+  <section class="band" id="toolchain">
+    <div class="wrap">
+      <p class="eyebrow">Eleven stages, all delivered</p>
+      <h2>The toolchain</h2>
+      <p class="intro">
+        Stages one through six close the loop from a Fang program to a KiCad netlist a
+        person can open. The rest are what you need once the loop is real.
+      </p>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th scope="col">Stage</th><th scope="col">Delivers</th><th scope="col">Module</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="stage">kernel</td><td class="what">Entity model, stable identity, units, values, constraints, transactions, the commit gate, canonical serialization, semantic diff, topology intent</td><td class="count">graph.py</td></tr>
+            <tr><td class="stage">language</td><td class="what">Modules, systems, parts, parameters with units, traits, <code>require()</code>, the connect operator, deterministic sandboxed elaboration</td><td class="count">lang.py</td></tr>
+            <tr><td class="stage">interfaces</td><td class="what">A catalogue of 17 typed interfaces, ports, buses, deterministic pin lowering, compatibility checks that return undecided</td><td class="count">lowering.py</td></tr>
+            <tr><td class="stage">parts</td><td class="what">Designators, packages, footprints, sourcing, and a standard library of generic parts</td><td class="count">parts.py</td></tr>
+            <tr><td class="stage">netlist</td><td class="what">Net inference, deterministic designator assignment, KiCad netlist emission</td><td class="count">netlist.py</td></tr>
+            <tr><td class="stage">cad</td><td class="what">S-expression reading, project import, the external identifier mapping table, loss reporting, one safe round trip</td><td class="count">kicad.py</td></tr>
+            <tr><td class="stage">tool plan</td><td class="what">Handles as symbolic conditions, the tool contract, the operation phase, realizations</td><td class="count">runtime.py</td></tr>
+            <tr><td class="stage">views</td><td class="what">System, interconnect, power, ground, interfaces and safety views; the layout boundary; SVG; stable placement seeds</td><td class="count">views.py</td></tr>
+            <tr><td class="stage">simulation</td><td class="what">Models as traits, explicit plans, SPICE lowering, the ngspice backend, normalized results with their coverage gaps</td><td class="count">simulation.py</td></tr>
+            <tr><td class="stage">rationale</td><td class="what">Requirements, assumptions, decisions, evidence, calculations, the verification graph, impact propagation</td><td class="count">rationale.py</td></tr>
+            <tr><td class="stage">cli</td><td class="what">The <code>.copperhead/</code> workspace, its manifest, and the commands</td><td class="count">cli.py</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="figures">
+        <div class="figure"><p class="v">81</p><p class="l">normative requirements</p></div>
+        <div class="figure"><p class="v">217</p><p class="l">specified scenarios</p></div>
+        <div class="figure"><p class="v">23 / 23</p><p class="l">acceptance criteria passing</p></div>
+        <div class="figure"><p class="v">430</p><p class="l">tests, no placeholders</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="install">
+    <div class="wrap">
+      <p class="eyebrow">Python 3.11+, standard library only</p>
+      <h2>Install</h2>
+      <p class="intro">
+        No required dependencies. NetworkX is an optional extra for graph analysis; ngspice
+        is an optional external simulator. When either is absent, the toolchain says so
+        rather than working around it.
+      </p>
+
+      <div class="cmds">
+        <div class="cmd">
+          <code><span class="p">$ </span>pip install fang</code>
+          <span class="say">The kernel, the language, and the <code>fang</code> command.</span>
+        </div>
+        <div class="cmd">
+          <code><span class="p">$ </span>fang build board.py</code>
+          <span class="say">Elaborate, pass the gate, persist the workspace, run the plan.</span>
+        </div>
+        <div class="cmd">
+          <code><span class="p">$ </span>fang check board.py</code>
+          <span class="say">Constraints, ground topology, interface compatibility.</span>
+        </div>
+        <div class="cmd">
+          <code><span class="p">$ </span>fang export board.py -o board.net</code>
+          <span class="say">A KiCad netlist, byte-identical for unchanged input.</span>
+        </div>
+        <div class="cmd">
+          <code><span class="p">$ </span>fang view board.py ground -o ground.svg</code>
+          <span class="say">Ground topology as intent, distinct from net equivalence.</span>
+        </div>
+        <div class="cmd">
+          <code><span class="p">$ </span>fang sim board.py --analysis transient --probe "V(1)"</code>
+          <span class="say">A SPICE deck, a run, and a result that names its coverage gaps.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site">
+  <div class="wrap foot">
+    <p class="made">
+      fang is part of <a href="https://copperhead.sh">copperhead</a>. Apache&nbsp;2.0.
+    </p>
+    <nav>
+      <a href="https://docs.copperhead.sh">Documentation</a>
+      <a href="https://github.com/copperhead-sh/fang">GitHub</a>
+      <a href="https://github.com/copperhead-sh/fang/blob/main/openspec/specs/fang-kernel/spec.md">Specification</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    var button = document.getElementById("theme");
+
+    function stored() {
+      try { return localStorage.getItem("fang-theme"); } catch (e) { return null; }
+    }
+    function remember(value) {
+      try { localStorage.setItem("fang-theme", value); } catch (e) { /* private mode */ }
+    }
+
+    var saved = stored();
+    if (saved === "light" || saved === "dark") root.setAttribute("data-theme", saved);
+
+    button.addEventListener("click", function () {
+      var isLight = root.getAttribute("data-theme") === "light" ||
+        (!root.hasAttribute("data-theme") &&
+          window.matchMedia("(prefers-color-scheme: light)").matches);
+      var next = isLight ? "dark" : "light";
+      root.setAttribute("data-theme", next);
+      remember(next);
+    });
+  })();
+</script>

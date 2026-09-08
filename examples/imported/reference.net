@@ -1,0 +1,27 @@
+(export "version" "E"
+  (design
+    (source "reference.kicad_sch")
+    (tool "KiCad 8.0"))
+  (libparts
+    (libpart "lib" "Device" "part" "R")
+    (libparts_detail "vendor specific data this adapter does not model"))
+  (components
+    (comp (ref "U1") (value "STM32G474CBT6") (footprint "Package_QFP:LQFP-48"))
+    (comp (ref "C1") (value "100nF") (footprint "Capacitor_SMD:C_0402_1005Metric"))
+    (comp (ref "C2") (value "10uF") (footprint "Capacitor_SMD:C_0805_2012Metric"))
+    (comp (ref "R1") (value "10k") (footprint "Resistor_SMD:R_0402_1005Metric"))
+    (comp (ref "J1") (value "USB_C") (footprint "Connector_USB:USB_C_Receptacle")))
+  (nets
+    (net "code" "1" "name" "+3V3"
+      (node "ref" "U1" "pin" "1")
+      (node "ref" "C1" "pin" "1")
+      (node "ref" "C2" "pin" "1")
+      (node "ref" "R1" "pin" "1"))
+    (net "code" "2" "name" "GND"
+      (node "ref" "U1" "pin" "8")
+      (node "ref" "C1" "pin" "2")
+      (node "ref" "C2" "pin" "2")
+      (node "ref" "J1" "pin" "1"))
+    (net "code" "3" "name" "NRST"
+      (node "ref" "U1" "pin" "7")
+      (node "ref" "R1" "pin" "2"))))

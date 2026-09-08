@@ -1,0 +1,13 @@
+# The sdist carries what a source consumer needs to run the suite and read the
+# contract: the tests, the examples they exercise, and the spec under openspec/.
+include CHANGELOG.md
+include RELEASING.md
+include CLAUDE.md
+graft tests
+graft examples
+graft openspec
+prune site
+prune .claude
+prune .github
+global-exclude *.py[cod]
+global-exclude .DS_Store

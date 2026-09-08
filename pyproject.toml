@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "copperhead-fang"
+description = "The Copperhead hardware kernel and the Fang authoring language"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Animesh Chouhan", email = "animesh@copperhead.sh" }]
+keywords = [
+    "eda",
+    "electronics",
+    "hardware",
+    "hdl",
+    "kicad",
+    "netlist",
+    "pcb",
+    "schematic",
+    "spice",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Manufacturing",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
+    "Topic :: Software Development :: Compilers",
+    "Typing :: Typed",
+]
+dependencies = []
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/copperheadhq/fang"
+Repository = "https://github.com/copperheadhq/fang"
+Issues = "https://github.com/copperheadhq/fang/issues"
+Changelog = "https://github.com/copperheadhq/fang/blob/main/CHANGELOG.md"
+
+[project.scripts]
+fang = "fang.cli:main"
+
+[project.optional-dependencies]
+analysis = ["networkx>=3.0"]
+dev = ["pytest>=8.0", "build>=1.2", "twine>=5.1"]
+
+[tool.setuptools.dynamic]
+version = { attr = "fang.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["fang*"]
+
+[tool.setuptools.package-data]
+fang = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+# Only functions are tests here. Without this, domain classes whose names begin
+# with "Test" (TestPoint is a part) get collected as test classes.
+python_classes = []

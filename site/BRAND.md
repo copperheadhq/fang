@@ -1,0 +1,130 @@
+# fang — brand
+
+Fang is a sub-brand of **copperhead**, not a separate identity. It inherits
+copperhead's palette, typefaces, and restraint. What it gets of its own is a
+mark and a voice suited to a language rather than an agent.
+
+The name is literal: copperhead is the snake, fang is the fang. Say it that way
+when the relationship needs explaining — it is the shortest true description of
+how the two products relate.
+
+## The mark
+
+A trace, and a fang descending from it.
+
+```
+────────────────
+   ╲        ╱
+    ╲      ╱
+     ╲    ╱
+      ╲  ╱
+       ╲╱
+```
+
+It is drawn on the same 32-unit grid as the copperhead via mark, with the same
+`2.25` stroke weight, the same round caps and joins, and the same copper. Set
+side by side the two read as one system: copperhead's is a via with four traces
+leaving it; fang's is a single trace with one thing hanging from it.
+
+| Asset | Use |
+| --- | --- |
+| [`brand/mark.svg`](brand/mark.svg) | The mark in copper. Default. |
+| [`brand/mark-currentcolor.svg`](brand/mark-currentcolor.svg) | Inherits `currentColor`. For inline use where the mark must take the surrounding text colour. |
+| [`brand/favicon.svg`](brand/favicon.svg) | 32×32 on the dark chip, matching copperhead's favicon construction. |
+| [`brand/lockup.svg`](brand/lockup.svg) | Horizontal mark plus wordmark. Outline the text before shipping anywhere the webfont is not loaded. |
+
+**Geometry.** Rail `M5.75 7.5 h20.5`. Fang `M10.5 7.5 L16 24.5 L21.5 7.5`.
+Stroke `2.25`, `round` caps and joins, `fill: none`. The glyph spans 20.5 units
+horizontally — the same span as the copperhead mark — and is centred on the
+32-unit grid.
+
+**Clear space.** One stroke-width (2.25 units at the drawn scale) on every side.
+**Minimum size.** 16 px. Below that the fang's apex closes up; use the favicon.
+
+**Do not:** fill the fang, add a taper, rotate it, put it in a circle, or pair it
+with a second accent colour.
+
+## Wordmark
+
+Lowercase `fang`, always. Set in **IBM Plex Mono Medium** — monospace because it
+names a language, where copperhead's own wordmark sits in Inter because it names
+a product you talk to.
+
+In running text the product is *fang*, lowercase, not *Fang* and not *FANG*. At
+the start of a sentence, rewrite the sentence.
+
+When the parent brand needs to be present, the lockup is
+`copperhead / fang`, with `copperhead /` in the muted text colour and `fang` at
+full strength. Never `Copperhead Fang` and never `fang by copperhead`.
+
+## Colour
+
+Copperhead's palette, with two values nudged for contrast (noted below). The
+accent is copper because the subject is copper.
+
+| Token | Dark | Light |
+| --- | --- | --- |
+| Accent | `#c47a3a` | `#a35d1f` |
+| Accent, text | `#e6a366` | `#9a5619` |
+| Accent, high | `#f2b57e` | `#5d3411` |
+| Accent, low | `#3b2614` | `#f8e9db` |
+| Accent, hover | `#d48a48` | `#8f4f18` |
+| Ground | `#1b1b1c` | `#ffffff` |
+| Raised | `#232425` | `#f7f8fa` |
+| Hairline | `#343638` | `#e3e7ed` |
+| Text | `#e3e5e8` | `#2b2d32` |
+| Text, muted | `#b3b8be` | `#545962` |
+| Text, dim | `#8a9098` | `#686f7a` |
+
+The mark asset uses `#b87333` — true copper, and the same value copperhead's own
+mark is drawn in. The interface accent is `#c47a3a`, a step brighter, because it
+has to hold contrast against the dark ground.
+
+Dark is the ground state. Light is a deliberate swap, not an afterthought: every
+token has a light value, and nothing is defined only inside a media query.
+
+Semantic colour is separate from the accent and never stands in for it:
+pass `#6fbf73`, undecided `#d9a441`, blocked `#d56b62` (dark theme values).
+
+Two values are nudged a step from copperhead's own and it is worth knowing why.
+Light `--text-dim` is `#686f7a` rather than copperhead's gray-3 `#6d747f`, which
+lands at 4.44 against the raised surface — just under 4.5. Dark `--stop` is
+`#d56b62` rather than `#d2685f` for the same reason on the raised panel. Both
+shifts are along the original hue and are invisible side by side; every text
+token now clears its threshold on every surface it can sit on, in both themes.
+
+## Type
+
+| Role | Face |
+| --- | --- |
+| Headings, body, UI | Inter |
+| Code, wordmark, labels, data | IBM Plex Mono |
+
+Both are copperhead's. Labels and eyebrows are uppercase IBM Plex Mono at
+`0.75rem` with `0.08em` tracking. Figures that line up in columns get
+`font-variant-numeric: tabular-nums`.
+
+## Voice
+
+The product refuses to overclaim, so the writing does too.
+
+- **Say what it will not do.** "A missing simulator reports unsupported rather
+  than substituting a model" is a better sentence than any list of features.
+- **Undecided is a value, not a hedge.** Never soften it into "may" or
+  "possibly". The kernel is precise about uncertainty; the copy should be too.
+- **Use the domain's real terms** — lowering, elaboration, the gate, undecided,
+  a decision entity. The audience is engineers who already have these words.
+- **No superlatives, no "revolutionary", no "seamless".** The claim is that the
+  thing is *correct*, which is a claim you can check.
+
+Copperhead's own line is "Cursor for circuit boards." Fang's is the layer under
+it: **the language and kernel under copperhead.**
+
+## The site
+
+[`index.html`](index.html) is the landing page for `fang.copperhead.sh`. It is a
+single self-contained file: no build step, no framework, one stylesheet inline,
+one small script for the theme toggle. Fonts come from Google Fonts; everything
+else ships with the page.
+
+To deploy, serve `site/` as the document root so `/brand/favicon.svg` resolves.

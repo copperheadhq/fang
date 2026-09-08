@@ -1,0 +1,61 @@
+schema: spec-driven
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+# Example:
+#   context: |
+#     Tech stack: TypeScript, React, Node.js
+#     We use conventional commits
+#     Domain: e-commerce platform
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
+
+context: |
+  Project: Fang - the Copperhead hardware kernel and its Python-embedded
+  authoring language.
+
+  Scope of this repository: the Fang language surface, the kernel graph,
+  stable identity, units and quantities, typed interfaces, constraints,
+  transactions with a commit gate, and deterministic serialization.
+
+  Source standard (in-repo): openspec/specs/fang-kernel/spec.md is the single
+  self-contained normative document. It defines the Engineering Intermediate
+  Representation (EIR) and the hardware kernel and Fang language over it, and
+  carries the terminology, design principles, layers of representation, kernel
+  architecture, and project root as front matter before its requirements.
+  There is no other standards document in this repository.
+
+  Governing rule: there is exactly one canonical model (the EIR).
+  The kernel graph is its live realization; everything else is a lowering,
+  a projection, or an interchange encoding. Never introduce a second
+  persisted representation of the same facts.
+
+  Tech stack: Python 3.11+, standard library first. NetworkX for graph
+  analysis only (never exposed as a public representation). Deterministic
+  JSON serialization, decimal (not binary float) magnitudes.
+
+  Conventions: RFC2119 keywords are normative. Every entity carries stable
+  identity, provenance, and a source location. Unknown is representable;
+  null never means "unknown". Undecided is a third truth value and is never
+  silently converted to pass or fail.
