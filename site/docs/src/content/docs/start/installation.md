@@ -11,15 +11,18 @@ Fang is pure Python 3.11+ with no required dependencies.
 pip install copperhead-fang
 ```
 
-Two optional extras exist, and when either is absent the toolchain says so
-rather than working around it:
+The distribution is `copperhead-fang` because the bare name on PyPI belongs to
+an unrelated package. The import name is still `fang`.
+
+Two optional extras exist. When either is absent the toolchain says so rather
+than working around it:
 
 ```bash
 pip install "copperhead-fang[analysis]"   # NetworkX, for graph analysis queries
 ```
 
 `ngspice` is an external simulator reached across a process boundary. Install it
-with your package manager; fang finds it on `PATH`.
+with your package manager and fang will find it on `PATH`.
 
 ## Your first board
 
@@ -46,7 +49,7 @@ fang netlist divider.py            # components and nets
 fang export  divider.py -o out.net # a KiCad netlist
 ```
 
-`fang build` writes a `.copperhead/` workspace beside your sources: the design
-as a canonical record stream, a manifest naming the schema version and the
-snapshot hash, and a reconstructible cache. Deleting the cache loses no
+`fang build` writes a `.copperhead/` workspace beside your sources. It holds the
+design as a canonical record stream, a cache that can be rebuilt and a manifest
+naming the schema version and the snapshot hash. Deleting the cache loses no
 engineering fact.

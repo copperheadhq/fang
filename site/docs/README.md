@@ -22,98 +22,54 @@ src/content/docs/
 Front matter is `title` and `description`, plus `sidebar.order` when a section
 needs a particular sequence. Nothing else is required.
 
-## Reusing the theme
+## The theme
 
-`src/styles/copperhead.css` is the whole visual identity: the palette, the type
-scale, the layout widths. It is applied through one line in `astro.config.mjs`:
-
-```js
-starlight({ customCss: ["./src/styles/copperhead.css"] })
-```
-
-**That file is interim.** The tokens in it were recovered from the built
-stylesheet at `docs.copperhead.sh`, which was the fastest way to ship something
-that looks right. Recovery has a real limit: a built stylesheet carries the
-tokens but not the component layer. Copperhead's own nav links, doc cards and
-CTA styles compile under Astro's scoped class hashes — `.astro-nen7h5rs` and
-friends — which are build-specific and meaningless outside that build. So the
-two sites currently share a palette, not a design system.
-
-### Do this instead
-
-Publish copperhead's theme once and depend on it from both sites. A Starlight
-**plugin** rather than a bare stylesheet, because a plugin can carry the whole
-identity and not just the colours:
-
-```
-@copperhead/starlight-theme/
-  index.ts          the plugin
-  styles/theme.css  the tokens, lifted from the copperhead docs repo
-  styles/fonts.css  @font-face for Inter Variable and IBM Plex Mono
-  fonts/            the woff2 files
-  components/       shared overrides, if any
-  assets/           the copperhead mark
-```
-
-```ts
-// index.ts
-import type { StarlightPlugin } from "@astrojs/starlight/types";
-
-export default function copperheadTheme(): StarlightPlugin {
-  return {
-    name: "@copperhead/starlight-theme",
-    hooks: {
-      "config:setup"({ config, updateConfig }) {
-        updateConfig({
-          customCss: [
-            "@copperhead/starlight-theme/styles/fonts.css",
-            "@copperhead/starlight-theme/styles/theme.css",
-            ...(config.customCss ?? []),
-          ],
-          favicon: config.favicon ?? "/brand/favicon.svg",
-        });
-      },
-    },
-  };
-}
-```
-
-A sibling site then inherits everything and states only what is its own:
+The identity comes from [`@copperhead/starlight-theme`](../../packages/starlight-theme/),
+a Starlight plugin that carries the tokens, the faces, the component overrides
+the stylesheet expects and the code-block styling. This site's config sets no
+`customCss` and no `components` of its own:
 
 ```js
-starlight({
-  title: "fang",
-  plugins: [copperheadTheme()],
-  logo: { src: "./public/brand/mark.svg", alt: "fang" },
-  sidebar: [{ label: "Start here", items: [{ autogenerate: { directory: "start" } }] }],
-});
+plugins: [copperheadTheme()]
 ```
 
-Ordering matters: the plugin pushes its stylesheets ahead of the site's own, so
-a site can still override a token locally without editing the shared file.
+[THEME.md](THEME.md) records where the theme was lifted from, how to check it
+against upstream and the one token that deliberately differs.
 
-**Where the package lives.** Publish it to npm (private scope is fine), or point
-both sites at the copperhead docs repo directly —
-`"@copperhead/starlight-theme": "github:copperheadhq/docs#main"` — which needs
-no registry and still gives one source of truth. A git submodule also works and
-is the option I would not pick: it makes the theme a checkout concern rather
-than a dependency, and the version is a commit rather than a number.
+The package sits in this repository because fang is its first consumer. It
+belongs in the copperhead repo, published once and depended on by both sites.
+See the package's own README for that move and for its options.
 
-**What to lift.** Take the theme source from the copperhead docs repo, not from
-this file. The source has the component layer that the build hash destroys, and
-it is the copy that will keep being maintained.
+## For LLMs
 
-### One thing to fix upstream while you are there
+Two files are generated for models that read the docs instead of crawling them:
 
-Light `--sl-color-gray-3` is `#6d747f` in copperhead's theme. Against the raised
-surface it lands at 4.44:1, just under the 4.5 threshold for body text. This
-file uses `#686f7a`, which clears every surface in both themes and is
-indistinguishable side by side. The fix belongs in the shared theme, not here.
+| File | Is |
+| --- | --- |
+| [`public/llms.txt`](public/llms.txt) | An index: every page, its URL and what it covers |
+| [`public/llms-full.txt`](public/llms-full.txt) | Every page's full Markdown, in reading order |
+
+Both open with the five rules that explain most of fang's behaviour and the two
+things models most often get wrong about it, so a model that reads only the
+first screen still answers correctly about `copperhead-fang` versus `fang` and
+about `Truth.UNDECIDED` versus `CheckStatus.UNKNOWN`.
+
+[`scripts/generate-llms.mjs`](scripts/generate-llms.mjs) writes them, and
+`prebuild` runs it, so `npm run build` keeps them current. A page added under
+`src/content/docs/` appears in both without anyone updating a list. To refresh
+them without a full build:
+
+```bash
+npm run llms
+```
+
+Keep them out of the sidebar. They are served at `/llms.txt` and
+`/llms-full.txt`, which is where a model looks for them.
 
 ## The landing page
 
-`site/index.html` is a separate, self-contained page — no build step, its own
-copy of the tokens inline. Two ways to put it and these docs on one domain, and
+`site/index.html` is a separate, self-contained page with no build step and its
+own copy of the tokens inline. Two ways to put it and these docs on one domain, and
 you should pick before wiring up a deploy:
 
 1. **Landing at `/`, docs at `/docs/`.** Two deploy targets on one subdomain.
@@ -124,5 +80,5 @@ you should pick before wiring up a deploy:
 
 I would take the second. The hero is the only thing that has to move, and after
 that a single build serves the whole subdomain and the landing page inherits
-theme changes for free instead of drifting from them — which is the same problem
+theme changes for free instead of drifting from them. That is the same problem
 as the stylesheet, one level up.

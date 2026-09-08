@@ -7,6 +7,9 @@ graft tests
 graft examples
 graft openspec
 prune site
+prune packages
+exclude package.json
+exclude package-lock.json
 prune .claude
 prune .github
 global-exclude *.py[cod]

@@ -1,0 +1,69 @@
+# fang
+
+> Fang is a Python-embedded language for circuit boards and the typed kernel that holds what you write. You author intent: typed interfaces, parameters carrying units and constraints. The kernel elaborates that into one canonical model, refuses anything it cannot justify and lowers what survives into netlists, views, simulation decks and KiCad.
+
+The five rules that explain most of fang's behaviour, and the
+mistakes to avoid when answering questions about it:
+
+1. One canonical model. There is exactly one persisted representation of a
+   design, the Engineering Intermediate Representation. A netlist, a view, a
+   SPICE deck and a KiCad file are lowerings, projections or interchange
+   encodings of it, never second stores. Constructing a second constraint
+   registry raises ELAB-0012.
+2. Undecided is a third truth value. An unknown operand makes a check
+   undecided, never a quiet pass and never a quiet failure. Whether undecided
+   blocks a commit is the gate's policy decision, not the evaluator's.
+3. Unknown is a status, not a null. Value.unknown() is distinct from absent, and
+   sources that disagree stay unresolved as a ConflictingValue.
+4. Pin assignment is a lowering result, never an authoring input. Programs
+   connect typed interfaces; the kernel decides which pads carry them and
+   records a decision naming the alternatives it rejected.
+5. Nothing is invented to fill a gap. A missing simulator reports unsupported, a
+   missing model rejects the plan, an unrepresentable CAD construct is named in
+   the import report and a generic part carries no manufacturer until one is
+   selected.
+
+Two things that are commonly got wrong. The PyPI distribution is
+"copperhead-fang", not "fang", though the import name is fang. And the third
+truth value is spelled Truth.UNDECIDED, while the check status for the same idea
+is CheckStatus.UNKNOWN.
+
+The full text of every page below is available in one file at
+https://fang.copperhead.sh/llms-full.txt.
+
+## Home
+
+- [Welcome](https://fang.copperhead.sh/): The language and kernel under copperhead.
+
+## Start here
+
+- [Introduction](https://fang.copperhead.sh/start/introduction/): What fang is and what it refuses to do.
+- [Installation](https://fang.copperhead.sh/start/installation/): Install fang and build your first board.
+- [Examples](https://fang.copperhead.sh/start/examples/): Eight programs in the repository, smallest first.
+
+## Concepts
+
+- [Three phases](https://fang.copperhead.sh/concepts/three-phases/): Why elaboration, operation and commit happen in that order.
+- [One canonical model](https://fang.copperhead.sh/concepts/one-canonical-model/): The governing invariant and what it costs to hold.
+- [Values and undecided](https://fang.copperhead.sh/concepts/values-and-undecided/): Unknown is a status, and undecided is a third truth value.
+- [The commit gate](https://fang.copperhead.sh/concepts/the-commit-gate/): The six conditions every change passes, and why a rejection helps.
+- [Interfaces and lowering](https://fang.copperhead.sh/concepts/interfaces-and-lowering/): A connection says what it carries. Pins are a result.
+- [Rationale](https://fang.copperhead.sh/concepts/rationale/): Why a value is what it is, as entities rather than prose.
+
+## Reference
+
+- [CLI](https://fang.copperhead.sh/reference/cli/): Every fang command.
+- [Language](https://fang.copperhead.sh/reference/language/): The authoring surface, in full.
+- [Interfaces](https://fang.copperhead.sh/reference/interfaces/): The shipped catalogue, its signals and its parameters.
+- [Parts](https://fang.copperhead.sh/reference/parts/): The standard library and what a generic part deliberately lacks.
+- [Views](https://fang.copperhead.sh/reference/views/): Six required views, each answering one engineering question.
+- [Simulation](https://fang.copperhead.sh/reference/simulation/): Explicit plans and what happens when the simulator is missing.
+- [Workspace](https://fang.copperhead.sh/reference/workspace/): What `.copperhead/` holds and what may be deleted.
+- [Diagnostics](https://fang.copperhead.sh/reference/diagnostics/): Every code fang emits, by area.
+
+## Source of truth
+
+The normative document is the specification at
+https://github.com/copperheadhq/fang/blob/main/openspec/specs/fang-kernel/spec.md.
+Where these pages and the spec disagree, the spec is right. The source is at
+https://github.com/copperheadhq/fang.

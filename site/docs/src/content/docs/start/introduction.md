@@ -1,18 +1,18 @@
 ---
 title: Introduction
-description: What fang is, and what it refuses to do.
+description: What fang is and what it refuses to do.
 sidebar:
   order: 1
 ---
 
-Fang is a Python-embedded language for circuit boards, and the kernel that holds
-what you write. You author intent — typed interfaces, parameters carrying units,
-constraints. The kernel elaborates that into one canonical model, refuses
-anything it cannot justify, and lowers what survives into netlists, views,
-simulation decks, and KiCad.
+Fang is a Python-embedded language for circuit boards and the kernel that holds
+what you write. You author intent: typed interfaces, parameters carrying units
+and constraints. The kernel elaborates that into one canonical model, refuses
+anything it cannot justify and lowers what survives into netlists, views,
+simulation decks and KiCad.
 
 It is the layer under [copperhead](https://copperhead.sh). Copperhead is the
-agent you talk to; fang is what it writes and what checks the writing.
+agent you talk to. Fang is what it writes and what checks the writing.
 
 ## The shape of it
 
@@ -30,9 +30,9 @@ class SensorBoard(System):
 ```
 
 `self.mcu.i2c >> self.imu.i2c` is an interface connection, not a pin
-assignment. The kernel lowers it — deterministically — onto `PB8 → SCL` and
-`PB9 → SDA`, and because the MCU offered `PB6` and `PB7` as alternatives, the
-choice becomes a decision entity naming what it rejected.
+assignment. The kernel lowers it onto `PB8 → SCL` and `PB9 → SDA`, the same way
+every time. The MCU offered `PB6` and `PB7` as alternatives, so the choice
+becomes a decision entity naming what it rejected.
 
 Pin assignment is a lowering result. It is never an authoring input, which is
 what makes late assignment and part substitution tractable.
@@ -41,8 +41,8 @@ what makes late assignment and part substitution tractable.
 
 Most of the value is in the answers the kernel declines to give.
 
-- An unknown datasheet number makes a check **undecided** — a third truth value,
-  never a quiet pass. Whether undecided blocks is the commit gate's policy
+- An unknown datasheet number makes a check **undecided**. That is a third truth
+  value, never a quiet pass. Whether undecided blocks is the commit gate's policy
   decision, not the evaluator's.
 - A dimensionally invalid expression is rejected **where it is written**, so it
   can never be stored, let alone evaluated.

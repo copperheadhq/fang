@@ -1,6 +1,6 @@
 ---
 title: The commit gate
-description: Six conditions, one path, and why a rejection is useful output.
+description: The six conditions every change passes, and why a rejection helps.
 sidebar:
   order: 4
 ---
@@ -20,10 +20,10 @@ if proposal.accepted:
     graph.commit(proposal)
 ```
 
-A `Transaction` names the snapshot it was built against and carries
-`Operation`s — `AddEntity`, `RemoveEntity`, `Connect`, `SetParameter`. Naming
-the base is what makes concurrent proposals safe: a transaction built against
-stale state is rejected rather than merged on hope.
+A `Transaction` names the snapshot it was built against and carries `Operation`s:
+`AddEntity`, `RemoveEntity`, `Connect` and `SetParameter`. Naming the base is
+what makes concurrent proposals safe. A transaction built against stale state is
+rejected rather than merged on hope.
 
 ## The six conditions
 
@@ -35,12 +35,12 @@ stale state is rejected rather than merged on hope.
    `TXN-0005`.
 3. **Structural validation.** Identifier uniqueness, referential integrity,
    provenance traceability, prohibited cycles, contradictory mandatory
-   constraints, and the requirement state machine.
+   constraints and the requirement state machine.
 4. **Required checks have run.** Every `CheckClass` the policy requires has
    actually produced a result. Absent a project policy, the required set is
    structural validation plus every check class whose scope intersects the
-   affected entities — so a check class is defined by what it covers as much as
-   by what it evaluates.
+   affected entities. A check class is therefore defined by what it covers as
+   much as by what it evaluates.
 5. **No blocking result.** No check reported a blocking severity, or `TXN-0002`.
 6. **No undecided over a must-be-decided requirement**, or `TXN-0003`; and
    policy approvals are satisfied, or `TXN-0004`.
@@ -52,27 +52,28 @@ candidate copy is discarded, and canonical state was never touched.
 
 | Check class | Evaluates |
 | --- | --- |
-| `constraints` | Every constraint in the registry, over interval arithmetic |
+| `constraint` | Every constraint in the registry, over interval arithmetic |
 | `topology` | Topology intent, by enumerating conductive paths |
 | `interface_compatibility` | Every typed link in the graph |
 
-Structural validation is not in this list because the gate runs it regardless.
-A policy can narrow or widen the required set; it cannot remove the structural
+Structural validation is not in this list because the gate runs it regardless. A
+policy can narrow or widen the required set. It cannot remove the structural
 check.
 
 ## A rejection returns its reasoning
 
 A rejected `Proposal` still carries its diagnostics **and its diff**. The
-explanation is the useful output of a rejection — "no" without the reason would
-make the gate an obstacle rather than a tool.
+explanation is the useful output of a rejection. Saying no without the reason
+would make the gate an obstacle rather than a tool.
 
 ## Two ordering rules
 
-These are encoded in the gate and new code must not invert them:
+These are encoded in the gate and new code must not invert them.
 
-- `materialize()` refuses a `Realization` whose parent is not the committed
-  snapshot. A result computed against a graph that no longer exists describes a
-  design nobody has.
-- `ingest_external_results()` refuses results produced against anything but the
-  committed head. External check results re-enter as `Evidence`, through an
-  ordinary transaction, through the same gate as everything else.
+`materialize()` refuses a `Realization` whose parent is not the committed
+snapshot. A result computed against a graph that no longer exists describes a
+design nobody has.
+
+`ingest_external_results()` refuses results produced against anything but the
+committed head. External check results re-enter as `Evidence`, through an
+ordinary transaction, through the same gate as everything else.

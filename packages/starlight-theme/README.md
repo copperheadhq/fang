@@ -1,0 +1,109 @@
+# @copperhead/starlight-theme
+
+The copperhead visual identity as a Starlight plugin: token overrides, the
+self-hosted faces, the component overrides the stylesheet expects and code-block styling.
+
+A site that uses it states what is its own, meaning its name, its links and its pages, and nothing
+about how it looks.
+
+```bash
+npm install @copperhead/starlight-theme @fontsource-variable/inter @fontsource/ibm-plex-mono
+```
+
+```js
+import starlight from "@astrojs/starlight";
+import copperheadTheme from "@copperhead/starlight-theme";
+
+starlight({
+  title: "fang",
+  social: [{ icon: "github", label: "GitHub", href: "https://github.com/copperheadhq/fang" }],
+  plugins: [copperheadTheme()],
+  sidebar: [{ label: "Guides", items: [{ autogenerate: { directory: "guides" } }] }],
+});
+```
+
+## What it sets
+
+| | |
+| --- | --- |
+| `customCss` | the two faces, then `styles/theme.css`, then whatever the site already had |
+| `components` | `Header`, `Sidebar`, `PageTitle`, `ThemeSelect`, `Footer` |
+| `expressiveCode` | radius, font, size, padding and frames for code blocks |
+
+Two ordering rules make it composable. The theme's stylesheets go **first**, so
+a site's own `customCss` still wins and can override a token without touching
+the theme. A component is claimed **only if the site has not overridden it**, so
+an explicit override in the consuming config beats the theme's.
+
+The stylesheet targets Starlight's semantic selectors and the five components by
+name. Take the CSS without the components and the rules that style them match
+nothing, which is why they travel together rather than as a stylesheet alone.
+
+## Options
+
+```ts
+copperheadTheme({
+  repo: "https://github.com/copperheadhq/fang", // default: the `github` social link
+  version: "1.4.0",                             // default: none, links to /releases/latest
+  license: "Apache-2.0",                        // default: Apache-2.0
+  components: true,                             // false to keep your own
+  codeBlocks: true,                             // false to leave expressiveCode alone
+})
+```
+
+`repo` and `version` feed the release pill at the bottom of the sidebar. Passing
+no `version` is the right choice when the project's version has a single source
+of truth elsewhere. The pill then reads "releases" and links to the latest,
+rather than restating a number that would drift.
+
+Pass `repo: false` to hide the pill.
+
+## Fonts are peer dependencies
+
+`@fontsource-variable/inter` and `@fontsource/ibm-plex-mono` are peers rather than dependencies, and the consuming site must install them. Starlight resolves
+`customCss` specifiers from the **site's** root, so that is where they have to
+be; as dependencies of this package they would sit in the wrong `node_modules`
+and the build would fail to resolve them.
+
+## One deliberate difference from docs.copperhead.sh
+
+Light `--sl-color-gray-3` is `#686f7a` here. Copperhead's docs ship `#6d747f`,
+which fails WCAG AA on two of the three surfaces Starlight uses gray-3 against:
+
+| surface | `#6d747f` | `#686f7a` |
+| --- | --- | --- |
+| page ground `#ffffff` | 4.71 | 5.07 |
+| sidebar `#f7f8fa` | **4.44** | 4.77 |
+| inline code `#eff2f6` | **4.20** | 4.51 |
+
+`#686f7a` is the smallest shift along the same hue that clears 4.5 everywhere,
+and the two are indistinguishable side by side. Everything else in
+`styles/theme.css` is byte-identical to `docs/src/styles/custom.css` in
+`copperheadhq/copperhead` at commit `c62f540`.
+
+## Versioning
+
+The peer range on Starlight is deliberately narrow (`>=0.41.0 <0.42.0`) because
+the theme overrides Starlight's own token names and its component contracts; a
+minor bump can rename either.
+
+In a workspace this matters more than it looks: a wide peer range lets npm hoist
+a *second* copy of Starlight alongside the one the site pinned, and a linked
+package will resolve the hoisted one, so the site and the theme end up building
+against different versions. If you pin the toolchain, pin it once at the
+workspace root and let the lockfile carry it.
+
+Note that `docs.copperhead.sh` currently serves Astro 7.1.1 / Starlight 0.41.3.
+Exact visual parity with the deployed site means matching those in the lockfile,
+not just in the ranges.
+
+## Publishing
+
+No build step: the plugin ships as TypeScript and Astro's bundler transforms it,
+which is how the components ship too. Consumers are Astro sites by construction,
+so there is nothing to compile for.
+
+```bash
+npm pack --dry-run    # check the file list
+npm publish --access restricted
+```

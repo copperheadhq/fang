@@ -1,0 +1,87 @@
+---
+/**
+ * Sidebar override. Same structure as Starlight's default (so the sidebar
+ * state persister keeps working), with a custom sublist renderer and a small
+ * version footer pinned to the bottom of the panel on desktop.
+ */
+import MobileMenuFooter from '@astrojs/starlight/components/MobileMenuFooter.astro';
+import SidebarPersister from '@astrojs/starlight/components/SidebarPersister.astro';
+import { Icon } from '@astrojs/starlight/components';
+import SidebarSublist from './SidebarSublist.astro';
+import theme from 'virtual:copperhead-theme/options';
+
+const { sidebar } = Astro.locals.starlightRoute;
+
+// The pill is shown only when a repository is known. A version is optional:
+// without one it links to the latest release, which is what a project whose
+// version lives elsewhere should do rather than restate the number here.
+const releaseUrl = theme.repo
+	? theme.version
+		? `${theme.repo}/releases/tag/v${theme.version}`
+		: `${theme.repo}/releases/latest`
+	: null;
+---
+
+<SidebarPersister>
+	<SidebarSublist sublist={sidebar} />
+</SidebarPersister>
+
+<div class="md:sl-hidden">
+	<MobileMenuFooter />
+</div>
+
+{
+	releaseUrl && (
+		<div class="sl-hidden md:sl-block version-wrap">
+			<a class="version sl-flex" href={releaseUrl}>
+				<Icon name="github" size="0.9rem" />
+				<span class="tag">{theme.version ? `v${theme.version}` : 'releases'}</span>
+				<span class="license">{theme.license}</span>
+			</a>
+		</div>
+	)
+}
+
+<style>
+	/* Pinned to the bottom of the sidebar panel; the list scrolls underneath. */
+	.version-wrap {
+		position: sticky;
+		bottom: 0;
+		margin-top: auto;
+		padding-top: 1.25rem;
+		padding-bottom: 0.75rem;
+		background: linear-gradient(to bottom, transparent, var(--sl-color-bg-sidebar) 40%);
+	}
+	.version {
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.5rem 0.75rem;
+		border: 1px solid var(--sl-color-gray-5);
+		border-radius: 0.75rem;
+		background-color: var(--sl-color-black);
+		font-size: var(--sl-text-xs);
+		font-weight: 500;
+		color: var(--sl-color-gray-2);
+		text-decoration: none;
+		white-space: nowrap;
+		transition:
+			border-color 0.12s,
+			color 0.12s;
+	}
+	.version:hover {
+		border-color: var(--sl-color-gray-4);
+		color: var(--sl-color-white);
+	}
+	.version svg {
+		color: var(--sl-color-gray-3);
+		flex-shrink: 0;
+	}
+	.tag {
+		font-family: var(--__sl-font-mono);
+	}
+	.license {
+		margin-inline-start: auto;
+		color: var(--sl-color-gray-3);
+		font-weight: 400;
+	}
+</style>

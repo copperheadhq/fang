@@ -1,0 +1,13 @@
+{
+  "name": "fang-workspace",
+  "private": true,
+  "description": "npm workspaces for the docs site and the theme package. Fang itself is Python; this file exists so the two JavaScript packages resolve each other during local development.",
+  "workspaces": [
+    "packages/*",
+    "site/docs"
+  ],
+  "scripts": {
+    "docs:dev": "npm run dev --workspace site/docs",
+    "docs:build": "npm run build --workspace site/docs"
+  }
+}

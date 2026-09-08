@@ -1,0 +1,1637 @@
+# fang: complete documentation
+
+> Fang is a Python-embedded language for circuit boards and the typed kernel that holds what you write. You author intent: typed interfaces, parameters carrying units and constraints. The kernel elaborates that into one canonical model, refuses anything it cannot justify and lowers what survives into netlists, views, simulation decks and KiCad.
+
+The five rules that explain most of fang's behaviour, and the
+mistakes to avoid when answering questions about it:
+
+1. One canonical model. There is exactly one persisted representation of a
+   design, the Engineering Intermediate Representation. A netlist, a view, a
+   SPICE deck and a KiCad file are lowerings, projections or interchange
+   encodings of it, never second stores. Constructing a second constraint
+   registry raises ELAB-0012.
+2. Undecided is a third truth value. An unknown operand makes a check
+   undecided, never a quiet pass and never a quiet failure. Whether undecided
+   blocks a commit is the gate's policy decision, not the evaluator's.
+3. Unknown is a status, not a null. Value.unknown() is distinct from absent, and
+   sources that disagree stay unresolved as a ConflictingValue.
+4. Pin assignment is a lowering result, never an authoring input. Programs
+   connect typed interfaces; the kernel decides which pads carry them and
+   records a decision naming the alternatives it rejected.
+5. Nothing is invented to fill a gap. A missing simulator reports unsupported, a
+   missing model rejects the plan, an unrepresentable CAD construct is named in
+   the import report and a generic part carries no manufacturer until one is
+   selected.
+
+Two things that are commonly got wrong. The PyPI distribution is
+"copperhead-fang", not "fang", though the import name is fang. And the third
+truth value is spelled Truth.UNDECIDED, while the check status for the same idea
+is CheckStatus.UNKNOWN.
+
+This file is every documentation page concatenated in reading order.
+Generated from https://fang.copperhead.sh. Each page below names its own URL.
+
+
+---
+
+# Welcome
+
+URL: https://fang.copperhead.sh/
+Summary: The language and kernel under copperhead.
+
+Fang is a Python-embedded language for circuit boards and the typed kernel that
+holds what you write. You author intent. The kernel decides what is true about
+it and refuses what it cannot justify.
+
+It is the layer under [copperhead](https://copperhead.sh). Copperhead is the
+agent you talk to. Fang is what it writes and what checks the writing.
+
+## Start here
+
+- [Introduction](/start/introduction/): what fang is and what it refuses to do
+- [Installation](/start/installation/): install it and build your first board
+- [Examples](/start/examples/): eight programs, smallest first
+
+## Concepts
+
+- [Three phases](/concepts/three-phases/): elaboration, operation and commit
+- [One canonical model](/concepts/one-canonical-model/): the governing invariant
+- [Values and undecided](/concepts/values-and-undecided/): the third truth value
+- [The commit gate](/concepts/the-commit-gate/): six conditions, one path in
+- [Interfaces and lowering](/concepts/interfaces-and-lowering/): connections to pins
+- [Rationale](/concepts/rationale/): keeping the reasoning in the graph
+
+## Reference
+
+- [CLI](/reference/cli/): every command, option and exit code
+- [Language](/reference/language/): the authoring surface
+- [Interfaces](/reference/interfaces/): the catalogue
+- [Parts](/reference/parts/): the standard library
+- [Views](/reference/views/): the six required views
+- [Simulation](/reference/simulation/): plans, lowering and backends
+- [Workspace](/reference/workspace/): what `.copperhead/` holds
+- [Diagnostics](/reference/diagnostics/): every code fang emits
+
+The normative document is the
+[spec](https://github.com/copperheadhq/fang/blob/main/openspec/specs/fang-kernel/spec.md).
+Where these pages and the spec disagree, the spec is right and this is a bug.
+
+
+---
+
+# Introduction
+
+URL: https://fang.copperhead.sh/start/introduction/
+Summary: What fang is and what it refuses to do.
+
+Fang is a Python-embedded language for circuit boards and the kernel that holds
+what you write. You author intent: typed interfaces, parameters carrying units
+and constraints. The kernel elaborates that into one canonical model, refuses
+anything it cannot justify and lowers what survives into netlists, views,
+simulation decks and KiCad.
+
+It is the layer under [copperhead](https://copperhead.sh). Copperhead is the
+agent you talk to. Fang is what it writes and what checks the writing.
+
+## The shape of it
+
+```python
+class SensorBoard(System):
+    regulator = Regulator(output_voltage=3.3 * V, package="SOT-23-5")
+    mcu = MCU(package="LQFP-64")
+    imu = IMU(package="LGA-14")
+
+    def architecture(self):
+        self.mcu.i2c >> self.imu.i2c
+
+    def constraints(self):
+        require(self.regulator.output_voltage == 3.3 * V)
+```
+
+`self.mcu.i2c >> self.imu.i2c` is an interface connection, not a pin
+assignment. The kernel lowers it onto `PB8 → SCL` and `PB9 → SDA`, the same way
+every time. The MCU offered `PB6` and `PB7` as alternatives, so the choice
+becomes a decision entity naming what it rejected.
+
+Pin assignment is a lowering result. It is never an authoring input, which is
+what makes late assignment and part substitution tractable.
+
+## What it will not do
+
+Most of the value is in the answers the kernel declines to give.
+
+- An unknown datasheet number makes a check **undecided**. That is a third truth
+  value, never a quiet pass. Whether undecided blocks is the commit gate's policy
+  decision, not the evaluator's.
+- A dimensionally invalid expression is rejected **where it is written**, so it
+  can never be stored, let alone evaluated.
+- A missing simulator reports **unsupported** rather than substituting a model.
+- A CAD construct the adapter does not model is **named in the import report**
+  rather than dropped.
+- A generic part carries **no manufacturer** until one is selected.
+
+Nothing is invented to make an answer available.
+
+
+---
+
+# Installation
+
+URL: https://fang.copperhead.sh/start/installation/
+Summary: Install fang and build your first board.
+
+Fang is pure Python 3.11+ with no required dependencies.
+
+```bash
+pip install copperhead-fang
+```
+
+The distribution is `copperhead-fang` because the bare name on PyPI belongs to
+an unrelated package. The import name is still `fang`.
+
+Two optional extras exist. When either is absent the toolchain says so rather
+than working around it:
+
+```bash
+pip install "copperhead-fang[analysis]"   # NetworkX, for graph analysis queries
+```
+
+`ngspice` is an external simulator reached across a process boundary. Install it
+with your package manager and fang will find it on `PATH`.
+
+## Your first board
+
+```python
+# divider.py
+from fang.lang import System, V, kOhm, uF
+from fang.parts import Capacitor, Resistor
+
+
+class Divider(System):
+    top = Resistor(resistance=10 * kOhm, package="R_0603_1608Metric")
+    bottom = Resistor(resistance=4.7 * kOhm, package="R_0603_1608Metric")
+    filter_cap = Capacitor(capacitance=100 * uF, voltage_rating=16 * V)
+
+    def architecture(self):
+        self.top.p2 >> self.bottom.p1
+        self.bottom.p1 >> self.filter_cap.p1
+        self.bottom.p2 >> self.filter_cap.p2
+```
+
+```bash
+fang build   divider.py            # elaborate, pass the gate, persist, run the plan
+fang netlist divider.py            # components and nets
+fang export  divider.py -o out.net # a KiCad netlist
+```
+
+`fang build` writes a `.copperhead/` workspace beside your sources. It holds the
+design as a canonical record stream, a cache that can be rebuilt and a manifest
+naming the schema version and the snapshot hash. Deleting the cache loses no
+engineering fact.
+
+
+---
+
+# Examples
+
+URL: https://fang.copperhead.sh/start/examples/
+Summary: Eight programs in the repository, smallest first.
+
+Every example in [`examples/`](https://github.com/copperheadhq/fang/tree/main/examples)
+elaborates, passes the gate and is exercised by the test suite, so none of them
+is a sketch that no longer runs.
+
+| Example | Shows |
+| --- | --- |
+| [`divider/`](https://github.com/copperheadhq/fang/tree/main/examples/divider/) | The smallest real board: two resistors and a capacitor |
+| [`blinky/`](https://github.com/copperheadhq/fang/tree/main/examples/blinky/) | Declared surfaces, connections and a constraint stating intent rather than the answer |
+| [`equations/`](https://github.com/copperheadhq/fang/tree/main/examples/equations/) | Values chosen by equation and reuse by inheritance |
+| [`sensor_board/`](https://github.com/copperheadhq/fang/tree/main/examples/sensor_board/) | Interfaces lowering to pins, a recorded decision, a check left undecided |
+| [`i2c_bus/`](https://github.com/copperheadhq/fang/tree/main/examples/i2c_bus/) | A multi-drop bus, addresses as constrained parameters |
+| [`usb_uart_bridge/`](https://github.com/copperheadhq/fang/tree/main/examples/usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet |
+| [`buck_regulator/`](https://github.com/copperheadhq/fang/tree/main/examples/buck_regulator/) | Requirement, decision, calculations and verification beside the circuit |
+| [`servo_drive/`](https://github.com/copperheadhq/fang/tree/main/examples/servo_drive/) | Composition: one `HalfBridge` block instantiated three times |
+
+## Running one
+
+```bash
+fang build   examples/sensor_board/sensor_board.py
+fang netlist examples/sensor_board/sensor_board.py
+fang view    examples/sensor_board/sensor_board.py ground -o ground.svg
+```
+
+## What is in an `out/`
+
+| File | What it is | Command |
+| --- | --- | --- |
+| `<name>.net` | The KiCad netlist, the artifact a layout tool opens | `fang export` |
+| `netlist.txt` | The same projection as text: parts, then nets and their pads | `fang netlist` |
+| `checks.txt` | Every check that ran, and every one left undecided | `fang check` |
+| `graph.txt` | What the elaborated graph contains, by entity kind | `fang graph` |
+| `views/*.svg` | The views worth looking at for that board | `fang view` |
+| `rationale.md` | The requirements, decisions, calculations and evidence in the graph | none |
+
+`python examples/regenerate.py` rewrites them. They are built in the project
+namespace `PRJ-EXAMPLES`, which is where the identifiers in them come from; a
+local `fang build` defaults to `PRJ-LOCAL` and derives its own.
+
+## What each one is for
+
+**`divider/`** is the smallest thing worth calling a board. Read it to learn
+the shape of a program and nothing else.
+
+**`blinky/`** adds the point about constraints. The series resistor is not
+written as a number that someone computed offstage. The LED current is written
+as the requirement, and the resistor value has to satisfy it.
+
+**`equations/`** takes that further. Ohm's law is a constraint rather than a
+comment, so substituting a part re-checks the arithmetic instead of trusting it.
+`SenseDivider` inherits the equations and replaces the two values.
+
+**`sensor_board/`** is the one to read to understand lowering. The MCU offers
+`PB8` and `PB6` for the I2C clock. `self.mcu.i2c >> self.imu.i2c` resolves to one
+of them and records a decision naming what it rejected. It also leaves a check
+**undecided**, because the IMU's threshold is missing rather than assumed.
+
+**`i2c_bus/`** connects one port several times. Two things a netlist could not
+keep survive here. The device addresses are parameters, so "no two devices answer
+to the same address" is a constraint the kernel decides rather than a linter
+rule. And the RTC's thresholds are recorded as an assumption, which leaves that
+link undecided rather than passed.
+
+**`usb_uart_bridge/`** shows part selection landing on the instance rather
+than the class template. The logical part stays "a 3.3 V regulator". Which one
+was bought is a separate, cited fact.
+
+**`buck_regulator/`** puts the reasoning in the graph. The requirement, the
+part decision, the datasheet numbers behind it, two calculations and the
+verification that closes the requirement are all entities beside the inductor.
+`fang` can answer "why is this 4.7 µH?" without anyone writing a design
+document.
+
+**`servo_drive/`** is composition at size. A `HalfBridge` owns its interior:
+its transistors, its shunt and its own constraints. The drive instantiates three
+of them from one declaration.
+
+
+---
+
+# Three phases
+
+URL: https://fang.copperhead.sh/concepts/three-phases/
+Summary: Why elaboration, operation and commit happen in that order.
+
+The order is the whole point. A program that could observe a tool's result would
+not be reproducible, so it never can.
+
+## Elaboration
+
+Your program runs in a sandbox with no network access and only declared, hashed
+file inputs. It builds a graph and a tool plan. It calls no engine and touches
+no geometry.
+
+The prohibition on network access is absolute rather than a default. A declared
+exception would cost exactly the reproducibility guarantee it exists to give.
+External data reaches a program as a declared, hashed file produced by an
+earlier tool call.
+
+A tool call returns a **handle**, not a result. Reading one during elaboration
+is an error, whether you convert it to a boolean, branch on it or compare it.
+
+```python
+def architecture(self):
+    layout = tools.layout(placers=["pyplacer"], routers=["freerouting"])
+    report = tools.check(profile="jlcpcb-2layer")
+    tools.export(layout=layout, format="kicad", require=report.passed)
+```
+
+`report.passed` is a symbolic condition recorded in the plan and resolved later.
+
+## Operation
+
+The recorded plan runs against immutable snapshots. Placers, routers, checkers
+and simulators are reached across a process boundary and produce candidate
+realizations. Nothing here mutates canonical state.
+
+A call whose condition resolves false is **skipped**, and the skip is recorded
+along with the condition that caused it.
+
+## Commit
+
+One gate, six conditions and the same path for a human edit, a re-elaboration,
+a CAD import and an agent proposal. They differ in their recorded provenance and
+in nothing else.
+
+A rejected proposal leaves canonical state untouched and still returns its
+diagnostics and its diff. The explanation is the useful output of a rejection.
+
+Only after commit are downstream artifacts written, and only then do external
+checks run and re-enter as evidence.
+
+
+---
+
+# One canonical model
+
+URL: https://fang.copperhead.sh/concepts/one-canonical-model/
+Summary: The governing invariant and what it costs to hold.
+
+There is exactly one canonical model: the Engineering Intermediate
+Representation. The kernel graph is its live realization. Everything else is a
+**lowering** of it, a **projection** of it or an **interchange encoding** of it.
+That covers a netlist, a view, a SPICE deck and a KiCad file alike.
+
+No feature may introduce a second persisted representation of the same facts.
+
+## Why it is stated as a prohibition
+
+Most hardware toolchains fail in the same place. The schematic knows one thing,
+the BOM knows another and the simulation deck knows a third, and each was true
+when it was written. Reconciliation becomes the work. The invariant exists so
+that reconciliation is not a task anyone can be assigned, because there is
+nothing to reconcile.
+
+The cost is real. A downstream tool that wants its own store cannot have one. It
+gets a generated `Projection` and recomputes. That is slower, and that is the
+point: a cache that can go stale is a second representation wearing a different
+hat.
+
+## How it is enforced
+
+`ConstraintRegistry` enforces it literally. Constructing a second registry for a
+project raises [`ELAB-0012`](/reference/diagnostics/):
+
+```python
+ConstraintRegistry(project)   # fine
+ConstraintRegistry(project)   # ELAB-0012: a second constraint registry was created
+```
+
+There is no flag to allow it.
+
+## What the model holds
+
+Sixteen entity kinds, each a frozen dataclass carrying identity, parameters,
+provenance and a source location:
+
+| Group | Kinds |
+| --- | --- |
+| Structure | `Component`, `Net`, `Rail`, `Connection`, `Domain` |
+| Interfaces | `Interface`, `Port`, `Bus`, `Pin` |
+| Rationale | `Requirement`, `Decision`, `Evidence`, `Calculation`, `Verification`, `Assumption` |
+| Analysis | `Model` |
+
+Every entity answers two questions. `references()` drives referential integrity,
+diff impact and topology adjacency. `as_dict()` drives canonical serialization.
+A new entity kind that does not answer both cannot participate in the graph.
+
+## Identity
+
+An identifier is a UUIDv5 over `(project namespace, "<kind>:<canonical semantic
+path>")`, rendered as a prefix plus twelve hex digits. Two consequences matter
+in practice.
+
+**Re-derivation is stable.** The same design gives the same identifiers, in this
+process or another one. Identifiers are not allocated from a counter, so there
+is no allocation order to preserve.
+
+**Collisions lengthen rather than renumber.** An identifier is extended four
+digits at a time, only against the identifiers already in that revision, so
+lengthening is itself reproducible.
+
+Three origins exist and are distinguished: `derive()` for a fact the kernel
+computed, `authored()` for one a person wrote and `imported()` for one that came
+from CAD.
+
+## Determinism
+
+Identical inputs give byte-identical snapshots. This is verified across
+processes with differing `PYTHONHASHSEED`, not merely within one run.
+
+Two rules make that hold. Magnitudes are `Decimal` strings under a fixed
+`Context(prec=34)`, never binary floats, so no value depends on rounding mode.
+And canonical serialization sorts by Unicode code point, except for the
+collections in `serialization.ORDERED_COLLECTIONS`, whose order carries meaning
+and is preserved rather than sorted.
+
+
+---
+
+# Values and undecided
+
+URL: https://fang.copperhead.sh/concepts/values-and-undecided/
+Summary: Unknown is a status, and undecided is a third truth value.
+
+A number in an engineering model is never only a number. How well it is known
+travels with it, and the kernel refuses to lose that on the way through a
+calculation.
+
+## Every value carries a status
+
+```python
+from fang.lang import V, kOhm
+
+Resistor(resistance=10 * kOhm)   # explicit: someone wrote it
+```
+
+| Status | Means |
+| --- | --- |
+| `explicit` | Someone wrote it |
+| `inferred` | The kernel computed it from other facts |
+| `assumed` | A working claim with no evidence behind it |
+| `unknown` | Not known, which is itself a value rather than a gap |
+
+**`null` never means "unknown."** `Value.unknown()` is a distinct status, so a
+field that is absent and a field that is known to be unavailable are different
+facts and stay different.
+
+A value whose sources disagree becomes a `ConflictingValue` holding the
+candidates. It is not resolved by picking the first, the newest or the most
+precise. It stays unresolved and visible until something decides it.
+
+## Quantities have dimensions
+
+A `Quantity` is a decimal magnitude over a dimension vector on the seven SI
+bases. It can be a scalar, a range or a nominal with a tolerance:
+
+```python
+from fang.lang import V, between, tolerance
+
+between(3.0 * V, 3.6 * V)          # a range
+tolerance(10 * kOhm, "1%")         # nominal and tolerance
+```
+
+**Dimensional errors are rejected where they are written.** `Arithmetic` checks
+dimensions in `__post_init__`, so `3 * V + 10 * kOhm` raises
+[`UNIT-0001`](/reference/diagnostics/) at construction. A dimensionally invalid
+expression cannot be stored, let alone evaluated. That is why nothing downstream
+re-checks units.
+
+## Undecided is a truth value
+
+Constraints evaluate to one of three values, not two:
+
+| `Truth` | When |
+| --- | --- |
+| `true` | Satisfied |
+| `false` | Violated |
+| `undecided` | An operand is unknown |
+
+Undecided propagates through Kleene three-valued logic, which is stronger than
+saying unknown poisons everything. `false and undecided` is `false`, because no
+value of the unknown operand could make the conjunction true. `true or undecided`
+is `true`. The kernel decides what it can and stops exactly where it must.
+
+Check results carry the same idea, plus one more case:
+
+| `CheckStatus` | Means |
+| --- | --- |
+| `PASS` | Decided and satisfied |
+| `FAIL` | Decided and violated |
+| `UNKNOWN` | Not decidable on what is known |
+| `NOT_APPLICABLE` | The check does not cover this |
+
+`UNKNOWN` and `NOT_APPLICABLE` are separate because "we could not tell" and
+"there was nothing to tell" are different engineering situations. Collapsing
+them is how a checklist comes to report coverage it does not have.
+
+## Undecided is never silently a pass
+
+An undecided result is never quietly a pass and never quietly a failure.
+Whether it **blocks** is a policy decision made by the commit gate in
+`KernelGraph.propose`, not by the evaluator. The evaluator's job is to be honest
+about what it knows. The gate's job is to decide what to do about it.
+
+That separation is what lets an early-stage design proceed with unknowns while a
+release gate refuses them, with no change to any constraint.
+
+
+---
+
+# The commit gate
+
+URL: https://fang.copperhead.sh/concepts/the-commit-gate/
+Summary: The six conditions every change passes, and why a rejection helps.
+
+Nothing enters canonical state except through the gate. A human edit, a
+re-elaboration, a CAD import and an agent proposal take the same path and differ
+only in the provenance they record.
+
+That is the point of having one. A second way in would be a second set of rules,
+and the second set is always the one that is weaker.
+
+## A transaction names its base
+
+```python
+proposal = graph.propose(transaction)
+if proposal.accepted:
+    graph.commit(proposal)
+```
+
+A `Transaction` names the snapshot it was built against and carries `Operation`s:
+`AddEntity`, `RemoveEntity`, `Connect` and `SetParameter`. Naming the base is
+what makes concurrent proposals safe. A transaction built against stale state is
+rejected rather than merged on hope.
+
+## The six conditions
+
+`propose()` applies the transaction **to a copy** and runs, in order:
+
+1. **Stale base.** The transaction's base is the committed head, or
+   [`TXN-0001`](/reference/diagnostics/).
+2. **Normalization.** Every operation produces a well-formed entity, or
+   `TXN-0005`.
+3. **Structural validation.** Identifier uniqueness, referential integrity,
+   provenance traceability, prohibited cycles, contradictory mandatory
+   constraints and the requirement state machine.
+4. **Required checks have run.** Every `CheckClass` the policy requires has
+   actually produced a result. Absent a project policy, the required set is
+   structural validation plus every check class whose scope intersects the
+   affected entities. A check class is therefore defined by what it covers as
+   much as by what it evaluates.
+5. **No blocking result.** No check reported a blocking severity, or `TXN-0002`.
+6. **No undecided over a must-be-decided requirement**, or `TXN-0003`; and
+   policy approvals are satisfied, or `TXN-0004`.
+
+Only `commit()` advances the head. Rejection is correct by construction: the
+candidate copy is discarded, and canonical state was never touched.
+
+## The shipped check classes
+
+| Check class | Evaluates |
+| --- | --- |
+| `constraint` | Every constraint in the registry, over interval arithmetic |
+| `topology` | Topology intent, by enumerating conductive paths |
+| `interface_compatibility` | Every typed link in the graph |
+
+Structural validation is not in this list because the gate runs it regardless. A
+policy can narrow or widen the required set. It cannot remove the structural
+check.
+
+## A rejection returns its reasoning
+
+A rejected `Proposal` still carries its diagnostics **and its diff**. The
+explanation is the useful output of a rejection. Saying no without the reason
+would make the gate an obstacle rather than a tool.
+
+## Two ordering rules
+
+These are encoded in the gate and new code must not invert them.
+
+`materialize()` refuses a `Realization` whose parent is not the committed
+snapshot. A result computed against a graph that no longer exists describes a
+design nobody has.
+
+`ingest_external_results()` refuses results produced against anything but the
+committed head. External check results re-enter as `Evidence`, through an
+ordinary transaction, through the same gate as everything else.
+
+
+---
+
+# Interfaces and lowering
+
+URL: https://fang.copperhead.sh/concepts/interfaces-and-lowering/
+Summary: A connection says what it carries. Pins are a result.
+
+```python
+self.mcu.i2c >> self.imu.i2c
+```
+
+That is not a pin assignment. It is a claim that two typed interfaces are
+joined, and the kernel works out which pads carry it.
+
+## Pin assignment is a lowering result
+
+It is never an authoring input. This is the load-bearing decision of the whole
+interface layer, and everything else follows from it.
+
+- **Late assignment is tractable.** Pins can be decided after placement, or
+  changed because routing wants them changed, without editing the design.
+- **Substitution is tractable.** A part with a different pinout satisfies the
+  same connection.
+- **The choice is explainable**, because the kernel made it and recorded why.
+
+## Lowering is deterministic
+
+A part declares its pins and a `PinMap` saying which pins can carry which
+interface signal:
+
+```python
+class MCU(Part):
+    i2c = I2CPort(voltage=3.3 * V, pull_up_resistance=4.7 * kOhm)
+    PB8 = Pin("PB8", role="clock")
+    PB6 = Pin("PB6", role="clock")       # a second candidate
+    PB9 = Pin("PB9", role="data")
+    PB7 = Pin("PB7", role="data")
+    pinmap = PinMap({"i2c.scl": ["PB8", "PB6"], "i2c.sda": ["PB9", "PB7"]})
+```
+
+Given candidates, lowering picks one and produces the same answer every time, in
+this process and the next. Determinism here is not a convenience. A pinout that
+shifted between runs would make every downstream artifact unstable.
+
+## A choice becomes a decision entity
+
+`PB8` won and `PB6` lost, so a `Decision` is written into the graph naming the
+alternative it rejected. Ask later why the clock is on `PB8` and the answer is a
+fact in the model, not an inference from the result.
+
+Where there is only one candidate there is no decision to record, and none is
+recorded. The graph does not accumulate ceremony.
+
+## If a signal cannot be placed
+
+A required signal with no pin able to carry it is
+[`IFACE-0001`](/reference/diagnostics/). It is not deferred, and no pin is
+invented to satisfy it.
+
+Optional signals are genuinely optional. `uart` names `rts` and `cts`, and a
+part that omits them is not incomplete.
+
+## Compatibility is checked, not assumed
+
+Joining two ports checks that the join makes electrical sense: voltages,
+thresholds, drive against demand and pull-ups where the protocol needs them.
+
+The check obeys the rule that governs everything else. A missing datasheet
+number makes the result **undecided**, never a pass.
+
+```python
+class IMU(Part):
+    i2c = I2CPort(voltage=3.3 * V)   # no vih_min: not known
+```
+
+Connect that to a 3.3 V controller and the compatibility check reports undecided
+and names the parameter it needed. Supplying `vih_min` decides it. Assuming one
+would have hidden the question.
+
+Two interfaces that disagree about membership are `IFACE-0002`.
+
+## Buses
+
+A multi-drop interface can be connected several times, and lowering resolves the
+whole set into one net per signal. `i2c`, `can`, `rs485` and `power_output` are
+multi-drop. `spi` is not, because a second target needs its own chip select, and
+that is a different circuit rather than the same one twice.
+
+
+---
+
+# Rationale
+
+URL: https://fang.copperhead.sh/concepts/rationale/
+Summary: Why a value is what it is, as entities rather than prose.
+
+The reason a component has the value it has is usually the most expensive thing
+to reconstruct and the first thing lost. Fang keeps it in the same graph as the
+component, as entities with the same identity and provenance rules as everything
+else.
+
+The test is simple: `fang` should answer "why is this 4.7 µH?" without anyone
+having written a design document.
+
+## What a program declares
+
+Rationale is declared in the class body, beside the parts it is about. Not in a
+method and not in a comment.
+
+```python
+from fang.lang import System, A, V, uH
+from fang.parts import Inductor, Regulator
+from fang.rationale import Calculates, Chooses, Cites, Requires, Verifies
+
+
+class Rail3V3(System):
+    rail_tolerance = Requires(
+        "The 3V3 rail holds 3.3 V within 3% for 0 to 1.5 A",
+        priority="MUST",
+        validation="analysis",
+    )
+
+    part_choice = Chooses(
+        "Which converter makes the 3V3 rail?",
+        selected="TPS62130",
+        alternatives=[
+            {"part": "LM2596", "reason": "asynchronous, and too tall for the enclosure"},
+            {"part": "MP2315", "reason": "no power-good output, and the sequencing needs one"},
+        ],
+        requirements=("rail_tolerance",),
+        evidence=("absolute_maximum",),
+    )
+
+    absolute_maximum = Cites(
+        "VIN absolute maximum is 17 V, recommended operating is 3 to 17 V",
+        document="SRC-DS-TPS62130",
+        locator="section 6.1, absolute maximum ratings",
+    )
+
+    controller = Regulator(output_voltage=3.3 * V, output_current_max=3 * A)
+    inductor = Inductor(inductance=4.7 * uH, current_rating=2 * A)
+
+    inductor_value = Calculates(
+        "L = v_out * (1 - v_out / v_in) / (f_sw * ripple_current)",
+        inputs=("inductor", "controller"),
+        result="4.7 uH at 1.25 MHz for 30% ripple at 1.5 A",
+        requirements=("rail_tolerance",),
+    )
+
+    load_regulation = Verifies(
+        "rail_tolerance",
+        method="analysis",
+        evidence=("absolute_maximum",),
+        result="PASS",
+    )
+```
+
+| Declaration | Records |
+| --- | --- |
+| `Requires(statement, *, priority, validation, state, source)` | A requirement the design must meet |
+| `Assumes(claim, *, rationale)` | A working claim with **no** evidence behind it |
+| `Cites(claim, *, document, locator)` | A claim with a document and a location within it |
+| `Chooses(question, *, selected, alternatives, requirements, evidence, rationale)` | A decision, its alternatives and what it rests on |
+| `Calculates(expression, *, inputs, result, requirements)` | A computed result and the inputs it depends on |
+| `Verifies(verifies, *, method, evidence, result)` | What is verified, how and on what evidence |
+
+Names bind to the attribute, so `requirements=("rail_tolerance",)` refers to the
+`rail_tolerance` declaration above it. A name that resolves to nothing is
+[`ELAB-0006`](/reference/diagnostics/) rather than a silently empty link.
+
+`Assumes` and `Cites` are deliberately different declarations. An assumption is
+not weak evidence. It is the absence of evidence, and merging the two is how a
+design comes to look better justified than it is.
+
+## Coverage is a query, not a report
+
+```python
+coverage(snapshot)                    # which requirements are verified and which are not
+impacted_by(snapshot, changed)        # what a change puts at risk
+```
+
+Both are computed on demand from the graph. Neither is a document that can drift
+from the design, because neither is stored.
+
+An unverified requirement is reported as unverified. There is no state in which
+the coverage answer is more complete than the evidence.
+
+## Impact propagates through the graph
+
+A change is classified as electrical or presentation-only, and invalidation
+follows the reference edges. Moving a part on a sheet does not invalidate a
+simulation. Changing the inductor invalidates the calculation that used it, the
+verification that rested on the calculation and the requirement that
+verification closed.
+
+The propagation is derived from `references()`, the same method that drives
+referential integrity and topology adjacency, so a rationale link cannot be
+invisible to impact analysis while being visible to validation.
+
+## Evidence from outside
+
+External results re-enter as `Evidence` through an ordinary transaction, against
+the committed head, through the same gate. A simulation run, a DRC report and a
+bench measurement all take that path. Because there is no side channel for
+results, a verification cannot rest on evidence the graph never saw.
+
+
+---
+
+# CLI
+
+URL: https://fang.copperhead.sh/reference/cli/
+Summary: Every fang command.
+
+Every command exits non-zero when the work it names did not succeed, so a build
+script can rely on the exit code rather than parsing output.
+
+| Command | Does |
+| --- | --- |
+| `fang init` | Create a `.copperhead/` workspace |
+| `fang build` | Elaborate, pass the gate, persist, run the tool plan |
+| `fang check` | Run the constraint, topology and compatibility checks |
+| `fang netlist` | Print the compiled components and nets |
+| `fang export` | Write a KiCad netlist |
+| `fang view` | Compile a view; render it to SVG with `-o` |
+| `fang sim` | Compile a simulation plan, lower it, run it |
+| `fang graph` | Summarize the kernel graph |
+| `fang diff` | Diff a program against the persisted workspace |
+
+## Options
+
+Every command that reads a program takes the same four:
+
+| Option | Default | Does |
+| --- | --- | --- |
+| `program` | required | The Fang program to elaborate |
+| `--system` | first found | Which system, when a file defines several |
+| `--project` | `PRJ-LOCAL` | The project identifier |
+| `-C`, `--directory` | `.` | The project directory |
+
+`--project` is the namespace identifiers are derived in, so changing it changes
+every identifier in the design. It is not a label.
+
+`fang init` takes only `-C`. `fang --version` reports the version.
+
+## Exit codes
+
+| Code | Means |
+| --- | --- |
+| `0` | The work succeeded |
+| `1` | The work failed: a rejected gate, a failed check or a missing model |
+| `2` | Usage error |
+
+A rejected commit is exit `1`, and the diagnostics that explain it go to output.
+The rejection is the answer, not a crash.
+
+## Views
+
+```bash
+fang view --list
+fang view board.py ground -o ground.svg
+```
+
+The six views are `system`, `interconnect`, `power`, `ground`, `interfaces` and
+`safety`. `interconnect` is the default when none is named.
+
+Each answers one engineering question and is generated only from facts in the
+graph. Each also reports its own incompleteness rather than hiding it: a node
+carrying unknown parameters is drawn with a dashed border.
+
+## Simulation
+
+```bash
+fang sim board.py --analysis transient --stop 10ms --step 1us --probe "V(1)"
+fang sim board.py -o deck.cir
+```
+
+| Option | Default |
+| --- | --- |
+| `--analysis` | `op` (or `transient`) |
+| `--backend` | `ngspice` |
+| `--stop` | `1ms` |
+| `--step` | `1us` |
+| `--probe` | none; repeatable |
+| `-o`, `--output` | write the SPICE deck here |
+
+If a selected component has no compatible model and is not explicitly
+abstracted, the plan is **rejected with the reason** rather than run with a
+substitute. If ngspice is not installed, the plan still compiles and the command
+says no run was made.
+
+
+---
+
+# Language
+
+URL: https://fang.copperhead.sh/reference/language/
+Summary: The authoring surface, in full.
+
+A Fang program is ordinary Python. What makes it a design is the declarations in
+a class body, which the kernel collects in the order they were written.
+
+## Modules
+
+| Class | Is |
+| --- | --- |
+| `Module` | A reusable unit owning parameters, surfaces, constraints and children |
+| `System` | The root module of a design |
+| `Part` | A leaf module that becomes a component rather than a block |
+
+```python
+from fang.lang import Part, System, V, kOhm, require
+
+class Board(System):
+    ...
+```
+
+A `Module` is instantiated with keyword overrides, as in
+`Regulator(output_voltage=5 * V)`. A `Part` also accepts `package=`.
+
+### The two hooks
+
+```python
+class Board(System):
+    def architecture(self):
+        """Connections. Runs first."""
+
+    def constraints(self):
+        """require() calls. Runs second."""
+```
+
+Both are optional. `architecture()` runs before `constraints()`, so a constraint
+may refer to anything the architecture created.
+
+## Parameters
+
+```python
+Parameter(unit, *, default=None, description="")
+```
+
+A parameter is declared with its unit. **A bare number is not a parameter.**
+The unit is not decoration. It is what makes the value checkable.
+
+```python
+class Regulator(GenericPart):
+    output_voltage = Parameter("V", description="the rail it makes")
+```
+
+## Units
+
+Unit literals multiply a number into a `Quantity`:
+
+```python
+3.3 * V      10 * kOhm      100 * uF      1.25 * MHz      10 * ms
+```
+
+| Domain | Literals |
+| --- | --- |
+| Voltage | `V` `mV` `uV` `kV` |
+| Current | `A` `mA` `uA` `nA` |
+| Power | `W` `mW` |
+| Resistance | `Ohm` `mOhm` `kOhm` `MOhm` |
+| Capacitance | `F` `uF` `nF` `pF` |
+| Inductance | `H` `mH` `uH` |
+| Frequency | `Hz` `kHz` `MHz` |
+| Time | `s` `ms` `us` `ns` |
+| Length | `m` `mm` |
+| Other | `degC` `percent` |
+
+Two helpers build non-scalar quantities:
+
+```python
+between(3.0 * V, 3.6 * V)              # a range, optional typical= third argument
+tolerance(10 * kOhm, "1%")             # a nominal and a tolerance
+```
+
+Combining unequal dimensions raises [`UNIT-0001`](/reference/diagnostics/) at the
+point the expression is constructed.
+
+## Surfaces
+
+A surface is somewhere a connection can land.
+
+| Surface | For |
+| --- | --- |
+| `Electrical` | An untyped electrical connection |
+| `Power` | A power connection |
+| `Ground` | A ground connection |
+| `Signal` | A signal connection |
+| `Mechanical` | A non-electrical attachment |
+
+Typed [interface ports](/reference/interfaces/) are surfaces too, and they
+carry more: their signals, their parameters and their rules.
+
+## Connections
+
+```python
+self.top.p2 >> self.bottom.p1          # the connect operator
+connect(self.top.p2, self.bottom.p1)   # the same thing, spelled out
+```
+
+`>>` is not directional in the electrical sense; it reads left to right and
+records a connection between two surfaces. A connection with no kind is
+[`ELAB-0005`](/reference/diagnostics/).
+
+## Constraints
+
+```python
+def constraints(self):
+    require(self.regulator.output_voltage == 3.3 * V)
+    require(self.led.forward_current <= 20 * mA)
+```
+
+`require()` records the expression; it does not evaluate it there. Evaluation
+happens against a snapshot, over interval arithmetic, with an unknown operand
+producing [undecided](/concepts/values-and-undecided/).
+
+## Pins and pin maps
+
+```python
+class MCU(Part):
+    i2c = I2CPort(voltage=3.3 * V)
+    PB8 = Pin("PB8", role="clock")
+    PB9 = Pin("PB9", role="data")
+    pinmap = PinMap({"i2c.scl": "PB8", "i2c.sda": "PB9"})
+```
+
+In `Pin(name, *, role="unknown", number=None)`, `number` records the physical
+pin number when it differs from the name.
+
+A `PinMap` value is one pin name or a list of candidates. Candidates are what
+make a recorded [decision](/concepts/interfaces-and-lowering/) possible.
+
+Roles are drawn from a fixed set: `power`, `ground`, `clock`, `data`, `control`,
+`reset`, `differential_p`, `differential_n`, `analog`, `phase`, `unknown`.
+
+## Selecting a vendor part
+
+```python
+def __init__(self, **overrides):
+    super().__init__(**overrides)
+    self.controller.select(
+        "Texas Instruments", "TPS62130RGTR",
+        distributor_ids={"digikey": "296-35088-1-ND"},
+        datasheet="SRC-DS-TPS62130",
+        evidence=("absolute_maximum",),
+    )
+```
+
+`select()` attaches sourcing to the **instance**, not the class template. The
+part's logical identity is unchanged: the design still says "a 3.3 V regulator"
+and separately says which one was bought. `part.selected` reports whether one
+was.
+
+## Tools
+
+```python
+def architecture(self):
+    layout = tools.layout(placers=["pyplacer"], routers=["freerouting"])
+    report = tools.check(profile="jlcpcb-2layer")
+    tools.export(layout=layout, format="kicad", require=report.passed)
+```
+
+Every `tools.*` call records an operation in the plan and returns a **handle**.
+Nothing runs during elaboration. Reading a handle is
+[`ELAB-0008`](/reference/diagnostics/), whether you branch on it, compare it or
+convert it to a boolean.
+`report.passed` is a symbolic condition resolved in the
+[operation phase](/concepts/three-phases/).
+
+Calls take named arguments only. A positional argument is rejected, because a
+stored and replayed plan cannot depend on argument order.
+
+## Rationale
+
+Declared in the class body. See [Rationale](/concepts/rationale/) for the full
+set: `Requires`, `Assumes`, `Cites`, `Chooses`, `Calculates`, `Verifies`.
+
+
+---
+
+# Interfaces
+
+URL: https://fang.copperhead.sh/reference/interfaces/
+Summary: The shipped catalogue, its signals and its parameters.
+
+The catalogue holds 21 interface types. Seventeen have a port class, so a
+program writes `I2CPort()` rather than reaching for a factory; the remaining
+four are the primitives the typed ones are built from.
+
+See [Interfaces and lowering](/concepts/interfaces-and-lowering/) for how a
+connection between two of these becomes pin connections.
+
+## The catalogue
+
+An asterisk marks an optional signal.
+
+| Type | Port class | Signals | Kind | Rules |
+| --- | --- | --- | --- | --- |
+| `analog_input` | `AnalogIn` | `signal` `ref`* | electrical | none |
+| `analog_output` | `AnalogOut` | `signal` `ref`* | electrical | none |
+| `can` | `CANPort` | `canh` `canl` | signal | multi-drop |
+| `clock` | `ClockPort` | `clk` | signal | none |
+| `electrical` | none | `line` | electrical | none |
+| `ground` | none | `gnd` | ground | none |
+| `i2c` | `I2CPort` | `scl` `sda` | signal | multi-drop, pull-ups |
+| `jtag` | `JTAGPort` | `tck` `tms` `tdi` `tdo` `trst`* | signal | none |
+| `motor_phase` | `MotorPhase` | `phase` | power | none |
+| `power` | none | `vcc` | power | none |
+| `power_input` | `PowerIn` | `vcc` `gnd` | power | none |
+| `power_output` | `PowerOut` | `vcc` `gnd` | power | multi-drop |
+| `pwm` | `PWMPort` | `out` | signal | none |
+| `quadrature_encoder` | `EncoderPort` | `a` `b` `index`* | signal | none |
+| `reset` | `ResetPort` | `nrst` | signal | none |
+| `rs485` | `RS485Port` | `a` `b` `de`* | signal | multi-drop |
+| `signal` | none | `line` | signal | none |
+| `spi` | `SPIPort` | `sck` `mosi` `miso` `cs` | signal | none |
+| `swd` | `SWDPort` | `swclk` `swdio` | signal | none |
+| `uart` | `UARTPort` | `tx` `rx` `rts`* `cts`* | signal | none |
+| `usb2` | `USB2Port` | `dp` `dm` `vbus`* `gnd` | signal | none |
+
+`spi` is not multi-drop. A second target needs its own chip select, which is a
+different circuit rather than the same one connected twice.
+
+## Parameters
+
+Every parameter is optional. An absent one is not a default. It leaves any
+check that needed it [undecided](/concepts/values-and-undecided/).
+
+**Digital interfaces**, meaning `i2c`, `spi`, `uart`, `usb2`, `can`, `rs485`, `pwm`,
+`quadrature_encoder`, `jtag`, `swd`, `clock`, `reset`:
+
+| Parameter | Unit | Is |
+| --- | --- | --- |
+| `voltage` | V | The supply the interface runs at |
+| `voh_min` | V | Minimum output high |
+| `vol_max` | V | Maximum output low |
+| `vih_min` | V | Minimum input high threshold |
+| `vil_max` | V | Maximum input low threshold |
+| `current_capability` | A | What a source can drive |
+| `current_demand` | A | What a sink draws |
+| `bit_rate` | Hz | Signalling rate |
+| `pull_up_resistance` | Ohm | Pull-up value, where the protocol needs one |
+| `pull_up_supply` | V | What the pull-ups are pulled to |
+
+**Power interfaces**, meaning `power`, `power_input`, `power_output` and
+`motor_phase` (which omits `ripple`):
+
+| Parameter | Unit |
+| --- | --- |
+| `voltage` | V |
+| `current_capability` | A |
+| `current_demand` | A |
+| `ripple` | V |
+
+**Analog interfaces**, meaning `analog_input` and `analog_output`:
+
+| Parameter | Unit |
+| --- | --- |
+| `voltage` | V |
+| `impedance` | Ohm |
+| `bandwidth` | Hz |
+
+## Using one
+
+```python
+from fang.interfaces import I2CPort, Pin, PinMap
+from fang.lang import Part, V, kOhm
+
+class MCU(Part):
+    i2c = I2CPort(voltage=3.3 * V, voh_min=2.4 * V,
+                  pull_up_resistance=4.7 * kOhm)
+    PB8 = Pin("PB8", role="clock")
+    PB9 = Pin("PB9", role="data")
+    pinmap = PinMap({"i2c.scl": "PB8", "i2c.sda": "PB9"})
+```
+
+A single signal of a port is reachable as a surface, so a rail can meet one pad
+rather than the whole interface:
+
+```python
+self.rail.vcc      >> self.pullup_scl.p1
+self.pullup_scl.p2 >> self.mcu.i2c.scl
+```
+
+A signal surface keeps the nature of the wire it is. A `power` signal stays
+power, a `ground` signal stays ground and anything else is plain electrical.
+
+## Roles
+
+A pin declares a role, drawn from a fixed set: `power`, `ground`, `clock`,
+`data`, `control`, `reset`, `differential_p`, `differential_n`, `analog`,
+`phase`, `unknown`.
+
+A role says what a pin is for. It classifies the pin and determines what a
+single-signal surface behaves as; which pin a signal actually lands on is
+decided by the `PinMap`, not by matching roles.
+
+## Adding one
+
+`InterfaceCatalogue.register()` adds a type to a project's catalogue. A new type
+states its signals, its connection kind, its parameters and its rules. It does
+not state pins, which remain a lowering result.
+
+
+---
+
+# Parts
+
+URL: https://fang.copperhead.sh/reference/parts/
+Summary: The standard library and what a generic part deliberately lacks.
+
+```python
+from fang.parts import Capacitor, Resistor
+from fang.lang import V, kOhm, uF
+
+top = Resistor(resistance=10 * kOhm, package="R_0603_1608Metric")
+cap = Capacitor(capacitance=100 * uF, voltage_rating=16 * V)
+```
+
+## A generic part has no manufacturer
+
+Everything in the library is a `GenericPart`: a part with no vendor identity.
+That is a deliberate absence, not an unfinished state. A design that says "a
+10 kΩ resistor" is complete at the stage it is at; attaching a manufacturer
+before one has been chosen would be inventing a fact.
+
+[`select()`](/reference/language/#selecting-a-vendor-part) attaches the vendor
+identity later, to the instance, without replacing the logical part.
+
+## The library
+
+| Part | Parameters | Surfaces |
+| --- | --- | --- |
+| `Resistor` | `resistance`, `power_rating`, `tolerance_pct` | `p1`, `p2` |
+| `Capacitor` | `capacitance`, `voltage_rating`, `tolerance_pct` | `p1`, `p2` |
+| `Inductor` | `inductance`, `current_rating`, `dc_resistance` | `p1`, `p2` |
+| `Diode` | `forward_voltage`, `forward_current`, `reverse_voltage` | `p1`, `p2` |
+| `LED` | the `Diode` set, plus `luminous_intensity` | `p1`, `p2` |
+| `Fuse` | `current_rating`, `voltage_rating` | `p1`, `p2` |
+| `Crystal` | `frequency`, `load_capacitance`, `tolerance_ppm` | `p1`, `p2` |
+| `Transistor` | `vds_max`, `id_max`, `rds_on`, `vgs_threshold` | `gate`, `drain`, `source` |
+| `Regulator` | `output_voltage`, `input_voltage_max`, `output_current_max`, `dropout_voltage`, `quiescent_current` | `vin`, `vout` (power ports) |
+| `Connector` | `current_rating`, `voltage_rating` | `shell`, plus per-instance pins |
+| `TestPoint` | none | `probe` |
+| `MountingHole` | `diameter` | `mount` |
+
+`DecouplingCapacitor` is a `Capacitor` whose job is stated, so a checker can
+find it. It is not in `LIBRARY` because it is a role, not a distinct part.
+
+## Every parameter is optional
+
+```python
+Resistor(resistance=10 * kOhm)     # power_rating unstated
+```
+
+An unstated parameter is unknown, and any check that needed it reports
+[undecided](/concepts/values-and-undecided/) rather than assuming a value. If a
+resistor's power rating matters to a constraint, the constraint says undecided
+until someone supplies it.
+
+## Packages and footprints
+
+```python
+Resistor(resistance=10 * kOhm, package="R_0603_1608Metric")
+```
+
+`package=` attaches a `Footprint` trait. Where a part lands physically is a
+trait rather than a parameter, because it is a fact about the realization, not
+about the electrical behaviour.
+
+## Traits
+
+Behaviour attaches to a part without widening its class:
+
+| Trait | Carries |
+| --- | --- |
+| `Footprint` | Where a component lands physically |
+| `Sourcing` | Manufacturer, MPN, distributor codes |
+| `DatasheetEvidence` | The document a component's claims are cited from |
+| `Simulatable` | A model, as data. The backend is not here |
+| `Renderable` | A view-compiler hint carrying no geometry and no meaning |
+
+## Writing your own
+
+Subclass `Part` and declare parameters, surfaces, pins and a pin map:
+
+```python
+from fang.interfaces import I2CPort, Pin, PinMap
+from fang.lang import Parameter, Part, V
+
+class IMU(Part):
+    i2c = I2CPort(voltage=3.3 * V)
+    supply_current = Parameter("A", description="run current")
+    SCL = Pin("SCL", role="clock", number="4")
+    SDA = Pin("SDA", role="data", number="5")
+    pinmap = PinMap({"i2c.scl": "SCL", "i2c.sda": "SDA"})
+```
+
+Nothing registers it. A part is a class, and using it is how it enters a design.
+
+
+---
+
+# Views
+
+URL: https://fang.copperhead.sh/reference/views/
+Summary: Six required views, each answering one engineering question.
+
+A view is a deterministic projection of graph state. It is generated rather than
+authored, and it holds no facts of its own. That is the
+[governing invariant](/concepts/one-canonical-model/) applied to drawings.
+
+```bash
+fang view --list
+fang view board.py ground -o ground.svg
+```
+
+## The six
+
+| View | Answers |
+| --- | --- |
+| `system` | What blocks and parts does this design contain, and how do they nest? |
+| `interconnect` | What is connected to what? |
+| `power` | Where does power come from and where does it go? |
+| `ground` | How do returns get home, and is the intended topology held? |
+| `interfaces` | Which typed interfaces exist and what do they join? |
+| `safety` | Which requirements and hard constraints govern this design? |
+
+Each is required in the sense that the implementation must be able to produce
+all six from any valid graph. `interconnect` is the default when a command names
+no view.
+
+## What each one includes
+
+| View | Nodes | Edges | Annotations |
+| --- | --- | --- | --- |
+| `system` | blocks, components | every kind | hard constraints |
+| `interconnect` | blocks, components | electrical, power, ground, signal | none |
+| `power` | blocks, components, rails | power | domain |
+| `ground` | blocks, components, nets, domains | ground | star point, topology intent, domain |
+| `interfaces` | blocks, components, interfaces | signal | none |
+| `safety` | blocks, components, requirements | every kind | requirements, hard constraints |
+
+A view that names no edge kind does not filter: `system` and `safety` draw every
+connection in the snapshot between the nodes they include.
+
+## How a diagram reads
+
+A box carries the name the part has in the program, such as `fb_top`, or
+`bridge_u.high` where one block declaration was instantiated three times. Its
+class goes underneath, because four boxes all saying `Resistor` tell you nothing
+about which one is which. Its colour follows the entity kind, and its tooltip is
+the identifier.
+
+An edge leaves the side of the box it is heading for and curves to the box it
+arrives at, rather than crossing whatever lies between; its colour follows the
+connection kind, and the key under the drawing lists the kinds actually present.
+Several connections between the same two parts are fanned apart, so three gate
+drives read as three.
+
+Nodes are laid out in layers, ordered within a layer to reduce crossings. A node
+that the view connects to nothing is packed into a grid below a rule that says
+so, rather than lengthening the first column. It is still a fact about the
+design, and it is still shown.
+
+## A view reports its own incompleteness
+
+A node carrying unknown parameters is drawn with a dashed border. The drawing
+does not resolve the unknown, hide it or fill it in with a plausible number. It
+shows that the graph does not know, in the same place you would look for the
+value.
+
+This is the same rule as everywhere else, applied to pixels: a view is only ever
+as complete as the graph behind it, and it says so.
+
+## Layout is a boundary
+
+The view compiler produces a graph and placement **seeds**. It does not place,
+route or own geometry. Placers and routers are reached in the
+[operation phase](/concepts/three-phases/) across a process boundary. What they
+return is a candidate realization that has to pass the gate like anything
+else.
+
+## Rendering
+
+With `-o`, the view is rendered to SVG. Without it, the command summarizes what
+the view contains.
+
+```bash
+fang view board.py power             # summarize
+fang view board.py power -o power.svg
+```
+
+Rendering is deterministic: the same graph gives the same SVG, byte for byte.
+
+
+---
+
+# Simulation
+
+URL: https://fang.copperhead.sh/reference/simulation/
+Summary: Explicit plans and what happens when the simulator is missing.
+
+Simulation is a compiler target, not a side trip. A design lowers to a SPICE
+deck the same way it lowers to a netlist, and the result comes back normalized
+into one shape.
+
+```bash
+fang sim board.py --analysis transient --stop 10ms --step 1us --probe "V(1)"
+fang sim board.py -o deck.cir          # write the deck, whether or not it runs
+```
+
+## Nothing runs without a plan
+
+`compile_plan()` turns a request into an explicit `SimulationPlan`. The plan
+names which models will be used and the provenance that justifies each one, and
+it names the analysis. Nothing runs until a plan exists, and you can inspect the
+plan before anything does.
+
+Models attach as the `Simulatable` trait. The model is **data**. The backend is
+not part of it, so the same model can be run by a different simulator or by
+none.
+
+## A missing model is a rejection
+
+If a selected component has no compatible model and is not explicitly
+abstracted, the plan is **rejected with the reason** rather than run with a
+substitute. There is no generic fallback device, because a result computed from
+an invented model is worse than no result, because it looks like an answer.
+
+Explicit abstraction is available and has to be written down. The difference
+between "this part is deliberately ideal here" and "we had nothing" is exactly
+the difference the plan records.
+
+## Analyses
+
+| Analysis | Request |
+| --- | --- |
+| Operating point | `OperatingPoint`, from `--analysis op`, the default |
+| Transient | `Transient`, from `--analysis transient`, with `--stop` and `--step` |
+| DC sweep | `DCSweep` |
+| AC sweep | `ACSweep` |
+
+## Levels
+
+Verification levels run one to five, cheapest first. `select_level()` picks the
+cheapest level that can decide the question asked, so a question answerable by
+inspection does not pay for a transient run.
+
+## Backends
+
+`NgspiceBackend` reaches ngspice across a process boundary. It is optional and
+external; fang finds it on `PATH`.
+
+If it is not installed, `BackendUnavailable` is reported. The plan still
+compiles and the deck can still be written. The command says no run was made,
+and does not substitute anything for one.
+
+```bash
+fang sim board.py -o deck.cir   # succeeds without ngspice; says nothing ran
+```
+
+## Results come back normalized
+
+`normalize()` brings a backend's output into one shape, so what reads a result
+does not know which simulator produced it. A `NormalizedResult` carries what the
+run produced together with everything needed to judge it: the plan, the models
+used and the assertions evaluated.
+
+Results re-enter canonical state as `Evidence`, through an ordinary transaction
+against the committed head, through [the gate](/concepts/the-commit-gate/).
+There is no path by which a simulation result becomes a fact without passing it.
+
+
+---
+
+# Workspace
+
+URL: https://fang.copperhead.sh/reference/workspace/
+Summary: What `.copperhead/` holds and what may be deleted.
+
+`fang init` creates a workspace beside your sources; `fang build` fills it.
+
+```
+.copperhead/
+  manifest.json       what produced this state
+  design.jsonl        the design, as a canonical record stream
+  plan.json           the tool plan
+  mapping.json        the CAD mapping table, after an import
+  import-report.json  what an import could not represent
+  sources/            declared, hashed inputs
+  evidence/           external results, before they are ingested
+  simulations/        decks and raw backend output
+  views/              rendered views
+  cache/              reconstructible; safe to delete
+```
+
+**Only `cache/` may be deleted.** Everything else is either canonical state or
+the record of where canonical state came from. Deleting the cache loses no
+engineering fact; deleting anything else does.
+
+## The manifest
+
+```json
+{
+  "schema_version": "1.1",
+  "revision_id": "...",
+  "compiler_version": "0.1.0",
+  "snapshot": "...",
+  "project_id": "PRJ-LOCAL",
+  "lock_id": "unlocked",
+  "entity_count": 42
+}
+```
+
+The manifest exists so a snapshot's producer is reconstructible. `snapshot` is
+the content hash; `schema_version` is the serialized-EIR version, which moves
+independently of the compiler version.
+
+An artifact declaring an unimplemented major schema version is
+[`ELAB-0009`](/reference/diagnostics/). It is refused, not read on a guess.
+
+## The design stream
+
+`design.jsonl` is the canonical record stream: one record per line, written in
+canonical form. Two properties follow from that and are what the format is for:
+
+- **Byte-identical for identical inputs**, across processes with differing hash
+  seeds. A diff between two builds shows engineering change and nothing else.
+- **Diffable by ordinary tools**, because it is line-oriented text whose line
+  order is deterministic.
+
+Magnitudes are decimal strings, never binary floats. Keys sort by Unicode code
+point, except for the collections whose order is semantic.
+
+## Options
+
+Every command that reads a program takes:
+
+| Option | Does |
+| --- | --- |
+| `-C`, `--directory` | The project directory. Defaults to `.` |
+| `--project` | The project identifier. Defaults to `PRJ-LOCAL` |
+| `--system` | Which system to build, when a file defines several |
+
+The project identifier is the namespace identifiers are derived in, so changing
+it changes every identifier in the design. It is not a label.
+
+## Importing CAD
+
+An import writes two files beside the design:
+
+- `mapping.json`, the mapping table, saying which kernel entity each CAD
+  construct became
+- `import-report.json`, the loss report
+
+A construct the adapter cannot represent is named in the report as
+[`IMPORT-0001`](/reference/diagnostics/) rather than dropped. The import is
+lossy in the open, which is what makes one safe round trip possible. What
+survived is stated, and so is what did not.
+
+
+---
+
+# Diagnostics
+
+URL: https://fang.copperhead.sh/reference/diagnostics/
+Summary: Every code fang emits, by area.
+
+Diagnostic codes are stable. They are **allocated, never reused and retired
+rather than deleted**, so a code in an old log means today what it meant then,
+and searching for one never lands on a different problem.
+
+Seven areas exist: `ELAB`, `IFACE`, `TOPO`, `UNIT`, `TXN`, `SIM`, `IMPORT`.
+
+## UNIT: units and dimensions
+
+| Code | Means |
+| --- | --- |
+| `UNIT-0001` | Operands of unequal dimension combined |
+| `UNIT-0002` | Unit symbol not recognized |
+| `UNIT-0003` | Exponent is not a dimensionless rational |
+| `UNIT-0004` | Unit conversion rounded |
+
+`UNIT-0001` is raised where the expression is **constructed**, not where it is
+evaluated. A dimensionally invalid expression cannot be stored.
+
+## ELAB: elaboration and structure
+
+| Code | Means |
+| --- | --- |
+| `ELAB-0001` | Canonical semantic path is not well formed |
+| `ELAB-0002` | Two entities share a canonical semantic path |
+| `ELAB-0003` | Identifier is not unique within the revision |
+| `ELAB-0004` | Entity traceable to neither a source location nor an import |
+| `ELAB-0005` | Connection has no kind |
+| `ELAB-0006` | Required reference names no entity |
+| `ELAB-0007` | Requirement state transition outside the permitted table |
+| `ELAB-0008` | Tool handle read during elaboration |
+| `ELAB-0009` | Artifact declares an unimplemented major schema version |
+| `ELAB-0010` | Cycle where one is prohibited |
+| `ELAB-0011` | Contradictory mandatory constraints |
+| `ELAB-0012` | A second constraint registry was created |
+
+`ELAB-0012` is the [governing invariant](/concepts/one-canonical-model/) as an
+error code. There is no flag that permits it.
+
+`ELAB-0008` is the [three-phase rule](/concepts/three-phases/) as an error code:
+a program that could observe a tool's result would not be reproducible.
+
+## IFACE: interfaces
+
+| Code | Means |
+| --- | --- |
+| `IFACE-0001` | A required interface signal has no pin |
+| `IFACE-0002` | Two interfaces disagree on membership |
+
+An optional signal with no pin is not an error. `IFACE-0001` is about signals
+the interface says it requires.
+
+## TXN: transactions and the gate
+
+| Code | Means |
+| --- | --- |
+| `TXN-0001` | Transaction proposed against a snapshot that is no longer current |
+| `TXN-0002` | A required check reported a blocking severity |
+| `TXN-0003` | An undecided result covers a must-be-decided requirement |
+| `TXN-0004` | Policy approval requirements unsatisfied |
+| `TXN-0005` | Operation did not normalize into a well-formed entity |
+
+These are the [gate conditions](/concepts/the-commit-gate/). A rejection carries
+its code, its message and the diff it would have applied.
+
+## IMPORT: CAD interchange
+
+| Code | Means |
+| --- | --- |
+| `IMPORT-0001` | Adapter could not represent a construct |
+
+Reported in `import-report.json` rather than raised, because an import that
+stopped at the first unrepresentable construct would be less useful than one
+that says what it could not carry.
+
+## Adding a code
+
+New codes are allocated through `_allocate` at the bottom of the relevant area
+block in `fang/diagnostics.py`. Never renumber and never reuse a retired
+number.

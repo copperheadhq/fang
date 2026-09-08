@@ -20,8 +20,32 @@ script can rely on the exit code rather than parsing output.
 | `fang graph` | Summarize the kernel graph |
 | `fang diff` | Diff a program against the persisted workspace |
 
-Shared options: `--project` sets the project identifier, `--system` picks a
-system when a file defines several, and `-C` sets the project directory.
+## Options
+
+Every command that reads a program takes the same four:
+
+| Option | Default | Does |
+| --- | --- | --- |
+| `program` | required | The Fang program to elaborate |
+| `--system` | first found | Which system, when a file defines several |
+| `--project` | `PRJ-LOCAL` | The project identifier |
+| `-C`, `--directory` | `.` | The project directory |
+
+`--project` is the namespace identifiers are derived in, so changing it changes
+every identifier in the design. It is not a label.
+
+`fang init` takes only `-C`. `fang --version` reports the version.
+
+## Exit codes
+
+| Code | Means |
+| --- | --- |
+| `0` | The work succeeded |
+| `1` | The work failed: a rejected gate, a failed check or a missing model |
+| `2` | Usage error |
+
+A rejected commit is exit `1`, and the diagnostics that explain it go to output.
+The rejection is the answer, not a crash.
 
 ## Views
 
@@ -31,15 +55,27 @@ fang view board.py ground -o ground.svg
 ```
 
 The six views are `system`, `interconnect`, `power`, `ground`, `interfaces` and
-`safety`. Each answers one engineering question, is generated only from facts in
-the graph, and reports its own incompleteness rather than hiding it — a node
+`safety`. `interconnect` is the default when none is named.
+
+Each answers one engineering question and is generated only from facts in the
+graph. Each also reports its own incompleteness rather than hiding it: a node
 carrying unknown parameters is drawn with a dashed border.
 
 ## Simulation
 
 ```bash
-fang sim board.py --analysis transient --stop 10ms --probe "V(1)" -o deck.cir
+fang sim board.py --analysis transient --stop 10ms --step 1us --probe "V(1)"
+fang sim board.py -o deck.cir
 ```
+
+| Option | Default |
+| --- | --- |
+| `--analysis` | `op` (or `transient`) |
+| `--backend` | `ngspice` |
+| `--stop` | `1ms` |
+| `--step` | `1us` |
+| `--probe` | none; repeatable |
+| `-o`, `--output` | write the SPICE deck here |
 
 If a selected component has no compatible model and is not explicitly
 abstracted, the plan is **rejected with the reason** rather than run with a
