@@ -45,9 +45,9 @@ https://fang.copperhead.sh/llms-full.txt.
 
 - [Three phases](https://fang.copperhead.sh/concepts/three-phases/): Why elaboration, operation and commit happen in that order.
 - [One canonical model](https://fang.copperhead.sh/concepts/one-canonical-model/): The governing invariant and what it costs to hold.
-- [Values and undecided](https://fang.copperhead.sh/concepts/values-and-undecided/): Unknown is a status, and undecided is a third truth value.
-- [The commit gate](https://fang.copperhead.sh/concepts/the-commit-gate/): The six conditions every change passes, and why a rejection helps.
-- [Interfaces and lowering](https://fang.copperhead.sh/concepts/interfaces-and-lowering/): A connection says what it carries. Pins are a result.
+- [Values and undecided](https://fang.copperhead.sh/concepts/values-and-undecided/): How the kernel represents a value it does not know, and a constraint it cannot decide.
+- [The commit gate](https://fang.copperhead.sh/concepts/the-commit-gate/): The six conditions every change passes before it reaches canonical state.
+- [Interfaces and lowering](https://fang.copperhead.sh/concepts/interfaces-and-lowering/): How a typed connection lowers to pins, and what that decides.
 - [Rationale](https://fang.copperhead.sh/concepts/rationale/): Why a value is what it is, as entities rather than prose.
 
 ## Reference

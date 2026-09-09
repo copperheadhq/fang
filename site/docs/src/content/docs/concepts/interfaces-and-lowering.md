@@ -1,6 +1,6 @@
 ---
 title: Interfaces and lowering
-description: A connection says what it carries. Pins are a result.
+description: How a typed connection lowers to pins, and what that decides.
 sidebar:
   order: 5
   attrs:
@@ -11,13 +11,13 @@ sidebar:
 self.mcu.i2c >> self.imu.i2c
 ```
 
-That is not a pin assignment. It is a claim that two typed interfaces are
-joined, and the kernel works out which pads carry it.
+That line is a claim that two typed interfaces are joined. The kernel works out
+which pads carry it.
 
 ## Pin assignment is a lowering result
 
-It is never an authoring input. This is the load-bearing decision of the whole
-interface layer, and everything else follows from it.
+Pin assignment is produced by lowering, never given as an authoring input. Most
+of the interface layer follows from that.
 
 - **Late assignment is tractable.** Pins can be decided after placement, or
   changed because routing wants them changed, without editing the design.
@@ -41,17 +41,17 @@ class MCU(Part):
 ```
 
 Given candidates, lowering picks one and produces the same answer every time, in
-this process and the next. Determinism here is not a convenience. A pinout that
+this process and the next. Determinism matters here because a pinout that
 shifted between runs would make every downstream artifact unstable.
 
 ## A choice becomes a decision entity
 
 `PB8` won and `PB6` lost, so a `Decision` is written into the graph naming the
-alternative it rejected. Ask later why the clock is on `PB8` and the answer is a
-fact in the model, not an inference from the result.
+alternative it rejected. Asking later why the clock is on `PB8` reads that fact
+out of the model rather than inferring it from the result.
 
-Where there is only one candidate there is no decision to record, and none is
-recorded. The graph does not accumulate ceremony.
+Where there is only one candidate there is nothing to decide, and no `Decision`
+is written.
 
 ## If a signal cannot be placed
 
@@ -59,10 +59,10 @@ A required signal with no pin able to carry it is
 [`IFACE-0001`](/reference/diagnostics/). It is not deferred, and no pin is
 invented to satisfy it.
 
-Optional signals are genuinely optional. `uart` names `rts` and `cts`, and a
-part that omits them is not incomplete.
+Optional signals are genuinely optional: `uart` names `rts` and `cts`, and a
+part that omits them is still complete.
 
-## Compatibility is checked, not assumed
+## Compatibility is checked
 
 Joining two ports checks that the join makes electrical sense: voltages,
 thresholds, drive against demand and pull-ups where the protocol needs them.
@@ -76,8 +76,7 @@ class IMU(Part):
 ```
 
 Connect that to a 3.3 V controller and the compatibility check reports undecided
-and names the parameter it needed. Supplying `vih_min` decides it. Assuming one
-would have hidden the question.
+and names the parameter it needed. Supplying `vih_min` decides it.
 
 Two interfaces that disagree about membership are `IFACE-0002`.
 
@@ -85,5 +84,4 @@ Two interfaces that disagree about membership are `IFACE-0002`.
 
 A multi-drop interface can be connected several times, and lowering resolves the
 whole set into one net per signal. `i2c`, `can`, `rs485` and `power_output` are
-multi-drop. `spi` is not, because a second target needs its own chip select, and
-that is a different circuit rather than the same one twice.
+multi-drop. `spi` is not, because a second target needs its own chip select.

@@ -281,17 +281,17 @@ of them from one declaration.
 URL: https://fang.copperhead.sh/concepts/three-phases/
 Summary: Why elaboration, operation and commit happen in that order.
 
-The order is the whole point. A program that could observe a tool's result would
-not be reproducible, so it never can.
+Elaboration, operation and commit run in that order because a program that could
+observe a tool's result would not be reproducible.
 
 ## Elaboration
 
 Your program runs in a sandbox with no network access and only declared, hashed
-file inputs. It builds a graph and a tool plan. It calls no engine and touches
+file inputs. It builds a graph and a tool plan, calling no engine and touching
 no geometry.
 
-The prohibition on network access is absolute rather than a default. A declared
-exception would cost exactly the reproducibility guarantee it exists to give.
+The prohibition on network access is absolute rather than a default, because a
+declared exception would cost the reproducibility guarantee it exists to give.
 External data reaches a program as a declared, hashed file produced by an
 earlier tool call.
 
@@ -318,15 +318,15 @@ along with the condition that caused it.
 
 ## Commit
 
-One gate, six conditions and the same path for a human edit, a re-elaboration,
-a CAD import and an agent proposal. They differ in their recorded provenance and
-in nothing else.
+One gate, six conditions and the same path for a human edit, a re-elaboration, a
+CAD import and an agent proposal. They differ only in the provenance they
+record.
 
 A rejected proposal leaves canonical state untouched and still returns its
-diagnostics and its diff. The explanation is the useful output of a rejection.
+diagnostics and its diff.
 
-Only after commit are downstream artifacts written, and only then do external
-checks run and re-enter as evidence.
+Downstream artifacts are written only after commit, and external checks run then
+and re-enter as evidence.
 
 
 ---
@@ -339,22 +339,20 @@ Summary: The governing invariant and what it costs to hold.
 There is exactly one canonical model: the Engineering Intermediate
 Representation. The kernel graph is its live realization. Everything else is a
 **lowering** of it, a **projection** of it or an **interchange encoding** of it.
-That covers a netlist, a view, a SPICE deck and a KiCad file alike.
+That covers a netlist, a view, a SPICE deck and a KiCad file.
 
 No feature may introduce a second persisted representation of the same facts.
 
 ## Why it is stated as a prohibition
 
-Most hardware toolchains fail in the same place. The schematic knows one thing,
-the BOM knows another and the simulation deck knows a third, and each was true
-when it was written. Reconciliation becomes the work. The invariant exists so
-that reconciliation is not a task anyone can be assigned, because there is
-nothing to reconcile.
+Most hardware toolchains fail in the same place. The schematic, the BOM and the
+simulation deck each hold their own copy of the same facts, and each copy was
+true when it was written. Reconciling them becomes the work. The invariant
+removes that work by leaving nothing to reconcile.
 
 The cost is real. A downstream tool that wants its own store cannot have one. It
-gets a generated `Projection` and recomputes. That is slower, and that is the
-point: a cache that can go stale is a second representation wearing a different
-hat.
+gets a generated `Projection` and recomputes, which is slower. A cache that can
+go stale is a second representation.
 
 ## How it is enforced
 
@@ -411,7 +409,7 @@ Two rules make that hold. Magnitudes are `Decimal` strings under a fixed
 `Context(prec=34)`, never binary floats, so no value depends on rounding mode.
 And canonical serialization sorts by Unicode code point, except for the
 collections in `serialization.ORDERED_COLLECTIONS`, whose order carries meaning
-and is preserved rather than sorted.
+and is preserved.
 
 
 ---
@@ -419,11 +417,10 @@ and is preserved rather than sorted.
 # Values and undecided
 
 URL: https://fang.copperhead.sh/concepts/values-and-undecided/
-Summary: Unknown is a status, and undecided is a third truth value.
+Summary: How the kernel represents a value it does not know, and a constraint it cannot decide.
 
-A number in an engineering model is never only a number. How well it is known
-travels with it, and the kernel refuses to lose that on the way through a
-calculation.
+Every value carries how well it is known alongside the number itself, and that
+status survives arithmetic.
 
 ## Every value carries a status
 
@@ -438,15 +435,15 @@ Resistor(resistance=10 * kOhm)   # explicit: someone wrote it
 | `explicit` | Someone wrote it |
 | `inferred` | The kernel computed it from other facts |
 | `assumed` | A working claim with no evidence behind it |
-| `unknown` | Not known, which is itself a value rather than a gap |
+| `unknown` | Not known |
 
-**`null` never means "unknown."** `Value.unknown()` is a distinct status, so a
-field that is absent and a field that is known to be unavailable are different
-facts and stay different.
+**`null` never means "unknown."** `Value.unknown()` is a distinct status, so an
+absent field and a field known to be unavailable are different facts and the
+model keeps them apart.
 
 A value whose sources disagree becomes a `ConflictingValue` holding the
-candidates. It is not resolved by picking the first, the newest or the most
-precise. It stays unresolved and visible until something decides it.
+candidates. The kernel does not resolve it by picking one; the candidates stay
+visible until something decides between them.
 
 ## Quantities have dimensions
 
@@ -463,8 +460,7 @@ tolerance(10 * kOhm, "1%")         # nominal and tolerance
 **Dimensional errors are rejected where they are written.** `Arithmetic` checks
 dimensions in `__post_init__`, so `3 * V + 10 * kOhm` raises
 [`UNIT-0001`](/reference/diagnostics/) at construction. A dimensionally invalid
-expression cannot be stored, let alone evaluated. That is why nothing downstream
-re-checks units.
+expression cannot be stored, so nothing downstream re-checks units.
 
 ## Undecided is a truth value
 
@@ -476,10 +472,10 @@ Constraints evaluate to one of three values, not two:
 | `false` | Violated |
 | `undecided` | An operand is unknown |
 
-Undecided propagates through Kleene three-valued logic, which is stronger than
-saying unknown poisons everything. `false and undecided` is `false`, because no
-value of the unknown operand could make the conjunction true. `true or undecided`
-is `true`. The kernel decides what it can and stops exactly where it must.
+Undecided propagates through Kleene three-valued logic rather than poisoning
+every expression it touches. `false and undecided` is `false`, because no value
+of the unknown operand could make the conjunction true. `true or undecided` is
+`true`.
 
 Check results carry the same idea, plus one more case:
 
@@ -491,18 +487,14 @@ Check results carry the same idea, plus one more case:
 | `NOT_APPLICABLE` | The check does not cover this |
 
 `UNKNOWN` and `NOT_APPLICABLE` are separate because "we could not tell" and
-"there was nothing to tell" are different engineering situations. Collapsing
-them is how a checklist comes to report coverage it does not have.
+"there was nothing to tell" are different engineering situations.
 
 ## Undecided is never silently a pass
 
-An undecided result is never quietly a pass and never quietly a failure.
-Whether it **blocks** is a policy decision made by the commit gate in
-`KernelGraph.propose`, not by the evaluator. The evaluator's job is to be honest
-about what it knows. The gate's job is to decide what to do about it.
-
-That separation is what lets an early-stage design proceed with unknowns while a
-release gate refuses them, with no change to any constraint.
+An undecided result is never quietly a pass or a failure. Whether it **blocks**
+is a policy decision, made by the commit gate in `KernelGraph.propose` rather
+than by the evaluator. That separation lets an early-stage design proceed with
+unknowns while a release gate refuses them, with no change to any constraint.
 
 
 ---
@@ -510,14 +502,13 @@ release gate refuses them, with no change to any constraint.
 # The commit gate
 
 URL: https://fang.copperhead.sh/concepts/the-commit-gate/
-Summary: The six conditions every change passes, and why a rejection helps.
+Summary: The six conditions every change passes before it reaches canonical state.
 
 Nothing enters canonical state except through the gate. A human edit, a
 re-elaboration, a CAD import and an agent proposal take the same path and differ
 only in the provenance they record.
 
-That is the point of having one. A second way in would be a second set of rules,
-and the second set is always the one that is weaker.
+A second way in would mean a second set of rules to keep in step with the first.
 
 ## A transaction names its base
 
@@ -529,8 +520,8 @@ if proposal.accepted:
 
 A `Transaction` names the snapshot it was built against and carries `Operation`s:
 `AddEntity`, `RemoveEntity`, `Connect` and `SetParameter`. Naming the base is
-what makes concurrent proposals safe. A transaction built against stale state is
-rejected rather than merged on hope.
+what makes concurrent proposals safe: a transaction built against stale state is
+rejected rather than merged.
 
 ## The six conditions
 
@@ -546,8 +537,8 @@ rejected rather than merged on hope.
 4. **Required checks have run.** Every `CheckClass` the policy requires has
    actually produced a result. Absent a project policy, the required set is
    structural validation plus every check class whose scope intersects the
-   affected entities. A check class is therefore defined by what it covers as
-   much as by what it evaluates.
+   affected entities. A check class is therefore defined by its scope as well as
+   by what it evaluates.
 5. **No blocking result.** No check reported a blocking severity, or `TXN-0002`.
 6. **No undecided over a must-be-decided requirement**, or `TXN-0003`; and
    policy approvals are satisfied, or `TXN-0004`.
@@ -564,14 +555,12 @@ candidate copy is discarded, and canonical state was never touched.
 | `interface_compatibility` | Every typed link in the graph |
 
 Structural validation is not in this list because the gate runs it regardless. A
-policy can narrow or widen the required set. It cannot remove the structural
-check.
+policy can narrow or widen the required set, but cannot remove it.
 
 ## A rejection returns its reasoning
 
-A rejected `Proposal` still carries its diagnostics **and its diff**. The
-explanation is the useful output of a rejection. Saying no without the reason
-would make the gate an obstacle rather than a tool.
+A rejected `Proposal` still carries its diagnostics **and its diff**, so the
+reason a change was refused is available without re-running anything.
 
 ## Two ordering rules
 
@@ -579,11 +568,11 @@ These are encoded in the gate and new code must not invert them.
 
 `materialize()` refuses a `Realization` whose parent is not the committed
 snapshot. A result computed against a graph that no longer exists describes a
-design nobody has.
+different design.
 
 `ingest_external_results()` refuses results produced against anything but the
 committed head. External check results re-enter as `Evidence`, through an
-ordinary transaction, through the same gate as everything else.
+ordinary transaction and the same gate.
 
 
 ---
@@ -591,19 +580,19 @@ ordinary transaction, through the same gate as everything else.
 # Interfaces and lowering
 
 URL: https://fang.copperhead.sh/concepts/interfaces-and-lowering/
-Summary: A connection says what it carries. Pins are a result.
+Summary: How a typed connection lowers to pins, and what that decides.
 
 ```python
 self.mcu.i2c >> self.imu.i2c
 ```
 
-That is not a pin assignment. It is a claim that two typed interfaces are
-joined, and the kernel works out which pads carry it.
+That line is a claim that two typed interfaces are joined. The kernel works out
+which pads carry it.
 
 ## Pin assignment is a lowering result
 
-It is never an authoring input. This is the load-bearing decision of the whole
-interface layer, and everything else follows from it.
+Pin assignment is produced by lowering, never given as an authoring input. Most
+of the interface layer follows from that.
 
 - **Late assignment is tractable.** Pins can be decided after placement, or
   changed because routing wants them changed, without editing the design.
@@ -627,17 +616,17 @@ class MCU(Part):
 ```
 
 Given candidates, lowering picks one and produces the same answer every time, in
-this process and the next. Determinism here is not a convenience. A pinout that
+this process and the next. Determinism matters here because a pinout that
 shifted between runs would make every downstream artifact unstable.
 
 ## A choice becomes a decision entity
 
 `PB8` won and `PB6` lost, so a `Decision` is written into the graph naming the
-alternative it rejected. Ask later why the clock is on `PB8` and the answer is a
-fact in the model, not an inference from the result.
+alternative it rejected. Asking later why the clock is on `PB8` reads that fact
+out of the model rather than inferring it from the result.
 
-Where there is only one candidate there is no decision to record, and none is
-recorded. The graph does not accumulate ceremony.
+Where there is only one candidate there is nothing to decide, and no `Decision`
+is written.
 
 ## If a signal cannot be placed
 
@@ -645,10 +634,10 @@ A required signal with no pin able to carry it is
 [`IFACE-0001`](/reference/diagnostics/). It is not deferred, and no pin is
 invented to satisfy it.
 
-Optional signals are genuinely optional. `uart` names `rts` and `cts`, and a
-part that omits them is not incomplete.
+Optional signals are genuinely optional: `uart` names `rts` and `cts`, and a
+part that omits them is still complete.
 
-## Compatibility is checked, not assumed
+## Compatibility is checked
 
 Joining two ports checks that the join makes electrical sense: voltages,
 thresholds, drive against demand and pull-ups where the protocol needs them.
@@ -662,8 +651,7 @@ class IMU(Part):
 ```
 
 Connect that to a 3.3 V controller and the compatibility check reports undecided
-and names the parameter it needed. Supplying `vih_min` decides it. Assuming one
-would have hidden the question.
+and names the parameter it needed. Supplying `vih_min` decides it.
 
 Two interfaces that disagree about membership are `IFACE-0002`.
 
@@ -671,8 +659,7 @@ Two interfaces that disagree about membership are `IFACE-0002`.
 
 A multi-drop interface can be connected several times, and lowering resolves the
 whole set into one net per signal. `i2c`, `can`, `rs485` and `power_output` are
-multi-drop. `spi` is not, because a second target needs its own chip select, and
-that is a different circuit rather than the same one twice.
+multi-drop. `spi` is not, because a second target needs its own chip select.
 
 
 ---
@@ -682,18 +669,17 @@ that is a different circuit rather than the same one twice.
 URL: https://fang.copperhead.sh/concepts/rationale/
 Summary: Why a value is what it is, as entities rather than prose.
 
-The reason a component has the value it has is usually the most expensive thing
-to reconstruct and the first thing lost. Fang keeps it in the same graph as the
-component, as entities with the same identity and provenance rules as everything
-else.
+The reason a component has the value it has is expensive to reconstruct and
+easily lost. Fang keeps it in the same graph as the component, as entities with
+the same identity and provenance rules as everything else.
 
-The test is simple: `fang` should answer "why is this 4.7 µH?" without anyone
-having written a design document.
+The goal is that `fang` answers "why is this 4.7 µH?" without anyone having
+written a design document.
 
 ## What a program declares
 
-Rationale is declared in the class body, beside the parts it is about. Not in a
-method and not in a comment.
+Rationale is declared in the class body, beside the parts it is about, rather
+than in a method or a comment.
 
 ```python
 from fang.lang import System, A, V, uH
@@ -754,24 +740,21 @@ class Rail3V3(System):
 
 Names bind to the attribute, so `requirements=("rail_tolerance",)` refers to the
 `rail_tolerance` declaration above it. A name that resolves to nothing is
-[`ELAB-0006`](/reference/diagnostics/) rather than a silently empty link.
+[`ELAB-0006`](/reference/diagnostics/).
 
-`Assumes` and `Cites` are deliberately different declarations. An assumption is
-not weak evidence. It is the absence of evidence, and merging the two is how a
-design comes to look better justified than it is.
+`Assumes` and `Cites` are deliberately different declarations. An assumption
+records the absence of evidence, and merging it with a citation would make a
+design look better justified than it is.
 
-## Coverage is a query, not a report
+## Coverage is computed on demand
 
 ```python
 coverage(snapshot)                    # which requirements are verified and which are not
 impacted_by(snapshot, changed)        # what a change puts at risk
 ```
 
-Both are computed on demand from the graph. Neither is a document that can drift
-from the design, because neither is stored.
-
-An unverified requirement is reported as unverified. There is no state in which
-the coverage answer is more complete than the evidence.
+Both are computed on demand from the graph, so neither can drift from the
+design, and an unverified requirement is reported as unverified.
 
 ## Impact propagates through the graph
 
@@ -782,15 +765,15 @@ verification that rested on the calculation and the requirement that
 verification closed.
 
 The propagation is derived from `references()`, the same method that drives
-referential integrity and topology adjacency, so a rationale link cannot be
-invisible to impact analysis while being visible to validation.
+referential integrity and topology adjacency, so a rationale link visible to
+validation is visible to impact analysis too.
 
 ## Evidence from outside
 
 External results re-enter as `Evidence` through an ordinary transaction, against
 the committed head, through the same gate. A simulation run, a DRC report and a
-bench measurement all take that path. Because there is no side channel for
-results, a verification cannot rest on evidence the graph never saw.
+bench measurement all take that path. There is no side channel, so a
+verification cannot rest on evidence the graph never saw.
 
 
 ---
