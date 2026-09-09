@@ -7,18 +7,17 @@ sidebar:
     data-icon: open-book
 ---
 
-The reason a component has the value it has is usually the most expensive thing
-to reconstruct and the first thing lost. Fang keeps it in the same graph as the
-component, as entities with the same identity and provenance rules as everything
-else.
+The reason a component has the value it has is expensive to reconstruct and
+easily lost. Fang keeps it in the same graph as the component, as entities with
+the same identity and provenance rules as everything else.
 
-The test is simple: `fang` should answer "why is this 4.7 µH?" without anyone
-having written a design document.
+The goal is that `fang` answers "why is this 4.7 µH?" without anyone having
+written a design document.
 
 ## What a program declares
 
-Rationale is declared in the class body, beside the parts it is about. Not in a
-method and not in a comment.
+Rationale is declared in the class body, beside the parts it is about, rather
+than in a method or a comment.
 
 ```python
 from fang.lang import System, A, V, uH
@@ -79,24 +78,21 @@ class Rail3V3(System):
 
 Names bind to the attribute, so `requirements=("rail_tolerance",)` refers to the
 `rail_tolerance` declaration above it. A name that resolves to nothing is
-[`ELAB-0006`](/reference/diagnostics/) rather than a silently empty link.
+[`ELAB-0006`](/reference/diagnostics/).
 
-`Assumes` and `Cites` are deliberately different declarations. An assumption is
-not weak evidence. It is the absence of evidence, and merging the two is how a
-design comes to look better justified than it is.
+`Assumes` and `Cites` are deliberately different declarations. An assumption
+records the absence of evidence, and merging it with a citation would make a
+design look better justified than it is.
 
-## Coverage is a query, not a report
+## Coverage is computed on demand
 
 ```python
 coverage(snapshot)                    # which requirements are verified and which are not
 impacted_by(snapshot, changed)        # what a change puts at risk
 ```
 
-Both are computed on demand from the graph. Neither is a document that can drift
-from the design, because neither is stored.
-
-An unverified requirement is reported as unverified. There is no state in which
-the coverage answer is more complete than the evidence.
+Both are computed on demand from the graph, so neither can drift from the
+design, and an unverified requirement is reported as unverified.
 
 ## Impact propagates through the graph
 
@@ -107,12 +103,12 @@ verification that rested on the calculation and the requirement that
 verification closed.
 
 The propagation is derived from `references()`, the same method that drives
-referential integrity and topology adjacency, so a rationale link cannot be
-invisible to impact analysis while being visible to validation.
+referential integrity and topology adjacency, so a rationale link visible to
+validation is visible to impact analysis too.
 
 ## Evidence from outside
 
 External results re-enter as `Evidence` through an ordinary transaction, against
 the committed head, through the same gate. A simulation run, a DRC report and a
-bench measurement all take that path. Because there is no side channel for
-results, a verification cannot rest on evidence the graph never saw.
+bench measurement all take that path. There is no side channel, so a
+verification cannot rest on evidence the graph never saw.

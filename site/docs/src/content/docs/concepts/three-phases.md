@@ -7,17 +7,17 @@ sidebar:
     data-icon: clock
 ---
 
-The order is the whole point. A program that could observe a tool's result would
-not be reproducible, so it never can.
+Elaboration, operation and commit run in that order because a program that could
+observe a tool's result would not be reproducible.
 
 ## Elaboration
 
 Your program runs in a sandbox with no network access and only declared, hashed
-file inputs. It builds a graph and a tool plan. It calls no engine and touches
+file inputs. It builds a graph and a tool plan, calling no engine and touching
 no geometry.
 
-The prohibition on network access is absolute rather than a default. A declared
-exception would cost exactly the reproducibility guarantee it exists to give.
+The prohibition on network access is absolute rather than a default, because a
+declared exception would cost the reproducibility guarantee it exists to give.
 External data reaches a program as a declared, hashed file produced by an
 earlier tool call.
 
@@ -44,12 +44,12 @@ along with the condition that caused it.
 
 ## Commit
 
-One gate, six conditions and the same path for a human edit, a re-elaboration,
-a CAD import and an agent proposal. They differ in their recorded provenance and
-in nothing else.
+One gate, six conditions and the same path for a human edit, a re-elaboration, a
+CAD import and an agent proposal. They differ only in the provenance they
+record.
 
 A rejected proposal leaves canonical state untouched and still returns its
-diagnostics and its diff. The explanation is the useful output of a rejection.
+diagnostics and its diff.
 
-Only after commit are downstream artifacts written, and only then do external
-checks run and re-enter as evidence.
+Downstream artifacts are written only after commit, and external checks run then
+and re-enter as evidence.

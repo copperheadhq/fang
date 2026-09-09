@@ -1,6 +1,6 @@
 ---
 title: The commit gate
-description: The six conditions every change passes, and why a rejection helps.
+description: The six conditions every change passes before it reaches canonical state.
 sidebar:
   order: 4
   attrs:
@@ -11,8 +11,7 @@ Nothing enters canonical state except through the gate. A human edit, a
 re-elaboration, a CAD import and an agent proposal take the same path and differ
 only in the provenance they record.
 
-That is the point of having one. A second way in would be a second set of rules,
-and the second set is always the one that is weaker.
+A second way in would mean a second set of rules to keep in step with the first.
 
 ## A transaction names its base
 
@@ -24,8 +23,8 @@ if proposal.accepted:
 
 A `Transaction` names the snapshot it was built against and carries `Operation`s:
 `AddEntity`, `RemoveEntity`, `Connect` and `SetParameter`. Naming the base is
-what makes concurrent proposals safe. A transaction built against stale state is
-rejected rather than merged on hope.
+what makes concurrent proposals safe: a transaction built against stale state is
+rejected rather than merged.
 
 ## The six conditions
 
@@ -41,8 +40,8 @@ rejected rather than merged on hope.
 4. **Required checks have run.** Every `CheckClass` the policy requires has
    actually produced a result. Absent a project policy, the required set is
    structural validation plus every check class whose scope intersects the
-   affected entities. A check class is therefore defined by what it covers as
-   much as by what it evaluates.
+   affected entities. A check class is therefore defined by its scope as well as
+   by what it evaluates.
 5. **No blocking result.** No check reported a blocking severity, or `TXN-0002`.
 6. **No undecided over a must-be-decided requirement**, or `TXN-0003`; and
    policy approvals are satisfied, or `TXN-0004`.
@@ -59,14 +58,12 @@ candidate copy is discarded, and canonical state was never touched.
 | `interface_compatibility` | Every typed link in the graph |
 
 Structural validation is not in this list because the gate runs it regardless. A
-policy can narrow or widen the required set. It cannot remove the structural
-check.
+policy can narrow or widen the required set, but cannot remove it.
 
 ## A rejection returns its reasoning
 
-A rejected `Proposal` still carries its diagnostics **and its diff**. The
-explanation is the useful output of a rejection. Saying no without the reason
-would make the gate an obstacle rather than a tool.
+A rejected `Proposal` still carries its diagnostics **and its diff**, so the
+reason a change was refused is available without re-running anything.
 
 ## Two ordering rules
 
@@ -74,8 +71,8 @@ These are encoded in the gate and new code must not invert them.
 
 `materialize()` refuses a `Realization` whose parent is not the committed
 snapshot. A result computed against a graph that no longer exists describes a
-design nobody has.
+different design.
 
 `ingest_external_results()` refuses results produced against anything but the
 committed head. External check results re-enter as `Evidence`, through an
-ordinary transaction, through the same gate as everything else.
+ordinary transaction and the same gate.
