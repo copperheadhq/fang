@@ -1,5 +1,9 @@
-<title>fang</title>
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fang — the language and kernel under copperhead</title>
 <meta name="description" content="The language and kernel under copperhead. Write hardware in Python; the kernel decides what is true about it.">
+<link rel="canonical" href="https://fang.copperhead.sh/">
 <!-- Google tag (gtag.js) — copperhead's own GA4 property, so fang's traffic
      reports beside the rest of the brand rather than into a second one. -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-KGEWCR918W"></script>
@@ -11,7 +15,29 @@
   gtag('config', 'G-KGEWCR918W');
 </script>
 
+<!-- The brand, for everything that renders the page without opening it: the
+     card a shared link becomes, the browser chrome's colour in each theme, and
+     the icons. brand/og.png and brand/apple-touch-icon.png are rasters because
+     neither a crawler nor a home screen renders SVG; brand/make.py draws them
+     from the same geometry as the mark. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="copperhead / fang">
+<meta property="og:url" content="https://fang.copperhead.sh/">
+<meta property="og:title" content="fang — the language and kernel under copperhead">
+<meta property="og:description" content="Write hardware in Python. The kernel elaborates it into one canonical model, refuses anything it cannot justify, and lowers what survives into netlists, views, simulation decks, and KiCad.">
+<meta property="og:image" content="https://fang.copperhead.sh/brand/og.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="copperhead / fang — write the hardware, and let the kernel decide what is true.">
+<meta name="twitter:card" content="summary_large_image">
+
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#1b1b1c" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+
 <link rel="icon" href="/brand/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -337,7 +363,7 @@
       <p class="eyebrow">The language and kernel under copperhead</p>
       <h1>Write the hardware.<br>Let the kernel decide <em>what is true</em>.</h1>
       <p class="lede">
-        Fang is a Python-embedded language for circuit boards. You author intent — typed
+        A Python-embedded language for circuit boards. You author intent — typed
         interfaces, parameters with units, constraints. The kernel elaborates it into one
         canonical model, refuses anything it cannot justify, and lowers what survives into
         netlists, views, simulation decks, and KiCad.
@@ -488,7 +514,7 @@
       <p class="eyebrow">Eleven stages, all delivered</p>
       <h2>The toolchain</h2>
       <p class="intro">
-        Stages one through six close the loop from a Fang program to a KiCad netlist a
+        Stages one through six close the loop from a fang program to a KiCad netlist a
         person can open. The rest are what you need once the loop is real.
       </p>
 
@@ -571,6 +597,7 @@
       <a href="https://docs.copperhead.sh">Documentation</a>
       <a href="https://github.com/copperheadhq/fang">GitHub</a>
       <a href="https://github.com/copperheadhq/fang/blob/main/openspec/specs/fang-kernel/spec.md">Specification</a>
+      <a href="https://github.com/copperheadhq/fang/blob/main/site/BRAND.md">Brand</a>
     </nav>
   </div>
 </footer>

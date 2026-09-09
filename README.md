@@ -1,8 +1,15 @@
-# fang
+<picture>
+  <source media="(prefers-color-scheme: dark)"
+          srcset="https://raw.githubusercontent.com/copperheadhq/fang/main/site/brand/lockup-outlined.svg">
+  <img src="https://raw.githubusercontent.com/copperheadhq/fang/main/site/brand/lockup-outlined-light.svg"
+       alt="fang" width="150" height="53">
+</picture>
 
-Fang is a code-defined electronics toolchain: a Python-embedded language for
-authoring hardware, a typed kernel that holds the design and compilers that
-lower it into netlists, views, simulation decks and CAD.
+**The language and kernel under [copperhead](https://copperhead.sh).**
+
+A code-defined electronics toolchain: a Python-embedded language for authoring
+hardware, a typed kernel that holds the design and compilers that lower it into
+netlists, views, simulation decks and CAD.
 
 ```python
 from fang.interfaces import I2CPort, Pin, PinMap
@@ -202,6 +209,21 @@ in [tests/test_examples.py](https://github.com/copperheadhq/fang/blob/main/tests
 - [examples/parity/](https://github.com/copperheadhq/fang/tree/main/examples/parity/): the divider and
   blinky built again in atopile, so the two toolchains' components and nets can be
   asserted equal
+
+## Brand
+
+fang is a sub-brand of [copperhead](https://copperhead.sh) rather than a
+separate identity, and the name is literal: copperhead is the snake, fang is the
+fang. The mark is a trace with a fang hanging from it, drawn on the same
+32-unit grid and in the same copper as copperhead's via mark. The wordmark is
+lowercase, always, and set in IBM Plex Mono because it names a language.
+
+[site/BRAND.md](https://github.com/copperheadhq/fang/blob/main/site/BRAND.md) is
+the identity in full — the mark's geometry and clear space, the palette in both
+themes with the two values nudged for contrast and the reason recorded, the type
+and the voice. The assets are in
+[site/brand/](https://github.com/copperheadhq/fang/tree/main/site/brand/), and
+the page they dress is [fang.copperhead.sh](https://fang.copperhead.sh).
 
 ## License
 

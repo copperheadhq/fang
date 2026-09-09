@@ -31,7 +31,24 @@ leaving it; fang's is a single trace with one thing hanging from it.
 | [`brand/mark.svg`](brand/mark.svg) | The mark in copper. Default. |
 | [`brand/mark-currentcolor.svg`](brand/mark-currentcolor.svg) | Inherits `currentColor`. For inline use where the mark must take the surrounding text colour. |
 | [`brand/favicon.svg`](brand/favicon.svg) | 32×32 on the dark chip, matching copperhead's favicon construction. |
-| [`brand/lockup.svg`](brand/lockup.svg) | Horizontal mark plus wordmark. Outline the text before shipping anywhere the webfont is not loaded. |
+| [`brand/lockup.svg`](brand/lockup.svg) | Horizontal mark plus wordmark, the wordmark still live text. For anywhere the webfont loads. |
+| [`brand/lockup-outlined.svg`](brand/lockup-outlined.svg) | The same lockup with the wordmark outlined, ink `#e3e5e8`. For the dark ground where the webfont does not load — a README, chiefly. |
+| [`brand/lockup-outlined-light.svg`](brand/lockup-outlined-light.svg) | The outlined lockup again, ink `#2b2d32`, for the light ground. Pair the two in a `<picture>` so the README follows the reader's theme. |
+| [`brand/og.png`](brand/og.png) | 1200×630 social card. What a shared link to the site renders as. |
+| [`brand/apple-touch-icon.png`](brand/apple-touch-icon.png) | 180×180 raster of the favicon chip, for an iOS home screen. |
+
+The last four are generated rather than drawn, because each is read somewhere
+the webfont does not load: the outlined lockups carry the wordmark as paths, the
+card carries it as pixels, and the touch icon is the chip a home screen cannot
+take as SVG. [`brand/make.py`](brand/make.py) draws all four from the geometry
+below and from the real faces, which it reads out of the docs build rather than
+substituting anything. Rerun it when the wordmark, the line, or the palette
+moves:
+
+```bash
+pip install pillow "fonttools[woff]"
+python site/brand/make.py
+```
 
 **Geometry.** Rail `M5.75 7.5 h20.5`. Fang `M10.5 7.5 L16 24.5 L21.5 7.5`.
 Stroke `2.25`, `round` caps and joins, `fill: none`. The glyph spans 20.5 units
@@ -51,7 +68,8 @@ names a language, where copperhead's own wordmark sits in Inter because it names
 a product you talk to.
 
 In running text the product is *fang*, lowercase, not *Fang* and not *FANG*. At
-the start of a sentence, rewrite the sentence.
+the start of a sentence, rewrite the sentence. The README and the landing page
+both open on a rewritten sentence.
 
 When the parent brand needs to be present, the lockup is
 `copperhead / fang`, with `copperhead /` in the muted text colour and `fang` at
@@ -125,6 +143,13 @@ it: **the language and kernel under copperhead.**
 [`index.html`](index.html) is the landing page for `fang.copperhead.sh`. It is a
 single self-contained file: no build step, no framework, one stylesheet inline,
 one small script for the theme toggle. Fonts come from Google Fonts; everything
-else ships with the page.
+else ships with the page. `make.py` is not part of it — the page has no build
+step and gets none.
+
+Its head carries the brand for everything that renders the page without opening
+it: `og:image` is the card, `theme-color` is the ground colour in each theme, and
+the icons are the favicon and the touch icon. The card is the one asset that has
+to be re-made by hand when the line on it changes, so it says only what the hero
+says.
 
 To deploy, serve `site/` as the document root so `/brand/favicon.svg` resolves.
