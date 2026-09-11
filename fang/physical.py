@@ -23,6 +23,7 @@ from decimal import Decimal
 from typing import Iterable, Mapping, Sequence
 
 from .constraints import PHYSICAL_PREFIX
+from .diagnostics import UNIT_DIMENSION_MISMATCH, error
 from .entities import Entity
 from .units import Quantity, _ctx, _decimal, _decimal_str
 from .values import Value
@@ -106,6 +107,31 @@ class PhysicalEntity(Entity):
     def references(self) -> tuple[str, ...]:
         return self.realizes()
 
+    def __post_init__(self) -> None:
+        _refuse_bare_magnitudes(self)
+
+
+def _refuse_bare_magnitudes(entity) -> None:
+    """Refuse a magnitude that is not a quantity, at construction.
+
+    A bare number carries no unit, so nothing downstream could tell 1 oz of
+    copper from 1 metre of it. Catching it here keeps the rule the rest of the
+    kernel already holds: a dimensionally meaningless value cannot be stored,
+    let alone evaluated.
+
+    Board structure and the copper realizing an entity are separate hierarchies
+    and both carry magnitudes, so the rule lives in one function they share
+    rather than being written twice.
+    """
+    for name, value in entity.physical_attributes().items():
+        if not isinstance(value, Quantity):
+            raise error(
+                UNIT_DIMENSION_MISMATCH,
+                f"{entity.identity.id}.{name} is {value!r}, which carries no "
+                "unit; a physical magnitude is a Quantity",
+                entities=[entity.identity.id],
+            )
+
 
 def _attributes(*pairs: tuple[str, Quantity | None]) -> dict[str, Quantity]:
     return {name: value for name, value in pairs if value is not None}
@@ -120,6 +146,9 @@ class Layer(Entity):
     function: str = "signal"
     copper_weight: Quantity | None = None
     thickness: Quantity | None = None
+
+    def __post_init__(self) -> None:
+        _refuse_bare_magnitudes(self)
 
     def physical_attributes(self) -> Mapping[str, Quantity]:
         return _attributes(
@@ -166,6 +195,9 @@ class Board(Entity):
     outline: tuple[Point, ...] = ()
     thickness: Quantity | None = None
     unit: str = "mm"
+
+    def __post_init__(self) -> None:
+        _refuse_bare_magnitudes(self)
 
     def physical_attributes(self) -> Mapping[str, Quantity]:
         return _attributes(("board_thickness", self.thickness))

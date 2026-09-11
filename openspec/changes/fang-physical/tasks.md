@@ -70,17 +70,18 @@ that can regress the gate; it lands alone.
 
 ## 3. Authoring physical intent
 
-- [ ] 3.1 Add keyword-only `class` and `kind` arguments to `lang.require()`,
+- [x] 3.1 Add keyword-only `constraint_class` and `constraint_kind` arguments to `lang.require()`,
       defaulting to today's `electrical` / `declared`, and carry them through
       `ElaborationContext` into `elaborate._build_constraints`; verify every
       existing example elaborates to byte-identical entities.
-- [ ] 3.2 Add the `board()` declaration method beside `constraints()` with the
+- [x] 3.2 Add the `board()` declaration method beside `constraints()` with the
       same once-per-elaboration rules; verify the declaration is recorded rather
       than evaluated and carries the source location of its line.
-- [ ] 3.3 Add `oz` to the unit table as a mass unit and settle the copper-weight
-      spelling left open in design.md; verify a layer's copper weight is a
+- [x] 3.3 Settle the copper-weight spelling left open in design.md: `ozcu`, a
+      length rather than a mass, because what a stackup composes with is the
+      thickness the weight produces; verify a layer's copper weight is a
       `Quantity` and that a bare number is refused.
-- [ ] 3.4 Verify no placer, router, or field solver is constructed during
+- [x] 3.4 Verify no placer, router, or field solver is constructed during
       elaboration, in the style of the existing sandbox assertion at
       [spec.md:1511](../../specs/fang-kernel/spec.md#L1511).
 
