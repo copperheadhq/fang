@@ -5,7 +5,7 @@
        alt="fang" width="150" height="53">
 </picture>
 
-**The language and kernel under [copperhead](https://copperhead.sh).**
+**Hardware as Code.** The language and kernel under [copperhead](https://copperhead.sh).
 
 A code-defined electronics toolchain: a Python-embedded language for authoring
 hardware, a typed kernel that holds the design and compilers that lower it into

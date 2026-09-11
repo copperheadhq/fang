@@ -45,6 +45,18 @@ HAIRLINE = "#343638"
 
 MARGIN = 88
 
+# The card's copy. The headline names the product and states the line, in the
+# one string the brand uses everywhere else; `copperhead` is named twice around
+# it, in the lockup above and the relationship along the foot. The accent falls
+# on the name: `fang` in copper, the line after it in plain text, so the card
+# says who this is first and what it does second. `fang` stays lowercase here
+# as it does in running text; the colon belongs to the sentence, not the name,
+# so it is not accented with it.
+HEAD = (("fang", ACCENT_TEXT), (": Hardware as Code", TEXT))
+HEAD_SIZE = 92        # a ceiling, not a setting — `fit` takes it down to fit
+FOOT_LABEL = "THE LANGUAGE AND KERNEL UNDER COPPERHEAD"
+DOMAIN = "fang.copperhead.sh"
+
 
 def face(pattern: str) -> ImageFont.FreeTypeFont:
     """The one woff2 in the docs build matching `pattern`, as a TrueType face."""
@@ -78,6 +90,15 @@ def tracked(draw, xy, text, font, fill, tracking=0.0):
         draw.text((x, y), ch, font=font, fill=fill, anchor="ls")
         x += draw.textlength(ch, font=font) + tracking
     return x
+
+
+def fit(draw, text, ceiling, width, weight=600):
+    """Inter at the largest whole point size at or under `ceiling` that fits."""
+    for size in range(ceiling, 0, -1):
+        font = sized(INTER, size * SS, weight=weight)
+        if draw.textlength(text, font=font) <= width:
+            return font
+    raise SystemExit(f"{text!r} does not fit in {width / SS:.0f} px at any size")
 
 
 def stroke(draw, points, width, colour):
@@ -164,6 +185,13 @@ def lockups() -> None:
 
 
 def card() -> None:
+    """The social card: the lockup, the line, and the foot that places it.
+
+    Three registers, top to bottom — who this is, what it is, and where it
+    lives. The headline is one line rather than the two it used to be, so it is
+    set larger and centred in the band the pair filled, which keeps the card's
+    proportions without leaving a hole where the second line was.
+    """
     canvas = Image.new("RGB", (W * SS, H * SS), GROUND)
     draw = ImageDraw.Draw(canvas)
 
@@ -186,40 +214,44 @@ def card() -> None:
     tracked(draw, (x, px(lockup_y)), "fang", plex_lockup, TEXT)
 
     # ── Headline ─────────────────────────────────────────────────────────
-    head = sized(INTER, 62 * SS, weight=600)
-    draw.text(px(MARGIN, 300), "Write the hardware.", font=head, fill=TEXT, anchor="ls")
+    # Set as large as the margins allow, up to the ceiling: the line is one
+    # string and the card is a fixed size, so the type fits the line rather
+    # than the line being cut to fit the type. Centred on its cap band and
+    # not its text box — the descender and the leading are not ink, and
+    # centring on those would ride the whole line high.
+    whole = "".join(word for word, _ in HEAD)
+    head = fit(draw, whole, HEAD_SIZE, (W - 2 * MARGIN) * SS)
+    rule = px(H - MARGIN - 74)
+    cap = -draw.textbbox((0, 0), whole, font=head, anchor="ls")[1]
+    baseline = (px(lockup_y + 46) + rule + cap) / 2
+
     x = px(MARGIN)
-    y = px(384)
-    for word, colour in (
-        ("Let the kernel decide ", TEXT),
-        ("what is true", ACCENT_TEXT),
-        (".", TEXT),
-    ):
-        draw.text((x, y), word, font=head, fill=colour, anchor="ls")
+    for word, colour in HEAD:
+        draw.text((x, baseline), word, font=head, fill=colour, anchor="ls")
         x += draw.textlength(word, font=head)
 
     # ── Foot ─────────────────────────────────────────────────────────────
-    rule = px(H - MARGIN - 74)
     draw.rectangle((px(MARGIN), rule, px(W - MARGIN), rule + SS), fill=HAIRLINE)
 
     label = sized(PLEX_400, 21 * SS)
-    baseline = px(H - MARGIN)
-    tracked(
-        draw,
-        (px(MARGIN), baseline),
-        "THE LANGUAGE AND KERNEL UNDER COPPERHEAD",
-        label,
-        DIM,
-        tracking=0.08 * 21 * SS,
-    )
+    foot = px(H - MARGIN)
+    tracked(draw, (px(MARGIN), foot), FOOT_LABEL, label, DIM, tracking=0.08 * 21 * SS)
 
     site = sized(PLEX_500, 21 * SS)
-    width = sum(draw.textlength(c, font=site) for c in "fang.copperhead.sh")
-    tracked(draw, (px(W - MARGIN) - width, baseline), "fang.copperhead.sh", site, ACCENT)
+    width = sum(draw.textlength(c, font=site) for c in DOMAIN)
+    tracked(draw, (px(W - MARGIN) - width, foot), DOMAIN, site, ACCENT)
 
-    out = HERE / "og.png"
-    canvas.resize((W, H), Image.LANCZOS).save(out, optimize=True)
-    print(f"{out.relative_to(HERE.parent.parent)}  {out.stat().st_size / 1024:.0f} KB")
+    image = canvas.resize((W, H), Image.LANCZOS)
+
+    # Written twice, because `/brand/` is served from two document roots: this
+    # folder for the landing page, and docs/public/ for the docs site, whose
+    # pages point at the same absolute URL. The hand-drawn assets are copied
+    # across by hand; this one is generated, so a copy left behind would go
+    # stale without anyone seeing it.
+    for out in (HERE, HERE.parent / "docs" / "public" / "brand"):
+        out = out / "og.png"
+        image.save(out, optimize=True)
+        print(f"{out.relative_to(HERE.parent.parent)}  {out.stat().st_size / 1024:.0f} KB")
 
 
 def touch_icon() -> None:
