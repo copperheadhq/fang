@@ -20,6 +20,7 @@ from typing import Any, Iterable, Mapping, Sequence
 from .constraints import (
     Arithmetic,
     Comparison,
+    ConstraintClass,
     Literal,
     Node,
     Ref,
@@ -137,8 +138,12 @@ us = UnitLiteral("us")
 ns = UnitLiteral("ns")
 m = UnitLiteral("m")
 mm = UnitLiteral("mm")
+um = UnitLiteral("um")
 degC = UnitLiteral("degC")
 percent = UnitLiteral("percent")
+# Copper weight. "1 oz" names an areal density by trade convention, but what a
+# stackup composes with is the thickness it produces, so the unit is a length.
+ozcu = UnitLiteral("ozcu")
 
 
 def between(minimum: Quantity, maximum: Quantity, typical: Quantity | None = None) -> Quantity:
@@ -554,6 +559,13 @@ class Module(Declared, metaclass=ModuleMeta):
     def constraints(self) -> None:
         """Declare constraints. Called once during elaboration."""
 
+    def board(self) -> None:
+        """Declare the board and its stackup. Called once during elaboration.
+
+        Like every other hook, what it declares is recorded rather than
+        evaluated: no outline is measured and no copper is placed here.
+        """
+
     # -- introspection -----------------------------------------------------
 
     @property
@@ -694,7 +706,13 @@ class ElaborationContext:
 
     def __init__(self) -> None:
         self.connections: list[tuple[Surface, Surface, SourceLocation | None]] = []
-        self.constraints: list[tuple[Module, Node, SourceLocation | None]] = []
+        self.constraints: list[
+            tuple[Module, Node, SourceLocation | None, ConstraintClass, str]
+        ] = []
+        #: The one board a program may declare, or None. A board is a property
+        #: of the design, not of a module, so it is recorded once here rather
+        #: than per-module like a constraint.
+        self.board: "BoardDeclaration | None" = None
         self.current: Module | None = None
         self.plan = PlanRecorder()
 
@@ -717,7 +735,23 @@ class ElaborationContext:
             )
         self.connections.append((left, right, location))
 
-    def require(self, expression: Node, location: SourceLocation | None) -> None:
+    def declare_board(self, declaration: "BoardDeclaration") -> None:
+        if self.board is not None:
+            raise error(
+                ELAB_UNTYPED_CONNECTION,
+                "a program declares one board; "
+                f"{declaration.location and declaration.location.file} declares a second",
+                location=declaration.location,
+            )
+        self.board = declaration
+
+    def require(
+        self,
+        expression: Node,
+        location: SourceLocation | None,
+        constraint_class: ConstraintClass = ConstraintClass.ELECTRICAL,
+        constraint_kind: str = "declared",
+    ) -> None:
         if self.current is None:
             raise error(
                 ELAB_UNTYPED_CONNECTION,
@@ -725,7 +759,9 @@ class ElaborationContext:
                 "elaboration",
                 location=location,
             )
-        self.constraints.append((self.current, expression, location))
+        self.constraints.append(
+            (self.current, expression, location, constraint_class, constraint_kind)
+        )
 
 
 def _context() -> ElaborationContext:
@@ -738,20 +774,124 @@ def _context() -> ElaborationContext:
     return _CONTEXT_STACK[-1]
 
 
-def require(expression: Node) -> None:
-    """Record a constraint. It is not evaluated here."""
+def require(
+    expression: Node,
+    *,
+    constraint_class: ConstraintClass | str = ConstraintClass.ELECTRICAL,
+    constraint_kind: str = "declared",
+) -> None:
+    """Record a constraint. It is not evaluated here.
+
+    The class and the kind are the fields the `Constraint` record carries, named
+    the same here so one vocabulary spans the program and the entity. They
+    default to what every existing program means, so adding them changed no
+    elaborated output.
+    """
     if not isinstance(expression, Node):
         raise error(
             UNIT_DIMENSION_MISMATCH,
             f"require() takes a constraint expression, not {expression!r}; "
             "comparing two quantities directly decides the question too early",
         )
-    _context().require(expression, _caller_location(2))
+    _context().require(
+        expression,
+        _caller_location(2),
+        _constraint_class(constraint_class),
+        constraint_kind,
+    )
+
+
+def _constraint_class(value: ConstraintClass | str) -> ConstraintClass:
+    """Accept the enum or its spelling; refuse anything else by name.
+
+    A program naming a class that does not exist is a mistake to catch while
+    elaborating, not a constraint that silently lands in the wrong check class.
+    """
+    if isinstance(value, ConstraintClass):
+        return value
+    try:
+        return ConstraintClass(value)
+    except ValueError:
+        known = ", ".join(sorted(c.value for c in ConstraintClass))
+        raise error(
+            UNIT_DIMENSION_MISMATCH,
+            f"{value!r} is not a constraint class; it is one of {known}",
+        ) from None
 
 
 def connect(left: Surface, right: Surface) -> None:
     """Record a typed connection between two surfaces."""
     _context().connect(left, right, _caller_location(2))
+
+
+@dataclass(frozen=True)
+class LayerDeclaration:
+    """One declared layer. Ordered by position in the stackup, never sorted."""
+
+    layer_name: str
+    function: str = "signal"
+    copper_weight: Quantity | None = None
+    thickness: Quantity | None = None
+
+
+@dataclass(frozen=True)
+class BoardDeclaration:
+    """What a program said its board is, before anything builds one."""
+
+    outline: tuple[tuple[Decimal, Decimal], ...] = ()
+    thickness: Quantity | None = None
+    unit: str = "mm"
+    layers: tuple[LayerDeclaration, ...] = ()
+    location: SourceLocation | None = None
+
+
+def layer(
+    layer_name: str,
+    *,
+    function: str = "signal",
+    copper_weight: Quantity | None = None,
+    thickness: Quantity | None = None,
+) -> LayerDeclaration:
+    """One layer of a stackup. Position in the list is the position on the board."""
+    for label, value in (("copper_weight", copper_weight), ("thickness", thickness)):
+        if value is not None and not isinstance(value, Quantity):
+            raise error(
+                UNIT_DIMENSION_MISMATCH,
+                f"{layer_name}.{label} is {value!r}; a copper weight is a "
+                "quantity such as 1 * ozcu, never a bare number",
+            )
+    return LayerDeclaration(layer_name, function, copper_weight, thickness)
+
+
+def declare_board(
+    *,
+    outline: Sequence[tuple[float | int | str | Decimal, float | int | str | Decimal]] = (),
+    thickness: Quantity | None = None,
+    unit: str = "mm",
+    layers: Sequence[LayerDeclaration] = (),
+) -> None:
+    """Record the board and its stackup. Nothing is measured or placed here."""
+    if thickness is not None and not isinstance(thickness, Quantity):
+        raise error(
+            UNIT_DIMENSION_MISMATCH,
+            f"board thickness is {thickness!r}; a thickness is a quantity such "
+            "as 1.6 * mm, never a bare number",
+        )
+    for entry in layers:
+        if not isinstance(entry, LayerDeclaration):
+            raise error(
+                UNIT_DIMENSION_MISMATCH,
+                f"a stackup is built from layer() calls, not {entry!r}",
+            )
+    _context().declare_board(
+        BoardDeclaration(
+            outline=tuple((_decimal(x), _decimal(y)) for x, y in outline),
+            thickness=thickness,
+            unit=unit,
+            layers=tuple(layers),
+            location=_caller_location(2),
+        )
+    )
 
 
 class _Tools:

@@ -173,16 +173,37 @@ tuple moves down and `checks.py` re-exports it.
 
 ### D6. `require()` learns a class; the program declares the board
 
-`require(expr, class="routing", kind="min_trace_width")` — keyword-only, both
-defaulting to today's `electrical` / `declared`, so every existing program
-elaborates to byte-identical entities. `ElaborationContext.constraints` carries
-the class through to `_build_constraints`.
+`require(expr, constraint_class="routing", constraint_kind="min_trace_width")` —
+keyword-only, both defaulting to today's `electrical` / `declared`, so every
+existing program elaborates to byte-identical entities.
+`ElaborationContext.constraints` carries the class through to
+`_build_constraints`.
+
+*Corrected during implementation.* This decision first spelled the arguments
+`class=` and `kind=`. `class` is a reserved word, so `require(expr,
+class="routing")` is a syntax error and no program could have written it. They
+are named `constraint_class` and `constraint_kind` after the fields the
+`Constraint` record already carries, so one vocabulary spans the program and the
+entity. Either the enum or its spelling is accepted; a class that does not exist
+is refused while elaborating, by name, rather than landing in the wrong check
+class.
 
 A module declares its board in a `board()` method beside `constraints()`, called
 once during elaboration under the same rules: recorded, never evaluated, and
-carrying the source location of the line that produced it. Layer copper weights
-are `Quantity` like every other magnitude — `1 * oz` — never a bare number, which
-means `oz` joins the unit table as a mass unit.
+carrying the source location of the line that produced it. The hook runs after
+`constraints()`, and a second declaration is refused: a board is a property of
+the design rather than of a module, so the context holds one.
+
+Layer copper weights are `Quantity` like every other magnitude — never a bare
+number, refused at the declaration and again when the entity is constructed.
+
+*The spelling, left open above, is settled as `ozcu`, and it is a length rather
+than a mass.* "1 oz copper" names an areal density by trade convention, but
+nothing downstream composes with an areal density: a stackup adds thicknesses
+and a width rule compares lengths. So the unit converts to the thickness the
+weight produces — 1 ozcu = 34.8 um — and the symbol is spelled out so it is
+never mistaken for the mass ounce. A mass unit here would have been
+dimensionally correct and useless.
 
 *Alternative rejected:* a separate `require_routing()`. Two spellings of one verb
 for a difference the record already carries in a field.
