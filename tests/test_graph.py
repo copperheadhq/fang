@@ -225,7 +225,7 @@ def test_a_realizations_implied_change_returns_through_a_transaction(kernel):
 
 def test_the_snapshot_records_its_producer(kernel):
     root = kernel.head.as_dict()
-    assert root["schema_version"] == "1.1"
+    assert root["schema_version"] == "1.2"
     assert root["compiler_version"]
     assert root["lock_id"]
 

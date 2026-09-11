@@ -68,16 +68,32 @@ class CheckStatus(Enum):
     NOT_APPLICABLE = "NOT_APPLICABLE"  # applicability evaluated false
 
 
+#: The prefix that sends a reference through the physical layer. It lives here
+#: rather than in `physical` because the evaluator has to recognize it: an
+#: interval spanned by copper means something different from an interval of
+#: uncertainty, and `Ref` is where the two are told apart.
+PHYSICAL_PREFIX = "physical."
+
+
 @dataclass(frozen=True)
 class Interval:
     """The closed interval an operand covers, in SI base units.
 
     ``None`` is never used for undecided; an operand that is not known produces
     no interval at all and the evaluator returns ``Truth.UNDECIDED``.
+
+    `population` distinguishes the two things a closed interval can mean. Its
+    default, an interval of *uncertainty*, says one value lies somewhere in
+    here; a comparison that straddles it is undecided, because the answer
+    depends on a fact nobody knows. A *population* interval is the span of many
+    values that are all known and all present — the widths of the segments
+    realizing a net. A comparison that straddles that one is not undecided: the
+    members that fall outside the bound are real, so the answer is false.
     """
 
     low: Decimal
     high: Decimal
+    population: bool = False
 
     @classmethod
     def point(cls, value: Decimal) -> "Interval":
@@ -94,15 +110,23 @@ class Interval:
                 for a in (self.low, self.high)
                 for b in (other.low, other.high)
             ]
-            return Interval(min(corners), max(corners))
+            return Interval(min(corners), max(corners), self._spans(other))
+
+    def _spans(self, other: "Interval") -> bool:
+        """Arithmetic over a population is still a population.
+
+        Doubling every segment width leaves a set of real widths, not a range
+        of uncertainty, so a rule over the result stays decidable.
+        """
+        return self.population or other.population
 
     def __add__(self, other: "Interval") -> "Interval":
         with localcontext(_CONTEXT):
-            return Interval(self.low + other.low, self.high + other.high)
+            return Interval(self.low + other.low, self.high + other.high, self._spans(other))
 
     def __sub__(self, other: "Interval") -> "Interval":
         with localcontext(_CONTEXT):
-            return Interval(self.low - other.high, self.high - other.low)
+            return Interval(self.low - other.high, self.high - other.low, self._spans(other))
 
     def __mul__(self, other: "Interval") -> "Interval":
         return self._combine(other, lambda a, b: a * b)
@@ -113,14 +137,14 @@ class Interval:
         return self._combine(other, lambda a, b: a / b)
 
     def __neg__(self) -> "Interval":
-        return Interval(-self.high, -self.low)
+        return Interval(-self.high, -self.low, self.population)
 
     def __abs__(self) -> "Interval":
         if self.low >= 0:
             return self
         if self.high <= 0:
-            return Interval(-self.high, -self.low)
-        return Interval(Decimal(0), max(-self.low, self.high))
+            return Interval(-self.high, -self.low, self.population)
+        return Interval(Decimal(0), max(-self.low, self.high), self.population)
 
     def power(self, exponent: Fraction) -> "Interval":
         if exponent.denominator != 1:
@@ -131,7 +155,7 @@ class Interval:
             corners = [self.low ** int(exponent), self.high ** int(exponent)]
             if self.low <= 0 <= self.high and int(exponent) % 2 == 0:
                 corners.append(Decimal(0))
-            return Interval(min(corners), max(corners))
+            return Interval(min(corners), max(corners), self.population)
 
 
 # --------------------------------------------------------------------------
@@ -227,7 +251,9 @@ class Ref(Node):
         if value is None or not value.known or value.quantity is None:
             return Truth.UNDECIDED
         low, high = value.quantity.interval()
-        return Interval(low, high)
+        # A physical reference spans the copper realizing the target: every
+        # value in it is present on a board. Any other range is uncertainty.
+        return Interval(low, high, self.attr.startswith(PHYSICAL_PREFIX))
 
     def references(self) -> tuple[str, ...]:
         return (self.ref,)
@@ -363,10 +389,20 @@ class Comparison(Node):
         a: Interval = left   # type: ignore[assignment]
         b: Interval = right  # type: ignore[assignment]
 
+        # Against a fixed bound, an ordering comparison over a population is
+        # decided by its ends alone: `min` settles every `>=` and `max` every
+        # `<=`, so a straddling interval is a failure rather than a question.
+        # Equality is deliberately excluded — the span says what the extremes
+        # are, never which values in between are actually present.
+        ordering = self.op in ("lt", "le", "gt", "ge")
+        exhaustive = ordering and (
+            (a.population and b.is_point) or (b.population and a.is_point)
+        )
+
         def decide(all_true: bool, all_false: bool) -> Truth:
             if all_true:
                 return Truth.TRUE
-            if all_false:
+            if all_false or exhaustive:
                 return Truth.FALSE
             return Truth.UNDECIDED
 

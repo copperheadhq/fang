@@ -166,6 +166,11 @@ UNITS: Mapping[str, _UnitDef] = {
     "h": _d(_T, "3600", prefixable=False),
     "L": _d(_L**3, "0.001"),
     "eV": _d(_L**2 * _M / _T**2, "1.602176634E-19"),
+    # Copper weight. "1 oz copper" names an areal density by trade convention,
+    # but what a stackup and a width rule actually compose with is the thickness
+    # it produces, so it is a length here: 1 oz -> 34.8 um. The symbol is spelled
+    # out so it is never mistaken for the mass ounce.
+    "ozcu": _d(_L, "0.0000348", prefixable=False),
 }
 
 #: Metric prefixes. A prefix is permitted on input; canonical form keeps it.

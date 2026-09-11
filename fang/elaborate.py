@@ -22,6 +22,7 @@ from .diagnostics import (
     Severity,
     SourceLocation,
 )
+from .physical import Board, Layer, Point, Stackup
 from .entities import (
     Assumption,
     Calculation,
@@ -142,6 +143,7 @@ def elaborate(
                 _build_lowerings(ordered, pin_ids, project_id, revision_id, built_at)
             )
             entities.update(_build_constraints(context, project_id, revision_id, built_at))
+            entities.update(_build_board(context, project_id, revision_id, built_at))
     except FangError as exc:
         # A failed elaboration produces diagnostics and no partial graph.
         return Elaboration(None, context.plan.plan(), (exc.diagnostic,))
@@ -212,7 +214,7 @@ def _identity_kind(module: Module) -> str:
 
 
 def _run_hooks(root_module: Module, context: ElaborationContext) -> None:
-    """Run architecture() then constraints(), top-down in declaration order."""
+    """Run architecture(), constraints(), then board(), in declaration order."""
     modules = [module for _, module in _walk(root_module, root_module._path or "system")]
     for module in modules:
         context.current = module
@@ -220,6 +222,11 @@ def _run_hooks(root_module: Module, context: ElaborationContext) -> None:
     for module in modules:
         context.current = module
         module.constraints()
+    # The board comes last: it is the one declaration about the whole design
+    # rather than about a module, so it is read once everything else is stated.
+    for module in modules:
+        context.current = module
+        module.board()
     context.current = None
 
 
@@ -421,13 +428,14 @@ def _build_constraints(
     built_at: datetime,
 ) -> dict[str, Entity]:
     entities: dict[str, Entity] = {}
-    for index, (module, expression, location) in enumerate(context.constraints):
+    for index, record in enumerate(context.constraints):
+        module, expression, location, constraint_class, constraint_kind = record
         path = f"{module._path}.constraint[{index}]"
         identity = derive(project_id, "constraint", path)
         constraint = Constraint(
             identity,
-            constraint_class=ConstraintClass.ELECTRICAL,
-            constraint_kind="declared",
+            constraint_class=constraint_class,
+            constraint_kind=constraint_kind,
             targets=(module._entity_id,),
             expression=expression,
             enforcement=Enforcement.HARD,
@@ -435,6 +443,62 @@ def _build_constraints(
             source_location=location,
         )
         entities[constraint.id] = constraint
+    return entities
+
+
+def _build_board(
+    context: ElaborationContext,
+    project_id: str,
+    revision_id: str,
+    built_at: datetime,
+) -> dict[str, Entity]:
+    """Turn a declared board into entities. Nothing here measures geometry."""
+    declaration = context.board
+    if declaration is None:
+        return {}
+
+    entities: dict[str, Entity] = {}
+    location = declaration.location
+    provenance = _provenance(revision_id, built_at, location)
+
+    layer_ids: list[str] = []
+    for index, declared in enumerate(declaration.layers):
+        # The path carries the position, so two layers of the same name in one
+        # stackup stay distinct and a layer keeps its identity when another is
+        # renamed around it.
+        identity = derive(project_id, "layer", f"board.stackup.layer[{index}]")
+        entities[identity.id] = Layer(
+            identity,
+            layer_name=declared.layer_name,
+            function=declared.function,
+            copper_weight=declared.copper_weight,
+            thickness=declared.thickness,
+            provenance=provenance,
+            source_location=location,
+        )
+        layer_ids.append(identity.id)
+
+    stackup_id = None
+    if layer_ids:
+        identity = derive(project_id, "stackup", "board.stackup")
+        entities[identity.id] = Stackup(
+            identity,
+            layers=tuple(layer_ids),
+            provenance=provenance,
+            source_location=location,
+        )
+        stackup_id = identity.id
+
+    identity = derive(project_id, "board", "board")
+    entities[identity.id] = Board(
+        identity,
+        stackup=stackup_id,
+        outline=tuple(Point(x, y) for x, y in declaration.outline),
+        thickness=declaration.thickness,
+        unit=declaration.unit,
+        provenance=provenance,
+        source_location=location,
+    )
     return entities
 
 
