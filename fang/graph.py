@@ -15,7 +15,7 @@ from dataclasses import dataclass, field, replace
 from typing import Callable, Iterable, Mapping, Sequence
 
 from . import SCHEMA_VERSION, __version__
-from .constraints import CheckStatus, Constraint, Node, Ref, Resolver
+from .constraints import CheckStatus, Constraint, ConstraintClass, Node, Ref, Resolver
 from .diagnostics import (
     Diagnostic,
     Severity,
@@ -34,6 +34,12 @@ from .entities import (
     ConnectionKind,
     Entity,
     Verification,
+)
+from .physical import (
+    PHYSICAL_COLLECTIONS,
+    PHYSICAL_KEYS,
+    PHYSICAL_PREFIX,
+    physical_resolver,
 )
 from .provenance import Provenance, ProvenanceRecord
 from .serialization import canonical_bytes, content_hash
@@ -110,7 +116,17 @@ class Snapshot:
         if self.extracted_upstream:
             root["extracted_upstream"] = sorted(self.extracted_upstream)
 
+        # `physical` is a mapping rather than a collection, so its kinds are
+        # grouped under it. Every key is present even when empty, exactly as the
+        # root rule requires of a collection.
+        for key in PHYSICAL_KEYS:
+            root["physical"][key] = []
+
         for entity in self.entities.values():
+            physical = PHYSICAL_COLLECTIONS.get(entity.kind)
+            if physical is not None:
+                root["physical"][physical].append(entity.as_dict())
+                continue
             collection = _COLLECTION_OF.get(entity.kind)
             if collection is None:
                 root.setdefault("extensions", {}).setdefault(entity.kind, []).append(
@@ -118,6 +134,12 @@ class Snapshot:
                 )
             else:
                 root[collection].append(entity.as_dict())
+
+        # `layers` is an ordered key name — a stackup's layer order and a via's
+        # layer pair both carry meaning — so the physical collections are sorted
+        # here rather than left to the serializer's unordered path.
+        for key in PHYSICAL_KEYS:
+            root["physical"][key].sort(key=lambda record: record["id"])
         return root
 
     def records(self) -> list[dict]:
@@ -129,9 +151,18 @@ class Snapshot:
         return content_hash(self.as_dict())
 
     def resolver(self) -> Resolver:
-        """Resolve an entity attribute to its value, for expression evaluation."""
+        """Resolve an entity attribute to its value, for expression evaluation.
+
+        A `physical.`-prefixed attribute resolves over the physical entities
+        realizing the target rather than over its own parameters, so a routing
+        rule targets the net it is about rather than trace segments whose
+        identifiers did not exist when the rule was written.
+        """
+        physical = physical_resolver(self.entities)
 
         def resolve(entity_id: str, attr: str) -> Value | None:
+            if attr.startswith(PHYSICAL_PREFIX):
+                return physical(entity_id, attr[len(PHYSICAL_PREFIX):])
             entity = self.entities.get(entity_id)
             if entity is None:
                 return None
@@ -357,12 +388,35 @@ class CheckClass:
         return bool(self.scope(snapshot) & affected)
 
 
+#: The classes the structural check covers. The layout classes are covered by
+#: `routing.ROUTING_CHECK` instead, so every class is covered exactly once and a
+#: constraint is never evaluated twice by two check classes.
+STRUCTURAL_CLASSES: frozenset = frozenset(
+    {
+        ConstraintClass.ELECTRICAL,
+        ConstraintClass.PHYSICS,
+        ConstraintClass.TOPOLOGY,
+        ConstraintClass.SOURCING,
+        ConstraintClass.TESTABILITY,
+    }
+)
+
+
+def _is_structural(entity) -> bool:
+    return isinstance(entity, Constraint) and entity.constraint_class in STRUCTURAL_CLASSES
+
+
 def structural_constraint_check(snapshot: Snapshot) -> list[CheckResult]:
-    """Evaluate every constraint in the graph. The default electrical check."""
+    """Evaluate every electrical-class constraint in the graph.
+
+    A check class is defined by what it covers as much as by what it evaluates,
+    so a class covering every constraint whatever its class could never be
+    scoped. The layout classes have their own.
+    """
     resolve = snapshot.resolver()
     results = []
     for entity in snapshot.entities.values():
-        if isinstance(entity, Constraint):
+        if _is_structural(entity):
             status = entity.evaluate(resolve)
             results.append(
                 CheckResult(
@@ -376,17 +430,18 @@ def structural_constraint_check(snapshot: Snapshot) -> list[CheckResult]:
 
 
 def _constraint_scope(snapshot: Snapshot) -> set[str]:
-    """What the constraint check covers: every constraint, its targets, and
-    every entity its expression reads.
+    """What the constraint check covers: every structural-class constraint,
+    its targets, and every entity its expression reads.
 
     A constraint declared in one module over a parameter of another reads an
     entity it does not target; setting that parameter must still bring the
     check into the gate, or a measured value could reach the head with the
-    constraint over it never evaluated.
+    constraint over it never evaluated. The layout classes are covered by
+    `routing.ROUTING_CHECK` instead, so nothing is evaluated twice.
     """
     scope: set[str] = set()
     for entity in snapshot.entities.values():
-        if isinstance(entity, Constraint):
+        if _is_structural(entity):
             scope.add(entity.id)
             scope.update(entity.targets)
             scope.update(entity.expression.references())
@@ -396,6 +451,25 @@ def _constraint_scope(snapshot: Snapshot) -> set[str]:
 
 
 CONSTRAINT_CHECK = CheckClass("constraint", structural_constraint_check, _constraint_scope)
+
+
+def default_checks() -> tuple[CheckClass, ...]:
+    """Every check class this implementation ships.
+
+    Resolved lazily: the layout, topology, and compatibility classes live above
+    this module and import it, so naming them at import time would invert the
+    dependency order the kernel keeps.
+    """
+    from .compatibility import compatibility_check, compatibility_scope
+    from .routing import ROUTING_CHECK
+    from .topology import topology_check, topology_scope
+
+    return (
+        CONSTRAINT_CHECK,
+        CheckClass("topology", topology_check, topology_scope),
+        CheckClass("interface_compatibility", compatibility_check, compatibility_scope),
+        ROUTING_CHECK,
+    )
 
 
 @dataclass(frozen=True)
@@ -498,12 +572,15 @@ class KernelGraph:
         self,
         snapshot: Snapshot,
         *,
-        checks: Sequence[CheckClass] = (CONSTRAINT_CHECK,),
+        checks: Sequence[CheckClass] | None = None,
         policy: Policy = DEFAULT_POLICY,
         revision_counter: int = 0,
     ) -> None:
         self._head = snapshot
-        self._checks = list(checks)
+        # Absent an explicit set, every shipped check class is available. A
+        # caller who took the old electrical-only default and then added a
+        # routing constraint would silently not have it checked.
+        self._checks = list(default_checks() if checks is None else checks)
         self.policy = policy
         self._revision = revision_counter
         self._history: list[Snapshot] = [snapshot]

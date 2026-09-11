@@ -27,6 +27,9 @@ ORDERED_COLLECTIONS: frozenset[str] = frozenset(
         "sequence",         # power-up sequencing
         "power_sequence",
         "branches",         # a topology constraint's ordered branches
+        "layers",           # a stackup runs top to bottom; a via's pair, first to last
+        "outline",          # a polygon's vertex order is its shape
+        "path",             # a routed segment runs from one end to the other
         "calls",            # a tool plan's ordered calls
         "args",             # an expression's operand order is semantic
         "steps",
