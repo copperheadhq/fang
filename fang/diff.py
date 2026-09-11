@@ -73,6 +73,13 @@ _KIND_TO_CHANGED = {
     "evidence": ChangeClass.EVIDENCE_CHANGED,
     "constraint": ChangeClass.CONSTRAINT_CHANGED,
     "board": ChangeClass.PHYSICAL_CHANGED,
+    "stackup": ChangeClass.PHYSICAL_CHANGED,
+    "layer": ChangeClass.PHYSICAL_CHANGED,
+    "placement": ChangeClass.PHYSICAL_CHANGED,
+    "pad": ChangeClass.PHYSICAL_CHANGED,
+    "trace": ChangeClass.PHYSICAL_CHANGED,
+    "via": ChangeClass.PHYSICAL_CHANGED,
+    "zone": ChangeClass.PHYSICAL_CHANGED,
     "region": ChangeClass.PHYSICAL_CHANGED,
 }
 
