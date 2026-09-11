@@ -34,7 +34,7 @@ leaving it; fang's is a single trace with one thing hanging from it.
 | [`brand/lockup.svg`](brand/lockup.svg) | Horizontal mark plus wordmark, the wordmark still live text. For anywhere the webfont loads. |
 | [`brand/lockup-outlined.svg`](brand/lockup-outlined.svg) | The same lockup with the wordmark outlined, ink `#e3e5e8`. For the dark ground where the webfont does not load — a README, chiefly. |
 | [`brand/lockup-outlined-light.svg`](brand/lockup-outlined-light.svg) | The outlined lockup again, ink `#2b2d32`, for the light ground. Pair the two in a `<picture>` so the README follows the reader's theme. |
-| [`brand/og.png`](brand/og.png) | 1200×630 social card. What a shared link to the site renders as. |
+| [`brand/og.png`](brand/og.png) | 1200×630 social card. What a shared link to the site renders as. Copied to `docs/public/brand/` too, by `make.py`. |
 | [`brand/apple-touch-icon.png`](brand/apple-touch-icon.png) | 180×180 raster of the favicon chip, for an iOS home screen. |
 
 The last four are generated rather than drawn, because each is read somewhere
@@ -135,8 +135,15 @@ The product refuses to overclaim, so the writing does too.
 - **No superlatives, no "revolutionary", no "seamless".** The claim is that the
   thing is *correct*, which is a claim you can check.
 
-Copperhead's own line is "Cursor for circuit boards." Fang's is the layer under
-it: **the language and kernel under copperhead.**
+Copperhead's own line is "Cursor for circuit boards." Fang's is
+**Hardware as Code** — the phrase infrastructure-as-code already taught this
+audience, pointed at the board. It is the line the card carries and the line
+the landing page and the README open on.
+
+Under it sits the relationship, which is a description rather than a line:
+*the language and kernel under copperhead*. Use it where fang has to be
+placed against the parent brand — a README's second sentence, an about page —
+not as the thing a reader meets first.
 
 ## The site
 
@@ -148,8 +155,23 @@ step and gets none.
 
 Its head carries the brand for everything that renders the page without opening
 it: `og:image` is the card, `theme-color` is the ground colour in each theme, and
-the icons are the favicon and the touch icon. The card is the one asset that has
-to be re-made by hand when the line on it changes, so it says only what the hero
-says.
+the icons are the favicon and the touch icon. The docs site carries the same
+card — Starlight gives each page its own `og:title` and `og:description` but no
+image, so `astro.config.mjs` supplies one for the whole site.
+
+The card is three registers, top to bottom: who this is, what it is, and where
+it lives. The `copperhead / fang` lockup, then **fang: Hardware as Code** set as
+large as the margins allow, then the relationship and the domain along the foot.
+It carries no second sentence — at thumbnail width one idea is the most that
+survives.
+
+The accent falls on the name and nothing else: `fang` in copper, the line after
+it in plain text, so the card says who this is first and what it does second.
+The colon belongs to the sentence rather than the name, and is not accented with
+it.
+
+The headline is fitted, not sized: `make.py` takes the largest whole point size
+at or under its ceiling that clears the margins, so the type follows the line
+rather than the line being cut to fit the type. Re-run it when the line moves.
 
 To deploy, serve `site/` as the document root so `/brand/favicon.svg` resolves.
