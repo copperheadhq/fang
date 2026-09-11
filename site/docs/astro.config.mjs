@@ -62,7 +62,7 @@ export default defineConfig({
           attrs: {
             property: "og:image:alt",
             content:
-              "fang: Hardware as Code — the line set under the copperhead / fang lockup, on fang's dark ground.",
+              "fang: Hardware as Code — fang's mark leading the line, with copperhead's mark and name above it, on fang's dark ground.",
           },
         },
         {

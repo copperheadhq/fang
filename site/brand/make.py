@@ -54,6 +54,7 @@ MARGIN = 88
 # so it is not accented with it.
 HEAD = (("fang", ACCENT_TEXT), (": Hardware as Code", TEXT))
 HEAD_SIZE = 92        # a ceiling, not a setting — `fit` takes it down to fit
+HEAD_MARK, HEAD_GAP = 0.70, 26   # the mark's span as a fraction of the size
 FOOT_LABEL = "THE LANGUAGE AND KERNEL UNDER COPPERHEAD"
 DOMAIN = "fang.copperhead.sh"
 
@@ -92,12 +93,19 @@ def tracked(draw, xy, text, font, fill, tracking=0.0):
     return x
 
 
-def fit(draw, text, ceiling, width, weight=600):
-    """Inter at the largest whole point size at or under `ceiling` that fits."""
+def fit(draw, text, ceiling, width, weight=600, mark=0.0, gap=0):
+    """Inter at the largest whole point size at or under `ceiling` that fits.
+
+    `mark` reserves a mark ahead of the text whose 20.5-unit span is that
+    fraction of the point size, `gap` after it. Tying the mark to the size
+    rather than fixing it in px means the two stay in proportion whatever
+    length the line turns out to be.
+    """
     for size in range(ceiling, 0, -1):
         font = sized(INTER, size * SS, weight=weight)
-        if draw.textlength(text, font=font) <= width:
-            return font
+        reserved = (mark * size * SS + gap) if mark else 0
+        if reserved + draw.textlength(text, font=font) <= width:
+            return font, size
     raise SystemExit(f"{text!r} does not fit in {width / SS:.0f} px at any size")
 
 
@@ -119,6 +127,33 @@ def mark(draw, x, y, grid):
     width = 2.25 * u
     stroke(draw, [p(5.75, 7.5), p(26.25, 7.5)], width, COPPER)
     stroke(draw, [p(10.5, 7.5), p(16, 24.5), p(21.5, 7.5)], width, COPPER)
+
+
+def via_mark(draw, x, y, grid):
+    """copperhead's own mark: a via, with four traces leaving it.
+
+    The geometry is packages/starlight-theme/assets/mark.svg — the same 32-unit
+    grid as fang's and the same 2.25 stroke, which is what makes the two read as
+    one system side by side. Butt caps, not round: these traces run into the via
+    rather than ending in the open, and fang's round caps are its own.
+    """
+    u = grid / 32
+
+    def p(ux, uy):
+        return (x + ux * u, y + uy * u)
+
+    width = max(1, int(round(2.25 * u)))
+    radius = 5.25 * u
+    cx, cy = p(16, 16)
+    draw.ellipse((cx - radius, cy - radius, cx + radius, cy + radius),
+                 outline=COPPER, width=width)
+    for a, b in (
+        ((16, 5.75), (16, 10.75)),      # the four traces, from the via outward
+        ((16, 21.25), (16, 26.25)),
+        ((5.75, 16), (10.75, 16)),
+        ((21.25, 16), (26.25, 16)),
+    ):
+        draw.line([p(*a), p(*b)], fill=COPPER, width=width)
 
 
 # The mark, exactly as `mark.svg` draws it.
@@ -202,16 +237,23 @@ def card() -> None:
     draw.rectangle((0, 0, W * SS, 3 * SS), fill=COPPER)
 
     # ── Lockup ───────────────────────────────────────────────────────────
-    # The mark stands 1.37 cap-heights tall beside the wordmark, the same
-    # proportion the page header sets it at, and is centred on the cap band.
-    grid, lockup_y = 72, MARGIN + 40
+    # The parent brand, on its own: copperhead's via with four traces leaving
+    # it, and its name. fang is not named up here any more — it leads the line
+    # below, where the mark that belongs to it goes too.
+    plex_light = sized(PLEX_400, 40 * SS)
+    lockup_baseline = (MARGIN + 40) * SS
+    cap = -draw.textbbox((0, 0), "copperhead", font=plex_light, anchor="ls")[1]
+
+    grid = 64 * SS
     u = grid / 32
-    mark(draw, px(MARGIN - 4), px(lockup_y - 14 - 9.5 * u - 7.5 * u), px(grid))
-    plex_lockup = sized(PLEX_500, 40 * SS)
-    plex_lockup_light = sized(PLEX_400, 40 * SS)
-    x = px(MARGIN + 26 * u - 4 + 10)
-    x = tracked(draw, (x, px(lockup_y)), "copperhead / ", plex_lockup_light, DIM)
-    tracked(draw, (x, px(lockup_y)), "fang", plex_lockup, TEXT)
+    via_mark(draw, MARGIN * SS - 5.75 * u, lockup_baseline - cap / 2 - 16 * u, grid)
+    tracked(
+        draw,
+        (MARGIN * SS + 20.5 * u + 12 * SS, lockup_baseline),
+        "copperhead",
+        plex_light,
+        DIM,
+    )
 
     # ── Headline ─────────────────────────────────────────────────────────
     # Set as large as the margins allow, up to the ceiling: the line is one
@@ -220,12 +262,21 @@ def card() -> None:
     # not its text box — the descender and the leading are not ink, and
     # centring on those would ride the whole line high.
     whole = "".join(word for word, _ in HEAD)
-    head = fit(draw, whole, HEAD_SIZE, (W - 2 * MARGIN) * SS)
     rule = px(H - MARGIN - 74)
-    cap = -draw.textbbox((0, 0), whole, font=head, anchor="ls")[1]
-    baseline = (px(lockup_y + 46) + rule + cap) / 2
+    head, size = fit(
+        draw, whole, HEAD_SIZE, (W - 2 * MARGIN) * SS, mark=HEAD_MARK, gap=HEAD_GAP * SS
+    )
+    head_cap = -draw.textbbox((0, 0), whole, font=head, anchor="ls")[1]
+    baseline = (lockup_baseline + 46 * SS + rule + head_cap) / 2
 
-    x = px(MARGIN)
+    # fang's mark leads its own line, set to the cap height beside it and
+    # centred on the same band, so it reads as the first word rather than as a
+    # bullet sitting next to one.
+    head_grid = HEAD_MARK * size * SS / 20.5 * 32
+    hu = head_grid / 32
+    x = MARGIN * SS
+    mark(draw, x - 5.75 * hu, baseline - head_cap / 2 - 16 * hu, head_grid)
+    x += 20.5 * hu + HEAD_GAP * SS
     for word, colour in HEAD:
         draw.text((x, baseline), word, font=head, fill=colour, anchor="ls")
         x += draw.textlength(word, font=head)

@@ -32,6 +32,15 @@ leaving it; fang's is a single trace with one thing hanging from it.
 | [`brand/mark-currentcolor.svg`](brand/mark-currentcolor.svg) | Inherits `currentColor`. For inline use where the mark must take the surrounding text colour. |
 | [`brand/favicon.svg`](brand/favicon.svg) | 32×32 on the dark chip, matching copperhead's favicon construction. |
 | [`brand/lockup.svg`](brand/lockup.svg) | Horizontal mark plus wordmark, the wordmark still live text. For anywhere the webfont loads. |
+
+The card is the one place both marks appear together — copperhead's above,
+fang's on the line below it. Both are drawn on the same 32-unit grid at the same
+2.25 stroke in the same copper, which is what makes the pair one system rather
+than two logos. copperhead's is not duplicated into this folder: `make.py` draws
+it from the geometry in
+[`packages/starlight-theme/assets/mark.svg`](../packages/starlight-theme/assets/mark.svg),
+which is upstream's copy and stays the only one.
+
 | [`brand/lockup-outlined.svg`](brand/lockup-outlined.svg) | The same lockup with the wordmark outlined, ink `#e3e5e8`. For the dark ground where the webfont does not load — a README, chiefly. |
 | [`brand/lockup-outlined-light.svg`](brand/lockup-outlined-light.svg) | The outlined lockup again, ink `#2b2d32`, for the light ground. Pair the two in a `<picture>` so the README follows the reader's theme. |
 | [`brand/og.png`](brand/og.png) | 1200×630 social card. What a shared link to the site renders as. Copied to `docs/public/brand/` too, by `make.py`. |
@@ -160,8 +169,10 @@ card — Starlight gives each page its own `og:title` and `og:description` but n
 image, so `astro.config.mjs` supplies one for the whole site.
 
 The card is three registers, top to bottom: who this is, what it is, and where
-it lives. The `copperhead / fang` lockup, then **fang: Hardware as Code** set as
-large as the margins allow, then the relationship and the domain along the foot.
+it lives. copperhead's mark and name alone at the top, then **fang: Hardware as
+Code** set as large as the margins allow with fang's own mark leading it, then
+the relationship and the domain along the foot. Each brand is named once, each
+behind its own mark, and fang's sits on the line that is fang's.
 It carries no second sentence — at thumbnail width one idea is the most that
 survives.
 
