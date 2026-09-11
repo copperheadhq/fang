@@ -67,10 +67,21 @@ function entityCount(graph) {
   return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
 }
 
-// The first paragraph, flattened to one line of plain text and cut at a
-// sentence, which is what a description has to be: no markdown, no newlines.
-function describe(body) {
-  const paragraph = body.split(/\n\s*\n/).find((p) => p.trim() && !p.startsWith("#"));
+// The first paragraph of prose, flattened to one line of plain text and cut at
+// a sentence, which is what a description has to be: no markdown, no newlines.
+//
+// "Of prose" is the whole difficulty. A README may open with a code fence, a
+// table, a quote or an image, and any of those read as a paragraph to a split
+// on blank lines while making a nonsense description. They are skipped, and if
+// an example has no prose at all its title stands in — a description that is
+// merely thin is survivable, and failing the whole docs build over one README
+// is not.
+function describe(body, fallback) {
+  const paragraph = body
+    .split(/\n\s*\n/)
+    .map((block) => block.trim())
+    .find((block) => block && !/^([#>|]|```|!\[|<)/.test(block));
+  if (!paragraph) return fallback;
   const flat = paragraph
     .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")   // links, keeping the text
     .replace(/[*_`]/g, "")
@@ -139,7 +150,7 @@ for (const [index, example] of examples.entries()) {
 
   let page = `---
 title: ${JSON.stringify(title)}
-description: ${JSON.stringify(describe(body))}
+description: ${JSON.stringify(describe(body, title))}
 sidebar:
   order: ${index + 1}
   label: ${JSON.stringify(name)}
