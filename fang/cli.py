@@ -298,8 +298,9 @@ def cmd_mcp(args) -> int:
     try:
         from .mcp import Session, serve
     except ImportError:
-        # Named rather than degraded: a server that cannot speak the protocol
-        # is not a smaller server, it is a broken one.
+        # This module imports no SDK, so the missing extra surfaces where
+        # `build_server` reaches for it — below, as a coded refusal. The guard
+        # stays for the case where fang.mcp itself cannot be imported.
         print(
             f"fang: {MCP_DEPENDENCY_MISSING}: the agent surface needs the "
             "protocol dependency, which is not installed; install it with "
@@ -316,11 +317,13 @@ def cmd_mcp(args) -> int:
             project_id=args.project,
             checks=DEFAULT_CHECKS,
         )
+        # Named rather than degraded: a server that cannot speak the protocol
+        # is not a smaller server, it is a broken one.
+        serve(session)
     except FangError as exc:
         report_diagnostics([exc.diagnostic])
         return EXIT_FAILED
 
-    serve(session)
     return EXIT_OK
 
 

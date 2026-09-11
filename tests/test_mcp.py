@@ -16,6 +16,7 @@ import pytest
 
 from conftest import PROJECT, REGULATOR, FIXED_TIME, tool_provenance
 
+from fang import __version__
 from fang.constraints import CheckStatus
 from fang.diagnostics import (
     MCP_MALFORMED_ARGUMENT,
@@ -761,3 +762,100 @@ def test_an_unknown_tool_is_refused_by_the_server(session):
     with pytest.raises(Exception) as caught:
         asyncio.run(server.call_tool("delete_the_board", {}))
     assert "delete_the_board" in str(caught.value)
+
+
+@requires_sdk
+def test_the_mutation_tools_reach_the_gate_over_the_protocol(attached):
+    """The whole mutation path, called the way a client calls it.
+
+    The tools that carry it are the two whose protocol names collide with the
+    functions they delegate to, so this exercises them through `call_tool`
+    rather than through the projection the other mutation tests use.
+    """
+    import asyncio
+
+    from fang.mcp import build_server
+
+    server = build_server(attached)
+    before = attached.graph().head.hash
+
+    answer = json.loads(
+        asyncio.run(
+            server.call_tool(
+                "propose",
+                {"operations": [{"op": "remove_entity", "target": "NET-CHASSIS",
+                                 "reason": "test"}]},
+            )
+        ).content[0].text
+    )
+    assert answer["ok"] is True, answer
+    assert answer["proposal"]["accepted"] is True
+    assert attached.graph().head.hash == before, "proposing moves nothing"
+
+    committed = json.loads(
+        asyncio.run(
+            server.call_tool("commit", {"handle": answer["handle"]})
+        ).content[0].text
+    )
+    assert committed["committed"] is True
+    assert committed["from"] == before
+    assert attached.graph().head.hash != before
+
+
+def test_a_transaction_records_the_path_it_arrived_by(attached):
+    """`Transaction.origin` differs by mutation path, and nothing else does."""
+    answer = propose(
+        attached, [{"op": "remove_entity", "target": "NET-CHASSIS", "reason": "test"}]
+    )
+    origin = answer["proposal"]["transaction"]["origin"]
+    assert origin["actor"] == {"kind": "adapter", "id": "fang-mcp", "version": __version__}
+    assert origin["activity"] == "mcp:propose"
+    assert origin["revision_id"] == attached.graph().head.revision_id
+
+
+def test_a_magnitude_that_is_not_a_number_is_refused_with_a_code(attached):
+    """An untrusted magnitude is a coded refusal, not a decimal exception."""
+    for bad in ("abc", None, [1], "", "1.2.3"):
+        answer = guarded(
+            propose,
+            attached,
+            [
+                {
+                    "op": "set_parameter",
+                    "target": REGULATOR,
+                    "name": "power_dissipation",
+                    "value": {
+                        "status": "explicit",
+                        "quantity": {"magnitude": bad, "unit": "W"},
+                    },
+                    "reason": "test",
+                }
+            ],
+        )
+        assert answer["ok"] is False, bad
+        assert [d["code"] for d in answer["diagnostics"]] == [MCP_MALFORMED_ARGUMENT]
+
+
+def test_a_reload_that_names_nothing_leaves_the_session_bound(session):
+    """A refused reload is survivable: the session keeps the program it had."""
+    program = session.program
+    head = session.graph().head.hash
+
+    with pytest.raises(FangError) as caught:
+        session.reload("not_a_program.py")
+    assert caught.value.diagnostic.code == MCP_MALFORMED_ARGUMENT
+    assert session.program == program
+    assert session.graph().head.hash == head
+
+
+def test_a_program_named_for_a_dependency_does_not_replace_it(project):
+    """The client names the program, so the module it registers is namespaced."""
+    shutil.copy(Path(project) / "sensor_board.py", Path(project) / "mcp.py")
+    before = sys.modules.get("mcp")
+
+    session = Session(project, "mcp.py", project_id="PRJ-MCP")
+    assert session.graph().head.entities
+
+    assert sys.modules.get("mcp") is before
+    assert "fang_program_mcp" in sys.modules
+    del sys.modules["fang_program_mcp"]
