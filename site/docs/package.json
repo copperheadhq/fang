@@ -4,10 +4,11 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "prebuild": "node scripts/generate-llms.mjs",
+    "prebuild": "node scripts/generate-examples.mjs && node scripts/generate-llms.mjs",
     "build": "astro build",
     "preview": "astro preview",
-    "llms": "node scripts/generate-llms.mjs"
+    "llms": "node scripts/generate-llms.mjs",
+    "examples": "node scripts/generate-examples.mjs"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.41.3",

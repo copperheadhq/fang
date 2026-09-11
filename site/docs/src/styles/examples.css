@@ -1,0 +1,19 @@
+/* The renders on the example pages.
+
+   `fang view` draws an SVG on its own white ground: it is a figure meant to be
+   read on its own — dropped into a report, opened in a browser, attached to a
+   review — so it carries no theme and does not inherit one. Recolouring it here
+   would put the view's palette in two places and make the page's copy the one
+   that goes stale, so the page gives it a surface to sit on instead. On the
+   dark theme that reads as a figure laid on the page rather than a hole burnt
+   through it; on the light theme the border is what separates the two whites. */
+.sl-markdown-content img[src^="/examples/"] {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #ffffff;
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  margin-block: 1.25rem;
+}
