@@ -24,6 +24,8 @@ import importlib.util
 import inspect
 import sys
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
@@ -31,6 +33,7 @@ from . import __version__
 from .checks import DEFAULT_CHECKS
 from .constraints import CheckStatus
 from .diagnostics import (
+    MCP_DEPENDENCY_MISSING,
     MCP_MALFORMED_ARGUMENT,
     MCP_PATH_OUTSIDE_ROOT,
     MCP_UNACCEPTED_PROPOSAL,
@@ -56,6 +59,7 @@ from .graph import (
 )
 from .lang import System
 from .netlist import compile_netlist
+from .provenance import Actor, ActorKind, ProvenanceOrigin, ProvenanceRecord
 from .queries import (
     causing_requirements,
     decisions_on_changed_evidence,
@@ -98,12 +102,23 @@ def _load_system(path: Path, name: str | None = None) -> type[System]:
     A failure here is a refusal with a code, not a `SystemExit`: the surface is
     answering a client, not running a command.
     """
-    spec = importlib.util.spec_from_file_location(path.stem, path)
+    if not path.is_file():
+        raise error(MCP_MALFORMED_ARGUMENT, f"{path} is not a file")
+
+    # The name is namespaced because a client chooses it: a board program called
+    # mcp.py would otherwise replace the SDK in this running server, and one
+    # called fang.py would replace this kernel.
+    spec = importlib.util.spec_from_file_location(f"fang_program_{path.stem}", path)
     if spec is None or spec.loader is None:
         raise error(MCP_MALFORMED_ARGUMENT, f"{path} could not be imported")
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
+    try:
+        spec.loader.exec_module(module)
+    except BaseException:
+        # A program that raised leaves nothing half-initialized registered.
+        sys.modules.pop(spec.name, None)
+        raise
 
     systems = [
         value
@@ -254,9 +269,21 @@ class Session:
         return workspace if workspace.exists else None
 
     def reload(self, program: Path | str | None = None) -> None:
-        """Re-bind and re-elaborate. A named program is contained like any path."""
+        """Re-bind and re-elaborate. A named program is contained like any path.
+
+        The new program is resolved and checked before any state is dropped, so
+        a reload naming a file that is not there is a refusal the session
+        survives rather than one that leaves it bound to nothing.
+        """
         if program is not None:
-            self.program = self.resolve(program)
+            candidate = self.resolve(program)
+            if not candidate.is_file():
+                raise error(
+                    MCP_MALFORMED_ARGUMENT,
+                    f"{candidate} is not a file; the session is unchanged and "
+                    "still bound to its program",
+                )
+            self.program = candidate
         self._cache_key, self._cache, self._graph = None, None, None
         self._proposals.clear()
 
@@ -549,19 +576,42 @@ def project_records(session: Session) -> str:
 # --------------------------------------------------------------------------
 
 
+def _number(value: Any, field: str) -> str:
+    """A client-supplied magnitude, as the decimal string the kernel stores.
+
+    The client is untrusted input, so a magnitude that is not one is refused
+    with a code here. Letting `Decimal` raise instead would surface an
+    unexplained `InvalidOperation` where the surface owes a named refusal.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float, str, Decimal)):
+        raise error(
+            MCP_MALFORMED_ARGUMENT,
+            f"{field} is a number; {type(value).__name__} is not one",
+        )
+    try:
+        Decimal(str(value))
+    except InvalidOperation:
+        raise error(MCP_MALFORMED_ARGUMENT, f"{field} is not a number: {value!r}") from None
+    return str(value)
+
+
 def _quantity(payload: Mapping[str, Any]) -> Quantity:
     unit = payload.get("unit")
     if unit is None:
         raise error(MCP_MALFORMED_ARGUMENT, "a quantity names its unit")
     if "magnitude" in payload:
-        return Quantity.scalar(str(payload["magnitude"]), unit)
+        return Quantity.scalar(_number(payload["magnitude"], "magnitude"), unit)
     if "tolerance" in payload and "nominal" in payload:
         return Quantity.with_tolerance(
-            str(payload["nominal"]), str(payload["tolerance"]), unit
+            _number(payload["nominal"], "nominal"),
+            _number(payload["tolerance"], "tolerance"),
+            unit,
         )
     if payload.get("minimum") is not None and payload.get("maximum") is not None:
         return Quantity.range(
-            str(payload["minimum"]), str(payload["maximum"]), unit
+            _number(payload["minimum"], "minimum"),
+            _number(payload["maximum"], "maximum"),
+            unit,
         )
     raise error(
         MCP_MALFORMED_ARGUMENT,
@@ -588,7 +638,7 @@ def _value(payload: Mapping[str, Any]) -> Value:
                 MCP_MALFORMED_ARGUMENT,
                 "an inferred value names its source and its confidence",
             )
-        return Value.inferred(quantity, source, str(confidence))
+        return Value.inferred(quantity, source, _number(confidence, "confidence"))
     if status == "assumed":
         rationale = payload.get("rationale")
         if rationale is None:
@@ -678,6 +728,24 @@ def build_operation(payload: Mapping[str, Any]) -> Operation:
     )
 
 
+def _origin(revision_id: str, moment: datetime | None = None) -> ProvenanceRecord:
+    """What this surface can attest about a mutation that arrived through it.
+
+    Not which model authored it — the surface does not know that, and inventing
+    it would be worse than recording nothing. What it knows is that the change
+    came through this adapter, at this version, against this revision, which is
+    the distinction `Transaction.origin` exists to carry. Every other mutation
+    path records its own; the agent's is not exempt.
+    """
+    return ProvenanceRecord(
+        ProvenanceOrigin.AUTHORED,
+        "mcp:propose",
+        Actor(ActorKind.ADAPTER, "fang-mcp", version=__version__),
+        revision_id,
+        moment or datetime.now(timezone.utc),
+    )
+
+
 def propose(session: Session, operations: Sequence[Mapping[str, Any]]) -> dict:
     """Submit a transaction to the gate.
 
@@ -692,7 +760,9 @@ def propose(session: Session, operations: Sequence[Mapping[str, Any]]) -> dict:
         raise error(MCP_MALFORMED_ARGUMENT, "a transaction carries at least one operation")
 
     built = tuple(build_operation(payload) for payload in operations)
-    proposal = graph.propose(Transaction(graph.head.hash, built))
+    proposal = graph.propose(
+        Transaction(graph.head.hash, built, origin=_origin(graph.head.revision_id))
+    )
     handle = session.hold(proposal)
     return _answer(
         session,
@@ -753,7 +823,16 @@ def build_server(session: Session, *, name: str = "fang"):
     reserializes, so the bytes an agent reads are the bytes this kernel
     produced.
     """
-    from mcp.server import MCPServer          # noqa: PLC0415 - the one SDK import
+    try:
+        from mcp.server import MCPServer      # noqa: PLC0415 - the one SDK import
+    except ImportError as missing:
+        # Named rather than degraded: a server that cannot speak the protocol
+        # is not a smaller server, it is a broken one.
+        raise error(
+            MCP_DEPENDENCY_MISSING,
+            "the agent surface needs the protocol dependency, which is not "
+            "installed; install it with 'pip install \"copperhead-fang[mcp]\"'",
+        ) from missing
 
     server = MCPServer(name=name, version=__version__)
 
@@ -835,7 +914,10 @@ def build_server(session: Session, *, name: str = "fang"):
         name="propose",
         structured_output=False,
     )
-    def propose(operations: list[dict]) -> str:
+    def propose_tool(operations: list[dict]) -> str:
+        # Named apart from the module-level `propose` it calls. A tool function
+        # of the same name shadows it inside this closure and calls itself, and
+        # the protocol name is the decorator's argument either way.
         return text(propose, session, operations)
 
     @server.tool(
@@ -843,7 +925,7 @@ def build_server(session: Session, *, name: str = "fang"):
         description="Advance the head with a proposal the gate accepted.",
         structured_output=False,
     )
-    def commit(handle: str) -> str:
+    def commit_tool(handle: str) -> str:
         return text(commit, session, handle)
 
     @server.tool(
