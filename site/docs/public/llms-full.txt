@@ -199,18 +199,20 @@ Summary: Eight programs in the repository, smallest first.
 
 Every example in [`examples/`](https://github.com/copperheadhq/fang/tree/main/examples)
 elaborates, passes the gate and is exercised by the test suite, so none of them
-is a sketch that no longer runs.
+is a sketch that no longer runs. Each has a page here carrying its program, the
+views it renders and the files it writes — all generated from the folder itself,
+so a page cannot describe a program that has since changed.
 
 | Example | Shows |
 | --- | --- |
-| [`divider/`](https://github.com/copperheadhq/fang/tree/main/examples/divider/) | The smallest real board: two resistors and a capacitor |
-| [`blinky/`](https://github.com/copperheadhq/fang/tree/main/examples/blinky/) | Declared surfaces, connections and a constraint stating intent rather than the answer |
-| [`equations/`](https://github.com/copperheadhq/fang/tree/main/examples/equations/) | Values chosen by equation and reuse by inheritance |
-| [`sensor_board/`](https://github.com/copperheadhq/fang/tree/main/examples/sensor_board/) | Interfaces lowering to pins, a recorded decision, a check left undecided |
-| [`i2c_bus/`](https://github.com/copperheadhq/fang/tree/main/examples/i2c_bus/) | A multi-drop bus, addresses as constrained parameters |
-| [`usb_uart_bridge/`](https://github.com/copperheadhq/fang/tree/main/examples/usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet |
-| [`buck_regulator/`](https://github.com/copperheadhq/fang/tree/main/examples/buck_regulator/) | Requirement, decision, calculations and verification beside the circuit |
-| [`servo_drive/`](https://github.com/copperheadhq/fang/tree/main/examples/servo_drive/) | Composition: one `HalfBridge` block instantiated three times |
+| [`divider/`](/examples/divider/) | The smallest real board: two resistors and a capacitor |
+| [`blinky/`](/examples/blinky/) | Declared surfaces, connections and a constraint stating intent rather than the answer |
+| [`equations/`](/examples/equations/) | Values chosen by equation and reuse by inheritance |
+| [`sensor_board/`](/examples/sensor_board/) | Interfaces lowering to pins, a recorded decision, a check left undecided |
+| [`i2c_bus/`](/examples/i2c_bus/) | A multi-drop bus, addresses as constrained parameters |
+| [`usb_uart_bridge/`](/examples/usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet |
+| [`buck_regulator/`](/examples/buck_regulator/) | Requirement, decision, calculations and verification beside the circuit |
+| [`servo_drive/`](/examples/servo_drive/) | Composition: one `HalfBridge` block instantiated three times |
 
 ## Running one
 
@@ -774,6 +776,2412 @@ External results re-enter as `Evidence` through an ordinary transaction, against
 the committed head, through the same gate. A simulation run, a DRC report and a
 bench measurement all take that path. There is no side channel, so a
 verification cannot rest on evidence the graph never saw.
+
+
+---
+
+# divider
+
+URL: https://fang.copperhead.sh/examples/divider/
+Summary: A voltage divider with a capacitor across its output: two resistors, one cap, and nothing else. It is here to show the shape of a Fang program and no more than…
+
+A voltage divider with a capacitor across its output: two resistors, one cap,
+and nothing else. It is here to show the shape of a Fang program and no more
+than that.
+
+## The program
+
+[`divider.py`](https://github.com/copperheadhq/fang/blob/main/examples/divider/divider.py) declares three surfaces (`supply`, `output`,
+`ground`), three parts, and joins them in `architecture`. The `>>` operator is
+the only way parts get connected, and every connection is an entity in the graph
+rather than a line in a file:
+
+```python
+top = Resistor(resistance=10 * kOhm, package="R_0603_1608Metric")
+
+def architecture(self):
+    self.top.p2 >> self.bottom.p1
+```
+
+The two constraints say what the divider is not allowed to be — a leg under
+1 kOhm — rather than restating the values that were already written above them.
+That is the distinction the whole language rests on: a value is a choice, a
+constraint is the reason the choice is allowed.
+
+## What comes out
+
+4 parts, 2 nets, 28 entities, 2 checks, none failed and none undecided. This is
+the only example with nothing undecided in it, because it is the only one with
+no missing datasheet number anywhere.
+
+- [`out/divider.net`](https://github.com/copperheadhq/fang/blob/main/examples/divider/out/divider.net) — the KiCad netlist
+- [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/divider/out/netlist.txt) — the same projection as text
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/divider/out/checks.txt) — both checks, both decided
+- [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/divider/out/graph.txt) — 28 entities, by kind
+
+![the interconnect view](/examples/divider/interconnect.svg)
+
+The two resistors are drawn by the name they have in the program — `top` and
+`bottom` — because `Resistor` twice would not tell you which one is which.
+
+## Running it
+
+```bash
+fang check   examples/divider/divider.py
+fang netlist examples/divider/divider.py
+fang export  examples/divider/divider.py -o divider.net
+fang view    examples/divider/divider.py interconnect -o interconnect.svg
+```
+
+## The whole program
+
+```python title="examples/divider/divider.py"
+"""A voltage divider with a decoupling capacitor: the smallest real board."""
+
+from fang.lang import Electrical, System, V, kOhm, require, uF
+from fang.parts import Capacitor, Resistor
+
+
+class Divider(System):
+    """Two resistors dividing a rail, with a capacitor across the output."""
+
+    supply = Electrical()
+    output = Electrical()
+    ground = Electrical()
+
+    top = Resistor(resistance=10 * kOhm, package="R_0603_1608Metric")
+    bottom = Resistor(resistance=4.7 * kOhm, package="R_0603_1608Metric")
+    filter_cap = Capacitor(
+        capacitance=100 * uF, voltage_rating=16 * V, package="C_0805_2012Metric"
+    )
+
+    def architecture(self):
+        self.top.p2 >> self.bottom.p1
+        self.bottom.p1 >> self.filter_cap.p1
+        self.bottom.p2 >> self.filter_cap.p2
+
+    def constraints(self):
+        # A divider that draws more than a milliamp from a sensing rail is
+        # usually a mistake; both legs stay well above that.
+        require(self.top.resistance >= 1 * kOhm)
+        require(self.bottom.resistance >= 1 * kOhm)
+```
+
+## The files it writes
+
+The parts, then the nets and the pads on them.
+
+```text title="out/netlist.txt"
+C1     100 uF           Package:C_0805_2012Metric
+R1     4.7 kOhm         Package:R_0603_1608Metric
+R2     10 kOhm          Package:R_0603_1608Metric
+Net-(C1-Pad1)            C1.1 R1.1 R2.2
+Net-(C1-Pad2)            C1.2 R1.2
+```
+
+Every check that ran, and every one left undecided.
+
+```text title="out/checks.txt"
+2 checks, 0 failed, 0 undecided
+```
+
+What the elaborated graph contains, by entity kind.
+
+```text title="out/graph.txt"
+    1  block
+    3  component
+    6  connection
+    2  constraint
+    1  interface
+    6  pin
+    9  port
+   28  total
+snapshot sha256:4381a29f913c43a07f9e363282fecb7f97b0a3b784e7b096aaf59caec8eaae6b
+```
+
+All of it, including the KiCad netlist, is in
+[`examples/divider/out/`](https://github.com/copperheadhq/fang/tree/main/examples/divider/out/). Rebuild it with:
+
+```bash
+fang build examples/divider/divider.py
+```
+
+
+---
+
+# blinky
+
+URL: https://fang.copperhead.sh/examples/blinky/
+Summary: An MCU pin, a series resistor, and an LED: the board everybody builds first. Read it after divider/, because it is the first example where the parts have…
+
+An MCU pin, a series resistor, and an LED: the board everybody builds first.
+Read it after [`divider/`](https://github.com/copperheadhq/fang/blob/main/examples/divider/), because it is the first example where
+the parts have *interfaces* rather than bare pads.
+
+## The program
+
+[`blinky.py`](https://github.com/copperheadhq/fang/blob/main/examples/blinky/blinky.py) declares its own parts. `MCU` is a `Part` with a
+`PowerIn`, a `Signal`, three pins, and a `PinMap` joining the two:
+
+```python
+power = PowerIn(voltage=3.3 * V, current_demand=30 * mA)
+blink = Signal()
+
+pinmap = PinMap({"power.vcc": "VDD", "power.gnd": "VSS", "blink.line": "PA5"})
+```
+
+The pin map is what makes `self.header.dc >> self.mcu.power` mean something: one
+connection between two typed surfaces lowers to the pads that carry it, and the
+netlist below is that lowering, not a second description of it.
+
+The constraint is the point of the example:
+
+```python
+require(self.series.resistance >= 150 * Ohm)
+require(self.indicator.forward_current <= 20 * mA)
+```
+
+The 330 Ohm is not defended by the comment beside it. The bound it has to
+satisfy is written down, so replacing the LED re-decides the question instead of
+inheriting an old answer.
+
+## What comes out
+
+6 parts, 4 nets, 47 entities, 6 checks — none failed, one undecided.
+
+That undecided one is worth reading in [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/blinky/out/checks.txt): the
+board's `supply` surface has no `current_demand` on it, so "does the source
+carry the load?" has no answer. The kernel says so rather than passing the check
+on an assumed number.
+
+- [`out/blinky.net`](https://github.com/copperheadhq/fang/blob/main/examples/blinky/out/blinky.net) — the KiCad netlist
+- [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/blinky/out/netlist.txt), [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/blinky/out/graph.txt)
+
+![the interconnect view](/examples/blinky/interconnect.svg)
+
+![the power view](/examples/blinky/power.svg)
+
+## Running it
+
+```bash
+fang check   examples/blinky/blinky.py
+fang netlist examples/blinky/blinky.py
+fang view    examples/blinky/blinky.py power -o power.svg
+```
+
+## The whole program
+
+```python title="examples/blinky/blinky.py"
+"""The smallest program that drives something: an MCU pin, a resistor, an LED.
+
+The board everybody builds first. What it shows is the shape of a Fang program —
+declared surfaces, connections between them, and a constraint that states the
+engineering intent rather than the answer.
+"""
+
+from fang.interfaces import Pin, PinMap, PowerIn, PowerOut
+from fang.lang import Ohm, Part, Signal, System, V, mA, mW, nF, require
+from fang.parts import LED, Capacitor, Resistor
+
+
+class MCU(Part):
+    """A microcontroller, reduced to the one output this board uses."""
+
+    designator_prefix = "U"
+
+    power = PowerIn(voltage=3.3 * V, current_demand=30 * mA)
+    blink = Signal()
+
+    VDD = Pin("VDD", role="power", number="1")
+    VSS = Pin("VSS", role="ground", number="8")
+    PA5 = Pin("PA5", role="data", number="5")
+
+    pinmap = PinMap({"power.vcc": "VDD", "power.gnd": "VSS", "blink.line": "PA5"})
+
+
+class PowerHeader(Part):
+    """Two pins and a rail: the board's power has to arrive on a pad."""
+
+    designator_prefix = "J"
+
+    dc = PowerOut(voltage=3.3 * V, current_capability=200 * mA)
+
+    VCC = Pin("VCC", role="power", number="1")
+    GND = Pin("GND", role="ground", number="2")
+
+    pinmap = PinMap({"dc.vcc": "VCC", "dc.gnd": "GND"})
+
+
+class Blinky(System):
+    supply = PowerIn(voltage=3.3 * V, current_capability=200 * mA)
+
+    header = PowerHeader(package="PinHeader_1x02_P2.54mm")
+    mcu = MCU(package="SOIC-8")
+    series = Resistor(resistance=330 * Ohm, power_rating=125 * mW, package="R_0603")
+    indicator = LED(
+        forward_voltage=2 * V, forward_current=10 * mA, package="LED_0603"
+    )
+    bypass = Capacitor(capacitance=100 * nF, voltage_rating=16 * V, package="C_0402")
+
+    def architecture(self):
+        self.supply >> self.header.dc
+        self.header.dc >> self.mcu.power
+
+        # The pin drives the anode through the series resistor; the cathode
+        # returns to the rail's ground rather than to a second ground of its own.
+        self.mcu.blink >> self.series.p1
+        self.series.p2 >> self.indicator.p1
+        self.indicator.p2 >> self.header.dc.gnd
+
+        # Decoupling belongs to the pin it decouples, so a checker can find it.
+        self.mcu.power.vcc >> self.bypass.p1
+        self.mcu.power.gnd >> self.bypass.p2
+
+    def constraints(self):
+        # (3.3 V - 2.0 V) / 330 Ohm is about 4 mA: visible, and inside what a
+        # GPIO will source. Both bounds are stated; neither is computed here.
+        require(self.series.resistance >= 150 * Ohm)
+        require(self.indicator.forward_current <= 20 * mA)
+```
+
+## The files it writes
+
+The parts, then the nets and the pads on them.
+
+```text title="out/netlist.txt"
+C1     100 nF           Package:C_0402
+DS1    2 V              Package:LED_0603
+J1     PowerHeader      Package:PinHeader_1x02_P2.54mm
+R1     330 Ohm          Package:R_0603
+U1     MCU              Package:SOIC-8
+Net-(C1-Pad1)            C1.1 J1.VCC U1.VDD
+Net-(C1-Pad2)            C1.2 DS1.K J1.GND U1.VSS
+Net-(DS1-PadA)           DS1.A R1.2
+Net-(R1-Pad1)            R1.1 U1.PA5
+```
+
+Every check that ran, and every one left undecided.
+
+```text title="out/checks.txt"
+UNDECIDED interface_compatibility: current capability is undecided on power_input: current_demand unknown
+6 checks, 0 failed, 1 undecided
+```
+
+What the elaborated graph contains, by entity kind.
+
+```text title="out/graph.txt"
+    1  block
+    5  component
+   14  connection
+    2  constraint
+    4  interface
+   11  pin
+   10  port
+   47  total
+snapshot sha256:48119cf0baeebb2f713db33833a931652d97307ada6f88e26d1c1073ddf1b31f
+```
+
+All of it, including the KiCad netlist, is in
+[`examples/blinky/out/`](https://github.com/copperheadhq/fang/tree/main/examples/blinky/out/). Rebuild it with:
+
+```bash
+fang build examples/blinky/blinky.py
+```
+
+
+---
+
+# sensor_board
+
+URL: https://fang.copperhead.sh/examples/sensor_board/
+Summary: A regulated board with an MCU and an I2C sensor on it. This is the example to read to understand lowering: what happens between a typed interface and the pads…
+
+A regulated board with an MCU and an I2C sensor on it. This is the example to
+read to understand **lowering**: what happens between a typed interface and the
+pads it lands on.
+
+## The program
+
+[`sensor_board.py`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/sensor_board.py) gives the MCU two candidate pin pairs for
+its I2C peripheral:
+
+```python
+pinmap = PinMap({
+    "power.vcc": "VDD", "power.gnd": "VSS",
+    "i2c.scl": ["PB8", "PB6"],
+    "i2c.sda": ["PB9", "PB7"],
+})
+```
+
+`self.mcu.i2c >> self.imu.i2c` is one line, and it has a choice inside it. The
+lowering resolves that choice, and records a `Decision` entity naming what it
+picked and what it passed over — [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/rationale.md) is those
+decisions, resolved back to the names in the program:
+
+> **Which pin of `system.mcu` carries i2c.scl?** → `system.mcu.PB8`
+
+The pull-ups are on the board rather than in the parts, because on an open-drain
+bus they belong to the net, and the regulator constraint states the intent
+(`output_current_max >= 100 * mA`) instead of asserting an answer.
+
+## What comes out
+
+7 parts, 4 nets, 71 entities, 11 checks — none failed, **four undecided**.
+
+The undecided ones are the reason this example exists.
+[`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/checks.txt) says why each is undecided, naming the value
+that is missing rather than the check that is failing:
+
+```
+UNDECIDED interface_compatibility: voltage domain is undecided on power_input: voltage unknown; on PORT-b2153fd0d1b8
+```
+
+Nothing here assumed 3.3 V and moved on. Undecided is a third truth value, and
+it is the honest one until someone supplies the number.
+
+- [`out/sensor_board.net`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/sensor_board.net), [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/netlist.txt)
+- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/rationale.md) — the four lowering decisions
+- [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/graph.txt) — 71 entities, 19 of them pins
+
+![the interfaces view](/examples/sensor_board/interfaces.svg)
+
+![the ground view](/examples/sensor_board/ground.svg)
+
+## Running it
+
+```bash
+fang check   examples/sensor_board/sensor_board.py
+fang view    examples/sensor_board/sensor_board.py interfaces -o interfaces.svg
+fang build   examples/sensor_board/sensor_board.py
+```
+
+## The whole program
+
+```python title="examples/sensor_board/sensor_board.py"
+"""A regulated sensor board: a rail, an MCU, and an I2C sensor on it.
+
+Shows the parts the toolchain is actually for: typed interfaces lowering to
+pins, a decision recorded where the MCU offered a choice, and constraints that
+stay undecided until someone supplies the missing datasheet number.
+"""
+
+from fang.interfaces import I2CPort, Pin, PinMap, PowerIn
+from fang.lang import A, Part, System, V, kHz, kOhm, mA, require, uF
+from fang.parts import Capacitor, Regulator, Resistor
+
+
+class MCU(Part):
+    """A microcontroller with two possible pin pairs for its I2C peripheral."""
+
+    designator_prefix = "U"
+
+    power = PowerIn(voltage=3.3 * V, current_demand=80 * mA)
+    i2c = I2CPort(
+        voh_min=2.4 * V,
+        vol_max=0.4 * V,
+        voltage=3.3 * V,
+        bit_rate=400 * kHz,
+        pull_up_resistance=4.7 * kOhm,
+        pull_up_supply=3.3 * V,
+    )
+
+    VDD = Pin("VDD", role="power", number="1")
+    VSS = Pin("VSS", role="ground", number="2")
+    PB8 = Pin("PB8", role="clock", number="61")
+    PB9 = Pin("PB9", role="data", number="62")
+    PB6 = Pin("PB6", role="clock", number="58")
+    PB7 = Pin("PB7", role="data", number="59")
+
+    pinmap = PinMap(
+        {
+            "power.vcc": "VDD",
+            "power.gnd": "VSS",
+            # Two candidates each: the lowering picks one and records why.
+            "i2c.scl": ["PB8", "PB6"],
+            "i2c.sda": ["PB9", "PB7"],
+        }
+    )
+
+
+class IMU(Part):
+    """An inertial sensor. Its logic thresholds come from the datasheet."""
+
+    designator_prefix = "U"
+
+    power = PowerIn(voltage=3.3 * V, current_demand=3 * mA)
+    i2c = I2CPort(vih_min=2.0 * V, vil_max=0.8 * V, voltage=3.3 * V, bit_rate=400 * kHz)
+
+    VDD = Pin("VDD", role="power", number="1")
+    GND = Pin("GND", role="ground", number="2")
+    SCL = Pin("SCL", role="clock", number="3")
+    SDA = Pin("SDA", role="data", number="4")
+
+    pinmap = PinMap(
+        {"power.vcc": "VDD", "power.gnd": "GND", "i2c.scl": "SCL", "i2c.sda": "SDA"}
+    )
+
+
+class SensorBoard(System):
+    supply = PowerIn(voltage=5 * V, current_capability=1 * A)
+
+    regulator = Regulator(
+        input_voltage_max=17 * V,
+        output_voltage=3.3 * V,
+        output_current_max=1000 * mA,
+        package="SOT-23-5",
+    )
+    mcu = MCU(package="LQFP-64")
+    imu = IMU(package="LGA-14")
+
+    bulk = Capacitor(capacitance=10 * uF, voltage_rating=16 * V, package="C_0805")
+    scl_pullup = Resistor(resistance=4.7 * kOhm, package="R_0402")
+    sda_pullup = Resistor(resistance=4.7 * kOhm, package="R_0402")
+
+    def architecture(self):
+        self.supply >> self.regulator.vin
+        self.regulator.vout >> self.mcu.power
+        self.regulator.vout >> self.imu.power
+        self.mcu.i2c >> self.imu.i2c
+
+        self.regulator.vout.vcc >> self.bulk.p1
+        self.regulator.vout.gnd >> self.bulk.p2
+
+        # Open drain: without these the bus never comes back up.
+        self.regulator.vout.vcc >> self.scl_pullup.p1
+        self.scl_pullup.p2 >> self.mcu.i2c.scl
+        self.regulator.vout.vcc >> self.sda_pullup.p1
+        self.sda_pullup.p2 >> self.mcu.i2c.sda
+
+    def constraints(self):
+        require(self.regulator.output_voltage == 3.3 * V)
+        # The regulator must carry both loads. Stated as intent; the kernel
+        # decides once every current figure is known.
+        require(self.regulator.output_current_max >= 100 * mA)
+```
+
+## The files it writes
+
+The parts, then the nets and the pads on them.
+
+```text title="out/netlist.txt"
+C1     10 uF            Package:C_0805
+R1     4.7 kOhm         Package:R_0402
+R2     4.7 kOhm         Package:R_0402
+U1     IMU              Package:LGA-14
+U2     MCU              Package:LQFP-64
+U3     Regulator        Package:SOT-23-5
+Net-(C1-Pad1)            C1.1 R1.1 R2.1 U1.VDD U2.VDD U3.VOUT
+Net-(C1-Pad2)            C1.2 U1.GND U2.VSS U3.GND
+Net-(R1-Pad2)            R1.2 U1.SCL U2.PB8
+Net-(R2-Pad2)            R2.2 U1.SDA U2.PB9
+```
+
+Every check that ran, and every one left undecided.
+
+```text title="out/checks.txt"
+UNDECIDED interface_compatibility: current capability is undecided on electrical: current_capability unknown
+UNDECIDED interface_compatibility: voltage domain is undecided on electrical: voltage unknown; on PORT-c75102d9787d
+UNDECIDED interface_compatibility: current capability is undecided on power_input: current_demand unknown
+UNDECIDED interface_compatibility: voltage domain is undecided on power_input: voltage unknown; on PORT-b2153fd0d1b8
+11 checks, 0 failed, 4 undecided
+```
+
+What the elaborated graph contains, by entity kind.
+
+```text title="out/graph.txt"
+    1  block
+    6  component
+   22  connection
+    2  constraint
+    4  decision
+    4  interface
+   19  pin
+   13  port
+   71  total
+snapshot sha256:4f07e8692fc789920b26d6aecc4012624c28d5b6930054692bb556f19051ec2d
+```
+
+All of it, including the KiCad netlist, is in
+[`examples/sensor_board/out/`](https://github.com/copperheadhq/fang/tree/main/examples/sensor_board/out/). Rebuild it with:
+
+```bash
+fang build examples/sensor_board/sensor_board.py
+```
+
+
+---
+
+# equations
+
+URL: https://fang.copperhead.sh/examples/equations/
+Summary: A divider written as the ratio it has to satisfy, rather than as two numbers someone computed offstage — and then reused, by inheritance, at a different ratio.
+
+A divider written as the ratio it has to satisfy, rather than as two numbers
+someone computed offstage — and then reused, by inheritance, at a different
+ratio.
+
+## The program
+
+[`equations.py`](https://github.com/copperheadhq/fang/blob/main/examples/equations/equations.py) puts Ohm's law in the graph:
+
+```python
+division = self.bottom.resistance / (self.top.resistance + self.bottom.resistance)
+require(self.ratio_max >= division)
+require(self.ratio_min <= division)
+require(self.v_in <= self.i_bleed * (self.top.resistance + self.bottom.resistance))
+```
+
+`Arithmetic` checks dimensions when the expression is *constructed*, so a
+dimensionally invalid equation cannot be stored, let alone evaluated. What
+survives to check time is arithmetic that already type-checks.
+
+`SenseDivider(FeedbackDivider)` is the reuse: it keeps every equation and
+replaces the two resistors, so 24 V onto a 3.3 V ADC is the same design at an
+eighth of the ratio. The board then instantiates both with different bounds:
+
+```python
+feedback = FeedbackDivider(v_in=12 * V, i_bleed=250 * uA, ratio_min=0.19 * ratio, ...)
+sense    = SenseDivider(v_in=24 * V, i_bleed=200 * uA, ratio_min=0.09 * ratio, ...)
+```
+
+`ratio = UnitLiteral("1")` is how a project adds a unit — dimensionless, here —
+without editing the language.
+
+## What comes out
+
+7 parts, 6 nets, 72 entities, 12 checks, none failed and none undecided. Twelve
+decided checks over two dividers is the whole point: every bound in both blocks
+has the numbers it needs to be answered.
+
+- [`out/equations.net`](https://github.com/copperheadhq/fang/blob/main/examples/equations/out/equations.net), [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/equations/out/netlist.txt)
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/equations/out/checks.txt), [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/equations/out/graph.txt)
+
+![the interconnect view](/examples/equations/interconnect.svg)
+
+## Running it
+
+```bash
+fang check   examples/equations/equations.py
+fang graph   examples/equations/equations.py
+```
+
+## The whole program
+
+```python title="examples/equations/equations.py"
+"""Values chosen by equation: a divider stated as the ratio it must satisfy.
+
+The resistors carry real values, but the values are not the design — the
+constraints are. Ohm's law is written down as a constraint rather than left in a
+comment, so substituting a part re-checks the arithmetic instead of trusting it.
+
+Inheritance is how a second divider reuses the first: `SenseDivider` keeps the
+equations and replaces the two values. A block owns its interior — its parts, its
+parameters, and the constraints over them — and the board connects to the pads at
+its edge.
+"""
+
+from fang.interfaces import AnalogIn, Pin, PinMap, PowerIn, PowerOut
+from fang.lang import (
+    MOhm,
+    Module,
+    Parameter,
+    Part,
+    System,
+    UnitLiteral,
+    V,
+    kOhm,
+    mA,
+    mW,
+    require,
+    tolerance,
+    uA,
+)
+from fang.parts import Resistor
+
+#: A dimensionless literal, so a ratio is a quantity like every other number.
+#: A project adds its own units this way rather than editing the language.
+ratio = UnitLiteral("1")
+
+
+class FeedbackDivider(Module):
+    """Two resistors and the four facts that make them the right two."""
+
+    v_in = Parameter("V", description="the rail being divided")
+    i_bleed = Parameter("A", description="the most the leg may draw from it")
+    ratio_min = Parameter("", description="lower bound on tap / rail")
+    ratio_max = Parameter("", description="upper bound on tap / rail")
+
+    top = Resistor(
+        resistance=tolerance(82 * kOhm, "1%"), power_rating=100 * mW, package="R_0402"
+    )
+    bottom = Resistor(
+        resistance=tolerance(22 * kOhm, "1%"), power_rating=100 * mW, package="R_0402"
+    )
+
+    def architecture(self):
+        # The interior: the tap is the node between the two legs.
+        self.top.p2 >> self.bottom.p1
+
+    def constraints(self):
+        division = self.bottom.resistance / (
+            self.top.resistance + self.bottom.resistance
+        )
+        # The reference is on the left of every comparison because a parameter
+        # is what the expression is being judged against.
+        require(self.ratio_max >= division)
+        require(self.ratio_min <= division)
+
+        # Ohm's law, as a constraint: v_in <= i_bleed * R_total is the same
+        # statement as "the leg draws no more than i_bleed", and it survives a
+        # change to either resistor.
+        require(
+            self.v_in <= self.i_bleed * (self.top.resistance + self.bottom.resistance)
+        )
+
+        # A leg stiff enough to ignore the tap's input current, and not so stiff
+        # that board leakage competes with it.
+        require(self.top.resistance <= 1 * MOhm)
+        require(self.top.resistance >= 10 * kOhm)
+
+
+class SenseDivider(FeedbackDivider):
+    """The same equations, an eighth of the ratio: 24 V onto a 3.3 V ADC."""
+
+    top = Resistor(
+        resistance=tolerance(180 * kOhm, "1%"), power_rating=100 * mW, package="R_0402"
+    )
+    bottom = Resistor(
+        resistance=tolerance(20 * kOhm, "1%"), power_rating=100 * mW, package="R_0402"
+    )
+
+
+class ADC(Part):
+    """A two-channel converter. Its inputs are analog, and typed as analog."""
+
+    designator_prefix = "U"
+
+    power = PowerIn(voltage=3.3 * V, current_demand=2 * mA)
+    channel_a = AnalogIn(voltage=3.3 * V, impedance=1 * MOhm)
+    channel_b = AnalogIn(voltage=3.3 * V, impedance=1 * MOhm)
+
+    VDD = Pin("VDD", role="power", number="1")
+    GND = Pin("GND", role="ground", number="2")
+    AIN0 = Pin("AIN0", role="analog", number="3")
+    AIN1 = Pin("AIN1", role="analog", number="4")
+
+    pinmap = PinMap(
+        {
+            "power.vcc": "VDD",
+            "power.gnd": "GND",
+            "channel_a.signal": "AIN0",
+            "channel_b.signal": "AIN1",
+        }
+    )
+
+
+class TerminalBlock(Part):
+    """The board's edge: two measured rails, the logic supply, one return."""
+
+    designator_prefix = "J"
+
+    rail_a = PowerOut(voltage=12 * V, current_capability=2000 * mA)
+    rail_b = PowerOut(voltage=24 * V, current_capability=2000 * mA)
+    logic = PowerOut(voltage=3.3 * V, current_capability=100 * mA)
+
+    V12 = Pin("12V", role="power", number="1")
+    V24 = Pin("24V", role="power", number="2")
+    V3V3 = Pin("3V3", role="power", number="3")
+    GND = Pin("GND", role="ground", number="4")
+
+    pinmap = PinMap(
+        {
+            "rail_a.vcc": "12V",
+            "rail_a.gnd": "GND",
+            "rail_b.vcc": "24V",
+            "rail_b.gnd": "GND",
+            "logic.vcc": "3V3",
+            "logic.gnd": "GND",
+        }
+    )
+
+
+class MeasuredRail(System):
+    """A 12 V rail and a 24 V rail, both measured by the same converter."""
+
+    terminals = TerminalBlock(package="TerminalBlock_1x04_P5.08mm")
+
+    feedback = FeedbackDivider(
+        v_in=12 * V,
+        i_bleed=250 * uA,
+        ratio_min=0.19 * ratio,
+        ratio_max=0.23 * ratio,
+    )
+    sense = SenseDivider(
+        v_in=24 * V,
+        i_bleed=200 * uA,
+        ratio_min=0.09 * ratio,
+        ratio_max=0.11 * ratio,
+    )
+    adc = ADC(package="MSOP-10")
+
+    def architecture(self):
+        self.terminals.logic >> self.adc.power
+
+        self.terminals.rail_a.vcc >> self.feedback.top.p1
+        self.terminals.rail_a.gnd >> self.feedback.bottom.p2
+        self.terminals.rail_b.vcc >> self.sense.top.p1
+        self.terminals.rail_b.gnd >> self.sense.bottom.p2
+
+        self.feedback.top.p2 >> self.adc.channel_a.signal
+        self.sense.top.p2 >> self.adc.channel_b.signal
+```
+
+## The files it writes
+
+The parts, then the nets and the pads on them.
+
+```text title="out/netlist.txt"
+J1     TerminalBlock    Package:TerminalBlock_1x04_P5.08mm
+R1     22 +/- 0.01 kOhm Package:R_0402
+R2     82 +/- 0.01 kOhm Package:R_0402
+R3     20 +/- 0.01 kOhm Package:R_0402
+R4     180 +/- 0.01 kOhm Package:R_0402
+U1     ADC              Package:MSOP-10
+Net-(J1-Pad12V)          J1.12V R2.1
+Net-(J1-Pad24V)          J1.24V R4.1
+Net-(J1-Pad3V3)          J1.3V3 U1.VDD
+Net-(J1-PadGND)          J1.GND R1.2 R3.2 U1.GND
+Net-(R1-Pad1)            R1.1 R2.2 U1.AIN0
+Net-(R3-Pad1)            R3.1 R4.2 U1.AIN1
+```
+
+Every check that ran, and every one left undecided.
+
+```text title="out/checks.txt"
+12 checks, 0 failed, 0 undecided
+```
+
+What the elaborated graph contains, by entity kind.
+
+```text title="out/graph.txt"
+    3  block
+    6  component
+   19  connection
+   10  constraint
+    4  interface
+   16  pin
+   14  port
+   72  total
+snapshot sha256:705c9e11bd04f7a5b1ec17e4f161a65bcbd41141b5ce9a35e033ec458a07b9e0
+```
+
+All of it, including the KiCad netlist, is in
+[`examples/equations/out/`](https://github.com/copperheadhq/fang/tree/main/examples/equations/out/). Rebuild it with:
+
+```bash
+fang build examples/equations/equations.py
+```
+
+
+---
+
+# i2c_bus
+
+URL: https://fang.copperhead.sh/examples/i2c_bus/
+Summary: One controller and three targets on a shared I2C bus. A bus is multi-drop, so the same port is connected three times and the lowering resolves it into one net…
+
+One controller and three targets on a shared I2C bus. A bus is multi-drop, so
+the same port is connected three times and the lowering resolves it into one net
+per signal — not three point-to-point links.
+
+## The program
+
+[`i2c_bus.py`](https://github.com/copperheadhq/fang/blob/main/examples/i2c_bus/i2c_bus.py) keeps two things a netlist could not hold.
+
+**The addresses are parameters**, so uniqueness is a constraint the kernel
+decides, not a rule inside a linter:
+
+```python
+address = Parameter("", description="7-bit I2C address")
+...
+require(self.temperature.address != self.memory.address)
+```
+
+**The unread datasheet is recorded as unread.** `TempSensor` and `EEPROM` cite
+their thresholds with `Cites(...)`; the `RTC` does not have them, and says so:
+
+```python
+thresholds = Assumes(
+    "The RTC accepts 3.3 V CMOS levels",
+    rationale="every part in this family does; not yet read off the datasheet",
+)
+```
+
+An assumption is not a value. The compatibility check over the RTC's link stays
+undecided, which is the state that gets someone to open the datasheet.
+
+## What comes out
+
+9 parts, 4 nets, 98 entities, 39 checks — none failed, **seven undecided**.
+
+Six of those seven are one missing pair of numbers, `vih_min` and `voh_min` on
+an I2C port — the RTC's, the only device on the bus whose datasheet nobody has
+read. The seventh is the board's supply, which states no current demand. The
+program predicted both, and the checks found them.
+
+- [`out/i2c_bus.net`](https://github.com/copperheadhq/fang/blob/main/examples/i2c_bus/out/i2c_bus.net), [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/i2c_bus/out/netlist.txt)
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/i2c_bus/out/checks.txt) — 39 checks, seven of them undecided
+- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/i2c_bus/out/rationale.md) — the address requirement, and the two
+  datasheet claims that *are* cited
+
+![the interfaces view](/examples/i2c_bus/interfaces.svg)
+
+Four devices, one bus: the interfaces view draws each device's link to the
+controller, and the parts that carry no interface — the pull-ups, the bulk cap —
+below the rule, because in this view nothing connects to them.
+
+![the interconnect view](/examples/i2c_bus/interconnect.svg)
+
+## Running it
+
+```bash
+fang check   examples/i2c_bus/i2c_bus.py
+fang view    examples/i2c_bus/i2c_bus.py interfaces -o interfaces.svg
+```
+
+## The whole program
+
+```python title="examples/i2c_bus/i2c_bus.py"
+"""One controller and three targets on a shared I2C bus.
+
+A bus is a multi-drop interface, so the same port is connected several times and
+the lowering resolves it into one net per signal. Two things the graph keeps that
+a netlist cannot: the addresses are parameters, so "no two devices answer to the
+same address" is a constraint the kernel decides rather than a rule in a linter;
+and the RTC's logic thresholds are recorded as an assumption rather than as
+numbers, which leaves the check over that link undecided instead of passed.
+"""
+
+from fang.interfaces import I2CPort, Pin, PinMap, PowerIn, PowerOut
+from fang.lang import (
+    Parameter,
+    Part,
+    System,
+    UnitLiteral,
+    V,
+    kHz,
+    kOhm,
+    mA,
+    require,
+    uA,
+    uF,
+)
+from fang.parts import Capacitor, Resistor
+from fang.rationale import Assumes, Cites, Requires
+
+#: Dimensionless, for the things on a board that are counts rather than measures.
+addr = UnitLiteral("1")
+
+
+class Target(Part):
+    """What every device on this bus has in common: a rail, a bus, an address."""
+
+    designator_prefix = "U"
+
+    address = Parameter("", description="7-bit I2C address")
+
+    power = PowerIn(voltage=3.3 * V)
+    i2c = I2CPort(voltage=3.3 * V, bit_rate=400 * kHz)
+
+    VDD = Pin("VDD", role="power", number="1")
+    GND = Pin("GND", role="ground", number="2")
+    SCL = Pin("SCL", role="clock", number="3")
+    SDA = Pin("SDA", role="data", number="4")
+
+    pinmap = PinMap(
+        {"power.vcc": "VDD", "power.gnd": "GND", "i2c.scl": "SCL", "i2c.sda": "SDA"}
+    )
+
+
+class TempSensor(Target):
+    power = PowerIn(voltage=3.3 * V, current_demand=1 * mA)
+    # On an open-drain bus the high level is the pull-up's, not the device's;
+    # what the device owes the bus is vol_max, and what it needs is vih_min.
+    i2c = I2CPort(
+        voh_min=2.9 * V,
+        vol_max=0.4 * V,
+        vih_min=2.1 * V,
+        vil_max=0.8 * V,
+        voltage=3.3 * V,
+        bit_rate=400 * kHz,
+    )
+
+    thresholds = Cites(
+        "VIH is 0.7 x VDD and VIL is 0.3 x VDD",
+        document="SRC-DS-TMP102",
+        locator="table 7.5, electrical characteristics",
+    )
+
+
+class EEPROM(Target):
+    power = PowerIn(voltage=3.3 * V, current_demand=5 * mA)
+    i2c = I2CPort(
+        voh_min=2.9 * V,
+        vol_max=0.4 * V,
+        vih_min=2.0 * V,
+        vil_max=0.8 * V,
+        voltage=3.3 * V,
+        bit_rate=400 * kHz,
+    )
+
+    thresholds = Cites(
+        "VIH is 2.0 V minimum over the 1.7-5.5 V supply range",
+        document="SRC-DS-24AA02",
+        locator="table 1-2, DC characteristics",
+    )
+
+
+class RTC(Target):
+    """The part nobody has read the datasheet for yet.
+
+    Its thresholds are absent rather than guessed, so the compatibility check
+    over its bus link is undecided. That is the honest answer, and it is the one
+    that gets someone to open the datasheet.
+    """
+
+    power = PowerIn(voltage=3.3 * V, current_demand=100 * uA)
+
+    thresholds = Assumes(
+        "The RTC accepts 3.3 V CMOS levels",
+        rationale="every part in this family does; not yet read off the datasheet",
+    )
+
+
+class Controller(Part):
+    designator_prefix = "U"
+
+    power = PowerIn(voltage=3.3 * V, current_demand=40 * mA)
+    i2c = I2CPort(
+        voh_min=2.9 * V,
+        vol_max=0.4 * V,
+        vih_min=2.0 * V,
+        vil_max=0.9 * V,
+        voltage=3.3 * V,
+        bit_rate=400 * kHz,
+        pull_up_resistance=2.2 * kOhm,
+        pull_up_supply=3.3 * V,
+    )
+
+    VDD = Pin("VDD", role="power", number="1")
+    VSS = Pin("VSS", role="ground", number="2")
+    PB6 = Pin("PB6", role="clock", number="58")
+    PB7 = Pin("PB7", role="data", number="59")
+
+    pinmap = PinMap(
+        {"power.vcc": "VDD", "power.gnd": "VSS", "i2c.scl": "PB6", "i2c.sda": "PB7"}
+    )
+
+
+class PowerHeader(Part):
+    """Where the 3V3 rail arrives, so the rail is a net and not a promise."""
+
+    designator_prefix = "J"
+
+    dc = PowerOut(voltage=3.3 * V, current_capability=500 * mA)
+
+    VCC = Pin("VCC", role="power", number="1")
+    GND = Pin("GND", role="ground", number="2")
+
+    pinmap = PinMap({"dc.vcc": "VCC", "dc.gnd": "GND"})
+
+
+class SensorBus(System):
+    supply = PowerIn(voltage=3.3 * V, current_capability=500 * mA)
+
+    unique_addresses = Requires(
+        "No two devices on the bus answer to the same address",
+        validation="analysis",
+    )
+
+    header = PowerHeader(package="PinHeader_1x02_P2.54mm")
+    controller = Controller(package="LQFP-64")
+    temperature = TempSensor(address=0x48 * addr, package="SOT-563")
+    memory = EEPROM(address=0x50 * addr, package="SOT-23-5")
+    clock = RTC(address=0x68 * addr, package="SOIC-8")
+
+    # 2.2k at 400 kHz: the bus is short and the capacitance is low, so the
+    # smaller of the two usual values wins the rise-time argument.
+    scl_pullup = Resistor(resistance=2.2 * kOhm, package="R_0402")
+    sda_pullup = Resistor(resistance=2.2 * kOhm, package="R_0402")
+    bulk = Capacitor(capacitance=1 * uF, voltage_rating=16 * V, package="C_0603")
+
+    def architecture(self):
+        self.supply >> self.header.dc
+        for device in (self.controller, self.temperature, self.memory, self.clock):
+            self.header.dc >> device.power
+
+        # One port connected three times: the bus is multi-drop, so this is a
+        # bus with four members and not three point-to-point links.
+        self.controller.i2c >> self.temperature.i2c
+        self.controller.i2c >> self.memory.i2c
+        self.controller.i2c >> self.clock.i2c
+
+        self.header.dc.vcc >> self.scl_pullup.p1
+        self.scl_pullup.p2 >> self.controller.i2c.scl
+        self.header.dc.vcc >> self.sda_pullup.p1
+        self.sda_pullup.p2 >> self.controller.i2c.sda
+
+        self.header.dc.vcc >> self.bulk.p1
+        self.header.dc.gnd >> self.bulk.p2
+
+    def constraints(self):
+        # Address uniqueness, written in the language rather than built into a
+        # checker: an address is a parameter, so this is a constraint like any
+        # other and it is decided the same way.
+        require(self.temperature.address != self.memory.address)
+        require(self.temperature.address != self.clock.address)
+        require(self.memory.address != self.clock.address)
+
+        # Open-drain: the pull-up sets the rise time and the sink current both.
+        require(self.scl_pullup.resistance <= 4.7 * kOhm)
+        require(self.scl_pullup.resistance >= 1 * kOhm)
+        require(self.sda_pullup.resistance <= 4.7 * kOhm)
+        require(self.sda_pullup.resistance >= 1 * kOhm)
+```
+
+## The files it writes
+
+The parts, then the nets and the pads on them.
+
+```text title="out/netlist.txt"
+C1     1 uF             Package:C_0603
+J1     PowerHeader      Package:PinHeader_1x02_P2.54mm
+R1     2.2 kOhm         Package:R_0402
+R2     2.2 kOhm         Package:R_0402
+U1     RTC              Package:SOIC-8
+U2     Controller       Package:LQFP-64
+U3     EEPROM           Package:SOT-23-5
+U4     TempSensor       Package:SOT-563
+Net-(C1-Pad1)            C1.1 J1.VCC R1.1 R2.1 U1.VDD U2.VDD U3.VDD U4.VDD
+Net-(C1-Pad2)            C1.2 J1.GND U1.GND U2.VSS U3.GND U4.GND
+Net-(R1-Pad2)            R1.2 U1.SCL U2.PB6 U3.SCL U4.SCL
+Net-(R2-Pad2)            R2.2 U1.SDA U2.PB7 U3.SDA U4.SDA
+```
+
+Every check that ran, and every one left undecided.
+
+```text title="out/checks.txt"
+UNDECIDED interface_compatibility: logic high margin is undecided on i2c: vih_min unknown
+UNDECIDED interface_compatibility: logic high margin is undecided on i2c: voh_min unknown
+UNDECIDED interface_compatibility: logic high margin is undecided on i2c: voh_min unknown
+UNDECIDED interface_compatibility: logic high margin is undecided on i2c: voh_min unknown
+UNDECIDED interface_compatibility: logic high margin is undecided on i2c: vih_min unknown
+UNDECIDED interface_compatibility: logic high margin is undecided on i2c: vih_min unknown
+UNDECIDED interface_compatibility: current capability is undecided on power_input: current_demand unknown
+39 checks, 0 failed, 7 undecided
+```
+
+What the elaborated graph contains, by entity kind.
+
+```text title="out/graph.txt"
+    1  assumption
+    1  block
+    8  component
+   34  connection
+    7  constraint
+    2  evidence
+    4  interface
+   24  pin
+   16  port
+    1  requirement
+   98  total
+snapshot sha256:b1812dc0dac6943c60780303dcd0d7a6a10148a70cb4a742d8a812d3a871a590
+```
+
+All of it, including the KiCad netlist, is in
+[`examples/i2c_bus/out/`](https://github.com/copperheadhq/fang/tree/main/examples/i2c_bus/out/). Rebuild it with:
+
+```bash
+fang build examples/i2c_bus/i2c_bus.py
+```
+
+
+---
+
+# buck_regulator
+
+URL: https://fang.copperhead.sh/examples/buck_regulator/
+Summary: 12 V to 3.3 V, with the reasoning kept beside the circuit. The converter itself is ordinary; what is not ordinary is that the argument for it is in the same…
+
+12 V to 3.3 V, with the reasoning kept beside the circuit. The converter itself
+is ordinary; what is not ordinary is that the argument for it is in the same
+graph as the inductor.
+
+## The program
+
+[`buck_regulator.py`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/buck_regulator.py) records five kinds of reasoning as
+entities, not comments:
+
+```python
+rail_tolerance = Requires("The 3V3 rail holds 3.3 V within 3% for 0 to 1.5 A over a 6 to 15 V input", ...)
+part_choice    = Chooses("Which converter makes the 3V3 rail?", selected="TPS62130", ...)
+ripple_current = Cites("Recommended inductor ripple is 20 to 40% of the maximum output current", ...)
+inductor_value = Calculates("L = v_out * (1 - v_out / v_in) / (f_sw * ripple_current)", ...)
+load_regulation = Verifies("rail_tolerance", ...)
+```
+
+So "why is this 4.7 µH?" has an answer the graph can give: a calculation, over a
+datasheet claim, serving a requirement, which a verification closes. Nobody had
+to write a design document, and nothing here can drift from the design, because
+it *is* the design — change the evidence and the decision resting on it is
+flagged.
+
+The output voltage is deliberately not a parameter of the controller. It is set
+by the feedback divider on the board, which is why the divider carries the
+constraint that produces it.
+
+## What comes out
+
+12 parts, 9 nets, 118 entities, 15 checks — none failed, one undecided.
+
+[`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/rationale.md) is the file to read. It is the whole
+argument, projected out of the graph in identifier order:
+
+> ### system.inductor_value — `CALC-7d60a2e8f772`
+>
+> `L = v_out * (1 - v_out / v_in) / (f_sw * ripple_current)`
+>
+> Result: 4.7 uH at 1.25 MHz for 30% ripple at 1.5 A
+>
+> - Over `system.inductor` — Inductor (`CMP-64dfc4cd840c`)
+
+- [`out/buck_regulator.net`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/buck_regulator.net), [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/netlist.txt)
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/checks.txt), [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/graph.txt)
+
+![the power view](/examples/buck_regulator/power.svg)
+
+![the system view](/examples/buck_regulator/system.svg)
+
+## Running it
+
+```bash
+fang check   examples/buck_regulator/buck_regulator.py
+fang view    examples/buck_regulator/buck_regulator.py power -o power.svg
+```
+
+## The whole program
+
+```python title="examples/buck_regulator/buck_regulator.py"
+"""A 12 V to 3.3 V buck converter, with the reasoning kept beside the circuit.
+
+The circuit is ordinary. What is not ordinary is that the requirement, the part
+decision, the datasheet numbers behind it, the two calculations, and the
+verification that closes the requirement are all entities in the same graph as
+the inductor — so `fang` can answer "why is this 4.7 uH?" without anyone having
+written a design document.
+"""
+
+from fang.interfaces import AnalogIn, Pin, PinMap, PowerIn, PowerOut
+from fang.lang import (
+    A,
+    Electrical,
+    Parameter,
+    Part,
+    Signal,
+    System,
+    UnitLiteral,
+    V,
+    kHz,
+    kOhm,
+    mA,
+    mOhm,
+    mV,
+    mW,
+    nF,
+    require,
+    uF,
+    uH,
+)
+from fang.parts import Capacitor, Diode, Fuse, Inductor, Resistor
+from fang.rationale import Calculates, Chooses, Cites, Requires, Verifies
+
+#: Dimensionless, for the divider ratio.
+ratio = UnitLiteral("1")
+
+
+class BuckController(Part):
+    """A synchronous buck IC: it switches, and it compares against a reference.
+
+    The output voltage is nowhere on this part. It is set by the divider on the
+    board, which is why the divider carries the constraint that produces it.
+    """
+
+    designator_prefix = "U"
+
+    vin = PowerIn(voltage=12 * V, current_demand=1500 * mA)
+    sw = Electrical()
+    boot = Electrical()
+    feedback = AnalogIn(voltage=800 * mV)
+    enable = Signal()
+
+    input_voltage_max = Parameter("V")
+    reference_voltage = Parameter("V", description="what feedback is compared against")
+    switching_frequency = Parameter("Hz")
+    output_current_max = Parameter("A")
+
+    VIN = Pin("VIN", role="power", number="1")
+    GND = Pin("GND", role="ground", number="2")
+    SW = Pin("SW", role="unknown", number="3")
+    BOOT = Pin("BOOT", role="unknown", number="4")
+    FB = Pin("FB", role="analog", number="5")
+    EN = Pin("EN", role="control", number="6")
+
+    pinmap = PinMap(
+        {
+            "vin.vcc": "VIN",
+            "vin.gnd": "GND",
+            "sw.line": "SW",
+            "boot.line": "BOOT",
+            "feedback.signal": "FB",
+            "enable.line": "EN",
+        }
+    )
+
+
+class InputTerminal(Part):
+    """Where the unregulated supply lands."""
+
+    designator_prefix = "J"
+
+    dc = PowerOut(voltage=12 * V, current_capability=2 * A)
+
+    VIN = Pin("VIN", role="power", number="1")
+    GND = Pin("GND", role="ground", number="2")
+
+    pinmap = PinMap({"dc.vcc": "VIN", "dc.gnd": "GND"})
+
+
+class RailHeader(Part):
+    """Where the 3V3 rail leaves for the rest of the board."""
+
+    designator_prefix = "J"
+
+    dc = PowerIn(voltage=3.3 * V, current_demand=1500 * mA)
+
+    VCC = Pin("3V3", role="power", number="1")
+    GND = Pin("GND", role="ground", number="2")
+
+    pinmap = PinMap({"dc.vcc": "3V3", "dc.gnd": "GND"})
+
+
+class Rail3V3(System):
+    """The rail, and the argument for it."""
+
+    # -- what the board has to do -----------------------------------------
+    rail_tolerance = Requires(
+        "The 3V3 rail holds 3.3 V within 3% for 0 to 1.5 A over a 6 to 15 V input",
+        priority="MUST",
+        validation="analysis",
+    )
+
+    part_choice = Chooses(
+        "Which converter makes the 3V3 rail?",
+        selected="TPS62130",
+        alternatives=[
+            {"part": "LM2596", "reason": "asynchronous, and too tall for the enclosure"},
+            {"part": "MP2315", "reason": "no power-good output, and the sequencing needs one"},
+        ],
+        requirements=("rail_tolerance",),
+        evidence=("absolute_maximum",),
+        rationale=(
+            "17 V absolute maximum against a 15 V worst case input",
+            "3 A capability against a 1.5 A load, so the part is not the limit",
+        ),
+    )
+
+    absolute_maximum = Cites(
+        "VIN absolute maximum is 17 V, recommended operating is 3 to 17 V",
+        document="SRC-DS-TPS62130",
+        locator="section 6.1, absolute maximum ratings",
+    )
+    ripple_current = Cites(
+        "Recommended inductor ripple is 20 to 40% of the maximum output current",
+        document="SRC-DS-TPS62130",
+        locator="section 9.2.2.1, inductor selection",
+    )
+
+    # -- the two numbers that were computed, and from what ------------------
+    inductor_value = Calculates(
+        "L = v_out * (1 - v_out / v_in) / (f_sw * ripple_current)",
+        inputs=("inductor", "controller"),
+        result="4.7 uH at 1.25 MHz for 30% ripple at 1.5 A",
+        requirements=("rail_tolerance",),
+    )
+    divider_ratio = Calculates(
+        "v_out = v_ref * (1 + top / bottom)",
+        inputs=("fb_top", "fb_bottom"),
+        result="3.3 V from a 0.8 V reference at 3.125",
+        requirements=("rail_tolerance",),
+    )
+
+    # -- the circuit --------------------------------------------------------
+    supply = PowerIn(voltage=12 * V, current_capability=2 * A)
+    rail = PowerOut(voltage=3.3 * V, current_capability=1500 * mA)
+
+    # The rail's 3% tolerance, carried back through the divider and declared as
+    # parameters so the comparison has a named thing on its left-hand side.
+    divider_min = Parameter("", default=3.03 * ratio)
+    divider_max = Parameter("", default=3.22 * ratio)
+
+    dc_in = InputTerminal(package="TerminalBlock_1x02_P5.08mm")
+    rail_out = RailHeader(package="PinHeader_1x02_P2.54mm")
+
+    protection = Fuse(current_rating=2 * A, voltage_rating=60 * V, package="F_1206")
+    reverse = Diode(
+        reverse_voltage=100 * V,
+        forward_voltage=550 * mV,
+        forward_current=3 * A,
+        package="SMA",
+    )
+
+    controller = BuckController(
+        input_voltage_max=17 * V,
+        reference_voltage=800 * mV,
+        switching_frequency=1250 * kHz,
+        output_current_max=3 * A,
+        package="VQFN-16",
+    )
+
+    inductor = Inductor(
+        inductance=4.7 * uH,
+        current_rating=3 * A,
+        dc_resistance=45 * mOhm,
+        package="L_4x4mm",
+    )
+
+    input_bulk = Capacitor(capacitance=22 * uF, voltage_rating=50 * V, package="C_1210")
+    output_bulk = Capacitor(capacitance=22 * uF, voltage_rating=16 * V, package="C_1206")
+    boot_cap = Capacitor(capacitance=100 * nF, voltage_rating=16 * V, package="C_0402")
+
+    fb_top = Resistor(resistance=200 * kOhm, power_rating=63 * mW, package="R_0402")
+    fb_bottom = Resistor(resistance=64 * kOhm, power_rating=63 * mW, package="R_0402")
+
+    # -- and what closes the requirement -------------------------------------
+    load_regulation = Verifies(
+        "rail_tolerance",
+        method="analysis",
+        evidence=("absolute_maximum", "ripple_current"),
+        result="PASS",
+    )
+
+    def __init__(self, **overrides):
+        super().__init__(**overrides)
+        self.controller.select(
+            "TI",
+            "TPS62130RGTR",
+            distributor_ids={"lcsc": "C77378"},
+            datasheet="SRC-DS-TPS62130",
+        )
+
+    def architecture(self):
+        # The system's declared edges, and the connectors that realize them.
+        self.supply >> self.dc_in.dc
+        self.rail_out.dc >> self.rail
+
+        self.dc_in.dc.vcc >> self.protection.p1
+        self.protection.p2 >> self.reverse.p1
+        self.reverse.p2 >> self.controller.vin.vcc
+        self.dc_in.dc.gnd >> self.controller.vin.gnd
+
+        self.controller.vin.vcc >> self.input_bulk.p1
+        self.controller.vin.gnd >> self.input_bulk.p2
+
+        # The switching node: the one net on this board whose loop area matters
+        # more than its schematic.
+        self.controller.sw >> self.inductor.p1
+        self.controller.sw >> self.boot_cap.p1
+        self.boot_cap.p2 >> self.controller.boot
+
+        self.inductor.p2 >> self.rail_out.dc.vcc
+        self.rail_out.dc.vcc >> self.output_bulk.p1
+        self.rail_out.dc.gnd >> self.output_bulk.p2
+
+        # The divider that actually sets the output, tapped back to feedback.
+        self.rail_out.dc.vcc >> self.fb_top.p1
+        self.fb_top.p2 >> self.controller.feedback.signal
+        self.fb_top.p2 >> self.fb_bottom.p1
+        self.fb_bottom.p2 >> self.rail_out.dc.gnd
+
+    def constraints(self):
+        # The part has to clear the 15 V worst case, not the 12 V nominal.
+        require(self.controller.input_voltage_max >= 16 * V)
+        require(self.controller.output_current_max >= 1500 * mA)
+
+        # 20 to 40% ripple at 1.25 MHz puts the inductor between these bounds.
+        # Both come from the cited selection procedure, not from a preference.
+        require(self.inductor.inductance >= 3.3 * uH)
+        require(self.inductor.inductance <= 10 * uH)
+        require(self.inductor.current_rating >= 2 * A)
+
+        # (1 + top / bottom) = 4.125 gives 3.3 V from a 0.8 V reference, so the
+        # ratio itself is what has to hold when either resistor is substituted.
+        division = self.fb_top.resistance / self.fb_bottom.resistance
+        require(self.divider_max >= division)
+        require(self.divider_min <= division)
+
+        # The input capacitor sees the input, and a hot-plugged supply rings.
+        require(self.input_bulk.voltage_rating >= 25 * V)
+        require(self.output_bulk.voltage_rating >= 10 * V)
+```
+
+## The files it writes
+
+The parts, then the nets and the pads on them.
+
+```text title="out/netlist.txt"
+C1     100 nF           Package:C_0402
+C2     22 uF            Package:C_1210
+C3     22 uF            Package:C_1206
+D1     550 mV           Package:SMA
+F1     2 A              Package:F_1206
+J1     InputTerminal    Package:TerminalBlock_1x02_P5.08mm
+J2     RailHeader       Package:PinHeader_1x02_P2.54mm
+L1     4.7 uH           Package:L_4x4mm
+R1     64 kOhm          Package:R_0402
+R2     200 kOhm         Package:R_0402
+U1     BuckController   Package:VQFN-16
+Net-(C1-Pad1)            C1.1 L1.1 U1.SW
+Net-(C1-Pad2)            C1.2 U1.BOOT
+Net-(C2-Pad1)            C2.1 D1.K U1.VIN
+Net-(C2-Pad2)            C2.2 J1.GND U1.GND
+Net-(C3-Pad1)            C3.1 J2.3V3 L1.2 R2.1
+Net-(C3-Pad2)            C3.2 J2.GND R1.2
+Net-(D1-PadA)            D1.A F1.2
+Net-(F1-Pad1)            F1.1 J1.VIN
+Net-(R1-Pad1)            R1.1 R2.2 U1.FB
+```
+
+Every check that ran, and every one left undecided.
+
+```text title="out/checks.txt"
+UNDECIDED interface_compatibility: current capability is undecided on power_input: current_demand unknown
+15 checks, 0 failed, 1 undecided
+```
+
+What the elaborated graph contains, by entity kind.
+
+```text title="out/graph.txt"
+    1  block
+    2  calculation
+   11  component
+   34  connection
+    9  constraint
+    1  decision
+    2  evidence
+    5  interface
+   26  pin
+   25  port
+    1  requirement
+    1  verification
+  118  total
+snapshot sha256:7b62dc883f71e568ff77bf9c804b06bc3721982f00d915a5882672ee9c921cb0
+```
+
+All of it, including the KiCad netlist, is in
+[`examples/buck_regulator/out/`](https://github.com/copperheadhq/fang/tree/main/examples/buck_regulator/out/). Rebuild it with:
+
+```bash
+fang build examples/buck_regulator/buck_regulator.py
+```
+
+
+---
+
+# usb_uart_bridge
+
+URL: https://fang.copperhead.sh/examples/usb_uart_bridge/
+Summary: USB to serial: the interface board on nearly every desk. What it adds over the other examples is part selection — the difference between what the design needs…
+
+USB to serial: the interface board on nearly every desk. What it adds over the
+other examples is **part selection** — the difference between what the design
+needs and what was bought.
+
+## The program
+
+[`usb_uart_bridge.py`](https://github.com/copperheadhq/fang/blob/main/examples/usb_uart_bridge/usb_uart_bridge.py) makes the selection in `__init__`,
+not in the class body:
+
+```python
+def __init__(self, **overrides):
+    super().__init__(**overrides)
+    self.bridge.select("WCH", "CH340C",
+                       distributor_ids={"lcsc": "C84681"},
+                       datasheet="SRC-DS-CH340")
+```
+
+The class body would attach the choice to the template every instance derives
+from. The instance is where it belongs: the logical part stays "a 3.3 V
+regulator", and which one was bought is a separate, cited fact that a second
+board can answer differently.
+
+The decision behind it is in the graph too, with what it rejected and why —
+`FT232RL` on unit cost, `CP2102N` on needing an oscillator — and it names the
+requirement it serves.
+
+The UART crossing is worth reading as well:
+
+```python
+self.bridge.uart.tx >> self.target.uart.rx
+self.bridge.uart.rx >> self.target.uart.tx
+```
+
+Connecting the two *ports* would pair like names with like — tx to tx — so the
+two wires are named individually. That a signal of an interface is addressable
+on its own is the whole reason this works.
+
+## What comes out
+
+17 parts, 11 nets, 162 entities, 24 checks — none failed, six undecided.
+
+- [`out/usb_uart_bridge.net`](https://github.com/copperheadhq/fang/blob/main/examples/usb_uart_bridge/out/usb_uart_bridge.net) — the KiCad netlist, ESD
+  clamps and series resistors included
+- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/usb_uart_bridge/out/rationale.md) — the requirement, the bridge decision
+  with both rejected alternatives, and the USB 2.0 citation behind the D+ pull-up
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/usb_uart_bridge/out/checks.txt), [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/usb_uart_bridge/out/graph.txt)
+
+![the power view](/examples/usb_uart_bridge/power.svg)
+
+![the interfaces view](/examples/usb_uart_bridge/interfaces.svg)
+
+## Running it
+
+```bash
+fang check   examples/usb_uart_bridge/usb_uart_bridge.py
+fang netlist examples/usb_uart_bridge/usb_uart_bridge.py
+```
+
+## The whole program
+
+```python title="examples/usb_uart_bridge/usb_uart_bridge.py"
+"""A USB-to-UART bridge: the interface board on nearly every desk.
+
+What it adds over the other examples is the part selection. The bridge and the
+regulator are chosen parts — a manufacturer, an MPN, a distributor code, and the
+datasheet the numbers came from — attached in `__init__` so the selection lands
+on the instance and not on the class template. The logical part stays "a 3.3 V
+regulator"; which one was bought is recorded separately.
+"""
+
+from fang.interfaces import Pin, PinMap, PowerIn, UARTPort, USB2Port
+from fang.lang import (
+    MHz,
+    Ohm,
+    Part,
+    Signal,
+    System,
+    V,
+    mA,
+    mV,
+    nF,
+    pF,
+    require,
+    uF,
+)
+from fang.parts import Capacitor, Crystal, Diode, Regulator, Resistor, TestPoint
+from fang.rationale import Chooses, Cites, Requires
+
+
+class USBReceptacle(Part):
+    """The connector. VBUS and the pair arrive together, so they are one port."""
+
+    designator_prefix = "J"
+
+    # The pair signals at 3.3 V; the 5 V is VBUS, which is one wire of the port
+    # rather than the domain the port signals in.
+    usb = USB2Port(voltage=3.3 * V, current_capability=500 * mA, bit_rate=12 * MHz)
+
+    VBUS = Pin("VBUS", role="power", number="A4")
+    DM = Pin("D-", role="differential_n", number="A7")
+    DP = Pin("D+", role="differential_p", number="A6")
+    GND = Pin("GND", role="ground", number="A1")
+
+    pinmap = PinMap(
+        {"usb.vbus": "VBUS", "usb.dm": "D-", "usb.dp": "D+", "usb.gnd": "GND"}
+    )
+
+
+class Bridge(Part):
+    """The bridge IC: USB on one side, UART on the other, a crystal beneath."""
+
+    designator_prefix = "U"
+
+    power = PowerIn(voltage=3.3 * V, current_demand=30 * mA)
+    # What the device draws from the bus, which is the number the requirement
+    # about pre-enumeration current is actually about.
+    usb = USB2Port(voltage=3.3 * V, bit_rate=12 * MHz, current_demand=90 * mA)
+    uart = UARTPort(
+        voh_min=2.8 * V,
+        vol_max=0.4 * V,
+        vih_min=2.0 * V,
+        vil_max=0.8 * V,
+        voltage=3.3 * V,
+    )
+    xin = Signal()
+    xout = Signal()
+
+    VDD = Pin("VDD", role="power", number="16")
+    GND = Pin("GND", role="ground", number="1")
+    UD_P = Pin("UD+", role="differential_p", number="6")
+    UD_M = Pin("UD-", role="differential_n", number="5")
+    TXD = Pin("TXD", role="data", number="2")
+    RXD = Pin("RXD", role="data", number="3")
+    XI = Pin("XI", role="clock", number="7")
+    XO = Pin("XO", role="clock", number="8")
+
+    pinmap = PinMap(
+        {
+            "power.vcc": "VDD",
+            "power.gnd": "GND",
+            "usb.dp": "UD+",
+            "usb.dm": "UD-",
+            "uart.tx": "TXD",
+            "uart.rx": "RXD",
+            "xin.line": "XI",
+            "xout.line": "XO",
+        }
+    )
+
+
+class Target(Part):
+    """Whatever is on the other end of the UART."""
+
+    designator_prefix = "U"
+
+    power = PowerIn(voltage=3.3 * V, current_demand=50 * mA)
+    uart = UARTPort(
+        voh_min=2.9 * V,
+        vol_max=0.4 * V,
+        vih_min=2.0 * V,
+        vil_max=0.8 * V,
+        voltage=3.3 * V,
+    )
+
+    VDD = Pin("VDD", role="power", number="1")
+    VSS = Pin("VSS", role="ground", number="2")
+    PA9 = Pin("PA9", role="data", number="30")
+    PA10 = Pin("PA10", role="data", number="31")
+
+    pinmap = PinMap(
+        {"power.vcc": "VDD", "power.gnd": "VSS", "uart.tx": "PA9", "uart.rx": "PA10"}
+    )
+
+
+class USBSerial(System):
+    """Bus power in, 3.3 V made on the board, a serial port out."""
+
+    bus_powered = Requires(
+        "The board draws no more than 100 mA before USB enumeration",
+        validation="analysis",
+    )
+    bridge_choice = Chooses(
+        "Which USB-UART bridge?",
+        selected="CH340C",
+        alternatives=[
+            {"part": "FT232RL", "reason": "four times the unit cost at this volume"},
+            {"part": "CP2102N", "reason": "needs an external oscillator we would pay for"},
+        ],
+        requirements=("bus_powered",),
+        rationale=(
+            "integrated clock removes the crystal from the BOM on the -C variant",
+            "known driver support on all three host operating systems",
+        ),
+    )
+    dp_pullup_value = Cites(
+        "A full-speed device signals its speed with 1.5k from D+ to 3.3 V",
+        document="SRC-USB-2.0",
+        locator="section 7.1.5.1",
+    )
+
+    connector = USBReceptacle(package="USB_C_Receptacle_16P")
+    regulator = Regulator(
+        input_voltage_max=6 * V,
+        output_voltage=3.3 * V,
+        output_current_max=300 * mA,
+        dropout_voltage=250 * mV,
+        package="SOT-23-5",
+    )
+    bridge = Bridge(package="SOP-16")
+    target = Target(package="LQFP-48")
+
+    resonator = Crystal(frequency=12 * MHz, load_capacitance=20 * pF, package="HC-49S")
+    load_c1 = Capacitor(capacitance=22 * pF, voltage_rating=50 * V, package="C_0402")
+    load_c2 = Capacitor(capacitance=22 * pF, voltage_rating=50 * V, package="C_0402")
+
+    bulk_in = Capacitor(capacitance=10 * uF, voltage_rating=16 * V, package="C_0805")
+    bulk_out = Capacitor(capacitance=10 * uF, voltage_rating=16 * V, package="C_0805")
+    bypass = Capacitor(capacitance=100 * nF, voltage_rating=16 * V, package="C_0402")
+
+    # Series resistors on the pair are the usual defence against a long cable's
+    # reflections; 22 Ohm keeps the impedance near the pair's own.
+    dp_series = Resistor(resistance=22 * Ohm, package="R_0402")
+    dm_series = Resistor(resistance=22 * Ohm, package="R_0402")
+
+    esd_dp = Diode(reverse_voltage=5 * V, forward_voltage=1 * V, package="SOD-523")
+    esd_dm = Diode(reverse_voltage=5 * V, forward_voltage=1 * V, package="SOD-523")
+
+    tx_probe = TestPoint(package="TestPoint_Pad_1.5x1.5mm")
+    rx_probe = TestPoint(package="TestPoint_Pad_1.5x1.5mm")
+
+    def __init__(self, **overrides):
+        super().__init__(**overrides)
+        # The selection attaches to the instance. Doing it in the class body
+        # would attach it to a template that every instance re-derives from.
+        self.bridge.select(
+            "WCH",
+            "CH340C",
+            distributor_ids={"lcsc": "C84681"},
+            datasheet="SRC-DS-CH340",
+        )
+        self.regulator.select(
+            "Diodes",
+            "AP2112K-3.3TRG1",
+            distributor_ids={"lcsc": "C51118"},
+            datasheet="SRC-DS-AP2112",
+        )
+
+    def architecture(self):
+        # Bus power in, regulated down, distributed.
+        self.connector.usb.vbus >> self.regulator.vin.vcc
+        self.connector.usb.gnd >> self.regulator.vin.gnd
+        self.regulator.vout >> self.bridge.power
+        self.regulator.vout >> self.target.power
+
+        # The pair, through its series resistors, with the clamps on the
+        # connector side where the energy actually arrives.
+        self.connector.usb.dp >> self.dp_series.p1
+        self.dp_series.p2 >> self.bridge.usb.dp
+        self.connector.usb.dm >> self.dm_series.p1
+        self.dm_series.p2 >> self.bridge.usb.dm
+        # Cathode on the line, anode on the return: the clamp catches the
+        # negative excursion and stays out of the way of the signal.
+        self.connector.usb.dp >> self.esd_dp.p2
+        self.connector.usb.gnd >> self.esd_dp.p1
+        self.connector.usb.dm >> self.esd_dm.p2
+        self.connector.usb.gnd >> self.esd_dm.p1
+
+        # The crystal and its load capacitors.
+        self.bridge.xin >> self.resonator.p1
+        self.bridge.xout >> self.resonator.p2
+        self.resonator.p1 >> self.load_c1.p1
+        self.resonator.p2 >> self.load_c2.p1
+        self.regulator.vout.gnd >> self.load_c1.p2
+        self.regulator.vout.gnd >> self.load_c2.p2
+
+        # A UART crosses. Connecting the two ports would pair like names with
+        # like — tx to tx — so the two wires are named, which is the whole
+        # reason a signal of an interface is addressable on its own.
+        self.bridge.uart.tx >> self.target.uart.rx
+        self.bridge.uart.rx >> self.target.uart.tx
+        self.bridge.uart.tx >> self.tx_probe.probe
+        self.bridge.uart.rx >> self.rx_probe.probe
+
+        self.connector.usb.vbus >> self.bulk_in.p1
+        self.connector.usb.gnd >> self.bulk_in.p2
+        self.regulator.vout.vcc >> self.bulk_out.p1
+        self.regulator.vout.gnd >> self.bulk_out.p2
+        self.bridge.power.vcc >> self.bypass.p1
+        self.bridge.power.gnd >> self.bypass.p2
+
+    def constraints(self):
+        require(self.regulator.output_voltage == 3.3 * V)
+        # USB gives 5 V nominal but specifies 5.25 V at the port; the regulator
+        # has to survive the top of that, not the nominal.
+        require(self.regulator.input_voltage_max >= 5.25 * V)
+        require(self.dp_series.resistance <= 33 * Ohm)
+        require(self.dm_series.resistance <= 33 * Ohm)
+        require(self.resonator.load_capacitance >= 12 * pF)
+```
+
+## The files it writes
+
+The parts, then the nets and the pads on them.
+
+```text title="out/netlist.txt"
+C1     10 uF            Package:C_0805
+C2     10 uF            Package:C_0805
+C3     100 nF           Package:C_0402
+C4     22 pF            Package:C_0402
+C5     22 pF            Package:C_0402
+D1     1 V              Package:SOD-523
+D2     1 V              Package:SOD-523
+J1     USBReceptacle    Package:USB_C_Receptacle_16P
+R1     22 Ohm           Package:R_0402
+R2     22 Ohm           Package:R_0402
+TP1    TestPoint        Package:TestPoint_Pad_1.5x1.5mm
+TP2    TestPoint        Package:TestPoint_Pad_1.5x1.5mm
+U1     Bridge           Package:SOP-16
+U2     Regulator        Package:SOT-23-5
+U3     Target           Package:LQFP-48
+Y1     12 MHz           Package:HC-49S
+Net-(C1-Pad1)            C1.1 J1.VBUS U2.VIN
+Net-(C1-Pad2)            C1.2 C2.2 C3.2 C4.2 C5.2 D1.A D2.A J1.GND U1.GND U2.GND U3.VSS
+Net-(C2-Pad1)            C2.1 C3.1 U1.VDD U2.VOUT U3.VDD
+Net-(C4-Pad1)            C4.1 U1.XI Y1.1
+Net-(C5-Pad1)            C5.1 U1.XO Y1.2
+Net-(D1-PadK)            D1.K J1.D- R1.1
+Net-(D2-PadK)            D2.K J1.D+ R2.1
+Net-(R1-Pad2)            R1.2 U1.UD-
+Net-(R2-Pad2)            R2.2 U1.UD+
+Net-(TP1-Pad1)           TP1.1 U1.RXD U3.PA9
+Net-(TP2-Pad1)           TP2.1 U1.TXD U3.PA10
+```
+
+Every check that ran, and every one left undecided.
+
+```text title="out/checks.txt"
+UNDECIDED interface_compatibility: current capability is undecided on electrical: current_capability unknown
+UNDECIDED interface_compatibility: voltage domain is undecided on electrical: voltage unknown; on PORT-c75102d9787d
+UNDECIDED interface_compatibility: current capability is undecided on usb2: current_demand unknown
+UNDECIDED interface_compatibility: voltage domain is undecided on usb2: voltage unknown; on PORT-b2153fd0d1b8
+UNDECIDED interface_compatibility: current capability is undecided on usb2: current_demand unknown
+UNDECIDED interface_compatibility: voltage domain is undecided on usb2: voltage unknown; on PORT-b2153fd0d1b8
+24 checks, 0 failed, 6 undecided
+```
+
+What the elaborated graph contains, by entity kind.
+
+```text title="out/graph.txt"
+    1  block
+   16  component
+   58  connection
+    5  constraint
+    1  decision
+    1  evidence
+    6  interface
+   41  pin
+   32  port
+    1  requirement
+  162  total
+snapshot sha256:92e4cd77262a09d561a4633f28c448712b8e63cc49b460e19353ee675421912d
+```
+
+All of it, including the KiCad netlist, is in
+[`examples/usb_uart_bridge/out/`](https://github.com/copperheadhq/fang/tree/main/examples/usb_uart_bridge/out/). Rebuild it with:
+
+```bash
+fang build examples/usb_uart_bridge/usb_uart_bridge.py
+```
+
+
+---
+
+# servo_drive
+
+URL: https://fang.copperhead.sh/examples/servo_drive/
+Summary: Three half-bridges, CAN, an encoder and a shunt per phase: the board this toolchain was written for. It is the composition example — the largest program here,…
+
+Three half-bridges, CAN, an encoder and a shunt per phase: the board this
+toolchain was written for. It is the composition example — the largest program
+here, from the smallest amount of repetition.
+
+## The program
+
+[`servo_drive.py`](https://github.com/copperheadhq/fang/blob/main/examples/servo_drive/servo_drive.py) declares the bridge once:
+
+```python
+class HalfBridge(Module):
+    high = Transistor(vds_max=100 * V, ..., package="PowerPAK-SO8")
+    low = Transistor(vds_max=100 * V, ..., package="PowerPAK-SO8")
+    shunt = Resistor(resistance=2 * mOhm, power_rating=2 * W, package="R_2512")
+
+    def architecture(self):
+        self.high.source >> self.low.drain
+        self.low.source >> self.shunt.p1
+
+    def constraints(self):
+        require(self.high.vds_max >= 60 * V)
+        require(self.shunt.power_rating >= 1 * W)
+```
+
+and instantiates it three times. A block owns its interior — its parts, its
+connections, and its constraints — so the drive connects to the bridge's edge
+and never reaches inside it. The three constraint sets are three separate
+constraints in the graph, decided separately: a change to one phase does not
+quietly pass because the other two are fine.
+
+The phase, the encoder and the CAN bus are typed ports, so a connection says
+what it carries rather than which pad it happens to land on.
+
+## What comes out
+
+24 parts, 26 nets, 310 entities, 46 checks — none failed, seven undecided. It is
+the biggest graph in the examples by a factor of two.
+
+- [`out/servo_drive.net`](https://github.com/copperheadhq/fang/blob/main/examples/servo_drive/out/servo_drive.net) — 24 components and 26 nets
+- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/servo_drive/out/rationale.md) — the requirements the drive states,
+  and the assumption it is honest about
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/servo_drive/out/checks.txt) — 46 checks over 21 constraints —
+  six of them from each bridge, three from the drive itself
+- [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/servo_drive/out/graph.txt)
+
+![the system view](/examples/servo_drive/system.svg)
+
+The three `bridge_*` blocks sit under the rule at the bottom: the system view
+draws electrical connection, and a block connects through the parts inside it.
+Their transistors are labelled `bridge_u.high`, `bridge_v.high` and so on — the
+path is what distinguishes three instances of one declaration.
+
+![the power view](/examples/servo_drive/power.svg)
+
+![the safety view](/examples/servo_drive/safety.svg)
+
+## Running it
+
+```bash
+fang check   examples/servo_drive/servo_drive.py
+fang graph   examples/servo_drive/servo_drive.py
+fang view    examples/servo_drive/servo_drive.py safety -o safety.svg
+```
+
+## The whole program
+
+```python title="examples/servo_drive/servo_drive.py"
+"""A three-phase servo drive: the board this toolchain was written for.
+
+Everything here is composition. A `HalfBridge` is a block with two transistors and
+a shunt: it owns its own interior and its own constraints, and the drive
+instantiates three of them from one declaration. The phase, the encoder, and the
+CAN bus are typed ports, so a connection says what it carries rather than which
+pad it happens to land on.
+"""
+
+from fang.interfaces import (
+    AnalogIn,
+    CANPort,
+    EncoderPort,
+    MotorPhase,
+    PWMPort,
+    Pin,
+    PinMap,
+    PowerIn,
+    PowerOut,
+)
+from fang.lang import (
+    A,
+    Module,
+    Ohm,
+    Part,
+    Signal,
+    System,
+    V,
+    W,
+    kHz,
+    mA,
+    mOhm,
+    mW,
+    nF,
+    require,
+    uF,
+)
+from fang.parts import Capacitor, Connector, Regulator, Resistor, Transistor
+from fang.rationale import Assumes, Requires
+
+
+class HalfBridge(Module):
+    """Two FETs, the node between them, and the shunt that measures it.
+
+    The block is the unit of reuse: one declaration, three instances, and one set
+    of constraints that holds for each of them.
+    """
+
+    high = Transistor(
+        vds_max=100 * V,
+        vgs_threshold=3 * V,
+        id_max=60 * A,
+        rds_on=4 * mOhm,
+        package="PowerPAK-SO8",
+    )
+    low = Transistor(
+        vds_max=100 * V,
+        vgs_threshold=3 * V,
+        id_max=60 * A,
+        rds_on=4 * mOhm,
+        package="PowerPAK-SO8",
+    )
+    shunt = Resistor(resistance=2 * mOhm, power_rating=2 * W, package="R_2512")
+
+    def architecture(self):
+        # The interior: a totem pole over a shunt. The midpoint is the phase and
+        # the top of the shunt is the current measurement.
+        self.high.source >> self.low.drain
+        self.low.source >> self.shunt.p1
+
+    def constraints(self):
+        # The bus is 24 V nominal but a decelerating motor pushes it up; 100 V
+        # parts on a 24 V bus is the usual margin for a regenerative load.
+        require(self.high.vds_max >= 60 * V)
+        require(self.low.vds_max >= 60 * V)
+
+        # 20 A through 2 mOhm is 0.8 W. The shunt is rated for more than double
+        # that, because it sits next to two FETs that are also warm.
+        require(self.shunt.resistance <= 5 * mOhm)
+        require(self.shunt.power_rating >= 1 * W)
+
+        # A logic-level gate: the driver's rail has to clear the threshold with
+        # room to spare, or the FET spends its life half on.
+        require(self.high.vgs_threshold <= 4 * V)
+        require(self.low.vgs_threshold <= 4 * V)
+
+
+class GateDriver(Part):
+    """One PWM in, a complementary gate pair out, per phase."""
+
+    designator_prefix = "U"
+
+    power = PowerIn(voltage=12 * V, current_demand=50 * mA)
+    pwm = PWMPort(vih_min=2 * V, vil_max=0.8 * V, voltage=3.3 * V, bit_rate=20 * kHz)
+    high_out = Signal()
+    low_out = Signal()
+
+    VCC = Pin("VCC", role="power", number="1")
+    GND = Pin("GND", role="ground", number="2")
+    IN = Pin("IN", role="control", number="3")
+    HO = Pin("HO", role="control", number="7")
+    LO = Pin("LO", role="control", number="5")
+
+    pinmap = PinMap(
+        {
+            "power.vcc": "VCC",
+            "power.gnd": "GND",
+            "pwm.out": "IN",
+            "high_out.line": "HO",
+            "low_out.line": "LO",
+        }
+    )
+
+
+class Controller(Part):
+    """The MCU: three PWM outputs, three current sense inputs, CAN, encoder."""
+
+    designator_prefix = "U"
+
+    power = PowerIn(voltage=3.3 * V, current_demand=120 * mA)
+    pwm_u = PWMPort(voh_min=2.9 * V, vol_max=0.4 * V, voltage=3.3 * V, bit_rate=20 * kHz)
+    pwm_v = PWMPort(voh_min=2.9 * V, vol_max=0.4 * V, voltage=3.3 * V, bit_rate=20 * kHz)
+    pwm_w = PWMPort(voh_min=2.9 * V, vol_max=0.4 * V, voltage=3.3 * V, bit_rate=20 * kHz)
+    sense_u = AnalogIn(voltage=3.3 * V, impedance=1 * Ohm)
+    sense_v = AnalogIn(voltage=3.3 * V, impedance=1 * Ohm)
+    sense_w = AnalogIn(voltage=3.3 * V, impedance=1 * Ohm)
+    encoder = EncoderPort(vih_min=2 * V, vil_max=0.8 * V, voltage=3.3 * V)
+    can_tx = Signal()
+    can_rx = Signal()
+
+    VDD = Pin("VDD", role="power", number="1")
+    VSS = Pin("VSS", role="ground", number="2")
+    PA8 = Pin("PA8", role="control", number="41")
+    PA9 = Pin("PA9", role="control", number="42")
+    PA10 = Pin("PA10", role="control", number="43")
+    PC0 = Pin("PC0", role="analog", number="8")
+    PC1 = Pin("PC1", role="analog", number="9")
+    PC2 = Pin("PC2", role="analog", number="10")
+    PB4 = Pin("PB4", role="data", number="56")
+    PB5 = Pin("PB5", role="data", number="57")
+    PB6 = Pin("PB6", role="data", number="58")
+    PB8 = Pin("PB8", role="data", number="61")
+    PB9 = Pin("PB9", role="data", number="62")
+
+    pinmap = PinMap(
+        {
+            "power.vcc": "VDD",
+            "power.gnd": "VSS",
+            "pwm_u.out": "PA8",
+            "pwm_v.out": "PA9",
+            "pwm_w.out": "PA10",
+            "sense_u.signal": "PC0",
+            "sense_v.signal": "PC1",
+            "sense_w.signal": "PC2",
+            "encoder.a": "PB4",
+            "encoder.b": "PB5",
+            "encoder.index": "PB6",
+            "can_tx.line": "PB9",
+            "can_rx.line": "PB8",
+        }
+    )
+
+
+class CANTransceiver(Part):
+    """TTL on the logic side, a differential pair on the bus side."""
+
+    designator_prefix = "U"
+
+    power = PowerIn(voltage=3.3 * V, current_demand=70 * mA)
+    bus = CANPort(voltage=3.3 * V, bit_rate=1000 * kHz)
+    txd = Signal()
+    rxd = Signal()
+
+    VCC = Pin("VCC", role="power", number="3")
+    GND = Pin("GND", role="ground", number="2")
+    TXD = Pin("TXD", role="data", number="1")
+    RXD = Pin("RXD", role="data", number="4")
+    CANH = Pin("CANH", role="differential_p", number="7")
+    CANL = Pin("CANL", role="differential_n", number="6")
+
+    pinmap = PinMap(
+        {
+            "power.vcc": "VCC",
+            "power.gnd": "GND",
+            "txd.line": "TXD",
+            "rxd.line": "RXD",
+            "bus.canh": "CANH",
+            "bus.canl": "CANL",
+        }
+    )
+
+
+class MotorConnector(Connector):
+    """Three phases out to the windings."""
+
+    designator_prefix = "J"
+
+    phase_u = MotorPhase(voltage=24 * V, current_demand=15 * A)
+    phase_v = MotorPhase(voltage=24 * V, current_demand=15 * A)
+    phase_w = MotorPhase(voltage=24 * V, current_demand=15 * A)
+
+    U = Pin("U", role="phase", number="1")
+    V_ = Pin("V", role="phase", number="2")
+    W = Pin("W", role="phase", number="3")
+
+    pinmap = PinMap({"phase_u.phase": "U", "phase_v.phase": "V", "phase_w.phase": "W"})
+
+
+class EncoderConnector(Connector):
+    designator_prefix = "J"
+
+    encoder = EncoderPort(voh_min=2.9 * V, vol_max=0.4 * V, voltage=3.3 * V)
+
+    A_ = Pin("A", role="data", number="1")
+    B_ = Pin("B", role="data", number="2")
+    Z = Pin("Z", role="data", number="3")
+
+    pinmap = PinMap({"encoder.a": "A", "encoder.b": "B", "encoder.index": "Z"})
+
+
+class BusConnector(Connector):
+    designator_prefix = "J"
+
+    can = CANPort(voltage=3.3 * V, bit_rate=1000 * kHz)
+
+    H = Pin("CANH", role="differential_p", number="1")
+    L = Pin("CANL", role="differential_n", number="2")
+
+    pinmap = PinMap({"can.canh": "CANH", "can.canl": "CANL"})
+
+
+class BusTerminal(Connector):
+    """The lugs the 24 V bus arrives on."""
+
+    designator_prefix = "J"
+
+    dc = PowerOut(voltage=24 * V, current_capability=20 * A)
+
+    VP = Pin("V+", role="power", number="1")
+    VN = Pin("V-", role="ground", number="2")
+
+    pinmap = PinMap({"dc.vcc": "V+", "dc.gnd": "V-"})
+
+
+class ServoDrive(System):
+    dc_bus = PowerIn(voltage=24 * V, current_capability=20 * A)
+
+    thermal = Requires(
+        "Conduction loss per bridge stays under 2 W at 15 A continuous",
+        validation="analysis",
+    )
+    switching_loss = Assumes(
+        "Switching loss at 20 kHz is small beside conduction loss",
+        rationale="not yet computed; true for these gate charges at this frequency",
+    )
+
+    bus_in = BusTerminal(
+        current_rating=30 * A, voltage_rating=60 * V, package="TerminalBlock_1x02_P7.62mm"
+    )
+
+    # The two housekeeping rails. A drive that only had the bus would still
+    # need these, so they belong to the drive rather than to the board it is on.
+    gate_rail = Regulator(
+        input_voltage_max=60 * V,
+        output_voltage=12 * V,
+        output_current_max=500 * mA,
+        package="SOT-223",
+    )
+    logic_rail = Regulator(
+        input_voltage_max=15 * V,
+        output_voltage=3.3 * V,
+        output_current_max=1 * A,
+        package="SOT-23-5",
+    )
+
+    controller = Controller(package="LQFP-64")
+    transceiver = CANTransceiver(package="SOIC-8")
+
+    driver_u = GateDriver(package="SOIC-8")
+    driver_v = GateDriver(package="SOIC-8")
+    driver_w = GateDriver(package="SOIC-8")
+
+    bridge_u = HalfBridge()
+    bridge_v = HalfBridge()
+    bridge_w = HalfBridge()
+
+    motor = MotorConnector(
+        current_rating=20 * A, voltage_rating=60 * V, package="TerminalBlock_1x03_P7.62mm"
+    )
+    encoder_port = EncoderConnector(
+        current_rating=1 * A, voltage_rating=12 * V, package="JST_PH_1x03_P2.00mm"
+    )
+    can_port = BusConnector(
+        current_rating=1 * A, voltage_rating=12 * V, package="JST_PH_1x02_P2.00mm"
+    )
+
+    # 120 Ohm, because this node is one end of the bus rather than a stub on it.
+    termination = Resistor(resistance=120 * Ohm, power_rating=250 * mW, package="R_0805")
+    bus_bulk = Capacitor(capacitance=470 * uF, voltage_rating=63 * V, package="Radial_D10")
+    logic_bypass = Capacitor(capacitance=100 * nF, voltage_rating=16 * V, package="C_0402")
+
+    def architecture(self):
+        self.dc_bus >> self.bus_in.dc
+        self.bus_in.dc >> self.gate_rail.vin
+        self.gate_rail.vout >> self.logic_rail.vin
+
+        self.logic_rail.vout >> self.controller.power
+        self.logic_rail.vout >> self.transceiver.power
+
+        for driver, bridge, pwm, sense, phase in (
+            (self.driver_u, self.bridge_u, self.controller.pwm_u, self.controller.sense_u, self.motor.phase_u),
+            (self.driver_v, self.bridge_v, self.controller.pwm_v, self.controller.sense_v, self.motor.phase_v),
+            (self.driver_w, self.bridge_w, self.controller.pwm_w, self.controller.sense_w, self.motor.phase_w),
+        ):
+            self.gate_rail.vout >> driver.power
+            pwm >> driver.pwm
+            driver.high_out >> bridge.high.gate
+            driver.low_out >> bridge.low.gate
+
+            self.bus_in.dc.vcc >> bridge.high.drain
+            self.bus_in.dc.gnd >> bridge.shunt.p2
+            bridge.low.drain >> phase.phase
+            bridge.shunt.p1 >> sense.signal
+
+        self.controller.can_tx >> self.transceiver.txd
+        self.controller.can_rx >> self.transceiver.rxd
+        self.transceiver.bus >> self.can_port.can
+        self.transceiver.bus.canh >> self.termination.p1
+        self.transceiver.bus.canl >> self.termination.p2
+
+        self.controller.encoder >> self.encoder_port.encoder
+
+        self.bus_in.dc.vcc >> self.bus_bulk.p1
+        self.bus_in.dc.gnd >> self.bus_bulk.p2
+        self.controller.power.vcc >> self.logic_bypass.p1
+        self.controller.power.gnd >> self.logic_bypass.p2
+
+    def constraints(self):
+        # The bus capacitor sees the bus, plus whatever the motor puts back into
+        # it; a 63 V part on a 24 V bus is that allowance, stated.
+        require(self.bus_bulk.voltage_rating >= 50 * V)
+        require(self.termination.resistance == 120 * Ohm)
+        require(self.motor.voltage_rating >= 48 * V)
+```
+
+## The files it writes
+
+The parts, then the nets and the pads on them.
+
+```text title="out/netlist.txt"
+C1     470 uF           Package:Radial_D10
+C2     100 nF           Package:C_0402
+J1     BusTerminal      Package:TerminalBlock_1x02_P7.62mm
+J2     BusConnector     Package:JST_PH_1x02_P2.00mm
+J3     EncoderConnector Package:JST_PH_1x03_P2.00mm
+J4     MotorConnector   Package:TerminalBlock_1x03_P7.62mm
+Q1     Transistor       Package:PowerPAK-SO8
+Q2     Transistor       Package:PowerPAK-SO8
+Q3     Transistor       Package:PowerPAK-SO8
+Q4     Transistor       Package:PowerPAK-SO8
+Q5     Transistor       Package:PowerPAK-SO8
+Q6     Transistor       Package:PowerPAK-SO8
+R1     2 mOhm           Package:R_2512
+R2     2 mOhm           Package:R_2512
+R3     2 mOhm           Package:R_2512
+R4     120 Ohm          Package:R_0805
+U1     Controller       Package:LQFP-64
+U2     GateDriver       Package:SOIC-8
+U3     GateDriver       Package:SOIC-8
+U4     GateDriver       Package:SOIC-8
+U5     Regulator        Package:SOT-223
+U6     Regulator        Package:SOT-23-5
+U7     CANTransceiver   Package:SOIC-8
+Net-(C1-Pad1)            C1.1 J1.V+ Q1.D Q3.D Q5.D U5.VIN
+Net-(C1-Pad2)            C1.2 C2.2 J1.V- R1.2 R2.2 R3.2 U1.VSS U2.GND U3.GND U4.GND U5.GND U6.GND U7.GND
+Net-(C2-Pad1)            C2.1 U1.VDD U6.VOUT U7.VCC
+Net-(J2-PadCANH)         J2.CANH R4.1 U7.CANH
+Net-(J2-PadCANL)         J2.CANL R4.2 U7.CANL
+Net-(J3-PadA)            J3.A U1.PB4
+Net-(J3-PadB)            J3.B U1.PB5
+Net-(J3-PadZ)            J3.Z U1.PB6
+Net-(J4-PadU)            J4.U Q1.S Q2.D
+Net-(J4-PadV)            J4.V Q3.S Q4.D
+Net-(J4-PadW)            J4.W Q5.S Q6.D
+Net-(Q1-PadG)            Q1.G U2.HO
+Net-(Q2-PadG)            Q2.G U2.LO
+Net-(Q2-PadS)            Q2.S R1.1 U1.PC0
+Net-(Q3-PadG)            Q3.G U3.HO
+Net-(Q4-PadG)            Q4.G U3.LO
+Net-(Q4-PadS)            Q4.S R2.1 U1.PC1
+Net-(Q5-PadG)            Q5.G U4.HO
+Net-(Q6-PadG)            Q6.G U4.LO
+Net-(Q6-PadS)            Q6.S R3.1 U1.PC2
+Net-(U1-PadPA10)         U1.PA10 U4.IN
+Net-(U1-PadPA8)          U1.PA8 U2.IN
+Net-(U1-PadPA9)          U1.PA9 U3.IN
+Net-(U1-PadPB8)          U1.PB8 U7.RXD
+Net-(U1-PadPB9)          U1.PB9 U7.TXD
+Net-(U2-PadVCC)          U2.VCC U3.VCC U4.VCC U5.VOUT U6.VIN
+```
+
+Every check that ran, and every one left undecided.
+
+```text title="out/checks.txt"
+UNDECIDED interface_compatibility: current capability is undecided on electrical: current_demand unknown
+UNDECIDED interface_compatibility: voltage domain is undecided on electrical: voltage unknown; on PORT-278c14e1e5e7
+UNDECIDED interface_compatibility: current capability is undecided on power_output: current_capability unknown
+UNDECIDED interface_compatibility: voltage domain is undecided on power_output: voltage unknown; on PORT-15f7df6602b0, PORT-9f797509605f
+UNDECIDED interface_compatibility: current capability is undecided on power_input: current_capability unknown
+UNDECIDED interface_compatibility: voltage domain is undecided on power_input: voltage unknown; on PORT-98da99673f80
+UNDECIDED interface_compatibility: current capability is undecided on power_input: current_demand unknown
+46 checks, 0 failed, 7 undecided
+```
+
+What the elaborated graph contains, by entity kind.
+
+```text title="out/graph.txt"
+    1  assumption
+    4  block
+   23  component
+   99  connection
+   21  constraint
+   10  interface
+   80  pin
+   71  port
+    1  requirement
+  310  total
+snapshot sha256:f309e8551a3443aafda95613ff3b1bf9a2e48780662207c3a52a83e8231529f9
+```
+
+All of it, including the KiCad netlist, is in
+[`examples/servo_drive/out/`](https://github.com/copperheadhq/fang/tree/main/examples/servo_drive/out/). Rebuild it with:
+
+```bash
+fang build examples/servo_drive/servo_drive.py
+```
 
 
 ---

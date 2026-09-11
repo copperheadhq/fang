@@ -9,18 +9,20 @@ sidebar:
 
 Every example in [`examples/`](https://github.com/copperheadhq/fang/tree/main/examples)
 elaborates, passes the gate and is exercised by the test suite, so none of them
-is a sketch that no longer runs.
+is a sketch that no longer runs. Each has a page here carrying its program, the
+views it renders and the files it writes — all generated from the folder itself,
+so a page cannot describe a program that has since changed.
 
 | Example | Shows |
 | --- | --- |
-| [`divider/`](https://github.com/copperheadhq/fang/tree/main/examples/divider/) | The smallest real board: two resistors and a capacitor |
-| [`blinky/`](https://github.com/copperheadhq/fang/tree/main/examples/blinky/) | Declared surfaces, connections and a constraint stating intent rather than the answer |
-| [`equations/`](https://github.com/copperheadhq/fang/tree/main/examples/equations/) | Values chosen by equation and reuse by inheritance |
-| [`sensor_board/`](https://github.com/copperheadhq/fang/tree/main/examples/sensor_board/) | Interfaces lowering to pins, a recorded decision, a check left undecided |
-| [`i2c_bus/`](https://github.com/copperheadhq/fang/tree/main/examples/i2c_bus/) | A multi-drop bus, addresses as constrained parameters |
-| [`usb_uart_bridge/`](https://github.com/copperheadhq/fang/tree/main/examples/usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet |
-| [`buck_regulator/`](https://github.com/copperheadhq/fang/tree/main/examples/buck_regulator/) | Requirement, decision, calculations and verification beside the circuit |
-| [`servo_drive/`](https://github.com/copperheadhq/fang/tree/main/examples/servo_drive/) | Composition: one `HalfBridge` block instantiated three times |
+| [`divider/`](/examples/divider/) | The smallest real board: two resistors and a capacitor |
+| [`blinky/`](/examples/blinky/) | Declared surfaces, connections and a constraint stating intent rather than the answer |
+| [`equations/`](/examples/equations/) | Values chosen by equation and reuse by inheritance |
+| [`sensor_board/`](/examples/sensor_board/) | Interfaces lowering to pins, a recorded decision, a check left undecided |
+| [`i2c_bus/`](/examples/i2c_bus/) | A multi-drop bus, addresses as constrained parameters |
+| [`usb_uart_bridge/`](/examples/usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet |
+| [`buck_regulator/`](/examples/buck_regulator/) | Requirement, decision, calculations and verification beside the circuit |
+| [`servo_drive/`](/examples/servo_drive/) | Composition: one `HalfBridge` block instantiated three times |
 
 ## Running one
 

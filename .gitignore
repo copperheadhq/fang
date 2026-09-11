@@ -54,6 +54,9 @@ Thumbs.db
 # the docs site
 node_modules/
 site/docs/dist/
+# Generated at prebuild from examples/ — a page per example and its views.
+site/docs/src/content/docs/examples/
+site/docs/public/examples/
 site/docs/.astro/
 
 # atopile build artifacts from the parity harness; the checked-in artifact is
