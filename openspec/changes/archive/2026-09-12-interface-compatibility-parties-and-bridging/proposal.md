@@ -29,7 +29,12 @@ bridging rules above.
 ## What Changes
 
 - `Typed Interfaces, Ports, Buses, and Domains` gains the definitions of a
-  link and a party, and states that a non-party is a wire on the link.
+  link and a party, states that a non-party is a wire on the link, and states
+  the two rules that decide a link's membership: a link continues through a
+  part that declares it bridges the terminals in the path and stops at a
+  part that declares no such bridge, and a link over a bus merges every
+  connection whose ports share a member into one link rather than one link
+  per connection.
 - `Interface Compatibility Checks` and `Interface Compatibility Evaluation`
   both stop saying a check runs over "all participants" / "every
   participant" and say what is now true: a check runs only over the

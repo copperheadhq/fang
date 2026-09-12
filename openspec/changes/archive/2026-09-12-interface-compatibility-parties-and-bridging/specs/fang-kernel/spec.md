@@ -14,7 +14,12 @@ sharing a voltage, ground, isolation, or timing reference.
 A link is one interface connection together with the ports that participate in
 it. A port is a party to the link when its interface declares at least one
 electrical parameter; a port whose interface declares none — a passive pad, a
-test point — is a wire on the link rather than a party to it.
+test point — is a wire on the link rather than a party to it. A link SHALL
+continue through a part that declares it bridges the terminals in the path,
+and SHALL stop at a part that declares no such bridge. A link over a bus SHALL
+merge every connection whose ports share a member into one link, so every
+port on the bus is a party to the same link rather than to a separate one per
+connection.
 
 The kernel SHALL ship a catalogue of typed interfaces and SHALL allow projects
 to define their own. The catalogue SHALL cover at least I2C, SPI, UART, USB 2,
