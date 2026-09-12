@@ -446,6 +446,16 @@ instance owned by a component, module, or architecture block. A bus is an
 interface whose participants are many rather than two. A domain groups entities
 sharing a voltage, ground, isolation, or timing reference.
 
+A link is one interface connection together with the ports that participate in
+it. A port is a party to the link when its interface declares at least one
+electrical parameter; a port whose interface declares none — a passive pad, a
+test point — is a wire on the link rather than a party to it. A link SHALL
+continue through a part that declares it bridges the terminals in the path,
+and SHALL stop at a part that declares no such bridge. A link over a bus SHALL
+merge every connection whose ports share a member into one link, so every
+port on the bus is a party to the same link rather than to a separate one per
+connection.
+
 The kernel SHALL ship a catalogue of typed interfaces and SHALL allow projects
 to define their own. The catalogue SHALL cover at least I2C, SPI, UART, USB 2,
 CAN, RS-485, PWM, quadrature encoder, power input, power output, analog input,
@@ -486,12 +496,13 @@ state and part selection.
 
 ### Requirement: Interface Compatibility Checks
 
-Interface compatibility SHALL be a deterministic check class. The kernel SHALL
-evaluate at least: source VOH(min) against sink VIH(min) plus margin; source
-VOL(max) against sink VIL(max) less margin; source current capability against
-sink demand; bus voltage domain compatibility across all participants; pull-up
-supply validity for every participant; open-drain and open-collector
-requirements; and protocol, rate, and addressing compatibility.
+Interface compatibility SHALL be a deterministic check class, run only over the
+parameters every party to the link declares. The kernel SHALL evaluate at
+least: source VOH(min) against sink VIH(min) plus margin; source VOL(max)
+against sink VIL(max) less margin; source current capability against sink
+demand; bus voltage domain compatibility across every party; pull-up supply
+validity for every party; open-drain and open-collector requirements; and
+protocol, rate, and addressing compatibility.
 
 #### Scenario: A check with unknown inputs returns undecided
 
@@ -1523,7 +1534,8 @@ USB 2, CAN, RS-485, PWM, quadrature encoder, power input, power output, analog
 input, analog output, motor phase, JTAG, serial wire debug, clock, and reset.
 Each definition SHALL own its member signals, their roles, its electrical
 parameters, and its compatibility rules, and a project SHALL be able to define
-its own.
+its own. Every digital interface SHALL declare a voltage-domain parameter,
+which the bus voltage-domain check depends on for that family.
 
 #### Scenario: Every named interface is present with its signals
 
@@ -1612,9 +1624,11 @@ unsatisfiable signal, and SHALL NOT produce a partial pin mapping.
 ### Requirement: Interface Compatibility Evaluation
 
 The compatibility check SHALL evaluate logic-level margin, current capability,
-voltage-domain agreement across every participant, pull-up supply validity,
-open-drain requirements, and protocol, rate, and addressing agreement. A check
-whose inputs are unknown SHALL return undecided naming the missing input.
+voltage-domain agreement, pull-up supply validity, open-drain requirements, and
+protocol, rate, and addressing agreement, over the parameters every party to
+the link declares. A check whose inputs are unknown SHALL return undecided
+naming the missing input. A link with fewer than two parties has nothing to
+compare and yields no result.
 
 #### Scenario: A logic-level shortfall fails
 
@@ -1627,10 +1641,10 @@ whose inputs are unknown SHALL return undecided naming the missing input.
 - **THEN** the check returns undecided and names `vih_min` as the missing input
 - **AND** it does not pass by default
 
-#### Scenario: A bus checks every participant
+#### Scenario: A bus checks every party
 
-- **WHEN** three participants share a bus and one is in a different voltage domain
-- **THEN** the check reports the mismatch and names the participant
+- **WHEN** three parties share a bus and one is in a different voltage domain
+- **THEN** the check reports the mismatch and names the party
 
 #### Scenario: An open-drain bus without a pull-up fails
 
@@ -1642,12 +1656,44 @@ whose inputs are unknown SHALL return undecided naming the missing input.
 - **WHEN** a compatibility input came from a datasheet
 - **THEN** the result cites the evidence entity that supplied it
 
+#### Scenario: A non-party is not asked for a fact it doesn't declare
+
+- **WHEN** a resistor pad sits on a link whose other end declares logic
+  levels and a voltage domain
+- **THEN** the resistor is not asked for those parameters, because its
+  interface declares none
+- **AND** the link has only one party, so the check yields no result at all
+
+#### Scenario: A series part joins the two interfaces it stands between
+
+- **WHEN** two ports of the same interface type are joined only through parts
+  that each declare they bridge the terminals in the path
+- **THEN** the two ports are treated as the two ends of one link
+- **AND** they are compared with each other, not with the parts between them
+
+#### Scenario: A mismatch carries through a series part
+
+- **WHEN** the two ends of a series-bridged link disagree on a checked
+  parameter, such as their voltage domain
+- **THEN** the check reports the mismatch between the two ends
+- **AND** the parts bridging the path between them are not asked about it
+
+#### Scenario: A part that declares no bridge ends the link
+
+- **WHEN** two ports of the same interface type are joined only through a
+  part that declares no bridge between the terminals in the path, such as a
+  transistor
+- **THEN** the interface does not continue through that part
+- **AND** the two ports are not treated as ends of one link
+
 ### Requirement: The Part Model
 
 A part SHALL separate its logical identity, its selected vendor part, its
 package, its sourcing identity, its parameterization, and its physical instance.
 A part SHALL declare a designator prefix, and a generic part SHALL carry no
-vendor identity until one is selected.
+vendor identity until one is selected. A part SHALL declare which pairs of its
+own terminals it bridges — conducts between — if any; nothing else in the
+graph records conduction through a part's own body.
 
 #### Scenario: A generic part has no vendor identity
 
@@ -1664,6 +1710,13 @@ vendor identity until one is selected.
 
 - **WHEN** a resistor, a capacitor, and an integrated circuit are declared
 - **THEN** their designator prefixes are `R`, `C`, and `U`
+
+#### Scenario: A part records what it bridges
+
+- **WHEN** a two-terminal part such as a resistor is declared
+- **THEN** the component entity records that its two terminals are bridged
+- **AND** a part such as a transistor or a connector that declares no bridge
+  records none
 
 ### Requirement: The Standard Part Library
 

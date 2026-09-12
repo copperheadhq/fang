@@ -132,7 +132,7 @@ construct a more permissive `Policy` here than the project's**.
 
 The working contract is [openspec/specs/fang-kernel/spec.md](openspec/specs/fang-kernel/spec.md),
 a self-contained normative document: terminology, design principles, layers of representation,
-kernel architecture, and the project root, then 81 requirements over 217 scenarios and 23
+kernel architecture, and the project root, then 81 requirements over 222 scenarios and 23
 acceptance tests. There is no other standards document in this repository — the spec is the whole
 contract. Read the relevant requirement before changing kernel behaviour. Module docstrings quote
 the requirement they implement by name (e.g. `Spec: "The Commit Gate"`) — keep that link intact.
