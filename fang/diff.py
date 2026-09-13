@@ -270,6 +270,26 @@ def _compare(old: Entity, new: Entity, entities: Mapping[str, Entity]) -> list[C
             )
         )
 
+    # A trait is state on the entity, so a change to one is a model or trait
+    # change and never a presentation one. The change names the protocols moved.
+    if "traits" in changed_fields:
+        old_traits, new_traits = old_dict.get("traits", {}), new_dict.get("traits", {})
+        moved = sorted(
+            protocol
+            for protocol in set(old_traits) | set(new_traits)
+            if old_traits.get(protocol) != new_traits.get(protocol)
+        )
+        changes.append(
+            Change(
+                ChangeClass.MODEL_CHANGED,
+                new.id,
+                before=moved,
+                after=moved,
+                impact=_impact(new.id, entities),
+            )
+        )
+        changed_fields.discard("traits")
+
     presentation_only = changed_fields and changed_fields <= PRESENTATION_FIELDS
     if presentation_only:
         changes.append(

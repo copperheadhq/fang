@@ -284,8 +284,16 @@ def _net_name(
 
 
 def compile_netlist(snapshot, *, traits=None) -> Netlist:
-    """Compile a snapshot into a netlist. Mutates nothing."""
+    """Compile a snapshot into a netlist. Mutates nothing.
+
+    Footprints and sourcing come from the traits the snapshot's entities carry,
+    unless a registry is passed in their place.
+    """
     entities = snapshot.entities
+    if traits is None:
+        from .traits import TraitRegistry
+
+        traits = TraitRegistry.from_entities(entities)
     designators = assign_designators(entities)
 
     components = tuple(

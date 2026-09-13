@@ -257,11 +257,12 @@ class Session:
         return self._graph
 
     def traits(self):
-        if self.program is None:
-            from .traits import TraitRegistry
+        """The traits the committed head's entities carry."""
+        from .traits import TraitRegistry
 
+        if self.program is None:
             return TraitRegistry()
-        return self.elaboration().traits
+        return TraitRegistry.from_entities(self.snapshot().entities)
 
     def workspace(self) -> Workspace | None:
         """The persisted workspace, where one exists beside the sources."""
@@ -435,7 +436,7 @@ def workspace_entity_ids(session: Session) -> list[str]:
 
 def project_netlist(session: Session) -> dict:
     snapshot = session.graph().head
-    netlist = compile_netlist(snapshot, traits=session.traits())
+    netlist = compile_netlist(snapshot)
     return _answer(session, {"ok": True, "netlist": netlist.as_dict()})
 
 
@@ -709,15 +710,15 @@ def build_operation(payload: Mapping[str, Any]) -> Operation:
         )
 
     if kind == "add_entity":
-        # The gate does evaluate this one. What is missing is a way to build a
-        # typed entity from a document: identity, provenance, and a source
-        # location all have to be minted, and the kernel has no rehydration
-        # registry to mint them with. Saying so is better than approximating it.
+        # The gate does evaluate this one, and a record now decodes into a typed
+        # entity. What is still missing is how an agent's entity is given its
+        # identity and provenance: those are minted rather than read, and that
+        # is a requirement of its own. Saying so is better than approximating it.
         raise error(
             MCP_UNKNOWN_OPERATION,
             "add_entity is evaluated by the gate but is not constructible here: "
-            "an entity carries identity, provenance, and a source location, and "
-            "there is no rehydration of those from a document yet. Author new "
+            "a record decodes into a typed entity, but how an agent's entity is "
+            "given its identity and provenance is not yet specified. Author new "
             "entities in the Fang program and reload.",
         )
 

@@ -41,6 +41,18 @@ tracked separately and moves only when the serialized form changes.
   always been keyed by parameter, and nothing said so.
 - [site/docs/](site/docs/), an Astro + Starlight documentation site for
   `fang.copperhead.sh`, pinned to the versions `docs.copperhead.sh` runs.
+- `Workspace.read_snapshot()` rebuilds a persisted design into typed entities and
+  their traits without running the program. It builds the snapshot with the
+  manifest's versions, refuses the load if the rebuilt hash differs from the
+  manifest's (`ELAB-0014`), and returns the snapshot with a load report.
+- `fang/rehydrate.py`, one decoder registry keyed by entity kind
+  (`register_entity`) and by trait protocol (`register_trait`). Every entity
+  class, trait class, and value type has a `from_dict` beside its `as_dict`. A
+  record of a kind with no decoder, or with a key its decoder does not model,
+  loads as an `OpaqueEntity` that reserializes byte for byte; a trait in the same
+  position loads as an `OpaqueTrait` on its still-typed entity. Both are named in
+  the load report. A malformed record refuses the whole load (`ELAB-0013`).
+- `fang.serialization.parse_rfc3339`, the inverse of `rfc3339`.
 
 ### Changed
 
@@ -81,8 +93,25 @@ tracked separately and moves only when the serialized form changes.
   `examples/*/out/*.net` is regenerated.
 - `Node.pairs()` reads nested `(key "value")` fields first and falls back to flat
   atom pairs, which is the form its docstring always claimed to read.
+- **Schema 1.2.** Traits persist inside their entity's record, under `traits`
+  keyed by protocol, so the snapshot hash covers a footprint change as it covers
+  a parameter change, and every example's snapshot hash changes. `Entity.traits`
+  holds them. `Elaboration.traits` is now a view built from the entities, and
+  `compile_netlist`, `compile_plan`, and the MCP session derive traits from the
+  snapshot when none are passed. A schema 1.1 workspace still loads, with no
+  traits.
+- `Workspace.read_snapshot()` no longer takes `entities=`, and returns a
+  `LoadedSnapshot` rather than a `Snapshot`. The manifest records
+  `extracted_upstream` when it is non-empty.
+- A change confined to an entity's traits is classified as
+  `model_or_trait_changed`, naming the protocols that moved.
 
 ### Fixed
+
+- A dimension vector, which an expression reference and a unit write under
+  `dimension`, was sorted like an unordered collection when serialized. It could
+  not be read back, and two dimensions whose exponents were permutations of each
+  other serialized identically. `dimension` is now an ordered collection.
 
 - `examples/sensor_board/` declared a bulk capacitor and two pull-up resistors
   and never connected them.

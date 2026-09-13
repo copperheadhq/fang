@@ -31,10 +31,18 @@ def test_the_workspace_creates_its_directories(tmp_path):
 
 
 def test_the_workspace_round_trips_a_design(built):
-    result, workspace, _ = built
-    records = workspace.read_records()
-    assert len(records) == len(result.snapshot.entities)
-    assert {r["id"] for r in records} == set(result.snapshot.entities)
+    """Every entity comes back typed, traits included, with no program run."""
+    result, workspace, manifest = built
+    loaded = Workspace(workspace.root).read_snapshot()
+    assert loaded.report.complete
+    assert loaded.snapshot.hash == manifest.snapshot
+    assert set(loaded.snapshot.entities) == set(result.snapshot.entities)
+    for entity_id, entity in result.snapshot.entities.items():
+        reloaded = loaded.snapshot.entities[entity_id]
+        assert type(reloaded) is type(entity)
+        assert reloaded.identity == entity.identity
+        assert canonical_record_stream([reloaded]) == canonical_record_stream([entity])
+    assert any(entity.traits for entity in loaded.snapshot.entities.values())
 
 
 def test_the_design_file_is_the_canonical_record_stream(built):

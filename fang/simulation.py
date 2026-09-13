@@ -233,7 +233,7 @@ def compile_plan(
     """
     analysis = analysis or OperatingPoint()
     entities = snapshot.entities
-    traits = traits or TraitRegistry()
+    traits = traits if traits is not None else TraitRegistry.from_entities(entities)
 
     components = [
         entity

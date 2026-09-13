@@ -1,6 +1,7 @@
 """The project workspace.
 
-Spec: "Workspace Persistence" and "The Workspace Layout".
+Spec: "Workspace Persistence", "The Workspace Layout", and "A Persisted Snapshot
+Reloads Without Running A Program".
 
 Everything outside the cache is either canonical state or recorded evidence. The
 cache is reconstructible: deleting it loses no engineering fact.
@@ -16,9 +17,10 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from . import SCHEMA_VERSION, __version__
-from .entities import Entity
+from .diagnostics import ELAB_SNAPSHOT_MISMATCH, error
 from .graph import Snapshot
 from .importing import MappingTable
+from .rehydrate import LoadReport, decode_records
 from .serialization import canonical_bytes, canonical_record_stream, read_record_stream
 from .validation import check_schema_version
 
@@ -44,9 +46,12 @@ class Manifest:
     project_id: str
     lock_id: str = "unlocked"
     entity_count: int = 0
+    #: Hashed into the snapshot when present, so a reload needs it to reproduce
+    #: the hash. Written only when non-empty.
+    extracted_upstream: tuple[str, ...] = ()
 
     def as_dict(self) -> dict:
-        return {
+        out = {
             "schema_version": self.schema_version,
             "revision_id": self.revision_id,
             "compiler_version": self.compiler_version,
@@ -55,6 +60,9 @@ class Manifest:
             "lock_id": self.lock_id,
             "entity_count": self.entity_count,
         }
+        if self.extracted_upstream:
+            out["extracted_upstream"] = sorted(self.extracted_upstream)
+        return out
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, Any]) -> "Manifest":
@@ -67,7 +75,16 @@ class Manifest:
             payload["project_id"],
             payload.get("lock_id", "unlocked"),
             payload.get("entity_count", 0),
+            tuple(payload.get("extracted_upstream", ())),
         )
+
+
+@dataclass(frozen=True)
+class LoadedSnapshot:
+    """A snapshot read back from a workspace, and what the load could not type."""
+
+    snapshot: Snapshot
+    report: LoadReport
 
 
 class Workspace:
@@ -122,6 +139,7 @@ class Workspace:
             snapshot.project_id,
             snapshot.lock_id,
             len(snapshot.entities),
+            tuple(sorted(snapshot.extracted_upstream)),
         )
         self.manifest_path.write_bytes(canonical_bytes(manifest.as_dict()))
         return manifest
@@ -157,23 +175,32 @@ class Workspace:
             return []
         return read_record_stream(self.design_path.read_bytes())
 
-    def read_snapshot(self, entities: Mapping[str, Entity] | None = None) -> Snapshot:
-        """Rebuild the snapshot.
+    def read_snapshot(self) -> LoadedSnapshot:
+        """Rebuild the snapshot as typed entities and traits, running no program.
 
-        Entity records round-trip as data. Rehydrating them into typed entities
-        needs the entity registry, so a caller that has the live entities passes
-        them; otherwise the records are returned as the snapshot's payload for
-        inspection.
+        The snapshot is built with the manifest's versions rather than the running
+        code's, so a workspace an earlier compiler wrote reproduces its own hash.
+        A rebuilt hash that differs from the manifest's refuses the load: it
+        means tampering, a decoder bug, or a file serialized some other way.
         """
         manifest = self.read_manifest()
-        return Snapshot(
+        entities, report = decode_records(self.read_records())
+        snapshot = Snapshot(
             manifest.project_id,
             manifest.revision_id,
-            dict(entities or {}),
+            entities,
             schema_version=manifest.schema_version,
             compiler_version=manifest.compiler_version,
             lock_id=manifest.lock_id,
+            extracted_upstream=manifest.extracted_upstream,
         )
+        if snapshot.hash != manifest.snapshot:
+            raise error(
+                ELAB_SNAPSHOT_MISMATCH,
+                f"the design file rebuilds to {snapshot.hash}, but the manifest "
+                f"records {manifest.snapshot}; nothing was loaded",
+            )
+        return LoadedSnapshot(snapshot, report)
 
     def as_dict(self) -> dict:
         return {

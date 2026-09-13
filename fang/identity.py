@@ -242,6 +242,32 @@ class Identity:
             out["display_name"] = self.display_name
         return out
 
+    @classmethod
+    def from_dict(cls, payload: Mapping) -> "Identity":
+        """The inverse of `as_dict`. The path is parsed back through `Path.parse`."""
+        from .records import MalformedRecord, expect_keys, member, optional_text, required, text
+
+        expect_keys(
+            payload,
+            ("id", "origin", "path", "uuid", "key", "external_id", "display_name"),
+            "identity",
+        )
+        path = optional_text(payload, "path", "identity.path")
+        raw_uuid = optional_text(payload, "uuid", "identity.uuid")
+        try:
+            parsed_uuid = uuid.UUID(raw_uuid) if raw_uuid is not None else None
+        except ValueError:
+            raise MalformedRecord("identity.uuid", f"{raw_uuid!r} is not a uuid") from None
+        return cls(
+            text(required(payload, "id", "identity.id"), "identity.id"),
+            member(Origin, required(payload, "origin", "identity.origin"), "identity.origin"),
+            path=Path.parse(path) if path is not None else None,
+            uuid=parsed_uuid,
+            key=optional_text(payload, "key", "identity.key"),
+            external_id=optional_text(payload, "external_id", "identity.external_id"),
+            display_name=optional_text(payload, "display_name", "identity.display_name"),
+        )
+
 
 def derive(
     project_id: str,

@@ -1,16 +1,30 @@
 """Traits: behaviour attaches to entities without widening their classes.
 
-Spec: "Traits As The Extension Mechanism" and "Trait Registration And
-Enumeration". A trait declares the protocol it satisfies, and the kernel
-enumerates the entities carrying a protocol without instantiating any backend.
+Spec: "Traits As The Extension Mechanism", "Trait Registration And
+Enumeration", and "A Persisted Snapshot Reloads Without Running A Program". A
+trait declares the protocol it satisfies, and the kernel enumerates the entities
+carrying a protocol without instantiating any backend. A trait is state: it
+travels on the entity that carries it, serializes inside that entity's record,
+and is read back with it.
 """
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Mapping
+from typing import Any, Callable, Iterable, Mapping
 
 from .provenance import Provenance
+from .records import (
+    MalformedRecord,
+    UnmodelledKeys,
+    boolean,
+    expect_keys,
+    required,
+    text,
+    text_mapping,
+    texts,
+)
 
 
 class Trait:
@@ -52,6 +66,11 @@ def _plain(value: Any):
     return value
 
 
+def _expect(payload: Any, cls: type[Trait], fields: Iterable[str]) -> Mapping[str, Any]:
+    """Refuse a trait payload carrying a key its class does not write."""
+    return expect_keys(payload, ("protocol", *fields), f"trait {cls.protocol}")
+
+
 @dataclass
 class Footprint(Trait):
     """Where a component lands physically."""
@@ -59,6 +78,15 @@ class Footprint(Trait):
     protocol = "footprint"
     library: str = ""
     name: str = ""
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "Footprint":
+        """The inverse of `as_dict`."""
+        _expect(payload, cls, ("library", "name"))
+        return cls(
+            library=text(required(payload, "library", "footprint.library"), "footprint.library"),
+            name=text(required(payload, "name", "footprint.name"), "footprint.name"),
+        )
 
 
 @dataclass
@@ -70,6 +98,22 @@ class Sourcing(Trait):
     mpn: str = ""
     distributor_ids: Mapping[str, str] = field(default_factory=dict)
 
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "Sourcing":
+        """The inverse of `as_dict`."""
+        _expect(payload, cls, ("manufacturer", "mpn", "distributor_ids"))
+        return cls(
+            manufacturer=text(
+                required(payload, "manufacturer", "sourcing.manufacturer"),
+                "sourcing.manufacturer",
+            ),
+            mpn=text(required(payload, "mpn", "sourcing.mpn"), "sourcing.mpn"),
+            distributor_ids=text_mapping(
+                required(payload, "distributor_ids", "sourcing.distributor_ids"),
+                "sourcing.distributor_ids",
+            ),
+        )
+
 
 @dataclass
 class DatasheetEvidence(Trait):
@@ -78,6 +122,21 @@ class DatasheetEvidence(Trait):
     protocol = "datasheet_evidence"
     document: str = ""
     evidence_ids: tuple[str, ...] = ()
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "DatasheetEvidence":
+        """The inverse of `as_dict`."""
+        _expect(payload, cls, ("document", "evidence_ids"))
+        return cls(
+            document=text(
+                required(payload, "document", "datasheet_evidence.document"),
+                "datasheet_evidence.document",
+            ),
+            evidence_ids=texts(
+                required(payload, "evidence_ids", "datasheet_evidence.evidence_ids"),
+                "datasheet_evidence.evidence_ids",
+            ),
+        )
 
 
 @dataclass
@@ -93,6 +152,54 @@ class Simulatable(Trait):
     distribution_restricted: bool = False
     provenance: Provenance = field(default_factory=Provenance)
 
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "Simulatable":
+        """The inverse of `as_dict`, provenance included where it was written."""
+        _expect(
+            payload,
+            cls,
+            (
+                "model_kind",
+                "backends",
+                "source",
+                "pin_map",
+                "conditions",
+                "distribution_restricted",
+                "provenance",
+            ),
+        )
+        source = required(payload, "source", "simulatable.source")
+        return cls(
+            model_kind=text(
+                required(payload, "model_kind", "simulatable.model_kind"),
+                "simulatable.model_kind",
+            ),
+            backends=texts(
+                required(payload, "backends", "simulatable.backends"), "simulatable.backends"
+            ),
+            source=text(source, "simulatable.source") if source is not None else None,
+            pin_map=text_mapping(
+                required(payload, "pin_map", "simulatable.pin_map"), "simulatable.pin_map"
+            ),
+            conditions=text_mapping(
+                required(payload, "conditions", "simulatable.conditions"),
+                "simulatable.conditions",
+            ),
+            distribution_restricted=boolean(
+                required(
+                    payload,
+                    "distribution_restricted",
+                    "simulatable.distribution_restricted",
+                ),
+                "simulatable.distribution_restricted",
+            ),
+            provenance=(
+                Provenance.from_list(payload["provenance"])
+                if "provenance" in payload
+                else Provenance()
+            ),
+        )
+
 
 @dataclass
 class Renderable(Trait):
@@ -100,6 +207,81 @@ class Renderable(Trait):
 
     protocol = "renderable"
     symbol: str = ""
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "Renderable":
+        """The inverse of `as_dict`."""
+        _expect(payload, cls, ("symbol",))
+        return cls(symbol=text(required(payload, "symbol", "renderable.symbol"), "renderable.symbol"))
+
+
+class OpaqueTrait(Trait):
+    """A trait whose protocol has no registered decoder, kept exactly as read.
+
+    It serializes back to the payload it was read from, so a trait a newer
+    producer wrote survives a reader that cannot interpret it.
+    """
+
+    def __init__(self, protocol: str, payload: Mapping[str, Any]) -> None:
+        self.protocol = protocol
+        self._payload = deepcopy(dict(payload))
+
+    def as_dict(self) -> dict:
+        return deepcopy(self._payload)
+
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, OpaqueTrait)
+            and other.protocol == self.protocol
+            and other._payload == self._payload
+        )
+
+    __hash__ = None  # type: ignore[assignment]
+
+
+#: A trait decoder turns a serialized payload back into the trait it describes.
+TraitDecoder = Callable[[Mapping[str, Any]], Trait]
+
+_DECODERS: dict[str, TraitDecoder] = {}
+
+
+def register_trait(protocol: str, decoder: TraitDecoder) -> None:
+    """Register the decoder for a protocol, so records carrying it read back typed."""
+    if not protocol:
+        raise ValueError("a trait decoder is registered for a protocol")
+    _DECODERS[protocol] = decoder
+
+
+def trait_decoders() -> dict[str, TraitDecoder]:
+    return dict(_DECODERS)
+
+
+def decode_trait(protocol: str, payload: Mapping[str, Any]) -> Trait:
+    """Decode one trait.
+
+    A protocol with no decoder, or a payload carrying a key its decoder does not
+    model, is kept as an `OpaqueTrait`. The entity carrying it stays typed.
+    """
+    if not isinstance(payload, Mapping):
+        raise MalformedRecord(
+            f"traits.{protocol}", f"expected an object, found {type(payload).__name__}"
+        )
+    if payload.get("protocol") != protocol:
+        raise MalformedRecord(
+            f"traits.{protocol}.protocol",
+            f"the payload names protocol {payload.get('protocol')!r}",
+        )
+    decoder = _DECODERS.get(protocol)
+    if decoder is None:
+        return OpaqueTrait(protocol, payload)
+    try:
+        return decoder(payload)
+    except UnmodelledKeys:
+        return OpaqueTrait(protocol, payload)
+
+
+for _trait in (Footprint, Sourcing, DatasheetEvidence, Simulatable, Renderable):
+    register_trait(_trait.protocol, _trait.from_dict)
 
 
 class TraitRegistry:
@@ -114,6 +296,19 @@ class TraitRegistry:
     def __init__(self) -> None:
         self._by_entity: dict[str, dict[str, Trait]] = {}
         self._by_protocol: dict[str, set[str]] = {}
+
+    @classmethod
+    def from_entities(cls, entities: Mapping[str, Any]) -> "TraitRegistry":
+        """The traits a set of entities carries, as a registry.
+
+        A view rather than a store: the entities hold the traits, and this is
+        built from them, so the two cannot disagree.
+        """
+        registry = cls()
+        for entity_id in sorted(entities):
+            for trait in getattr(entities[entity_id], "traits", {}).values():
+                registry.attach(entity_id, trait)
+        return registry
 
     def attach(self, entity_id: str, trait: Trait) -> Trait:
         if not trait.protocol:

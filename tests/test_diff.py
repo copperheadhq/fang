@@ -93,6 +93,21 @@ def test_a_verification_status_change_is_classified():
     assert any(c.type is ChangeClass.VERIFICATION_STATUS_CHANGED for c in changes)
 
 
+def test_a_change_confined_to_traits_is_a_model_or_trait_change():
+    from fang.traits import Footprint, Sourcing
+
+    sourcing = Sourcing(manufacturer="TI", mpn="TPS62130RGTR")
+    before = {"CMP-A": component(traits={
+        "footprint": Footprint("Package_SO", "SOIC-8"), "sourcing": sourcing,
+    })}
+    after = {"CMP-A": component(traits={
+        "footprint": Footprint("Package_SO", "SOIC-14"), "sourcing": sourcing,
+    })}
+    changes = list(diff(before, after))
+    assert [c.type for c in changes] == [ChangeClass.MODEL_CHANGED]
+    assert changes[0].after == ["footprint"]
+
+
 def test_a_diff_carries_the_impact_of_a_change():
     resistor = component("CMP-R42", parameters={
         "resistance": Value.explicit(Quantity.scalar("10", "kOhm"))
