@@ -9,6 +9,7 @@ and is not the persisted design state.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Iterable, Mapping, Sequence
@@ -258,7 +259,6 @@ def _build_entities(
     sandbox: Sandbox,
 ) -> tuple[dict[str, Entity], TraitRegistry, dict[tuple[str, str], str]]:
     entities: dict[str, Entity] = {}
-    traits = TraitRegistry()
     interface_ids: dict[str, str] = {}
     pin_ids: dict[tuple[str, str], str] = {}
     declared_inputs = tuple(Input(d.id, d.hash) for d in sandbox.inputs)
@@ -277,6 +277,9 @@ def _build_entities(
             display_name=type(module).__name__,
         )
 
+        # A module's traits travel on the entity it becomes. Each is copied, so
+        # a frozen entity never shares a mutable trait with the program.
+        carried = {trait.protocol: deepcopy(trait) for trait in module.traits}
         if module.entity_kind == "component":
             entity: Entity = Component(
                 identity,
@@ -287,6 +290,7 @@ def _build_entities(
                 part=type(module).__name__,
                 package=getattr(module, "package", None),
                 extensions=_part_extensions(module),
+                traits=carried,
             )
         else:
             entity = Entity(
@@ -295,11 +299,9 @@ def _build_entities(
                 parameters=parameters,
                 provenance=provenance,
                 source_location=module._source,
+                traits=carried,
             )
         entities[entity.id] = entity
-
-        for trait in module.traits:
-            traits.attach(entity.id, trait)
 
         # One interface entity per surface type in use; a port instance per
         # declared surface. Stage 3 replaces these with the full catalogue.
@@ -373,7 +375,8 @@ def _build_entities(
             entities[pin_entity.id] = pin_entity
             pin_ids[(entity.id, pin.name)] = pin_entity.id
 
-    return entities, traits, pin_ids
+    # The registry is a view of the traits the entities carry, never a second store.
+    return entities, TraitRegistry.from_entities(entities), pin_ids
 
 
 def _build_connections(

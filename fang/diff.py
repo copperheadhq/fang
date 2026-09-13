@@ -251,11 +251,18 @@ def _compare(old: Entity, new: Entity, entities: Mapping[str, Entity]) -> list[C
             )
         )
 
+    # Fields compare by their canonical bytes, the form the hash covers, so the
+    # tuple a program built and the list a reload read are the same value.
+    from .serialization import canonical_dumps
+
+    def differs(before, after) -> bool:
+        return canonical_dumps(before) != canonical_dumps(after)
+
     old_dict, new_dict = old.as_dict(), new.as_dict()
     changed_fields = {
         key
         for key in set(old_dict) | set(new_dict)
-        if old_dict.get(key) != new_dict.get(key)
+        if differs(old_dict.get(key), new_dict.get(key))
     } - {"parameters", "provenance", "identity"}
 
     # A display-name change with identity intact is a rename, not a removal.
@@ -269,6 +276,26 @@ def _compare(old: Entity, new: Entity, entities: Mapping[str, Entity]) -> list[C
                 impact=_impact(new.id, entities),
             )
         )
+
+    # A trait is state on the entity, so a change to one is a model or trait
+    # change and never a presentation one. The change names the protocols moved.
+    if "traits" in changed_fields:
+        old_traits, new_traits = old_dict.get("traits", {}), new_dict.get("traits", {})
+        moved = sorted(
+            protocol
+            for protocol in set(old_traits) | set(new_traits)
+            if differs(old_traits.get(protocol), new_traits.get(protocol))
+        )
+        changes.append(
+            Change(
+                ChangeClass.MODEL_CHANGED,
+                new.id,
+                before=moved,
+                after=moved,
+                impact=_impact(new.id, entities),
+            )
+        )
+        changed_fields.discard("traits")
 
     presentation_only = changed_fields and changed_fields <= PRESENTATION_FIELDS
     if presentation_only:

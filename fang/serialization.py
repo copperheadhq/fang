@@ -32,6 +32,7 @@ ORDERED_COLLECTIONS: frozenset[str] = frozenset(
         "steps",
         "alternatives_rejected",
         "candidates",
+        "dimension",        # exponents over the seven base dimensions, in fixed order
     }
 )
 
@@ -57,9 +58,42 @@ def rfc3339(moment: datetime) -> str:
             "a timestamp carries a timezone; a naive datetime is ambiguous"
         )
     moment = moment.astimezone(timezone.utc)
+    # Written field by field: `strftime("%Y")` does not pad a year below 1000,
+    # and the form has to be exactly the one `parse_rfc3339` reads back.
+    stamp = (
+        f"{moment.year:04d}-{moment.month:02d}-{moment.day:02d}"
+        f"T{moment.hour:02d}:{moment.minute:02d}:{moment.second:02d}"
+    )
     if moment.microsecond:
-        return moment.strftime("%Y-%m-%dT%H:%M:%S.%f").rstrip("0") + "Z"
-    return moment.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+        stamp += f".{moment.microsecond:06d}".rstrip("0")
+    return stamp + "Z"
+
+
+def parse_rfc3339(text: str) -> datetime:
+    """The inverse of `rfc3339`: a UTC timestamp with a trailing Z.
+
+    Only the form `rfc3339` writes is accepted. `datetime.fromisoformat` is not
+    used, because whether it accepts the trailing Z depends on the Python version.
+    """
+    import re
+
+    match = re.fullmatch(
+        r"(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?Z",
+        text if isinstance(text, str) else "",
+    )
+    if match is None:
+        raise ValueError(f"{text!r} is not an RFC3339 UTC timestamp with a trailing Z")
+    year, month, day, hour, minute, second, fraction = match.groups()
+    return datetime(
+        int(year),
+        int(month),
+        int(day),
+        int(hour),
+        int(minute),
+        int(second),
+        int((fraction or "0").ljust(6, "0")),
+        tzinfo=timezone.utc,
+    )
 
 
 def _encode_string(text: str) -> str:

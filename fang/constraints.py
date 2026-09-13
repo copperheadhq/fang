@@ -23,6 +23,18 @@ from .diagnostics import (
     error,
 )
 from .entities import Entity
+from .records import (
+    MalformedRecord,
+    boolean,
+    decimal,
+    expect_keys,
+    listed,
+    member,
+    optional_text,
+    required,
+    text,
+    texts,
+)
 from .units import DIMENSIONLESS, Dimension, Quantity, _CONTEXT, _decimal_str
 from .values import Value, ValueStatus
 
@@ -255,6 +267,10 @@ class Arithmetic(Node):
     def __post_init__(self) -> None:
         if self.op not in ARITHMETIC_OPS:
             raise ValueError(f"{self.op!r} is not an arithmetic operator")
+        if self.exponent is not None:
+            # One representation, so an exponent given as `0.5` writes the `1/2`
+            # it reads back as.
+            object.__setattr__(self, "exponent", Fraction(self.exponent))
         object.__setattr__(self, "dimension", self._check())
 
     def _check(self) -> Dimension:
@@ -420,6 +436,69 @@ class Logical(Node):
         return {"node": "logical", "op": self.op, "args": [a.as_dict() for a in self.args]}
 
 
+def node_from_dict(payload: Mapping) -> Node:
+    """The inverse of every node's `as_dict`, dispatched on `node`.
+
+    Construction re-checks dimensions, so a tree whose operands disagree is
+    refused on reading exactly as it is on writing.
+    """
+    if not isinstance(payload, Mapping):
+        raise MalformedRecord("expression", f"expected an object, found {type(payload).__name__}")
+    node = required(payload, "node", "expression.node")
+
+    if node == "literal":
+        expect_keys(payload, ("node", "quantity", "number", "string", "boolean"), "literal")
+        supplied = [key for key in ("quantity", "number", "string", "boolean") if key in payload]
+        if len(supplied) != 1:
+            raise MalformedRecord(
+                "expression.literal",
+                "a literal carries exactly one of quantity, number, string, boolean",
+            )
+        key = supplied[0]
+        if key == "quantity":
+            return Literal(quantity=Quantity.from_dict(payload[key]))
+        if key == "number":
+            return Literal(number=decimal(payload[key], "expression.number"))
+        if key == "string":
+            return Literal(text=text(payload[key], "expression.string"))
+        return Literal(boolean=boolean(payload[key], "expression.boolean"))
+
+    if node == "ref":
+        expect_keys(payload, ("node", "ref", "attr", "dimension"), "ref")
+        return Ref(
+            text(required(payload, "ref", "expression.ref"), "expression.ref"),
+            text(required(payload, "attr", "expression.attr"), "expression.attr"),
+            Dimension.from_list(required(payload, "dimension", "expression.dimension")),
+        )
+
+    if node not in ("arithmetic", "comparison", "logical"):
+        raise MalformedRecord("expression.node", f"{node!r} is not a node kind")
+    allowed = ("node", "op", "args", "exponent") if node == "arithmetic" else ("node", "op", "args")
+    expect_keys(payload, allowed, node)
+    op = text(required(payload, "op", "expression.op"), "expression.op")
+    args = tuple(
+        node_from_dict(arg)
+        for arg in listed(required(payload, "args", "expression.args"), "expression.args")
+    )
+    if node == "comparison":
+        if len(args) != 2:
+            raise MalformedRecord(
+                "expression.args", f"a comparison takes two operands, not {len(args)}"
+            )
+        return Comparison(op, args)
+    if node == "logical":
+        return Logical(op, args)
+
+    exponent = None
+    if "exponent" in payload:
+        raw = text(payload["exponent"], "expression.exponent")
+        try:
+            exponent = Fraction(raw)
+        except (ValueError, ZeroDivisionError):
+            raise MalformedRecord("expression.exponent", f"{raw!r} is not a rational") from None
+    return Arithmetic(op, args, exponent)
+
+
 # -- construction helpers ---------------------------------------------------
 
 
@@ -482,6 +561,11 @@ class Constraint(Entity):
     verification_status: CheckStatus = CheckStatus.UNKNOWN
     source: str | None = None
 
+    _RECORD_KEYS = frozenset(
+        {"class", "constraint_kind", "targets", "expression", "enforcement",
+         "verification", "applicability", "source"}
+    )
+
     def __post_init__(self) -> None:
         if not self.constraint_kind:
             raise ValueError("a constraint carries a kind")
@@ -541,6 +625,38 @@ class Constraint(Entity):
         if self.source is not None:
             out["source"] = self.source
         return out
+
+    @classmethod
+    def _constraint_fields(cls, record: Mapping) -> dict:
+        """Decode what `Constraint.as_dict` adds to the base record."""
+        verification = required(record, "verification")
+        expect_keys(verification, ("status", "method"), "verification")
+        method = verification.get("method")
+        applicability = record.get("applicability")
+        return {
+            "constraint_class": member(ConstraintClass, required(record, "class"), "class"),
+            "constraint_kind": text(required(record, "constraint_kind"), "constraint_kind"),
+            "targets": texts(required(record, "targets"), "targets"),
+            "expression": node_from_dict(required(record, "expression")),
+            "enforcement": member(Enforcement, required(record, "enforcement"), "enforcement"),
+            "verification_status": member(
+                CheckStatus,
+                required(verification, "status", "verification.status"),
+                "verification.status",
+            ),
+            "verification_method": (
+                member(VerificationMethod, method, "verification.method")
+                if method is not None
+                else None
+            ),
+            "applicability": node_from_dict(applicability) if applicability is not None else None,
+            "source": optional_text(record, "source"),
+        }
+
+    @classmethod
+    def from_dict(cls, record: Mapping) -> "Constraint":
+        """The inverse of `as_dict`. A topology record decodes through its own class."""
+        return cls(**cls._decode_base(record), **cls._constraint_fields(record))
 
 
 class ConstraintRegistry:

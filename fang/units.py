@@ -101,6 +101,19 @@ class Dimension:
         """Serialize as decimal strings, so the vector round-trips exactly."""
         return [str(e) for e in self.exponents]
 
+    @classmethod
+    def from_list(cls, exponents: list[str]) -> "Dimension":
+        """The inverse of `as_list`."""
+        from .records import MalformedRecord, texts
+
+        values = texts(exponents, "dimension")
+        if len(values) != 7:
+            raise MalformedRecord("dimension", f"carries {len(values)} exponents, not seven")
+        try:
+            return cls(tuple(Fraction(value) for value in values))
+        except (ValueError, ZeroDivisionError):
+            raise MalformedRecord("dimension", f"{list(values)!r} is not a rational vector") from None
+
 
 DIMENSIONLESS = Dimension()
 
@@ -318,6 +331,17 @@ class Tolerance:
     def as_dict(self) -> dict:
         return {"kind": self.kind, "value": _decimal_str(self.value)}
 
+    @classmethod
+    def from_dict(cls, payload: Mapping) -> "Tolerance":
+        """The inverse of `as_dict`."""
+        from .records import MalformedRecord, decimal, expect_keys, required
+
+        expect_keys(payload, ("kind", "value"), "tolerance")
+        kind = required(payload, "kind", "tolerance.kind")
+        if kind not in ("relative", "absolute"):
+            raise MalformedRecord("tolerance.kind", f"{kind!r} is not relative or absolute")
+        return cls(kind, decimal(required(payload, "value", "tolerance.value"), "tolerance.value"))
+
 
 @dataclass(frozen=True)
 class Quantity:
@@ -485,6 +509,50 @@ class Quantity:
             out["conditions"] = dict(self.conditions)
         return out
 
+    @classmethod
+    def from_dict(cls, payload: Mapping) -> "Quantity":
+        """The inverse of `as_dict`: `min` and `max` back to `minimum` and `maximum`.
+
+        The unit is parsed back from its symbol, which is canonical and so parses
+        to itself. Construction re-checks what each kind carries.
+        """
+        from .records import MalformedRecord, decimal, expect_keys, required, text, text_mapping
+
+        expect_keys(
+            payload,
+            ("kind", "unit", "value", "min", "max", "typical", "nominal", "tolerance", "conditions"),
+            "quantity",
+        )
+        kind = required(payload, "kind", "quantity.kind")
+        if kind not in ("scalar", "range", "tolerance"):
+            raise MalformedRecord("quantity.kind", f"{kind!r} is not scalar, range, or tolerance")
+        unit = Unit.parse(text(required(payload, "unit", "quantity.unit"), "quantity.unit"))
+        magnitudes = {
+            name: decimal(payload[key], f"quantity.{key}")
+            for name, key in (
+                ("value", "value"),
+                ("minimum", "min"),
+                ("maximum", "max"),
+                ("typical", "typical"),
+                ("nominal", "nominal"),
+            )
+            if key in payload
+        }
+        tolerance = payload.get("tolerance")
+        conditions = text_mapping(payload.get("conditions", {}), "quantity.conditions")
+        try:
+            return cls(
+                kind,
+                unit,
+                tolerance=Tolerance.from_dict(tolerance) if tolerance is not None else None,
+                conditions=conditions,
+                **magnitudes,
+            )
+        except MalformedRecord:
+            raise
+        except ValueError as failure:
+            raise MalformedRecord("quantity", str(failure)) from None
+
     def __str__(self) -> str:
         if self.kind == "scalar":
             return f"{_decimal_str(self.value)} {self.unit}"
@@ -511,13 +579,15 @@ def _decimal(value: str | Decimal | int) -> Decimal:
 def _decimal_str(value: Decimal) -> str:
     """Render a Decimal as its canonical decimal string.
 
-    Normalizes away exponent notation for ordinary magnitudes so that the same
-    number always serializes the same way, without changing its value.
+    Normalizes away exponent notation and trailing zeros so that the same number
+    always serializes the same way, without changing its value. Nothing here
+    depends on a decimal context's precision, so the rendering is exact at any
+    magnitude, and rendering the result again gives the result.
     """
-    if value == value.to_integral_value() and abs(value.as_tuple().exponent) < 20:
-        text = str(value.quantize(Decimal(1)))
+    if value == value.to_integral_value():
+        text = format(value.to_integral_value(), "f")
     else:
-        text = format(value.normalize(), "f")
+        text = format(value, "f").rstrip("0")
     return "0" if text in ("-0", "0E+0") else text
 
 

@@ -26,6 +26,7 @@ from .constraints import (
 )
 from .diagnostics import Severity
 from .entities import Connection, ConnectionKind, Entity
+from .records import boolean, member, optional_text, required, text, texts
 
 #: Connection kinds that conduct: everything realized as copper. A dependency,
 #: containment, control, or mechanical edge is a relation rather than a
@@ -168,6 +169,10 @@ class TopologyConstraint(Constraint):
     forbid_parallel_paths: bool = True
     expression: Node | None = field(default_factory=lambda: Literal.of(True))
 
+    _RECORD_KEYS = Constraint._RECORD_KEYS | frozenset(
+        {"net", "mode", "center", "branches", "forbid_parallel_paths"}
+    )
+
     def __post_init__(self) -> None:
         if not self.net:
             raise ValueError("a topology constraint names the net or domain it governs")
@@ -198,6 +203,21 @@ class TopologyConstraint(Constraint):
         if self.center is not None:
             out["center"] = self.center
         return out
+
+    @classmethod
+    def from_dict(cls, record: Mapping) -> "TopologyConstraint":
+        """The inverse of `as_dict`. The branches keep their order."""
+        return cls(
+            **cls._decode_base(record),
+            **cls._constraint_fields(record),
+            net=text(required(record, "net"), "net"),
+            mode=member(TopologyMode, required(record, "mode"), "mode"),
+            center=optional_text(record, "center"),
+            branches=texts(required(record, "branches"), "branches"),
+            forbid_parallel_paths=boolean(
+                required(record, "forbid_parallel_paths"), "forbid_parallel_paths"
+            ),
+        )
 
     def verify(self, entities: Mapping[str, Entity]):
         """Enumerate the conductive paths and report each unpermitted one.

@@ -43,6 +43,19 @@ class SourceLocation:
             out["column"] = self.column
         return out
 
+    @classmethod
+    def from_dict(cls, payload) -> "SourceLocation":
+        """The inverse of `as_dict`."""
+        from .records import expect_keys, integer, required, text
+
+        expect_keys(payload, ("file", "line", "column"), "source location")
+        column = payload.get("column")
+        return cls(
+            text(required(payload, "file", "source_location.file"), "source_location.file"),
+            integer(required(payload, "line", "source_location.line"), "source_location.line"),
+            integer(column, "source_location.column") if column is not None else None,
+        )
+
 
 @dataclass(frozen=True)
 class Code:
@@ -149,6 +162,13 @@ ELAB_CONTRADICTORY_CONSTRAINTS = _allocate(
 )
 ELAB_SECOND_REGISTRY = _allocate(
     "ELAB-0012", "a second constraint registry was created"
+)
+ELAB_MALFORMED_RECORD = _allocate("ELAB-0013", "a persisted record cannot be decoded")
+ELAB_SNAPSHOT_MISMATCH = _allocate(
+    "ELAB-0014", "a reloaded snapshot does not match the hash its manifest records"
+)
+ELAB_UNTYPED_STATE = _allocate(
+    "ELAB-0015", "a projection needs state that loaded untyped"
 )
 
 # Transaction conditions.

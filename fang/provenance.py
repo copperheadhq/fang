@@ -9,9 +9,19 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Iterable, Sequence
+from typing import Any, Iterable, Mapping, Sequence
 
 from .diagnostics import SourceLocation
+from .records import (
+    MalformedRecord,
+    expect_keys,
+    listed,
+    member,
+    optional_text,
+    required,
+    text,
+    texts,
+)
 
 
 class ProvenanceOrigin(Enum):
@@ -46,6 +56,16 @@ class Actor:
             out["version"] = self.version
         return out
 
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "Actor":
+        """The inverse of `as_dict`."""
+        expect_keys(payload, ("kind", "id", "version"), "actor")
+        return cls(
+            member(ActorKind, required(payload, "kind", "actor.kind"), "actor.kind"),
+            text(required(payload, "id", "actor.id"), "actor.id"),
+            optional_text(payload, "version", "actor.version"),
+        )
+
 
 @dataclass(frozen=True)
 class Input:
@@ -56,6 +76,15 @@ class Input:
 
     def as_dict(self) -> dict:
         return {"id": self.id, "hash": self.hash}
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "Input":
+        """The inverse of `as_dict`."""
+        expect_keys(payload, ("id", "hash"), "input")
+        return cls(
+            text(required(payload, "id", "input.id"), "input.id"),
+            text(required(payload, "hash", "input.hash"), "input.hash"),
+        )
 
 
 @dataclass(frozen=True)
@@ -96,6 +125,62 @@ class ProvenanceRecord:
         if self.confidence is not None:
             out["confidence"] = self.confidence.value
         return out
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "ProvenanceRecord":
+        """The inverse of `as_dict`. The timestamp is parsed from its RFC3339 form."""
+        from .serialization import parse_rfc3339
+
+        expect_keys(
+            payload,
+            (
+                "origin",
+                "activity",
+                "actor",
+                "revision_id",
+                "created_at",
+                "derived_from",
+                "inputs",
+                "source_location",
+                "confidence",
+            ),
+            "provenance record",
+        )
+        created_at = required(payload, "created_at", "provenance.created_at")
+        if isinstance(created_at, datetime):
+            moment = created_at
+        else:
+            try:
+                moment = parse_rfc3339(created_at)
+            except ValueError as failure:
+                raise MalformedRecord("provenance.created_at", str(failure)) from None
+        location = payload.get("source_location")
+        confidence = payload.get("confidence")
+        return cls(
+            member(
+                ProvenanceOrigin,
+                required(payload, "origin", "provenance.origin"),
+                "provenance.origin",
+            ),
+            text(required(payload, "activity", "provenance.activity"), "provenance.activity"),
+            Actor.from_dict(required(payload, "actor", "provenance.actor")),
+            text(
+                required(payload, "revision_id", "provenance.revision_id"),
+                "provenance.revision_id",
+            ),
+            moment,
+            derived_from=texts(payload.get("derived_from", []), "provenance.derived_from"),
+            inputs=tuple(
+                Input.from_dict(item)
+                for item in listed(payload.get("inputs", []), "provenance.inputs")
+            ),
+            source_location=SourceLocation.from_dict(location) if location is not None else None,
+            confidence=(
+                member(Confidence, confidence, "provenance.confidence")
+                if confidence is not None
+                else None
+            ),
+        )
 
 
 class Provenance:
@@ -138,3 +223,10 @@ class Provenance:
 
     def as_list(self) -> list[dict]:
         return [record.as_dict() for record in self._records]
+
+    @classmethod
+    def from_list(cls, payload: Sequence[Mapping[str, Any]]) -> "Provenance":
+        """The inverse of `as_list`. Order is kept, because records run oldest first."""
+        return cls(
+            ProvenanceRecord.from_dict(record) for record in listed(payload, "provenance")
+        )

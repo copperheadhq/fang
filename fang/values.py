@@ -9,8 +9,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import Enum
-from typing import Sequence
+from typing import Any, Mapping, Sequence
 
+from .records import decimal, expect_keys, listed, member, optional_text, required, text
 from .units import Quantity, _decimal_str
 
 
@@ -109,6 +110,20 @@ class Value:
             out["rationale"] = self.rationale
         return out
 
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "Value":
+        """The inverse of `as_dict`. Construction re-checks what each status carries."""
+        expect_keys(payload, ("status", "quantity", "source", "confidence", "rationale"), "value")
+        quantity = payload.get("quantity")
+        confidence = payload.get("confidence")
+        return cls(
+            member(ValueStatus, required(payload, "status", "value.status"), "value.status"),
+            Quantity.from_dict(quantity) if quantity is not None else None,
+            source=optional_text(payload, "source", "value.source"),
+            confidence=decimal(confidence, "value.confidence") if confidence is not None else None,
+            rationale=optional_text(payload, "rationale", "value.rationale"),
+        )
+
     def __str__(self) -> str:
         if self.status is ValueStatus.UNKNOWN:
             return "unknown"
@@ -124,6 +139,15 @@ class Candidate:
 
     def as_dict(self) -> dict:
         return {"value": self.value.as_dict(), "source": self.source}
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "Candidate":
+        """The inverse of `as_dict`."""
+        expect_keys(payload, ("value", "source"), "candidate")
+        return cls(
+            Value.from_dict(required(payload, "value", "candidate.value")),
+            text(required(payload, "source", "candidate.source"), "candidate.source"),
+        )
 
 
 @dataclass(frozen=True)
@@ -182,6 +206,29 @@ class ConflictingValue:
             out["decision"] = self.decision
         return out
 
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "ConflictingValue":
+        """The inverse of `as_dict`. Every candidate comes back, and reading chooses none."""
+        expect_keys(payload, ("candidates", "resolution", "decision"), "conflicting value")
+        return cls(
+            tuple(
+                Candidate.from_dict(item)
+                for item in listed(
+                    required(payload, "candidates", "conflict.candidates"),
+                    "conflict.candidates",
+                )
+            ),
+            optional_text(payload, "resolution", "conflict.resolution"),
+            optional_text(payload, "decision", "conflict.decision"),
+        )
+
 
 #: A parameter holds either one value or an unresolved set of candidates.
 Parameter = Value | ConflictingValue
+
+
+def parameter_from_dict(payload: Mapping[str, Any]) -> Parameter:
+    """A serialized parameter: one value, or the candidates of a conflict."""
+    if isinstance(payload, Mapping) and "candidates" in payload:
+        return ConflictingValue.from_dict(payload)
+    return Value.from_dict(payload)

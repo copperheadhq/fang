@@ -1,8 +1,9 @@
 """The EIR entity model the kernel graph holds.
 
 Spec: "Typed Connections", "Typed Interfaces, Ports, Buses, and Domains",
-"Requirement State Transitions", and "Structural Validation". The kernel graph
-holds these entities and nothing else; there is no second model.
+"Requirement State Transitions", "Structural Validation", and "A Persisted
+Snapshot Reloads Without Running A Program". The kernel graph holds these
+entities and nothing else; there is no second model.
 """
 
 from __future__ import annotations
@@ -14,7 +15,21 @@ from typing import Any, Mapping, Sequence
 from .diagnostics import ELAB_UNTYPED_CONNECTION, SourceLocation, error
 from .identity import Identity, Origin
 from .provenance import Provenance
-from .values import Parameter, Value
+from .records import (
+    MalformedRecord,
+    boolean,
+    expect_keys,
+    freeze,
+    listed,
+    member,
+    optional_text,
+    required,
+    text,
+    text_mapping,
+    texts,
+)
+from .traits import Trait, decode_trait
+from .values import Parameter, Value, parameter_from_dict
 
 
 class ConnectionKind(Enum):
@@ -88,6 +103,17 @@ class Entity:
     provenance: Provenance = field(default_factory=Provenance)
     source_location: SourceLocation | None = None
     extensions: Mapping[str, Any] = field(default_factory=dict)
+    #: The traits the entity carries, keyed by protocol. A trait is state: it
+    #: serializes inside this entity's record and is read back with it.
+    traits: Mapping[str, Trait] = field(default_factory=dict)
+
+    #: The keys `_base_dict` writes, and the keys a subclass's `as_dict` adds. A
+    #: decoder refuses a key outside both rather than guess at it.
+    _BASE_KEYS = frozenset(
+        {"kind", "identity", "id", "parameters", "provenance", "source_location",
+         "extensions", "traits"}
+    )
+    _RECORD_KEYS = frozenset()
 
     @property
     def id(self) -> str:
@@ -115,10 +141,50 @@ class Entity:
             out["source_location"] = self.source_location.as_dict()
         if self.extensions:
             out["extensions"] = dict(self.extensions)
+        if self.traits:
+            out["traits"] = {
+                protocol: trait.as_dict() for protocol, trait in self.traits.items()
+            }
         return out
 
     def as_dict(self) -> dict:
         return self._base_dict()
+
+    @classmethod
+    def _decode_base(cls, record: Mapping[str, Any]) -> dict[str, Any]:
+        """Decode what `_base_dict` wrote, refusing any key `as_dict` does not write."""
+        if not isinstance(record, Mapping):
+            raise MalformedRecord("record", f"expected an object, found {type(record).__name__}")
+        expect_keys(record, cls._BASE_KEYS | cls._RECORD_KEYS, f"{record.get('kind')} record")
+        identity = Identity.from_dict(required(record, "identity"))
+        if required(record, "id") != identity.id:
+            raise MalformedRecord("id", f"{record['id']!r} is not the identity's id {identity.id!r}")
+        parameters = record.get("parameters", {})
+        extensions = record.get("extensions", {})
+        traits = record.get("traits", {})
+        for name, value in (("parameters", parameters), ("extensions", extensions), ("traits", traits)):
+            if not isinstance(value, Mapping):
+                raise MalformedRecord(name, f"expected an object, found {type(value).__name__}")
+        location = record.get("source_location")
+        return {
+            "identity": identity,
+            "parameters": {
+                text(name, "parameters"): parameter_from_dict(value)
+                for name, value in parameters.items()
+            },
+            "provenance": Provenance.from_list(record.get("provenance", [])),
+            "source_location": SourceLocation.from_dict(location) if location is not None else None,
+            "extensions": freeze(extensions),
+            "traits": {
+                text(protocol, "traits"): decode_trait(protocol, payload)
+                for protocol, payload in traits.items()
+            },
+        }
+
+    @classmethod
+    def from_dict(cls, record: Mapping[str, Any]) -> "Entity":
+        """The inverse of `as_dict`, for an entity with no fields of its own."""
+        return cls(kind=text(required(record, "kind"), "kind"), **cls._decode_base(record))
 
 
 @dataclass(frozen=True)
@@ -129,6 +195,8 @@ class Requirement(Entity):
     source: str = "user"
     validation_method: str | None = None
     kind: str = "requirement"
+
+    _RECORD_KEYS = frozenset({"statement", "state", "priority", "source", "validation"})
 
     def as_dict(self) -> dict:
         out = self._base_dict()
@@ -144,6 +212,24 @@ class Requirement(Entity):
             out["validation"] = {"method": self.validation_method}
         return out
 
+    @classmethod
+    def from_dict(cls, record: Mapping[str, Any]) -> "Requirement":
+        """The inverse of `as_dict`."""
+        base = cls._decode_base(record)
+        validation = record.get("validation")
+        method = None
+        if validation is not None:
+            expect_keys(validation, ("method",), "validation")
+            method = text(required(validation, "method", "validation.method"), "validation.method")
+        return cls(
+            **base,
+            statement=text(required(record, "statement"), "statement"),
+            state=member(RequirementState, required(record, "state"), "state"),
+            priority=text(required(record, "priority"), "priority"),
+            source=text(required(record, "source"), "source"),
+            validation_method=method,
+        )
+
 
 @dataclass(frozen=True)
 class Connection(Entity):
@@ -158,6 +244,8 @@ class Connection(Entity):
     source: str = ""
     target: str = ""
     derived_from_interface: str | None = None
+
+    _RECORD_KEYS = frozenset({"connection_kind", "source", "target", "derived_from_interface"})
 
     def __post_init__(self) -> None:
         if self.connection_kind is None:
@@ -189,6 +277,20 @@ class Connection(Entity):
             out["derived_from_interface"] = self.derived_from_interface
         return out
 
+    @classmethod
+    def from_dict(cls, record: Mapping[str, Any]) -> "Connection":
+        """The inverse of `as_dict`."""
+        base = cls._decode_base(record)
+        return cls(
+            **base,
+            connection_kind=member(
+                ConnectionKind, required(record, "connection_kind"), "connection_kind"
+            ),
+            source=text(required(record, "source"), "source"),
+            target=text(required(record, "target"), "target"),
+            derived_from_interface=optional_text(record, "derived_from_interface"),
+        )
+
 
 @dataclass(frozen=True)
 class Component(Entity):
@@ -197,6 +299,8 @@ class Component(Entity):
     part: str | None = None
     package: str | None = None
     models: tuple[str, ...] = ()
+
+    _RECORD_KEYS = frozenset({"designator", "part", "package", "models"})
 
     def references(self) -> tuple[str, ...]:
         return self.models
@@ -214,6 +318,18 @@ class Component(Entity):
             out["models"] = sorted(self.models)
         return out
 
+    @classmethod
+    def from_dict(cls, record: Mapping[str, Any]) -> "Component":
+        """The inverse of `as_dict`."""
+        base = cls._decode_base(record)
+        return cls(
+            **base,
+            designator=optional_text(record, "designator"),
+            part=optional_text(record, "part"),
+            package=optional_text(record, "package"),
+            models=texts(record.get("models", []), "models"),
+        )
+
 
 @dataclass(frozen=True)
 class Net(Entity):
@@ -225,6 +341,8 @@ class Net(Entity):
     #: connections and no net entities; an imported one has net entities and no
     #: synthetic connection chain. Never both for the same facts.
     members: tuple[str, ...] = ()
+
+    _RECORD_KEYS = frozenset({"aliases", "domain", "members"})
 
     def references(self) -> tuple[str, ...]:
         return ((self.domain,) if self.domain else ()) + self.members
@@ -239,6 +357,20 @@ class Net(Entity):
             out["members"] = sorted(self.members)
         return out
 
+    @classmethod
+    def _net_fields(cls, record: Mapping[str, Any]) -> dict[str, Any]:
+        return {
+            "aliases": texts(record.get("aliases", []), "aliases"),
+            "domain": optional_text(record, "domain"),
+            "members": texts(record.get("members", []), "members"),
+        }
+
+    @classmethod
+    def from_dict(cls, record: Mapping[str, Any]) -> "Net":
+        """The inverse of `as_dict`."""
+        base = cls._decode_base(record)
+        return cls(**base, **cls._net_fields(record))
+
 
 @dataclass(frozen=True)
 class Rail(Net):
@@ -248,6 +380,10 @@ class Rail(Net):
     source_blocks: tuple[str, ...] = ()
     load_blocks: tuple[str, ...] = ()
     power_sequence: tuple[str, ...] = ()
+
+    _RECORD_KEYS = Net._RECORD_KEYS | frozenset(
+        {"source_blocks", "load_blocks", "power_sequence"}
+    )
 
     def references(self) -> tuple[str, ...]:
         return super().references() + self.source_blocks + self.load_blocks
@@ -262,6 +398,18 @@ class Rail(Net):
             # Order carries meaning here; it is preserved, not sorted.
             out["power_sequence"] = list(self.power_sequence)
         return out
+
+    @classmethod
+    def from_dict(cls, record: Mapping[str, Any]) -> "Rail":
+        """The inverse of `as_dict`. The power sequence keeps its order."""
+        base = cls._decode_base(record)
+        return cls(
+            **base,
+            **cls._net_fields(record),
+            source_blocks=texts(record.get("source_blocks", []), "source_blocks"),
+            load_blocks=texts(record.get("load_blocks", []), "load_blocks"),
+            power_sequence=texts(record.get("power_sequence", []), "power_sequence"),
+        )
 
 
 @dataclass(frozen=True)
@@ -279,6 +427,17 @@ class Signal:
             out["direction"] = self.direction
         return out
 
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "Signal":
+        """The inverse of `as_dict`."""
+        expect_keys(payload, ("name", "role", "required", "direction"), "signal")
+        return cls(
+            text(required(payload, "name", "signal.name"), "signal.name"),
+            text(required(payload, "role", "signal.role"), "signal.role"),
+            direction=optional_text(payload, "direction", "signal.direction"),
+            required=boolean(required(payload, "required", "signal.required"), "signal.required"),
+        )
+
 
 @dataclass(frozen=True)
 class Interface(Entity):
@@ -289,6 +448,8 @@ class Interface(Entity):
     signals: tuple[Signal, ...] = ()
     direction: str | None = None
 
+    _RECORD_KEYS = frozenset({"interface_type", "signals", "direction"})
+
     def as_dict(self) -> dict:
         out = self._base_dict()
         out["interface_type"] = self.interface_type
@@ -296,6 +457,20 @@ class Interface(Entity):
         if self.direction is not None:
             out["direction"] = self.direction
         return out
+
+    @classmethod
+    def from_dict(cls, record: Mapping[str, Any]) -> "Interface":
+        """The inverse of `as_dict`."""
+        base = cls._decode_base(record)
+        return cls(
+            **base,
+            interface_type=text(required(record, "interface_type"), "interface_type"),
+            signals=tuple(
+                Signal.from_dict(item)
+                for item in listed(required(record, "signals"), "signals")
+            ),
+            direction=optional_text(record, "direction"),
+        )
 
 
 @dataclass(frozen=True)
@@ -307,6 +482,8 @@ class Port(Entity):
     owner: str = ""
     direction: str | None = None
 
+    _RECORD_KEYS = frozenset({"interface", "owner", "direction"})
+
     def references(self) -> tuple[str, ...]:
         return (self.interface, self.owner)
 
@@ -316,6 +493,17 @@ class Port(Entity):
         if self.direction is not None:
             out["direction"] = self.direction
         return out
+
+    @classmethod
+    def from_dict(cls, record: Mapping[str, Any]) -> "Port":
+        """The inverse of `as_dict`."""
+        base = cls._decode_base(record)
+        return cls(
+            **base,
+            interface=text(required(record, "interface"), "interface"),
+            owner=text(required(record, "owner"), "owner"),
+            direction=optional_text(record, "direction"),
+        )
 
 
 @dataclass(frozen=True)
@@ -332,6 +520,8 @@ class Pin(Entity):
     role: str = "unknown"
     number: str | None = None
 
+    _RECORD_KEYS = frozenset({"owner", "vendor_name", "role", "number"})
+
     def references(self) -> tuple[str, ...]:
         return (self.owner,) if self.owner else ()
 
@@ -342,6 +532,18 @@ class Pin(Entity):
             out["number"] = self.number
         return out
 
+    @classmethod
+    def from_dict(cls, record: Mapping[str, Any]) -> "Pin":
+        """The inverse of `as_dict`."""
+        base = cls._decode_base(record)
+        return cls(
+            **base,
+            owner=text(required(record, "owner"), "owner"),
+            vendor_name=text(required(record, "vendor_name"), "vendor_name"),
+            role=text(required(record, "role"), "role"),
+            number=optional_text(record, "number"),
+        )
+
 
 @dataclass(frozen=True)
 class Bus(Entity):
@@ -350,6 +552,8 @@ class Bus(Entity):
     kind: str = "bus"
     interface: str = ""
     participants: tuple[str, ...] = ()
+
+    _RECORD_KEYS = frozenset({"interface", "participants"})
 
     def references(self) -> tuple[str, ...]:
         return (self.interface,) + self.participants
@@ -360,6 +564,16 @@ class Bus(Entity):
         out["participants"] = sorted(self.participants)
         return out
 
+    @classmethod
+    def from_dict(cls, record: Mapping[str, Any]) -> "Bus":
+        """The inverse of `as_dict`."""
+        base = cls._decode_base(record)
+        return cls(
+            **base,
+            interface=text(required(record, "interface"), "interface"),
+            participants=texts(required(record, "participants"), "participants"),
+        )
+
 
 @dataclass(frozen=True)
 class Domain(Entity):
@@ -368,6 +582,8 @@ class Domain(Entity):
     kind: str = "domain"
     domain_kind: str = "ground"
     members: tuple[str, ...] = ()
+
+    _RECORD_KEYS = frozenset({"domain_kind", "members"})
 
     def references(self) -> tuple[str, ...]:
         return self.members
@@ -378,6 +594,16 @@ class Domain(Entity):
         out["members"] = sorted(self.members)
         return out
 
+    @classmethod
+    def from_dict(cls, record: Mapping[str, Any]) -> "Domain":
+        """The inverse of `as_dict`."""
+        base = cls._decode_base(record)
+        return cls(
+            **base,
+            domain_kind=text(required(record, "domain_kind"), "domain_kind"),
+            members=texts(required(record, "members"), "members"),
+        )
+
 
 @dataclass(frozen=True)
 class Decision(Entity):
@@ -387,6 +613,10 @@ class Decision(Entity):
     rationale: tuple[str, ...] = ()
     alternatives_rejected: tuple[Mapping[str, str], ...] = ()
     requirements: tuple[str, ...] = ()
+
+    _RECORD_KEYS = frozenset(
+        {"question", "choice", "rationale", "alternatives_rejected", "requirements"}
+    )
 
     def references(self) -> tuple[str, ...]:
         return self.requirements
@@ -404,6 +634,22 @@ class Decision(Entity):
             out["requirements"] = sorted(self.requirements)
         return out
 
+    @classmethod
+    def from_dict(cls, record: Mapping[str, Any]) -> "Decision":
+        """The inverse of `as_dict`. The rationale and the rejections keep their order."""
+        base = cls._decode_base(record)
+        return cls(
+            **base,
+            question=text(required(record, "question"), "question"),
+            choice=optional_text(record, "choice"),
+            rationale=texts(record.get("rationale", []), "rationale"),
+            alternatives_rejected=tuple(
+                text_mapping(item, "alternatives_rejected")
+                for item in listed(record.get("alternatives_rejected", []), "alternatives_rejected")
+            ),
+            requirements=texts(record.get("requirements", []), "requirements"),
+        )
+
 
 @dataclass(frozen=True)
 class Evidence(Entity):
@@ -412,6 +658,8 @@ class Evidence(Entity):
     document: str | None = None
     locator: str | None = None
 
+    _RECORD_KEYS = frozenset({"claim", "document", "locator"})
+
     def as_dict(self) -> dict:
         out = self._base_dict()
         out["claim"] = self.claim
@@ -419,6 +667,17 @@ class Evidence(Entity):
             if value is not None:
                 out[name] = value
         return out
+
+    @classmethod
+    def from_dict(cls, record: Mapping[str, Any]) -> "Evidence":
+        """The inverse of `as_dict`."""
+        base = cls._decode_base(record)
+        return cls(
+            **base,
+            claim=text(required(record, "claim"), "claim"),
+            document=optional_text(record, "document"),
+            locator=optional_text(record, "locator"),
+        )
 
 
 @dataclass(frozen=True)
@@ -435,6 +694,8 @@ class Calculation(Entity):
     result: str | None = None
     requirements: tuple[str, ...] = ()
 
+    _RECORD_KEYS = frozenset({"expression", "inputs", "result", "requirements"})
+
     def references(self) -> tuple[str, ...]:
         return self.inputs + self.requirements
 
@@ -448,6 +709,18 @@ class Calculation(Entity):
             out["requirements"] = sorted(self.requirements)
         return out
 
+    @classmethod
+    def from_dict(cls, record: Mapping[str, Any]) -> "Calculation":
+        """The inverse of `as_dict`."""
+        base = cls._decode_base(record)
+        return cls(
+            **base,
+            expression=text(required(record, "expression"), "expression"),
+            inputs=texts(required(record, "inputs"), "inputs"),
+            result=optional_text(record, "result"),
+            requirements=texts(record.get("requirements", []), "requirements"),
+        )
+
 
 @dataclass(frozen=True)
 class Verification(Entity):
@@ -459,6 +732,8 @@ class Verification(Entity):
     evidence: tuple[str, ...] = ()
     result: str = "UNKNOWN"
 
+    _RECORD_KEYS = frozenset({"verifies", "method", "result", "evidence"})
+
     def references(self) -> tuple[str, ...]:
         return ((self.verifies,) if self.verifies else ()) + self.evidence
 
@@ -469,6 +744,18 @@ class Verification(Entity):
             out["evidence"] = sorted(self.evidence)
         return out
 
+    @classmethod
+    def from_dict(cls, record: Mapping[str, Any]) -> "Verification":
+        """The inverse of `as_dict`."""
+        base = cls._decode_base(record)
+        return cls(
+            **base,
+            verifies=text(required(record, "verifies"), "verifies"),
+            method=text(required(record, "method"), "method"),
+            result=text(required(record, "result"), "result"),
+            evidence=texts(record.get("evidence", []), "evidence"),
+        )
+
 
 @dataclass(frozen=True)
 class Assumption(Entity):
@@ -478,10 +765,22 @@ class Assumption(Entity):
     claim: str = ""
     rationale: str = ""
 
+    _RECORD_KEYS = frozenset({"claim", "rationale"})
+
     def as_dict(self) -> dict:
         out = self._base_dict()
         out.update({"claim": self.claim, "rationale": self.rationale})
         return out
+
+    @classmethod
+    def from_dict(cls, record: Mapping[str, Any]) -> "Assumption":
+        """The inverse of `as_dict`."""
+        base = cls._decode_base(record)
+        return cls(
+            **base,
+            claim=text(required(record, "claim"), "claim"),
+            rationale=text(required(record, "rationale"), "rationale"),
+        )
 
 
 @dataclass(frozen=True)
@@ -496,6 +795,11 @@ class Model(Entity):
     pin_map: Mapping[str, str] = field(default_factory=dict)
     conditions: Mapping[str, str] = field(default_factory=dict)
     distribution_restricted: bool = False
+
+    _RECORD_KEYS = frozenset(
+        {"model_kind", "component", "backends", "distribution_restricted", "source",
+         "pin_map", "conditions"}
+    )
 
     def references(self) -> tuple[str, ...]:
         return (self.component,) if self.component else ()
@@ -517,6 +821,23 @@ class Model(Entity):
         if self.conditions:
             out["conditions"] = dict(self.conditions)
         return out
+
+    @classmethod
+    def from_dict(cls, record: Mapping[str, Any]) -> "Model":
+        """The inverse of `as_dict`."""
+        base = cls._decode_base(record)
+        return cls(
+            **base,
+            model_kind=text(required(record, "model_kind"), "model_kind"),
+            component=text(required(record, "component"), "component"),
+            backends=texts(required(record, "backends"), "backends"),
+            distribution_restricted=boolean(
+                required(record, "distribution_restricted"), "distribution_restricted"
+            ),
+            source=optional_text(record, "source"),
+            pin_map=text_mapping(record.get("pin_map", {}), "pin_map"),
+            conditions=text_mapping(record.get("conditions", {}), "conditions"),
+        )
 
 
 #: Every collection key of the project root. All are present in machine-generated
