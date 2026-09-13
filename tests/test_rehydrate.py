@@ -749,5 +749,162 @@ def test_a_workspace_written_before_traits_were_persisted_still_loads(tmp_path):
     loaded = workspace.read_snapshot()
     assert loaded.snapshot.schema_version == "1.1"
     assert loaded.snapshot.hash == manifest.snapshot
-    assert loaded.report.complete
     assert not any(entity.traits for entity in loaded.snapshot.entities.values())
+    # Under a 1.1 manifest a record holding an expression reference is kept
+    # verbatim, because that writer sorted its dimension. Nothing else is.
+    assert loaded.report.untyped
+    assert all("sorted" in item.reason for item in loaded.report.untyped)
+    assert loaded.report.decoded + len(loaded.report.untyped) == len(bare)
+
+
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
+
+
+def test_a_workspace_the_schema_1_1_writer_wrote_loads_without_corrupting_a_reference(tmp_path):
+    """Schema 1.1 wrote a reference's dimension sorted. Read as ordered, one
+    constraint would be refused and another would load with a wrong dimension,
+    so both load verbatim and the report says why."""
+    workspace = Workspace(tmp_path).create()
+    for name in ("design.jsonl", "manifest.json"):
+        (workspace.dir / name).write_bytes((FIXTURES / "schema-1.1" / name).read_bytes())
+
+    loaded = workspace.read_snapshot()
+    assert loaded.snapshot.schema_version == "1.1"
+    assert loaded.snapshot.hash == workspace.read_manifest().snapshot
+    assert canonical_record_stream(loaded.snapshot.records()) == workspace.design_path.read_bytes()
+    references = ["RULE-PWR-1", "RULE-VOUT-MATCH"]
+    assert sorted(item.subject for item in loaded.report.untyped) == references
+    assert all("sorted" in item.reason for item in loaded.report.untyped)
+    assert all(isinstance(loaded.snapshot.entities[subject], OpaqueEntity) for subject in references)
+    assert loaded.report.decoded == 3
+
+
+def test_a_reloaded_example_diffs_as_unchanged_against_its_program(saved):
+    from fang.diff import diff
+
+    result, workspace, _ = saved
+    reloaded = Workspace(workspace.root).read_snapshot().snapshot
+    assert list(diff(result.snapshot.entities, reloaded.entities)) == []
+
+
+def _divider_reloaded_with(mutate):
+    """The divider's records with one footprint-carrying component's record changed."""
+    result = elaborate(Divider, project_id=PROJECT)
+    records = [on_disk(entity.as_dict()) for entity in result.snapshot.entities.values()]
+    target = next(
+        record
+        for record in sorted(records, key=lambda r: r["id"])
+        if record["kind"] == "component" and "footprint" in record.get("traits", {})
+    )
+    mutate(target)
+    entities, report = decode_records(records)
+    return replace(result.snapshot, entities=entities), target["id"], report
+
+
+def test_a_netlist_refuses_a_footprint_that_loaded_untyped():
+    from fang.diagnostics import ELAB_UNTYPED_STATE
+
+    snapshot, target, report = _divider_reloaded_with(
+        lambda record: record["traits"]["footprint"].update(pad_count=2)
+    )
+    assert [item.construct for item in report.untyped] == ["trait footprint"]
+    with pytest.raises(FangError) as failure:
+        compile_netlist(snapshot)
+    assert failure.value.diagnostic.code == ELAB_UNTYPED_STATE
+    assert failure.value.diagnostic.entities == (target,)
+
+
+def test_a_netlist_refuses_a_component_that_loaded_untyped():
+    from fang.diagnostics import ELAB_UNTYPED_STATE
+
+    snapshot, target, _ = _divider_reloaded_with(
+        lambda record: record.update(thermal_resistance="40 K/W")
+    )
+    assert isinstance(snapshot.entities[target], OpaqueEntity)
+    with pytest.raises(FangError) as failure:
+        compile_netlist(snapshot)
+    assert failure.value.diagnostic.code == ELAB_UNTYPED_STATE
+
+
+def test_a_simulation_plan_refuses_a_model_that_loaded_untyped():
+    from fang.simulation import SimulationError, compile_plan
+
+    snapshot, target, _ = _divider_reloaded_with(
+        lambda record: record["traits"].update(
+            simulatable={"protocol": "simulatable", "backends": ["ngspice"], "future": True}
+        )
+    )
+    with pytest.raises(SimulationError, match="loaded untyped"):
+        compile_plan(snapshot, scope=[target])
+
+
+def test_changing_a_trait_the_registry_hands_out_leaves_the_snapshot_unchanged():
+    result = elaborate(Divider, project_id=PROJECT)
+    before = result.snapshot.hash
+    component = next(
+        entity
+        for entity in result.snapshot.entities.values()
+        if isinstance(entity, Component) and "footprint" in entity.traits
+    )
+    result.traits.get(component.id, "footprint").name = "CHANGED"
+    TraitRegistry.from_entities(result.snapshot.entities).get(component.id, "footprint").name = "CHANGED"
+    assert result.snapshot.hash == before
+
+
+@pytest.mark.parametrize(
+    "magnitude",
+    ["1E+28", "12345678901234567890123456789012345678", "1E-30", "-0.000", "100.000", "6.022E+23", "3.30"],
+)
+def test_a_magnitude_renders_the_same_when_its_rendering_is_rendered(magnitude):
+    from decimal import Decimal
+
+    from fang.units import _decimal_str
+
+    once = _decimal_str(Decimal(magnitude))
+    assert _decimal_str(Decimal(once)) == once
+    assert Decimal(once) == Decimal(magnitude)
+
+
+def test_a_large_magnitude_round_trips_through_a_record():
+    entity = Component(
+        authored("CMP-Y1"), parameters={"frequency": Value.explicit(Quantity.scalar("1E+28", "Hz"))}
+    )
+    decoded, untyped = decode_record(on_disk(entity.as_dict()))
+    assert isinstance(decoded, Component) and untyped == ()
+
+
+@pytest.mark.parametrize("missing", ["mode", "net", "branches", "forbid_parallel_paths"])
+def test_a_topology_record_missing_a_field_is_refused_not_kept(missing):
+    rule = TopologyConstraint(
+        authored("RULE-TOPO-1"), net="NET-GND", center="NET-STAR", branches=("DOM-A", "DOM-B")
+    )
+    record = on_disk(rule.as_dict())
+    del record[missing]
+    with pytest.raises(FangError) as failure:
+        decode_records([record])
+    assert failure.value.diagnostic.code == ELAB_MALFORMED_RECORD
+
+
+def test_an_exponent_given_as_a_decimal_writes_what_it_reads_back_as():
+    from decimal import Decimal
+
+    node = Arithmetic("pow", (Ref("CMP-A", "current", AMPS),), Decimal("0.5"))
+    assert node.exponent == Fraction(1, 2)
+    assert node_from_dict(on_disk(node.as_dict())) == node
+
+
+def test_a_timestamp_before_the_year_1000_round_trips():
+    from datetime import datetime, timezone
+
+    moment = datetime(999, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+    assert rfc3339(moment) == "0999-01-02T03:04:05Z"
+    assert parse_rfc3339(rfc3339(moment)) == moment
+
+
+def test_a_session_bound_to_a_snapshot_answers_with_its_traits():
+    from fang.mcp import Session
+
+    result = elaborate(Divider, project_id=PROJECT)
+    traits = Session.over(result.snapshot).traits()
+    assert traits.entities_with("footprint")
+    assert traits.entities_with("footprint") == result.traits.entities_with("footprint")

@@ -88,3 +88,25 @@
       Open Questions) and record the outcome here
 - [x] 5.7 Declare `dimension` an ordered collection, with a test that a
       reference's dimension survives canonical form (D9)
+
+## 6. Review fixes
+
+- [x] 6.1 Under a manifest older than schema 1.2, load a record holding an
+      expression reference as an `OpaqueEntity` with its reason, tested against
+      `tests/fixtures/schema-1.1`, written by commit `62a6de3` (D9)
+- [x] 6.2 Keep `OpaqueTrait` out of a registry built from entities, record it as
+      untyped, and refuse a netlist or a simulation plan that needs untyped state
+      (`ELAB-0015`) (D10)
+- [x] 6.3 Copy traits into a registry built from entities, so changing one does
+      not change the snapshot (D10)
+- [x] 6.4 Render a decimal without depending on a context's precision, so a
+      rendering renders to itself at any magnitude
+- [x] 6.5 Compare fields by canonical bytes in the semantic diff, so a program's
+      snapshot and its reload diff as unchanged
+- [x] 6.6 Dispatch a `class: "topology"` record carrying any topology field to
+      `TopologyConstraint`, so one missing `mode` is refused rather than kept
+- [x] 6.7 Normalize an arithmetic exponent to a `Fraction`, write a year below
+      1000 with four digits, and let an MCP session bound to a snapshot answer
+      with its traits
+- [x] 6.8 Run `python -m pytest` with the review fixes: 720 collected, 714 passed,
+      6 skipped, the same six optional extras as before

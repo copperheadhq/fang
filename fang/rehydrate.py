@@ -57,6 +57,11 @@ EntityDecoder = Callable[[Mapping[str, Any]], Entity]
 
 _DECODERS: dict[str, EntityDecoder] = {}
 
+#: The keys only a topology constraint writes. A `class: "topology"` record
+#: carrying any of them is a topology constraint, so one missing the rest is
+#: malformed rather than an unknown extension of the plain constraint record.
+_TOPOLOGY_KEYS = frozenset({"net", "mode", "center", "branches", "forbid_parallel_paths"})
+
 
 def register_entity(kind: str, decoder: EntityDecoder) -> None:
     """Register the decoder for a kind, so records of that kind read back typed.
@@ -143,11 +148,40 @@ def _opaque(record: Mapping[str, Any], subject: str, kind: str) -> OpaqueEntity:
     )
 
 
-def decode_record(record: Any) -> tuple[Entity, tuple[Untyped, ...]]:
+def _sorts_dimensions(schema_version: str | None) -> bool:
+    """Whether a schema's writer sorted a dimension vector as if it were a set.
+
+    Before schema 1.2, `dimension` was not an ordered collection, so canonical
+    serialization sorted the seven exponents. The order that gave them meaning
+    was never written, and no reader can recover it.
+    """
+    if schema_version is None:
+        return False
+    try:
+        major, minor = (int(part) for part in schema_version.split(".")[:2])
+    except ValueError:
+        return False
+    return (major, minor) < (1, 2)
+
+
+def _holds_reference(value: Any) -> bool:
+    if isinstance(value, Mapping):
+        if value.get("node") == "ref":
+            return True
+        return any(_holds_reference(item) for item in value.values())
+    if isinstance(value, (list, tuple)):
+        return any(_holds_reference(item) for item in value)
+    return False
+
+
+def decode_record(
+    record: Any, *, schema_version: str | None = None
+) -> tuple[Entity, tuple[Untyped, ...]]:
     """Decode one record through the registry.
 
-    Returns the entity and whatever in it loaded untyped. Raises ELAB-0013 for a
-    record that cannot be read at all.
+    `schema_version` is the schema the record was written under, where a caller
+    knows it. Returns the entity and whatever in it loaded untyped. Raises
+    ELAB-0013 for a record that cannot be read at all.
     """
     if not isinstance(record, Mapping):
         raise _malformed(None, "record", f"expected an object, found {type(record).__name__}")
@@ -157,6 +191,17 @@ def decode_record(record: Any) -> tuple[Entity, tuple[Untyped, ...]]:
     kind = record.get("kind")
     if not isinstance(kind, str) or not kind:
         raise _malformed(subject, "kind", "a record carries its kind as a non-empty string")
+
+    if _sorts_dimensions(schema_version) and _holds_reference(record):
+        return _opaque(record, subject, kind), (
+            Untyped(
+                subject,
+                f"kind {kind}",
+                f"schema {schema_version} wrote the dimension of an expression reference "
+                "sorted, so its order cannot be read back; rebuilding the design rewrites "
+                "the record under the current schema",
+            ),
+        )
 
     decoder = _DECODERS.get(kind)
     if decoder is None:
@@ -176,7 +221,11 @@ def decode_record(record: Any) -> tuple[Entity, tuple[Untyped, ...]]:
 
     # A decoder that does not reproduce its record would move the hash. Keeping
     # the record verbatim instead is lossless, and the report says so.
-    if canonical_dumps(entity.as_dict()) != canonical_dumps(record):
+    try:
+        reproduced = canonical_dumps(entity.as_dict()) == canonical_dumps(record)
+    except (ArithmeticError, TypeError, ValueError):
+        reproduced = False
+    if not reproduced:
         return _opaque(record, subject, kind), (
             Untyped(
                 subject,
@@ -200,13 +249,15 @@ def decode_record(record: Any) -> tuple[Entity, tuple[Untyped, ...]]:
     return entity, untyped
 
 
-def decode_records(records: Iterable[Any]) -> tuple[dict[str, Entity], LoadReport]:
+def decode_records(
+    records: Iterable[Any], *, schema_version: str | None = None
+) -> tuple[dict[str, Entity], LoadReport]:
     """Decode a whole record stream, or refuse the whole of it."""
     entities: dict[str, Entity] = {}
     untyped: list[Untyped] = []
     decoded = 0
     for record in records:
-        entity, missed = decode_record(record)
+        entity, missed = decode_record(record, schema_version=schema_version)
         if entity.id in entities:
             raise error(
                 ELAB_DUPLICATE_ID,
@@ -222,7 +273,7 @@ def decode_records(records: Iterable[Any]) -> tuple[dict[str, Entity], LoadRepor
 
 def _decode_constraint(record: Mapping[str, Any]) -> Constraint:
     """A constraint record, or a topology constraint when it carries a topology's fields."""
-    if record.get("class") == "topology" and "mode" in record:
+    if record.get("class") == "topology" and _TOPOLOGY_KEYS & set(record):
         return TopologyConstraint.from_dict(record)
     return Constraint.from_dict(record)
 

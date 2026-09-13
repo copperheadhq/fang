@@ -251,11 +251,18 @@ def _compare(old: Entity, new: Entity, entities: Mapping[str, Entity]) -> list[C
             )
         )
 
+    # Fields compare by their canonical bytes, the form the hash covers, so the
+    # tuple a program built and the list a reload read are the same value.
+    from .serialization import canonical_dumps
+
+    def differs(before, after) -> bool:
+        return canonical_dumps(before) != canonical_dumps(after)
+
     old_dict, new_dict = old.as_dict(), new.as_dict()
     changed_fields = {
         key
         for key in set(old_dict) | set(new_dict)
-        if old_dict.get(key) != new_dict.get(key)
+        if differs(old_dict.get(key), new_dict.get(key))
     } - {"parameters", "provenance", "identity"}
 
     # A display-name change with identity intact is a rename, not a removal.
@@ -277,7 +284,7 @@ def _compare(old: Entity, new: Entity, entities: Mapping[str, Entity]) -> list[C
         moved = sorted(
             protocol
             for protocol in set(old_traits) | set(new_traits)
-            if old_traits.get(protocol) != new_traits.get(protocol)
+            if differs(old_traits.get(protocol), new_traits.get(protocol))
         )
         changes.append(
             Change(

@@ -257,11 +257,9 @@ class Session:
         return self._graph
 
     def traits(self):
-        """The traits the committed head's entities carry."""
+        """The traits the committed head's entities carry, whatever the session is bound to."""
         from .traits import TraitRegistry
 
-        if self.program is None:
-            return TraitRegistry()
         return TraitRegistry.from_entities(self.snapshot().entities)
 
     def workspace(self) -> Workspace | None:

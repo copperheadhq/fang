@@ -184,7 +184,9 @@ class Workspace:
         means tampering, a decoder bug, or a file serialized some other way.
         """
         manifest = self.read_manifest()
-        entities, report = decode_records(self.read_records())
+        entities, report = decode_records(
+            self.read_records(), schema_version=manifest.schema_version
+        )
         snapshot = Snapshot(
             manifest.project_id,
             manifest.revision_id,

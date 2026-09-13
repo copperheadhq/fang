@@ -58,9 +58,15 @@ def rfc3339(moment: datetime) -> str:
             "a timestamp carries a timezone; a naive datetime is ambiguous"
         )
     moment = moment.astimezone(timezone.utc)
+    # Written field by field: `strftime("%Y")` does not pad a year below 1000,
+    # and the form has to be exactly the one `parse_rfc3339` reads back.
+    stamp = (
+        f"{moment.year:04d}-{moment.month:02d}-{moment.day:02d}"
+        f"T{moment.hour:02d}:{moment.minute:02d}:{moment.second:02d}"
+    )
     if moment.microsecond:
-        return moment.strftime("%Y-%m-%dT%H:%M:%S.%f").rstrip("0") + "Z"
-    return moment.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+        stamp += f".{moment.microsecond:06d}".rstrip("0")
+    return stamp + "Z"
 
 
 def parse_rfc3339(text: str) -> datetime:

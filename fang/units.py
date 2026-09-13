@@ -579,13 +579,15 @@ def _decimal(value: str | Decimal | int) -> Decimal:
 def _decimal_str(value: Decimal) -> str:
     """Render a Decimal as its canonical decimal string.
 
-    Normalizes away exponent notation for ordinary magnitudes so that the same
-    number always serializes the same way, without changing its value.
+    Normalizes away exponent notation and trailing zeros so that the same number
+    always serializes the same way, without changing its value. Nothing here
+    depends on a decimal context's precision, so the rendering is exact at any
+    magnitude, and rendering the result again gives the result.
     """
-    if value == value.to_integral_value() and abs(value.as_tuple().exponent) < 20:
-        text = str(value.quantize(Decimal(1)))
+    if value == value.to_integral_value():
+        text = format(value.to_integral_value(), "f")
     else:
-        text = format(value.normalize(), "f")
+        text = format(value, "f").rstrip("0")
     return "0" if text in ("-0", "0E+0") else text
 
 

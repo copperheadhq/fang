@@ -167,6 +167,9 @@ ELAB_MALFORMED_RECORD = _allocate("ELAB-0013", "a persisted record cannot be dec
 ELAB_SNAPSHOT_MISMATCH = _allocate(
     "ELAB-0014", "a reloaded snapshot does not match the hash its manifest records"
 )
+ELAB_UNTYPED_STATE = _allocate(
+    "ELAB-0015", "a projection needs state that loaded untyped"
+)
 
 # Transaction conditions.
 TXN_STALE_SNAPSHOT = _allocate(

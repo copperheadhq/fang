@@ -267,6 +267,10 @@ class Arithmetic(Node):
     def __post_init__(self) -> None:
         if self.op not in ARITHMETIC_OPS:
             raise ValueError(f"{self.op!r} is not an arithmetic operator")
+        if self.exponent is not None:
+            # One representation, so an exponent given as `0.5` writes the `1/2`
+            # it reads back as.
+            object.__setattr__(self, "exponent", Fraction(self.exponent))
         object.__setattr__(self, "dimension", self._check())
 
     def _check(self) -> Dimension:

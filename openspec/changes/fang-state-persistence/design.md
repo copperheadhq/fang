@@ -202,6 +202,27 @@ meaning to keep that order. The change is therefore a fix, not a new
 requirement: `dimension` joins `ORDERED_COLLECTIONS`. A snapshot holding an
 expression reference changes hash, which D8 already accepts.
 
+A workspace the schema 1.1 writer wrote still holds sorted vectors. Decoding one
+as if it were ordered does one of two things. It refuses a valid comparison, or,
+worse, it loads a comparison of two references with a wrong dimension and a
+matching hash. So under a manifest older than schema 1.2, a record holding an
+expression reference loads as an `OpaqueEntity`, and the load report says the
+order was never written. Rebuilding the design rewrites the record.
+`tests/fixtures/schema-1.1` is a workspace that commit `62a6de3` actually wrote.
+
+### D10. A consumer refuses state it cannot read
+
+A `TraitRegistry` built from entities attaches only typed traits. It records an
+`OpaqueTrait` as untyped rather than hand out an object that lacks the
+protocol's fields. It also copies each trait, so a consumer that changes what it
+is handed cannot change a frozen snapshot.
+
+A netlist refuses to compile when a component, pin, net, rail, or connection
+loaded untyped, or when a footprint or sourcing trait did, with `ELAB-0015`. A
+simulation plan refuses a model that loaded untyped. Leaving the thing out would
+produce a projection that claims to be complete while missing a part. That is
+the silent pass D4 rules out.
+
 ## Risks / Trade-offs
 
 - [A decoder drifts from its `as_dict`] → A round-trip test runs over every

@@ -294,6 +294,31 @@ def compile_netlist(snapshot, *, traits=None) -> Netlist:
         from .traits import TraitRegistry
 
         traits = TraitRegistry.from_entities(entities)
+
+    # A netlist that left out a part, a pin, or a footprint it could not read
+    # would still claim to project the snapshot, so state that loaded untyped
+    # refuses the compile instead.
+    from .diagnostics import ELAB_UNTYPED_STATE, error
+    from .rehydrate import OpaqueEntity
+
+    for entity in sorted(entities.values(), key=lambda e: e.id):
+        if isinstance(entity, OpaqueEntity) and entity.kind in (
+            "component", "pin", "net", "rail", "connection"
+        ):
+            raise error(
+                ELAB_UNTYPED_STATE,
+                f"{entity.kind} {entity.id} loaded untyped, so a netlist cannot project it",
+                entities=[entity.id],
+            )
+        if isinstance(entity, Component) and hasattr(traits, "untyped"):
+            for protocol in ("footprint", "sourcing"):
+                if traits.untyped(entity.id, protocol):
+                    raise error(
+                        ELAB_UNTYPED_STATE,
+                        f"{entity.id} carries a {protocol} trait that loaded untyped, "
+                        "so a netlist cannot read it",
+                        entities=[entity.id],
+                    )
     designators = assign_designators(entities)
 
     components = tuple(

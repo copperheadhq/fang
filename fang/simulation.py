@@ -253,6 +253,11 @@ def compile_plan(
             )
             continue
 
+        if hasattr(traits, "untyped") and traits.untyped(component.id, "simulatable"):
+            raise SimulationError(
+                f"{component.id} carries a simulatable trait that loaded untyped; "
+                "the plan cannot read its model, and does not run without it"
+            )
         trait = traits.get(component.id, "simulatable")
         if trait is None:
             if _is_primitive(component):

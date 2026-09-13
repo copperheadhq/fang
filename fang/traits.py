@@ -291,24 +291,39 @@ class TraitRegistry:
     asking "what is simulatable" costs a dictionary lookup rather than a backend.
     """
 
-    __slots__ = ("_by_entity", "_by_protocol")
+    __slots__ = ("_by_entity", "_by_protocol", "_untyped")
 
     def __init__(self) -> None:
         self._by_entity: dict[str, dict[str, Trait]] = {}
         self._by_protocol: dict[str, set[str]] = {}
+        self._untyped: dict[str, frozenset[str]] = {}
 
     @classmethod
     def from_entities(cls, entities: Mapping[str, Any]) -> "TraitRegistry":
         """The traits a set of entities carries, as a registry.
 
-        A view rather than a store: the entities hold the traits, and this is
-        built from them, so the two cannot disagree.
+        The entities hold the traits and this is built from them, so the two
+        cannot disagree. Each trait is copied, so a consumer that changes what it
+        is handed does not reach into a frozen snapshot. A trait that loaded
+        untyped is not attached under its protocol, because it does not satisfy
+        it. It is recorded instead, so a consumer that needs it can refuse rather
+        than read a gap as an absence.
         """
         registry = cls()
         for entity_id in sorted(entities):
-            for trait in getattr(entities[entity_id], "traits", {}).values():
-                registry.attach(entity_id, trait)
+            untyped = []
+            for protocol, trait in sorted(getattr(entities[entity_id], "traits", {}).items()):
+                if isinstance(trait, OpaqueTrait):
+                    untyped.append(protocol)
+                else:
+                    registry.attach(entity_id, deepcopy(trait))
+            if untyped:
+                registry._untyped[entity_id] = frozenset(untyped)
         return registry
+
+    def untyped(self, entity_id: str, protocol: str) -> bool:
+        """Whether the entity carries this protocol in a form no decoder could type."""
+        return protocol in self._untyped.get(entity_id, ())
 
     def attach(self, entity_id: str, trait: Trait) -> Trait:
         if not trait.protocol:

@@ -51,7 +51,10 @@ tracked separately and moves only when the serialized form changes.
   record of a kind with no decoder, or with a key its decoder does not model,
   loads as an `OpaqueEntity` that reserializes byte for byte; a trait in the same
   position loads as an `OpaqueTrait` on its still-typed entity. Both are named in
-  the load report. A malformed record refuses the whole load (`ELAB-0013`).
+  the load report. A malformed record refuses the whole load (`ELAB-0013`). A
+  netlist compiled over a component, pin, net, or connection that loaded untyped,
+  or over a footprint or sourcing trait that did, refuses with `ELAB-0015` rather
+  than leave it out; a simulation plan refuses a model that loaded untyped.
 - `fang.serialization.parse_rfc3339`, the inverse of `rfc3339`.
 
 ### Changed
@@ -111,7 +114,19 @@ tracked separately and moves only when the serialized form changes.
 - A dimension vector, which an expression reference and a unit write under
   `dimension`, was sorted like an unordered collection when serialized. It could
   not be read back, and two dimensions whose exponents were permutations of each
-  other serialized identically. `dimension` is now an ordered collection.
+  other serialized identically. `dimension` is now an ordered collection. A
+  schema 1.1 workspace still holds the sorted form, whose order was never
+  written, so a record there holding an expression reference loads verbatim and
+  is named in the load report; rebuilding the design rewrites it.
+- A magnitude of 29 or more integer digits could not be rendered: rendering
+  quantized it under the default 28-digit decimal context, which raised.
+  Rendering no longer depends on a context's precision, and rendering a rendered
+  magnitude gives it back unchanged.
+- An arithmetic exponent given as a decimal serialized as `0.5` where the same
+  exponent given as a fraction serialized as `1/2`, so one expression had two
+  hashes. The exponent is normalized to a fraction on construction.
+- A timestamp before the year 1000 serialized with a three-digit year, which is
+  not RFC 3339.
 
 - `examples/sensor_board/` declared a bulk capacitor and two pull-up resistors
   and never connected them.
