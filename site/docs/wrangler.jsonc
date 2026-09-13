@@ -1,0 +1,21 @@
+{
+  // fang.copperhead.sh: this Starlight site, built to static files and served as
+  // Worker assets, with no Worker script. Workers Builds runs from this
+  // directory.
+  //
+  // With no configuration file, `wrangler deploy` on the production branch
+  // configured the project itself, but `wrangler versions upload`, which Workers
+  // Builds runs for every other branch, cannot, so each such build failed with
+  // "Missing entry-point to Worker script or to assets directory". This file
+  // states what that automatic configuration detected, so both commands read
+  // the same settings. Because a configuration file turns automatic
+  // configuration off, the build it used to run is stated here too.
+  "name": "fang",
+  "compatibility_date": "2026-09-14",
+  "build": {
+    "command": "npm run build"
+  },
+  "assets": {
+    "directory": "./dist"
+  }
+}
