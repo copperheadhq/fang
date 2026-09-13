@@ -227,9 +227,12 @@ def test_an_implied_semantic_change_returns_through_the_gate(elaborated):
 def test_export_writes_to_the_workspace_and_nowhere_else(tmp_path, elaborated):
     outcome = run(elaborated, workspace=tmp_path)
     assert outcome.result(2).status is Status.SUCCEEDED
+    from fang.sexpr import parse
+
     written = list(tmp_path.iterdir())
     assert [p.name for p in written] == ["design.net"]
-    assert written[0].read_text().startswith('(export "version" "E"')
+    root = parse(written[0].read_text())
+    assert root.head == "export" and root.value("version") == "E"
 
 
 def test_the_registry_reports_what_it_carries():

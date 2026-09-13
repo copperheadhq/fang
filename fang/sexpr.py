@@ -63,9 +63,28 @@ class Node:
         return atoms[index] if index < len(atoms) else None
 
     def pairs(self) -> dict[str, str]:
-        """A child's atoms read as key/value pairs, as KiCad writes them."""
+        """The list's fields, read as key/value pairs.
+
+        KiCad writes each field as a list of its own, `(name "GND")`, and that
+        nested form is read first. Earlier Fang releases wrote fields as flat
+        atoms, `"name" "GND"`, which fill any key the nested form did not supply,
+        so the nested reading wins where a file carries both. Only a child of
+        exactly a key and one atom is a field; `(node (ref "R1") (pin "1"))` is
+        not.
+        """
+        fields: dict[str, str] = {}
+        for item in self.rest:
+            if (
+                isinstance(item, Node)
+                and len(item.items) == 2
+                and isinstance(item.items[0], Atom)
+                and isinstance(item.items[1], Atom)
+            ):
+                fields.setdefault(item.items[0].value, item.items[1].value)
         atoms = self.atoms()
-        return {atoms[i]: atoms[i + 1] for i in range(0, len(atoms) - 1, 2)}
+        for index in range(0, len(atoms) - 1, 2):
+            fields.setdefault(atoms[index], atoms[index + 1])
+        return fields
 
     def __iter__(self) -> Iterator["Node | Atom"]:
         return iter(self.items)

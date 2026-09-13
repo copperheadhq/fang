@@ -92,9 +92,13 @@ def test_an_example_projects_to_a_netlist_with_no_component_left_out(example):
 
 
 def test_an_example_emits_a_kicad_netlist(example):
+    from fang.sexpr import parse
+
     result = build(example)
     netlist = compile_netlist(result.snapshot, traits=result.traits)
-    assert emit_netlist(netlist).startswith('(export "version" "E"')
+    root = parse(emit_netlist(netlist))
+    assert root.head == "export" and root.value("version") == "E"
+    assert len(root.child("components").children("comp")) == len(netlist.components)
 
 
 def test_an_example_builds_identically_twice(example):

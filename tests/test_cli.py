@@ -46,15 +46,21 @@ def test_netlist_lists_components_and_nets(capsys):
 
 
 def test_export_writes_a_kicad_netlist(tmp_path, capsys):
+    from fang.sexpr import parse
+
     target = tmp_path / "board.net"
     code = main(["export", SENSOR, "--project", "PRJ-CLI", "-o", str(target)])
     assert code == EXIT_OK
-    assert target.read_text().startswith('(export "version" "E"')
+    root = parse(target.read_text())
+    assert root.head == "export" and root.value("version") == "E"
 
 
 def test_export_writes_to_stdout_without_an_output_path(capsys):
+    from fang.sexpr import parse
+
     assert main(["export", DIVIDER, "--project", "PRJ-CLI"]) == EXIT_OK
-    assert capsys.readouterr().out.startswith('(export "version" "E"')
+    root = parse(capsys.readouterr().out)
+    assert root.head == "export" and root.value("version") == "E"
 
 
 def test_check_reports_and_exits_zero_when_nothing_fails(capsys):
