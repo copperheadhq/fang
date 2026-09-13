@@ -44,6 +44,22 @@ def test_key_value_pairs_are_readable():
     assert node.pairs() == {"ref": "R1", "pin": "2"}
 
 
+def test_nested_fields_are_read_as_pairs():
+    """KiCad writes each field as a list of its own."""
+    node = parse('(net (code "1") (name "GND") (class "Default") (node (ref "R1") (pin "1")))')
+    assert node.pairs() == {"code": "1", "name": "GND", "class": "Default"}
+
+
+def test_a_nested_field_wins_over_a_flat_one():
+    node = parse('(net "name" "flat" (name "nested") "code" "7")')
+    assert node.pairs() == {"name": "nested", "code": "7"}
+
+
+def test_a_child_that_is_not_a_key_and_one_atom_is_not_a_field():
+    node = parse('(comp (ref "R1" "extra") (units (unit (name "A"))) (tstamps))')
+    assert node.pairs() == {}
+
+
 def test_a_malformed_file_is_reported_rather_than_guessed_at():
     for bad, message in (
         ("(unclosed", "ends inside a list"),

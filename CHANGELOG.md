@@ -71,11 +71,33 @@ tracked separately and moves only when the serialized form changes.
   the graph said current entering one terminal leaves at the other.
 - `DIGITAL_PARAMETERS` gained `voltage`, which the voltage-domain check has
   always read and the catalogue never declared.
+- **Breaking output change:** `fang export`, and the `design.net` the runtime
+  writes, now use KiCad's own netlist form, in which every field is a list of
+  its own — `(export (version "E") ...)`, `(net (code "1") (name "GND")
+  (node (ref "R1") (pin "1")))`, `(property (name "fang_id") (value "CMP-..."))`
+  — instead of flat `"key" "value"` atoms. Anything that matched the old text
+  will not match the new. The reader still imports the old form, but a file in
+  the new form does not import on an earlier Fang. Every committed
+  `examples/*/out/*.net` is regenerated.
+- `Node.pairs()` reads nested `(key "value")` fields first and falls back to flat
+  atom pairs, which is the form its docstring always claimed to read.
 
 ### Fixed
 
 - `examples/sensor_board/` declared a bulk capacitor and two pull-up resistors
   and never connected them.
+- A netlist KiCad exported imported with its components and none of its nets.
+  KiCad nests every field as `(key "value")`; the reader read only flat atoms,
+  so every node was dropped as having no reference and pin. The fixture that
+  should have caught it, `examples/imported/reference.net`, was written by hand
+  in Fang's own form; it is now a netlist KiCad 10.0.4 exported from
+  copperhead's `open-key` test project.
+- The netlist reader accepted a component's fields, datasheet, and properties, a
+  net's class, and a node's pin function and pin type, and neither stored nor
+  reported any of them. Each is now named in the import report.
+- A net its source names with a single pin, as KiCad names every pin it leaves
+  unconnected, no longer disappears when an import is compiled back into a
+  netlist, so an unchanged import re-emits unchanged.
 
 ## [0.1.0] - 2026-09-08
 

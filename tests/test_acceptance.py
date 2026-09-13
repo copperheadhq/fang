@@ -69,17 +69,28 @@ def test_at_r1_import_of_a_representative_kicad_project_without_unreported_loss(
         for e in result.entities.values()
         if isinstance(e, Component)
     }
-    assert designators == {"U1", "C1", "C2", "R1", "J1"}
-    # Every net the file names survives with its own name.
+    assert designators == {"R1", "R2", "U1"}
+    # Every net the file names survives with its own name, including the four
+    # single-pin nets KiCad names after the pins it leaves unconnected.
     from fang.entities import Net
 
     assert {alias for e in result.entities.values() if isinstance(e, Net)
-            for alias in e.aliases} == {"+3V3", "GND", "NRST"}
+            for alias in e.aliases} == {
+        "3V3", "EN", "GND", "KEY_DAH",
+        "unconnected-(U1-GPIO0-Pad3)", "unconnected-(U1-GPIO3-Pad4)",
+        "unconnected-(U1-GPIO18-Pad6)", "unconnected-(U1-GPIO21-Pad7)",
+    }
 
-    # The symbol-library block carries no connectivity and this adapter does not
-    # model it. That is reported rather than dropped, which is the whole point.
+    # What the file carries and this adapter does not store is reported rather
+    # than dropped, which is the whole point: the symbol-library and grouping
+    # blocks, each component's sheet bookkeeping, fields, and properties, each
+    # net's class, and each pin's function and type.
     assert not result.report.lossless
-    assert {item.construct for item in result.report.unrepresented} == {"libparts"}
+    assert {item.construct for item in result.report.unrepresented} == {
+        "groups", "variants", "libparts", "libraries",
+        "libsource", "sheetpath", "tstamps", "units", "field", "property",
+        "class", "pinfunction", "pintype",
+    }
 
 
 def test_at_r2_byte_identical_reserialization_of_unchanged_state(snapshot):
@@ -157,7 +168,7 @@ def test_at_r7_explicit_reporting_of_lossy_adapter_operations():
     from fang.kicad import read_netlist
 
     text = """
-    (export "version" "E"
+    (export (version "E")
       (components (comp (ref "R1") (value "10k") (thermal_model "x")))
       (nets)
       (proprietary_block "data"))
@@ -279,9 +290,17 @@ def test_at_k1_import_of_an_existing_project_with_every_mismatch_reported():
     assert source_refs == recompiled_refs, "a component mismatch would appear here"
 
     source_nets = {
-        net.pairs().get("name") for net in source.child("nets").children("net")
+        net.pairs().get("name"): sorted(
+            (node.value("ref"), node.value("pin")) for node in net.children("node")
+        )
+        for net in source.child("nets").children("net")
     }
-    assert source_nets == {net.name for net in recompiled.nets}
+    recompiled_nets = {
+        net.name: sorted((node.designator, node.pin) for node in net.nodes)
+        for net in recompiled.nets
+    }
+    assert source_nets, "a file with no nets would compare equal to anything"
+    assert source_nets == recompiled_nets, "a net or membership mismatch would appear here"
     # Import fidelity is measured here, and what could not be modelled is named.
     assert result.report.recovered > 0
     assert isinstance(result.report.as_dict()["unrepresented"], list)

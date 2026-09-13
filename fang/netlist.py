@@ -322,8 +322,10 @@ def compile_netlist(snapshot, *, traits=None) -> Netlist:
                 key=lambda node: (node.designator, node.pin),
             )
         )
-        if len(nodes) < 2:
-            # A net of one node is an unconnected pin, not a net.
+        if len(nodes) < 2 and not any(pin in recorded for pin in members):
+            # A lone pin is an unconnected pin, not a net, unless a source named
+            # it: a name a source gave a net is engineering data (see _net_name),
+            # and KiCad writes every pin it leaves unconnected as a named net.
             continue
         nets.append(
             NetlistNet(_net_name(members, entities, designators, recorded), code, nodes)
