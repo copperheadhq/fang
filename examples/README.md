@@ -22,7 +22,7 @@ them is a sketch that no longer works.
 
 The last three are the odd ones out: eight boards, then two exam questions
 and a textbook figure, because the kernel decides a claim about a circuit the
-same way whichever it is. The two exam questions share a folder —
+same way whichever it is. The two exam questions share a folder.
 [`jee_advanced/`](jee_advanced/) groups them and is not itself an example,
 which is why an example's name here is its path below `examples/` rather than
 just a folder name.

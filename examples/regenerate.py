@@ -169,8 +169,8 @@ def _named(snapshot, identifier: str) -> str:
     if entity is None:
         return f"`{identifier}`"
     label, name = _label(entity), entity.identity.display_name
-    kind = f" — {name}" if name and label.rsplit(".", 1)[-1] != name else ""
-    return f"`{label}`{kind} (`{identifier}`)"
+    inside = f"{name}, " if name and label.rsplit(".", 1)[-1] != name else ""
+    return f"`{label}` ({inside}`{identifier}`)"
 
 
 def _rationale(name: str, snapshot) -> str | None:
@@ -188,7 +188,7 @@ def _rationale(name: str, snapshot) -> str | None:
         return None
 
     out = [
-        f"# {name} — rationale",
+        f"# {name}: rationale",
         "",
         "Every line below is an entity in the elaborated graph, projected by",
         "`python examples/regenerate.py`. Nothing here is prose kept beside the",
@@ -203,7 +203,7 @@ def _rationale(name: str, snapshot) -> str | None:
             verifications = [
                 v for v in kinds["verification"] if v.verifies == req.id
             ]
-            out.append(f"### {_label(req)} — `{req.id}`")
+            out.append(f"### {_label(req)} (`{req.id}`)")
             out.append("")
             out.append(f"> {_resolve(snapshot, req.statement)}")
             out.append("")
@@ -228,7 +228,7 @@ def _rationale(name: str, snapshot) -> str | None:
         out.append("## Decisions")
         out.append("")
         for decision in kinds["decision"]:
-            out.append(f"### {_label(decision)} — `{decision.id}`")
+            out.append(f"### {_label(decision)} (`{decision.id}`)")
             out.append("")
             choice = decision.choice or ""
             out.append(
@@ -251,7 +251,7 @@ def _rationale(name: str, snapshot) -> str | None:
         out.append("## Calculations")
         out.append("")
         for calculation in kinds["calculation"]:
-            out.append(f"### {_label(calculation)} — `{calculation.id}`")
+            out.append(f"### {_label(calculation)} (`{calculation.id}`)")
             out.append("")
             out.append(f"`{calculation.expression}`")
             out.append("")
@@ -265,7 +265,7 @@ def _rationale(name: str, snapshot) -> str | None:
         out.append("## Evidence")
         out.append("")
         for evidence in kinds["evidence"]:
-            out.append(f"### {_label(evidence)} — `{evidence.id}`")
+            out.append(f"### {_label(evidence)} (`{evidence.id}`)")
             out.append("")
             out.append(f"> {_resolve(snapshot, evidence.claim)}")
             out.append("")

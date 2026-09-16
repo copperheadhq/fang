@@ -207,7 +207,7 @@ in [tests/test_examples.py](https://github.com/copperheadhq/fang/blob/main/tests
   quadrature encoder, from one block declaration instantiated three times
 - [examples/jee_advanced/](https://github.com/copperheadhq/fang/tree/main/examples/jee_advanced/): two exam
   questions rather than two boards, each answered by constraints the checker
-  decides — one paper's four claimed currents, and one claimed current beside
+  decides: one paper's four claimed currents, and one claimed current beside
   the two branches that carry none
 - [examples/noninverting_amp/](https://github.com/copperheadhq/fang/tree/main/examples/noninverting_amp/): a textbook
   figure's input impedance and gain, with the reading of the drawing they rest

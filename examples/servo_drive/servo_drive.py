@@ -2,7 +2,7 @@
 
 Everything here is composition. A `HalfBridge` is a block with two transistors and
 a shunt: it owns its own interior and its own constraints, and the drive
-instantiates three of them from one declaration. The phase, the encoder, and the
+instantiates three of them from one declaration. The phase, the encoder and the
 CAN bus are typed ports, so a connection says what it carries rather than which
 pad it happens to land on.
 """
@@ -40,9 +40,9 @@ from fang.rationale import Assumes, Requires
 
 
 class HalfBridge(Module):
-    """Two FETs, the node between them, and the shunt that measures it.
+    """Two FETs, the node between them and the shunt that measures it.
 
-    The block is the unit of reuse: one declaration, three instances, and one set
+    The block is the unit of reuse: one declaration, three instances and one set
     of constraints that holds for each of them.
     """
 
