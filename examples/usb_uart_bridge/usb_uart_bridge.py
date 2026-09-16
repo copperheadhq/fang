@@ -1,9 +1,9 @@
 """A USB-to-UART bridge: the interface board on nearly every desk.
 
 What it adds over the other examples is the part selection. The bridge and the
-regulator are chosen parts — a manufacturer, an MPN, a distributor code, and the
-datasheet the numbers came from — attached in `__init__` so the selection lands
-on the instance and not on the class template. The logical part stays "a 3.3 V
+regulator are chosen parts: a manufacturer, an MPN, a distributor code and the
+datasheet the numbers came from, all attached in `__init__` so the selection
+lands on the instance and not on the class template. The logical part stays "a 3.3 V
 regulator"; which one was bought is recorded separately.
 """
 
@@ -213,7 +213,7 @@ class USBSerial(System):
         self.regulator.vout.gnd >> self.load_c2.p2
 
         # A UART crosses. Connecting the two ports would pair like names with
-        # like — tx to tx — so the two wires are named, which is the whole
+        # like, tx to tx, so the two wires are named, which is the whole
         # reason a signal of an interface is addressable on its own.
         self.bridge.uart.tx >> self.target.uart.rx
         self.bridge.uart.rx >> self.target.uart.tx

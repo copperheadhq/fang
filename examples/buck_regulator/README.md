@@ -34,13 +34,13 @@ constraint that produces it.
 [`out/rationale.md`](out/rationale.md) is the file to read. It is the whole
 argument, projected out of the graph in identifier order:
 
-> ### system.inductor_value — `CALC-7d60a2e8f772`
+> ### system.inductor_value (`CALC-7d60a2e8f772`)
 >
 > `L = v_out * (1 - v_out / v_in) / (f_sw * ripple_current)`
 >
 > Result: 4.7 uH at 1.25 MHz for 30% ripple at 1.5 A
 >
-> - Over `system.inductor` — Inductor (`CMP-64dfc4cd840c`)
+> - Over `system.inductor` (Inductor, `CMP-64dfc4cd840c`)
 
 - [`out/buck_regulator.net`](out/buck_regulator.net), [`out/netlist.txt`](out/netlist.txt)
 - [`out/checks.txt`](out/checks.txt), [`out/graph.txt`](out/graph.txt)

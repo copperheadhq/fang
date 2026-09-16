@@ -1,12 +1,12 @@
 """Values chosen by equation: a divider stated as the ratio it must satisfy.
 
-The resistors carry real values, but the values are not the design — the
+The resistors carry real values, but the values are not the design; the
 constraints are. Ohm's law is written down as a constraint rather than left in a
 comment, so substituting a part re-checks the arithmetic instead of trusting it.
 
 Inheritance is how a second divider reuses the first: `SenseDivider` keeps the
-equations and replaces the two values. A block owns its interior — its parts, its
-parameters, and the constraints over them — and the board connects to the pads at
+equations and replaces the two values. A block owns its interior (its parts, its
+parameters and the constraints over them), and the board connects to the pads at
 its edge.
 """
 

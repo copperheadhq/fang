@@ -235,7 +235,7 @@ def to_svg(positioned: PositionedView, *, padding: int = 28) -> str:
         )
         tooltip = _escape(node.id)
         if node.incomplete:
-            tooltip += " — unknown: " + _escape(", ".join(node.incomplete))
+            tooltip += ", unknown: " + _escape(", ".join(node.incomplete))
         centre = x + node_width // 2
         parts.append(
             f'<g><rect x="{x}" y="{y}" width="{node_width}" height="{node_height}" '
