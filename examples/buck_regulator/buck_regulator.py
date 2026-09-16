@@ -1,9 +1,9 @@
 """A 12 V to 3.3 V buck converter, with the reasoning kept beside the circuit.
 
 The circuit is ordinary. What is not ordinary is that the requirement, the part
-decision, the datasheet numbers behind it, the two calculations, and the
+decision, the datasheet numbers behind it, the two calculations and the
 verification that closes the requirement are all entities in the same graph as
-the inductor — so `fang` can answer "why is this 4.7 uH?" without anyone having
+the inductor, so `fang` can answer "why is this 4.7 uH?" without anyone having
 written a design document.
 """
 

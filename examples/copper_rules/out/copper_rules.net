@@ -1,0 +1,40 @@
+(export "version" "E"
+  (design
+    (source "copper_rules.py")
+    (tool "fang 0.1.0")
+    (snapshot "sha256:770cca494464aa654698aed5b625d14388fa56f77636b69f517e01ed43448f63")
+    (project "PRJ-EXAMPLES")
+  )
+  (components
+    (comp
+      (ref "C1")
+      (value "22 uF")
+      (footprint "Package:C_1206_3216Metric")
+      (property "name" "fang_id" "CMP-e61380669445")
+    )
+    (comp
+      (ref "J1")
+      (value "LoadHeader")
+      (footprint "Package:PinHeader_1x02_P2.54mm")
+      (property "name" "fang_id" "CMP-2b0183addcce")
+    )
+    (comp
+      (ref "J2")
+      (value "InputTerminal")
+      (footprint "Package:TerminalBlock_1x02_P5.08mm")
+      (property "name" "fang_id" "CMP-3219377790fa")
+    )
+  )
+  (nets
+    (net "code" "1" "name" "Net-(C1-Pad1)"
+      (node "ref" "C1" "pin" "1")
+      (node "ref" "J1" "pin" "5V")
+      (node "ref" "J2" "pin" "VIN")
+    )
+    (net "code" "2" "name" "Net-(C1-Pad2)"
+      (node "ref" "C1" "pin" "2")
+      (node "ref" "J1" "pin" "GND")
+      (node "ref" "J2" "pin" "GND")
+    )
+  )
+)

@@ -79,7 +79,7 @@ The contract is one document:
 [openspec/specs/fang-kernel/spec.md](https://github.com/copperheadhq/fang/blob/main/openspec/specs/fang-kernel/spec.md).
 It is self-contained and normative, covering the terminology, the design principles, the
 layers of representation, the kernel architecture and the project root, followed
-by 81 requirements over 217 scenarios covering the Engineering Intermediate
+by 94 requirements over 261 scenarios covering the Engineering Intermediate
 Representation (identity, quantities, constraints, provenance, serialization,
 diff) and the kernel and language over it, with all 23 acceptance criteria.
 RFC 2119 keywords in it are normative.
@@ -171,7 +171,7 @@ so rather than substituting anything.
 ## Tests
 
 ```bash
-python -m pytest          # 553 tests; 551 pass here, the rest skip by name
+python -m pytest          # 703 tests; 701 pass here, the rest skip by name
 python -m pytest -rs      # names each environment-dependent skip
 ```
 
@@ -219,7 +219,7 @@ fang. The mark is a trace with a fang hanging from it, drawn on the same
 lowercase, always, and set in IBM Plex Mono because it names a language.
 
 [site/BRAND.md](https://github.com/copperheadhq/fang/blob/main/site/BRAND.md) is
-the identity in full — the mark's geometry and clear space, the palette in both
+the identity in full: the mark's geometry and clear space, the palette in both
 themes with the two values nudged for contrast and the reason recorded, the type
 and the voice. The assets are in
 [site/brand/](https://github.com/copperheadhq/fang/tree/main/site/brand/), and

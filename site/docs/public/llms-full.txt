@@ -200,8 +200,8 @@ Summary: Eight programs in the repository, smallest first.
 Every example in [`examples/`](https://github.com/copperheadhq/fang/tree/main/examples)
 elaborates, passes the gate and is exercised by the test suite, so none of them
 is a sketch that no longer runs. Each has a page here carrying its program, the
-views it renders and the files it writes — all generated from the folder itself,
-so a page cannot describe a program that has since changed.
+views it renders and the files it writes. All of it is generated from the folder
+itself, so a page cannot describe a program that has since changed.
 
 | Example | Shows |
 | --- | --- |
@@ -783,16 +783,16 @@ verification cannot rest on evidence the graph never saw.
 # divider
 
 URL: https://fang.copperhead.sh/examples/divider/
-Summary: A voltage divider with a capacitor across its output: two resistors, one cap, and nothing else. It is here to show the shape of a Fang program and no more than…
+Summary: A voltage divider with a capacitor across its output: two resistors, one cap and nothing else. It is here to show the shape of a Fang program and no more than…
 
-A voltage divider with a capacitor across its output: two resistors, one cap,
+A voltage divider with a capacitor across its output: two resistors, one cap
 and nothing else. It is here to show the shape of a Fang program and no more
 than that.
 
 ## The program
 
 [`divider.py`](https://github.com/copperheadhq/fang/blob/main/examples/divider/divider.py) declares three surfaces (`supply`, `output`,
-`ground`), three parts, and joins them in `architecture`. The `>>` operator is
+`ground`) and three parts, then joins them in `architecture`. The `>>` operator is
 the only way parts get connected, and every connection is an entity in the graph
 rather than a line in a file:
 
@@ -803,8 +803,8 @@ def architecture(self):
     self.top.p2 >> self.bottom.p1
 ```
 
-The two constraints say what the divider is not allowed to be — a leg under
-1 kOhm — rather than restating the values that were already written above them.
+The two constraints say what the divider is not allowed to be (a leg under
+1 kOhm) rather than restating the values that were already written above them.
 That is the distinction the whole language rests on: a value is a choice, a
 constraint is the reason the choice is allowed.
 
@@ -814,15 +814,15 @@ constraint is the reason the choice is allowed.
 the only example with nothing undecided in it, because it is the only one with
 no missing datasheet number anywhere.
 
-- [`out/divider.net`](https://github.com/copperheadhq/fang/blob/main/examples/divider/out/divider.net) — the KiCad netlist
-- [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/divider/out/netlist.txt) — the same projection as text
-- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/divider/out/checks.txt) — both checks, both decided
-- [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/divider/out/graph.txt) — 28 entities, by kind
+- [`out/divider.net`](https://github.com/copperheadhq/fang/blob/main/examples/divider/out/divider.net): the KiCad netlist
+- [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/divider/out/netlist.txt): the same projection as text
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/divider/out/checks.txt): both checks, both decided
+- [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/divider/out/graph.txt): 28 entities, by kind
 
 ![the interconnect view](/examples/divider/interconnect.svg)
 
-The two resistors are drawn by the name they have in the program — `top` and
-`bottom` — because `Resistor` twice would not tell you which one is which.
+The two resistors are drawn by the name they have in the program, `top` and
+`bottom`, because `Resistor` twice would not tell you which one is which.
 
 ## Running it
 
@@ -909,19 +909,312 @@ fang build examples/divider/divider.py
 
 ---
 
+# copper_rules
+
+URL: https://fang.copperhead.sh/examples/copper_rules/
+Summary: A 2 A rail that states how wide its copper has to be, and two boards that answer differently. The circuit is as small as a power path gets: a terminal block, a…
+
+A 2 A rail that states how wide its copper has to be, and two boards that answer
+differently. The circuit is as small as a power path gets: a terminal block, a
+header, a bulk capacitor. The circuit is not what this one is about.
+
+## The program
+
+[`copper_rules.py`](https://github.com/copperheadhq/fang/blob/main/examples/copper_rules/copper_rules.py) declares its board in a `board()` method
+beside `constraints()`. The declaration is recorded, never measured: no outline
+is computed and nothing is placed.
+
+```python
+def board(self):
+    declare_board(
+        outline=[(0, 0), (40, 0), (40, 30), (0, 30)],
+        thickness=1.6 * mm,
+        layers=[
+            layer("F.Cu", copper_weight=1 * ozcu),
+            layer("core", function="dielectric", thickness=1.5 * mm),
+            layer("B.Cu", copper_weight=1 * ozcu),
+        ],
+    )
+```
+
+`ozcu` is a length, not a mass. "1 oz copper" names an areal density by trade
+convention, but what a stackup adds up and what a width rule compares are both
+thicknesses, so the unit converts to the 34.8 um the weight produces.
+
+Two of the three constraints are about copper rather than about values, and say
+so by naming their class:
+
+```python
+require(
+    self.supply.physical.trace_width >= 0.5 * mm,
+    constraint_class="routing",
+    constraint_kind="min_trace_width",
+)
+```
+
+`self.supply.physical.trace_width` is a reference through the reserved
+`physical.` namespace. It resolves over whatever realizes the rail (every
+segment, via and zone at once, as the interval they span), so the rule holds
+over the whole realization rather than over a segment someone picked.
+
+There is no fourth kind of thing here. A routing rule is a record in the same
+constraint registry as the electrical one above it, evaluated by the same
+evaluator, and the only difference is which check class selects it.
+
+## Undecided until there is copper
+
+3 parts, 2 nets, 35 entities, 7 checks, none failed and three undecided.
+
+Two of those three are the routing rules, and they are undecided because nothing
+realizes the rail yet:
+
+```
+UNDECIDED routing: min_trace_width on PORT-4cc256e8351c
+UNDECIDED routing: min_clearance on PORT-4cc256e8351c
+```
+
+That is the whole point of the third truth value. A rule about copper that does
+not exist has not passed, and reporting it as a pass would be the one answer
+that is certainly wrong.
+
+## The rules reach the router
+
+`fang export --rules` projects them into a KiCad design-rule file:
+
+```
+(rule "RULE-bb986433e3df"
+  (severity error)
+  (constraint track_width
+    (min 0.5mm)
+  )
+  (condition "A.NetClass == 'fang_min_clearance_min_trace_width_563357'")
+)
+```
+
+Each rule is named by the identifier of the constraint it projects, and adds
+only fields the constraint record does not already define. Here that is the net
+class, which is a grouping of the rules themselves, so a conductor belongs to
+exactly one class by construction. The file is a projection and nothing else: an edit
+made to it in the layout tool is reported as a difference from the registry and
+never adopted as the engineering fact.
+
+## Two boards, one rule
+
+[`narrow.kicad_pcb`](https://github.com/copperheadhq/fang/blob/main/examples/copper_rules/narrow.kicad_pcb) routes the rail at 0.3 mm and
+[`wide.kicad_pcb`](https://github.com/copperheadhq/fang/blob/main/examples/copper_rules/wide.kicad_pcb) at 0.8 mm. Both are read back through the
+same reader, and the same rule decides:
+
+```
+## narrow.kicad_pcb
+  PASS           min_clearance on PORT-4cc256e8351c
+  FAIL           min_trace_width on PORT-4cc256e8351c; realized by TRC-…, VIA-…, ZONE-…
+
+## wide.kicad_pcb
+  PASS           min_clearance on PORT-4cc256e8351c
+  PASS           min_trace_width on PORT-4cc256e8351c
+```
+
+The failing result names the copper that failed, not only the rail it belongs
+to. Neither board is a place the width is *recorded*: the width is a fact about
+copper, and the rule about it lives in the registry.
+
+A board names its net after the rail the program named, which is the one place
+the two vocabularies meet. Everything else the reader recognizes (outline,
+stackup, footprints, pads, segments, vias, zones) becomes physical entities
+with derived identity, and every external identifier in the file is recorded in
+the mapping table against it rather than becoming one.
+
+## What comes out
+
+- [`out/copper_rules.net`](https://github.com/copperheadhq/fang/blob/main/examples/copper_rules/out/copper_rules.net): the KiCad netlist
+- [`out/rules.kicad_dru`](https://github.com/copperheadhq/fang/blob/main/examples/copper_rules/out/rules.kicad_dru): the design rules, projected
+- [`out/net_classes.json`](https://github.com/copperheadhq/fang/blob/main/examples/copper_rules/out/net_classes.json): the net class assignments
+- [`out/boards.txt`](https://github.com/copperheadhq/fang/blob/main/examples/copper_rules/out/boards.txt): each board against the rules
+- [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/copper_rules/out/netlist.txt): the netlist as text
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/copper_rules/out/checks.txt): seven checks, three undecided
+- [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/copper_rules/out/graph.txt): 35 entities, by kind
+
+## Running it
+
+```bash
+fang check  examples/copper_rules/copper_rules.py
+fang export examples/copper_rules/copper_rules.py --rules -o copper_rules.kicad_dru
+fang export examples/copper_rules/copper_rules.py --net-classes
+```
+
+## The whole program
+
+```python title="examples/copper_rules/copper_rules.py"
+"""A 2 A rail that states how wide its copper has to be.
+
+The circuit is as small as a power path gets: a terminal block, a header and a
+bulk capacitor. What it is here to show is the layer underneath. The program
+declares its board and its stackup, states two rules about the copper on its
+supply rail, and those rules reach a router as a generated `.kicad_dru` and come
+back decided against a board that was actually laid out.
+
+Two boards sit beside it. `narrow.kicad_pcb` routes the rail at 0.3 mm and
+`wide.kicad_pcb` at 0.8 mm; the same rule fails against one and passes against
+the other, and neither board is ever a place the width is *recorded*.
+"""
+
+from fang.interfaces import Pin, PinMap, PowerIn, PowerOut
+from fang.lang import (
+    A,
+    Part,
+    System,
+    V,
+    declare_board,
+    layer,
+    mm,
+    ozcu,
+    require,
+    uF,
+)
+from fang.parts import Capacitor
+
+
+class InputTerminal(Part):
+    """Where the 5 V supply lands."""
+
+    designator_prefix = "J"
+
+    dc = PowerOut(voltage=5 * V, current_capability=2 * A)
+
+    VIN = Pin("VIN", role="power", number="1")
+    GND = Pin("GND", role="ground", number="2")
+
+    pinmap = PinMap({"dc.vcc": "VIN", "dc.gnd": "GND"})
+
+
+class LoadHeader(Part):
+    """Where the rail leaves for whatever draws the two amps."""
+
+    designator_prefix = "J"
+
+    dc = PowerIn(voltage=5 * V, current_demand=2 * A)
+
+    VCC = Pin("5V", role="power", number="1")
+    GND = Pin("GND", role="ground", number="2")
+
+    pinmap = PinMap({"dc.vcc": "5V", "dc.gnd": "GND"})
+
+
+class PowerPath(System):
+    """Five volts in, five volts out and a rule about the copper between."""
+
+    supply = PowerIn(voltage=5 * V, current_capability=2 * A)
+
+    source = InputTerminal(package="TerminalBlock_1x02_P5.08mm")
+    load = LoadHeader(package="PinHeader_1x02_P2.54mm")
+    bulk = Capacitor(capacitance=22 * uF, voltage_rating=16 * V, package="C_1206_3216Metric")
+
+    def architecture(self):
+        self.supply >> self.source.dc
+
+        self.source.dc.vcc >> self.load.dc.vcc
+        self.source.dc.gnd >> self.load.dc.gnd
+
+        self.load.dc.vcc >> self.bulk.p1
+        self.load.dc.gnd >> self.bulk.p2
+
+    def constraints(self):
+        # An ordinary electrical rule, for contrast: it is checked by the
+        # structural constraint class and never reaches a router.
+        require(self.bulk.voltage_rating >= 10 * V)
+
+        # Two amps on one-ounce outer copper needs roughly half a millimetre for
+        # a ten-degree rise. The rule is about the rail, and it is decided by
+        # whatever copper realizes the rail, which is nothing at all until a
+        # board exists, and undecided is the honest answer until then.
+        require(
+            self.supply.physical.trace_width >= 0.5 * mm,
+            constraint_class="routing",
+            constraint_kind="min_trace_width",
+        )
+
+        # The fabricator's floor for one-ounce copper, stated once here rather
+        # than typed into the layout tool where nothing could check it.
+        require(
+            self.supply.physical.clearance >= 0.2 * mm,
+            constraint_class="routing",
+            constraint_kind="min_clearance",
+        )
+
+    def board(self):
+        # Declared, not measured: no outline is computed and nothing is placed.
+        declare_board(
+            outline=[(0, 0), (40, 0), (40, 30), (0, 30)],
+            thickness=1.6 * mm,
+            layers=[
+                layer("F.Cu", copper_weight=1 * ozcu),
+                layer("core", function="dielectric", thickness=1.5 * mm),
+                layer("B.Cu", copper_weight=1 * ozcu),
+            ],
+        )
+```
+
+## The files it writes
+
+The parts, then the nets and the pads on them.
+
+```text title="out/netlist.txt"
+C1     22 uF            Package:C_1206_3216Metric
+J1     LoadHeader       Package:PinHeader_1x02_P2.54mm
+J2     InputTerminal    Package:TerminalBlock_1x02_P5.08mm
+Net-(C1-Pad1)            C1.1 J1.5V J2.VIN
+Net-(C1-Pad2)            C1.2 J1.GND J2.GND
+```
+
+Every check that ran, and every one left undecided.
+
+```text title="out/checks.txt"
+UNDECIDED interface_compatibility: current capability is undecided on power_input: current_demand unknown
+UNDECIDED routing: min_trace_width on PORT-4cc256e8351c
+UNDECIDED routing: min_clearance on PORT-4cc256e8351c
+7 checks, 0 failed, 3 undecided
+```
+
+What the elaborated graph contains, by entity kind.
+
+```text title="out/graph.txt"
+    1  block
+    1  board
+    3  component
+    9  connection
+    3  constraint
+    3  interface
+    3  layer
+    6  pin
+    5  port
+    1  stackup
+   35  total
+snapshot sha256:770cca494464aa654698aed5b625d14388fa56f77636b69f517e01ed43448f63
+```
+
+All of it, including the KiCad netlist, is in
+[`examples/copper_rules/out/`](https://github.com/copperheadhq/fang/tree/main/examples/copper_rules/out/). Rebuild it with:
+
+```bash
+fang build examples/copper_rules/copper_rules.py
+```
+
+
+---
+
 # blinky
 
 URL: https://fang.copperhead.sh/examples/blinky/
-Summary: An MCU pin, a series resistor, and an LED: the board everybody builds first. Read it after divider/, because it is the first example where the parts have…
+Summary: An MCU pin, a series resistor and an LED: the board everybody builds first. Read it after divider/, because it is the first example where the parts have…
 
-An MCU pin, a series resistor, and an LED: the board everybody builds first.
+An MCU pin, a series resistor and an LED: the board everybody builds first.
 Read it after [`divider/`](https://github.com/copperheadhq/fang/blob/main/examples/divider/), because it is the first example where
 the parts have *interfaces* rather than bare pads.
 
 ## The program
 
 [`blinky.py`](https://github.com/copperheadhq/fang/blob/main/examples/blinky/blinky.py) declares its own parts. `MCU` is a `Part` with a
-`PowerIn`, a `Signal`, three pins, and a `PinMap` joining the two:
+`PowerIn`, a `Signal`, three pins and a `PinMap` joining the two:
 
 ```python
 power = PowerIn(voltage=3.3 * V, current_demand=30 * mA)
@@ -947,14 +1240,14 @@ inheriting an old answer.
 
 ## What comes out
 
-6 parts, 4 nets, 47 entities, 6 checks — none failed, one undecided.
+6 parts, 4 nets, 47 entities, 6 checks, none failed and one undecided.
 
 That undecided one is worth reading in [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/blinky/out/checks.txt): the
 board's `supply` surface has no `current_demand` on it, so "does the source
 carry the load?" has no answer. The kernel says so rather than passing the check
 on an assumed number.
 
-- [`out/blinky.net`](https://github.com/copperheadhq/fang/blob/main/examples/blinky/out/blinky.net) — the KiCad netlist
+- [`out/blinky.net`](https://github.com/copperheadhq/fang/blob/main/examples/blinky/out/blinky.net): the KiCad netlist
 - [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/blinky/out/netlist.txt), [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/blinky/out/graph.txt)
 
 ![the interconnect view](/examples/blinky/interconnect.svg)
@@ -974,8 +1267,8 @@ fang view    examples/blinky/blinky.py power -o power.svg
 ```python title="examples/blinky/blinky.py"
 """The smallest program that drives something: an MCU pin, a resistor, an LED.
 
-The board everybody builds first. What it shows is the shape of a Fang program —
-declared surfaces, connections between them, and a constraint that states the
+The board everybody builds first. What it shows is the shape of a Fang program:
+declared surfaces, connections between them and a constraint that states the
 engineering intent rather than the answer.
 """
 
@@ -1115,7 +1408,7 @@ pinmap = PinMap({
 
 `self.mcu.i2c >> self.imu.i2c` is one line, and it has a choice inside it. The
 lowering resolves that choice, and records a `Decision` entity naming what it
-picked and what it passed over — [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/rationale.md) is those
+picked and what it passed over. [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/rationale.md) is those
 decisions, resolved back to the names in the program:
 
 > **Which pin of `system.mcu` carries i2c.scl?** → `system.mcu.PB8`
@@ -1126,7 +1419,7 @@ bus they belong to the net, and the regulator constraint states the intent
 
 ## What comes out
 
-7 parts, 4 nets, 71 entities, 11 checks — none failed, **four undecided**.
+7 parts, 4 nets, 71 entities, 11 checks, none failed and **four undecided**.
 
 The undecided ones are the reason this example exists.
 [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/checks.txt) says why each is undecided, naming the value
@@ -1140,8 +1433,8 @@ Nothing here assumed 3.3 V and moved on. Undecided is a third truth value, and
 it is the honest one until someone supplies the number.
 
 - [`out/sensor_board.net`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/sensor_board.net), [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/netlist.txt)
-- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/rationale.md) — the four lowering decisions
-- [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/graph.txt) — 71 entities, 19 of them pins
+- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/rationale.md): the four lowering decisions
+- [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/graph.txt): 71 entities, 19 of them pins
 
 ![the interfaces view](/examples/sensor_board/interfaces.svg)
 
@@ -1158,10 +1451,10 @@ fang build   examples/sensor_board/sensor_board.py
 ## The whole program
 
 ```python title="examples/sensor_board/sensor_board.py"
-"""A regulated sensor board: a rail, an MCU, and an I2C sensor on it.
+"""A regulated sensor board: a rail, an MCU and an I2C sensor on it.
 
 Shows the parts the toolchain is actually for: typed interfaces lowering to
-pins, a decision recorded where the MCU offered a choice, and constraints that
+pins, a decision recorded where the MCU offered a choice and constraints that
 stay undecided until someone supplies the missing datasheet number.
 """
 
@@ -1314,10 +1607,10 @@ fang build examples/sensor_board/sensor_board.py
 # equations
 
 URL: https://fang.copperhead.sh/examples/equations/
-Summary: A divider written as the ratio it has to satisfy, rather than as two numbers someone computed offstage — and then reused, by inheritance, at a different ratio.
+Summary: A divider written as the ratio it has to satisfy, rather than as two numbers someone computed offstage, and then reused, by inheritance, at a different ratio.
 
 A divider written as the ratio it has to satisfy, rather than as two numbers
-someone computed offstage — and then reused, by inheritance, at a different
+someone computed offstage, and then reused, by inheritance, at a different
 ratio.
 
 ## The program
@@ -1344,8 +1637,8 @@ feedback = FeedbackDivider(v_in=12 * V, i_bleed=250 * uA, ratio_min=0.19 * ratio
 sense    = SenseDivider(v_in=24 * V, i_bleed=200 * uA, ratio_min=0.09 * ratio, ...)
 ```
 
-`ratio = UnitLiteral("1")` is how a project adds a unit — dimensionless, here —
-without editing the language.
+`ratio = UnitLiteral("1")` is how a project adds a unit, dimensionless in this
+case, without editing the language.
 
 ## What comes out
 
@@ -1370,13 +1663,13 @@ fang graph   examples/equations/equations.py
 ```python title="examples/equations/equations.py"
 """Values chosen by equation: a divider stated as the ratio it must satisfy.
 
-The resistors carry real values, but the values are not the design — the
+The resistors carry real values, but the values are not the design; the
 constraints are. Ohm's law is written down as a constraint rather than left in a
 comment, so substituting a part re-checks the arithmetic instead of trusting it.
 
 Inheritance is how a second divider reuses the first: `SenseDivider` keeps the
-equations and replaces the two values. A block owns its interior — its parts, its
-parameters, and the constraints over them — and the board connects to the pads at
+equations and replaces the two values. A block owns its interior (its parts, its
+parameters and the constraints over them), and the board connects to the pads at
 its edge.
 """
 
@@ -1592,7 +1885,7 @@ Summary: One controller and three targets on a shared I2C bus. A bus is multi-dr
 
 One controller and three targets on a shared I2C bus. A bus is multi-drop, so
 the same port is connected three times and the lowering resolves it into one net
-per signal — not three point-to-point links.
+per signal, not three point-to-point links.
 
 ## The program
 
@@ -1622,22 +1915,22 @@ undecided, which is the state that gets someone to open the datasheet.
 
 ## What comes out
 
-9 parts, 4 nets, 98 entities, 39 checks — none failed, **seven undecided**.
+9 parts, 4 nets, 98 entities, 39 checks, none failed and **seven undecided**.
 
 Six of those seven are one missing pair of numbers, `vih_min` and `voh_min` on
-an I2C port — the RTC's, the only device on the bus whose datasheet nobody has
+an I2C port: the RTC's, the only device on the bus whose datasheet nobody has
 read. The seventh is the board's supply, which states no current demand. The
 program predicted both, and the checks found them.
 
 - [`out/i2c_bus.net`](https://github.com/copperheadhq/fang/blob/main/examples/i2c_bus/out/i2c_bus.net), [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/i2c_bus/out/netlist.txt)
-- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/i2c_bus/out/checks.txt) — 39 checks, seven of them undecided
-- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/i2c_bus/out/rationale.md) — the address requirement, and the two
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/i2c_bus/out/checks.txt): 39 checks, seven of them undecided
+- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/i2c_bus/out/rationale.md): the address requirement, and the two
   datasheet claims that *are* cited
 
 ![the interfaces view](/examples/i2c_bus/interfaces.svg)
 
 Four devices, one bus: the interfaces view draws each device's link to the
-controller, and the parts that carry no interface — the pull-ups, the bulk cap —
+controller, and the parts that carry no interface (the pull-ups, the bulk cap)
 below the rule, because in this view nothing connects to them.
 
 ![the interconnect view](/examples/i2c_bus/interconnect.svg)
@@ -1933,7 +2226,7 @@ load_regulation = Verifies("rail_tolerance", ...)
 So "why is this 4.7 µH?" has an answer the graph can give: a calculation, over a
 datasheet claim, serving a requirement, which a verification closes. Nobody had
 to write a design document, and nothing here can drift from the design, because
-it *is* the design — change the evidence and the decision resting on it is
+it *is* the design: change the evidence and the decision resting on it is
 flagged.
 
 The output voltage is deliberately not a parameter of the controller. It is set
@@ -1942,18 +2235,18 @@ constraint that produces it.
 
 ## What comes out
 
-12 parts, 9 nets, 118 entities, 15 checks — none failed, one undecided.
+12 parts, 9 nets, 118 entities, 15 checks, none failed and one undecided.
 
 [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/rationale.md) is the file to read. It is the whole
 argument, projected out of the graph in identifier order:
 
-> ### system.inductor_value — `CALC-7d60a2e8f772`
+> ### system.inductor_value (`CALC-7d60a2e8f772`)
 >
 > `L = v_out * (1 - v_out / v_in) / (f_sw * ripple_current)`
 >
 > Result: 4.7 uH at 1.25 MHz for 30% ripple at 1.5 A
 >
-> - Over `system.inductor` — Inductor (`CMP-64dfc4cd840c`)
+> - Over `system.inductor` (Inductor, `CMP-64dfc4cd840c`)
 
 - [`out/buck_regulator.net`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/buck_regulator.net), [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/netlist.txt)
 - [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/checks.txt), [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/graph.txt)
@@ -1975,9 +2268,9 @@ fang view    examples/buck_regulator/buck_regulator.py power -o power.svg
 """A 12 V to 3.3 V buck converter, with the reasoning kept beside the circuit.
 
 The circuit is ordinary. What is not ordinary is that the requirement, the part
-decision, the datasheet numbers behind it, the two calculations, and the
+decision, the datasheet numbers behind it, the two calculations and the
 verification that closes the requirement are all entities in the same graph as
-the inductor — so `fang` can answer "why is this 4.7 uH?" without anyone having
+the inductor, so `fang` can answer "why is this 4.7 uH?" without anyone having
 written a design document.
 """
 
@@ -2300,10 +2593,10 @@ fang build examples/buck_regulator/buck_regulator.py
 # usb_uart_bridge
 
 URL: https://fang.copperhead.sh/examples/usb_uart_bridge/
-Summary: USB to serial: the interface board on nearly every desk. What it adds over the other examples is part selection — the difference between what the design needs…
+Summary: USB to serial: the interface board on nearly every desk. What it adds over the other examples is part selection, the difference between what the design needs…
 
 USB to serial: the interface board on nearly every desk. What it adds over the
-other examples is **part selection** — the difference between what the design
+other examples is **part selection**, the difference between what the design
 needs and what was bought.
 
 ## The program
@@ -2324,8 +2617,8 @@ from. The instance is where it belongs: the logical part stays "a 3.3 V
 regulator", and which one was bought is a separate, cited fact that a second
 board can answer differently.
 
-The decision behind it is in the graph too, with what it rejected and why —
-`FT232RL` on unit cost, `CP2102N` on needing an oscillator — and it names the
+The decision behind it is in the graph too, with what it rejected and why
+(`FT232RL` on unit cost, `CP2102N` on needing an oscillator), and it names the
 requirement it serves.
 
 The UART crossing is worth reading as well:
@@ -2335,18 +2628,18 @@ self.bridge.uart.tx >> self.target.uart.rx
 self.bridge.uart.rx >> self.target.uart.tx
 ```
 
-Connecting the two *ports* would pair like names with like — tx to tx — so the
+Connecting the two *ports* would pair like names with like, tx to tx, so the
 two wires are named individually. That a signal of an interface is addressable
 on its own is the whole reason this works.
 
 ## What comes out
 
-17 parts, 11 nets, 162 entities, 24 checks — none failed, six undecided.
+17 parts, 11 nets, 162 entities, 24 checks, none failed and six undecided.
 
-- [`out/usb_uart_bridge.net`](https://github.com/copperheadhq/fang/blob/main/examples/usb_uart_bridge/out/usb_uart_bridge.net) — the KiCad netlist, ESD
+- [`out/usb_uart_bridge.net`](https://github.com/copperheadhq/fang/blob/main/examples/usb_uart_bridge/out/usb_uart_bridge.net): the KiCad netlist, ESD
   clamps and series resistors included
-- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/usb_uart_bridge/out/rationale.md) — the requirement, the bridge decision
-  with both rejected alternatives, and the USB 2.0 citation behind the D+ pull-up
+- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/usb_uart_bridge/out/rationale.md): the requirement, the bridge decision
+  with both rejected alternatives and the USB 2.0 citation behind the D+ pull-up
 - [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/usb_uart_bridge/out/checks.txt), [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/usb_uart_bridge/out/graph.txt)
 
 ![the power view](/examples/usb_uart_bridge/power.svg)
@@ -2366,9 +2659,9 @@ fang netlist examples/usb_uart_bridge/usb_uart_bridge.py
 """A USB-to-UART bridge: the interface board on nearly every desk.
 
 What it adds over the other examples is the part selection. The bridge and the
-regulator are chosen parts — a manufacturer, an MPN, a distributor code, and the
-datasheet the numbers came from — attached in `__init__` so the selection lands
-on the instance and not on the class template. The logical part stays "a 3.3 V
+regulator are chosen parts: a manufacturer, an MPN, a distributor code and the
+datasheet the numbers came from, all attached in `__init__` so the selection
+lands on the instance and not on the class template. The logical part stays "a 3.3 V
 regulator"; which one was bought is recorded separately.
 """
 
@@ -2578,7 +2871,7 @@ class USBSerial(System):
         self.regulator.vout.gnd >> self.load_c2.p2
 
         # A UART crosses. Connecting the two ports would pair like names with
-        # like — tx to tx — so the two wires are named, which is the whole
+        # like, tx to tx, so the two wires are named, which is the whole
         # reason a signal of an interface is addressable on its own.
         self.bridge.uart.tx >> self.target.uart.rx
         self.bridge.uart.rx >> self.target.uart.tx
@@ -2678,10 +2971,10 @@ fang build examples/usb_uart_bridge/usb_uart_bridge.py
 # servo_drive
 
 URL: https://fang.copperhead.sh/examples/servo_drive/
-Summary: Three half-bridges, CAN, an encoder and a shunt per phase: the board this toolchain was written for. It is the composition example — the largest program here,…
+Summary: Three half-bridges, CAN, an encoder and a shunt per phase: the board this toolchain was written for. It is the composition example: the largest program here,…
 
 Three half-bridges, CAN, an encoder and a shunt per phase: the board this
-toolchain was written for. It is the composition example — the largest program
+toolchain was written for. It is the composition example: the largest program
 here, from the smallest amount of repetition.
 
 ## The program
@@ -2703,8 +2996,8 @@ class HalfBridge(Module):
         require(self.shunt.power_rating >= 1 * W)
 ```
 
-and instantiates it three times. A block owns its interior — its parts, its
-connections, and its constraints — so the drive connects to the bridge's edge
+and instantiates it three times. A block owns its interior (its parts, its
+connections and its constraints), so the drive connects to the bridge's edge
 and never reaches inside it. The three constraint sets are three separate
 constraints in the graph, decided separately: a change to one phase does not
 quietly pass because the other two are fine.
@@ -2714,21 +3007,21 @@ what it carries rather than which pad it happens to land on.
 
 ## What comes out
 
-24 parts, 26 nets, 310 entities, 46 checks — none failed, seven undecided. It is
+24 parts, 26 nets, 310 entities, 46 checks, none failed and seven undecided. It is
 the biggest graph in the examples by a factor of two.
 
-- [`out/servo_drive.net`](https://github.com/copperheadhq/fang/blob/main/examples/servo_drive/out/servo_drive.net) — 24 components and 26 nets
-- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/servo_drive/out/rationale.md) — the requirements the drive states,
+- [`out/servo_drive.net`](https://github.com/copperheadhq/fang/blob/main/examples/servo_drive/out/servo_drive.net): 24 components and 26 nets
+- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/servo_drive/out/rationale.md): the requirements the drive states
   and the assumption it is honest about
-- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/servo_drive/out/checks.txt) — 46 checks over 21 constraints —
-  six of them from each bridge, three from the drive itself
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/servo_drive/out/checks.txt): 46 checks over 21 constraints, six of them
+  from each bridge and three from the drive itself
 - [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/servo_drive/out/graph.txt)
 
 ![the system view](/examples/servo_drive/system.svg)
 
 The three `bridge_*` blocks sit under the rule at the bottom: the system view
 draws electrical connection, and a block connects through the parts inside it.
-Their transistors are labelled `bridge_u.high`, `bridge_v.high` and so on — the
+Their transistors are labelled `bridge_u.high`, `bridge_v.high` and so on. The
 path is what distinguishes three instances of one declaration.
 
 ![the power view](/examples/servo_drive/power.svg)
@@ -2750,7 +3043,7 @@ fang view    examples/servo_drive/servo_drive.py safety -o safety.svg
 
 Everything here is composition. A `HalfBridge` is a block with two transistors and
 a shunt: it owns its own interior and its own constraints, and the drive
-instantiates three of them from one declaration. The phase, the encoder, and the
+instantiates three of them from one declaration. The phase, the encoder and the
 CAN bus are typed ports, so a connection says what it carries rather than which
 pad it happens to land on.
 """
@@ -2788,9 +3081,9 @@ from fang.rationale import Assumes, Requires
 
 
 class HalfBridge(Module):
-    """Two FETs, the node between them, and the shunt that measures it.
+    """Two FETs, the node between them and the shunt that measures it.
 
-    The block is the unit of reuse: one declaration, three instances, and one set
+    The block is the unit of reuse: one declaration, three instances and one set
     of constraints that holds for each of them.
     """
 
@@ -3805,8 +4098,8 @@ none.
 
 If a selected component has no compatible model and is not explicitly
 abstracted, the plan is **rejected with the reason** rather than run with a
-substitute. There is no generic fallback device, because a result computed from
-an invented model is worse than no result, because it looks like an answer.
+substitute. There is no generic fallback device: a result computed from an invented model is
+worse than no result, because it looks like an answer.
 
 Explicit abstraction is available and has to be written down. The difference
 between "this part is deliberately ideal here" and "we had nothing" is exactly

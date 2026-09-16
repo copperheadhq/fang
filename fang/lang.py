@@ -18,6 +18,7 @@ from decimal import Decimal
 from typing import Any, Iterable, Mapping, Sequence
 
 from .constraints import (
+    PHYSICAL_PREFIX,
     Arithmetic,
     Comparison,
     ConstraintClass,
@@ -32,6 +33,7 @@ from .diagnostics import (
     error,
 )
 from .entities import ConnectionKind
+from .physical import PHYSICAL_DIMENSIONS
 from .toolplan import Handle, PlanRecorder
 from .traits import DatasheetEvidence, Footprint, Sourcing, Trait
 from .units import DIMENSIONLESS, Dimension, Quantity, Unit
@@ -219,7 +221,11 @@ class ParameterRef:
 
     __slots__ = ("owner", "name", "dimension")
 
-    def __init__(self, owner: "Module", name: str, dimension: Dimension) -> None:
+    # `owner` is anything that knows its own entity id when the expression is
+    # built: a module for a parameter, a surface for a physical attribute. The
+    # id is read in `_node`, not here, because it does not exist until the
+    # module tree has been walked.
+    def __init__(self, owner: "Module | Surface", name: str, dimension: Dimension) -> None:
         self.owner = owner
         self.name = name
         self.dimension = dimension
@@ -348,9 +354,50 @@ class Surface(Declared):
         self.connect(other, location=_caller_location(2))
         return other
 
+    @property
+    def physical(self) -> "_PhysicalAttributes":
+        """The physical attributes of whatever realizes this surface.
+
+        `self.supply.physical.trace_width` is a reference through the reserved
+        `physical.` namespace, so a rule about copper is written the same way a
+        rule about a parameter is, and reads as what it is.
+        """
+        return _PhysicalAttributes(self)
+
     def __repr__(self) -> str:
         owner = self.owner._path if self.owner and self.owner._path else "?"
         return f"<{type(self).__name__} {owner}.{self.attribute}>"
+
+
+class _PhysicalAttributes:
+    """A reference into the physical layer, one attribute at a time.
+
+    An attribute outside the vocabulary is refused *here*, by name, rather than
+    resolving unknown later: a typo in a program is a mistake to catch while
+    elaborating, and it is distinguishable from copper that does not exist yet
+    only at this point.
+    """
+
+    __slots__ = ("_surface",)
+
+    def __init__(self, surface: Surface) -> None:
+        self._surface = surface
+
+    def __getattr__(self, name: str) -> ParameterRef:
+        if name not in PHYSICAL_DIMENSIONS:
+            known = ", ".join(sorted(PHYSICAL_DIMENSIONS))
+            raise error(
+                UNIT_DIMENSION_MISMATCH,
+                f"{name!r} is not a physical attribute; it is one of {known}",
+            )
+        # The same wrapper a parameter reference uses, so a rule about copper is
+        # written with the same operators as a rule about a value.
+        return ParameterRef(
+            self._surface, PHYSICAL_PREFIX + name, PHYSICAL_DIMENSIONS[name]
+        )
+
+    def __repr__(self) -> str:
+        return f"<physical attributes of {self._surface!r}>"
 
 
 class Electrical(Surface):

@@ -31,8 +31,8 @@ none.
 
 If a selected component has no compatible model and is not explicitly
 abstracted, the plan is **rejected with the reason** rather than run with a
-substitute. There is no generic fallback device, because a result computed from
-an invented model is worse than no result, because it looks like an answer.
+substitute. There is no generic fallback device: a result computed from an
+invented model is worse than no result, because it looks like an answer.
 
 Explicit abstraction is available and has to be written down. The difference
 between "this part is deliberately ideal here" and "we had nothing" is exactly

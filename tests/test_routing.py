@@ -1,5 +1,6 @@
 """Spec: Physical Attributes Resolve Through The Entity They Realize; Routing
-And Placement Constraints Are Checked By The Gate."""
+And Placement Constraints Are Checked By The Gate; Emitted Design Rules Are
+Projections."""
 
 from __future__ import annotations
 
@@ -28,8 +29,14 @@ from fang.graph import (
     default_checks,
 )
 from fang.identity import authored
+from fang.kicad import compare_design_rules, emit_design_rules, emit_net_classes
 from fang.physical import Board, Placement, Trace, physical_resolver
-from fang.routing import ROUTING_CHECK, rule_projections
+from fang.routing import (
+    ROUTING_CHECK,
+    net_classes,
+    rule_projections,
+    unresolved_references,
+)
 from fang.units import Quantity
 from fang.values import Value, ValueStatus
 
@@ -323,7 +330,11 @@ def test_a_passing_routing_rule_commits():
 def test_a_projection_carries_the_identity_of_what_it_projects():
     projections = rule_projections(routed("0.8"), layer="F.Cu")
     assert [p.as_dict() for p in projections] == [
-        {"projects": "RULE-W1", "layer": "F.Cu"}
+        {
+            "projects": "RULE-W1",
+            "layer": "F.Cu",
+            "net_classes": ["fang_min_trace_width_1c7a53"],
+        }
     ]
 
 
@@ -333,3 +344,319 @@ def test_a_projection_does_not_restate_a_field_the_record_defines():
     rule = width_rule()
     with pytest.raises(ValueError):
         Projection(rule, {"enforcement": "hard"})
+
+
+# -- 4.1/4.2 net classes and the emitted rule file -------------------------
+
+
+def clearance_rule(minimum: str = "0.25", *, net: str = NET, id: str = "RULE-C1"):
+    return Constraint(
+        authored(id),
+        constraint_class=ConstraintClass.ROUTING,
+        constraint_kind="min_clearance",
+        targets=(net,),
+        expression=ge(
+            Ref(net, "physical.clearance", MM),
+            Literal.of(Quantity.scalar(minimum, "mm")),
+        ),
+        provenance=tool_provenance(),
+    )
+
+
+OTHER = "NET-GND"
+
+
+def two_nets() -> Snapshot:
+    """Two named nets: one carrying two rules, one carrying a single rule."""
+    entities = {
+        NET: Net(authored(NET), aliases=("VBUS",)),
+        OTHER: Net(authored(OTHER), aliases=("GND",)),
+    }
+    for constraint in (
+        width_rule(),
+        clearance_rule(),
+        width_rule(id="RULE-W2").__class__(
+            authored("RULE-W2"),
+            constraint_class=ConstraintClass.ROUTING,
+            constraint_kind="min_trace_width",
+            targets=(OTHER,),
+            expression=ge(
+                Ref(OTHER, "physical.trace_width", MM),
+                Literal.of(Quantity.scalar("0.5", "mm")),
+            ),
+            provenance=tool_provenance(),
+        ),
+    ):
+        entities[constraint.id] = constraint
+    return Snapshot(PROJECT, "REV-000000", entities)
+
+
+def test_a_net_belongs_to_exactly_one_class():
+    classes = net_classes(two_nets())
+    memberships = [net for entry in classes for net in entry.nets]
+    assert sorted(memberships) == sorted(set(memberships)) == sorted([NET, OTHER])
+
+
+def test_nets_with_the_same_rules_share_a_class_and_others_do_not():
+    classes = net_classes(two_nets())
+    assert len(classes) == 2
+    by_net = {net: entry.name for entry in classes for net in entry.nets}
+    assert by_net[NET] != by_net[OTHER]
+
+
+def test_a_net_class_names_the_constraints_it_came_from():
+    classes = {entry.nets: entry for entry in net_classes(two_nets())}
+    assert classes[(NET,)].projects == ("RULE-C1", "RULE-W1")
+    assert classes[(OTHER,)].projects == ("RULE-W2",)
+
+
+def test_a_net_class_carries_the_name_the_layout_tool_knows_the_net_by():
+    classes = {entry.nets: entry for entry in net_classes(two_nets())}
+    assert classes[(NET,)].net_names == ("VBUS",)
+
+
+def test_a_net_no_layout_constraint_targets_is_in_no_class():
+    snapshot = Snapshot(
+        PROJECT, "REV-000000", {OTHER: Net(authored(OTHER), aliases=("GND",))}
+    )
+    assert net_classes(snapshot) == []
+
+
+def test_a_class_name_is_stable_when_an_unrelated_rule_is_added():
+    before = {e.nets: e.name for e in net_classes(routed("0.8"))}
+    after = {e.nets: e.name for e in net_classes(two_nets())}
+    assert before[(NET,)] != after[(NET,)]      # NET itself gained a rule
+    assert after[(OTHER,)] == {
+        e.nets: e.name
+        for e in net_classes(
+            Snapshot(
+                PROJECT,
+                "REV-000000",
+                {
+                    OTHER: Net(authored(OTHER), aliases=("GND",)),
+                    "RULE-W2": two_nets().entities["RULE-W2"],
+                },
+            )
+        )
+    }[(OTHER,)]
+
+
+def test_each_emitted_rule_names_the_constraint_it_projects():
+    rules = emit_design_rules(rule_projections(two_nets()))
+    for identifier in ("RULE-C1", "RULE-W1", "RULE-W2"):
+        assert f'(rule "{identifier}"' in rules.text
+    assert rules.projected == ("RULE-C1", "RULE-W1", "RULE-W2")
+
+
+def test_an_emitted_rule_adds_only_class_specific_fields():
+    projections = rule_projections(two_nets())
+    record_fields = {
+        "id", "class", "constraint_kind", "targets", "expression",
+        "enforcement", "verification", "applicability", "source",
+    }
+    for projection in projections:
+        assert not record_fields & set(projection.class_specific)
+
+
+def test_an_emitted_rule_carries_the_bound_and_the_enforcement():
+    rules = emit_design_rules(rule_projections(routed("0.8")))
+    assert "(constraint track_width" in rules.text
+    assert "(min 0.5mm)" in rules.text
+    assert "(severity error)" in rules.text
+
+
+def test_a_soft_rule_emits_as_a_warning_rather_than_being_dropped():
+    rule = width_rule(enforcement=Enforcement.SOFT)
+    rules = emit_design_rules(rule_projections(routed("0.8", rule=rule)))
+    assert "(severity warning)" in rules.text
+
+
+def test_a_rule_names_the_net_class_it_applies_to():
+    snapshot = two_nets()
+    names = {entry.nets: entry.name for entry in net_classes(snapshot)}
+    rules = emit_design_rules(rule_projections(snapshot))
+    assert f"A.NetClass == '{names[(NET,)]}'" in rules.text
+
+
+def test_an_exclusive_bound_is_reported_rather_than_rounded_into_an_inclusive_one():
+    from fang.constraints import compare
+
+    rule = Constraint(
+        authored("RULE-W1"),
+        constraint_class=ConstraintClass.ROUTING,
+        constraint_kind="min_trace_width",
+        targets=(NET,),
+        expression=compare(
+            "gt",
+            Ref(NET, "physical.trace_width", MM),
+            Literal.of(Quantity.scalar("0.5", "mm")),
+        ),
+        provenance=tool_provenance(),
+    )
+    rules = emit_design_rules(rule_projections(routed("0.8", rule=rule)))
+    assert rules.projected == ()
+    assert not rules.lossless
+    assert [d.code for d in rules.diagnostics()] == ["IMPORT-0001"]
+
+
+def test_an_attribute_with_no_rule_that_means_the_same_is_reported():
+    rule = Constraint(
+        authored("RULE-T1"),
+        constraint_class=ConstraintClass.MANUFACTURING,
+        constraint_kind="max_board_thickness",
+        targets=(NET,),
+        expression=le(
+            Ref(NET, "physical.board_thickness", MM),
+            Literal.of(Quantity.scalar("1.6", "mm")),
+        ),
+        provenance=tool_provenance(),
+    )
+    rules = emit_design_rules(rule_projections(routed("0.8", rule=rule)))
+    assert rules.projected == ()
+    assert "board_thickness" not in rules.text
+
+
+def test_a_maximum_reads_off_the_other_end_of_the_literal():
+    rule = Constraint(
+        authored("RULE-W1"),
+        constraint_class=ConstraintClass.ROUTING,
+        constraint_kind="max_trace_width",
+        targets=(NET,),
+        expression=le(
+            Ref(NET, "physical.trace_width", MM),
+            Literal.of(Quantity.scalar("2", "mm")),
+        ),
+        provenance=tool_provenance(),
+    )
+    rules = emit_design_rules(rule_projections(routed("0.8", rule=rule)))
+    assert "(max 2mm)" in rules.text
+
+
+def test_a_bound_written_in_another_unit_emits_in_millimetres():
+    rule = Constraint(
+        authored("RULE-W1"),
+        constraint_class=ConstraintClass.ROUTING,
+        constraint_kind="min_trace_width",
+        targets=(NET,),
+        expression=ge(
+            Ref(NET, "physical.trace_width", MM),
+            Literal.of(Quantity.scalar("500", "um")),
+        ),
+        provenance=tool_provenance(),
+    )
+    rules = emit_design_rules(rule_projections(routed("0.8", rule=rule)))
+    assert "(min 0.5mm)" in rules.text
+
+
+# -- 4.3 emission is deterministic ----------------------------------------
+
+
+def test_emission_is_byte_identical_across_two_runs_of_one_snapshot():
+    snapshot = two_nets()
+    first = emit_design_rules(rule_projections(snapshot), snapshot=snapshot.hash).text
+    second = emit_design_rules(rule_projections(snapshot), snapshot=snapshot.hash).text
+    assert first.encode("utf-8") == second.encode("utf-8")
+
+
+def test_net_class_emission_is_byte_identical_across_two_runs():
+    snapshot = two_nets()
+    assert emit_net_classes(net_classes(snapshot)) == emit_net_classes(
+        net_classes(snapshot)
+    )
+
+
+def test_emission_is_byte_identical_across_processes_with_differing_hash_seeds():
+    """The companion to the snapshot determinism test in test_serialization."""
+    import subprocess
+    import sys
+    import textwrap
+
+    program = textwrap.dedent(
+        """
+        import sys
+        sys.path.insert(0, "tests")
+        from conftest import PROJECT
+        from test_routing import two_nets
+        from fang.kicad import emit_design_rules, emit_net_classes
+        from fang.routing import net_classes, rule_projections
+
+        snapshot = two_nets()
+        sys.stdout.write(emit_design_rules(rule_projections(snapshot)).text)
+        sys.stdout.write(emit_net_classes(net_classes(snapshot)))
+        """
+    )
+    outputs = []
+    for seed in ("0", "1", "12345"):
+        completed = subprocess.run(
+            [sys.executable, "-c", program],
+            capture_output=True,
+            check=True,
+            env={"PYTHONHASHSEED": seed, "PATH": "/usr/bin:/bin"},
+        )
+        outputs.append(completed.stdout)
+    assert outputs[0] == outputs[1] == outputs[2]
+
+
+# -- an edited rule file is reported, never adopted ------------------------
+
+
+def test_an_unedited_rule_file_reports_no_difference():
+    snapshot = two_nets()
+    projections = rule_projections(snapshot)
+    text = emit_design_rules(projections).text
+    assert compare_design_rules(text, projections) == []
+
+
+def test_a_reformatted_rule_file_is_not_an_edited_one():
+    snapshot = two_nets()
+    projections = rule_projections(snapshot)
+    text = emit_design_rules(projections).text
+    # The comment header is dropped and every rule collapsed onto one line.
+    body = "\n".join(
+        line for line in text.splitlines() if not line.lstrip().startswith("#")
+    )
+    reflowed = " ".join(body.split())
+    assert compare_design_rules(reflowed, projections) == []
+
+
+def test_an_edited_rule_is_reported_as_a_difference_from_the_registry():
+    snapshot = two_nets()
+    projections = rule_projections(snapshot)
+    text = emit_design_rules(projections).text
+    findings = compare_design_rules(text.replace("0.25mm", "0.1mm"), projections)
+    assert [f.code for f in findings] == ["TOPO-0003"]
+    assert "RULE-C1" in findings[0].message
+
+
+def test_a_rule_added_by_hand_is_reported_and_not_adopted():
+    snapshot = two_nets()
+    projections = rule_projections(snapshot)
+    text = emit_design_rules(projections).text
+    text += '\n(rule "invented" (constraint track_width (min 9mm)))\n'
+    findings = compare_design_rules(text, projections)
+    assert [f.code for f in findings] == ["TOPO-0003"]
+    # The registry is untouched: the file is a projection, not a place to write.
+    assert emit_design_rules(rule_projections(snapshot)).text == emit_design_rules(
+        projections
+    ).text
+
+
+def test_a_deleted_rule_is_reported_as_a_difference():
+    snapshot = two_nets()
+    projections = rule_projections(snapshot)
+    text = emit_design_rules(projections).text
+    without = text[: text.index('(rule "RULE-W2"')]
+    assert [f.code for f in compare_design_rules(without, projections)] == ["TOPO-0003"]
+
+
+# -- an undecided reference is said out loud ------------------------------
+
+
+def test_an_unresolved_physical_reference_is_reported_under_its_code():
+    findings = unresolved_references(routed())
+    assert [f.code for f in findings] == ["TOPO-0001"]
+    assert NET in findings[0].entities
+
+
+def test_a_realized_reference_reports_nothing():
+    assert unresolved_references(routed("0.8")) == []

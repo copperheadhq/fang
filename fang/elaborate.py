@@ -14,7 +14,14 @@ from datetime import datetime, timezone
 from typing import Any, Iterable, Mapping, Sequence
 
 from . import SCHEMA_VERSION, __version__
-from .constraints import Constraint, ConstraintClass, Enforcement, Node
+from .constraints import (
+    LAYOUT_CLASSES,
+    Constraint,
+    ConstraintClass,
+    Enforcement,
+    Node,
+    physical_references,
+)
 from .diagnostics import (
     ELAB_UNTYPED_CONNECTION,
     Diagnostic,
@@ -421,6 +428,20 @@ def _connection_kind(left: Surface, right: Surface) -> ConnectionKind:
     return ConnectionKind.ELECTRICAL
 
 
+def _targets(module: Module, expression, constraint_class) -> tuple[str, ...]:
+    """What a constraint is about.
+
+    An electrical constraint is about the module whose line declared it. A
+    layout constraint is about the entity whose copper it governs, which is what
+    its physical references name — so the check class can find the realization
+    and the net class can find the net. A layout constraint that reaches no
+    physical attribute falls back to the module, which is still true of it.
+    """
+    if constraint_class not in LAYOUT_CLASSES:
+        return (module._entity_id,)
+    return physical_references(expression) or (module._entity_id,)
+
+
 def _build_constraints(
     context: ElaborationContext,
     project_id: str,
@@ -436,7 +457,7 @@ def _build_constraints(
             identity,
             constraint_class=constraint_class,
             constraint_kind=constraint_kind,
-            targets=(module._entity_id,),
+            targets=_targets(module, expression, constraint_class),
             expression=expression,
             enforcement=Enforcement.HARD,
             provenance=_provenance(revision_id, built_at, location),

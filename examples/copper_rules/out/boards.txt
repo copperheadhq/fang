@@ -1,0 +1,16 @@
+# copper_rules: the same rules against each board
+
+The rules are the registry's. Neither board records a width; each one
+is copper that either satisfies the rule or does not.
+
+## narrow.kicad_pcb
+
+  PASS           RULE-6608f625a922  min_clearance on PORT-4cc256e8351c
+  FAIL           RULE-bb986433e3df  min_trace_width on PORT-4cc256e8351c; realized by TRC-a00235ad436b, TRC-a5be2efbab29, VIA-c19c6987a038, ZONE-6defb95fb4ec
+  read losslessly: every construct in the file is modelled
+
+## wide.kicad_pcb
+
+  PASS           RULE-6608f625a922  min_clearance on PORT-4cc256e8351c
+  PASS           RULE-bb986433e3df  min_trace_width on PORT-4cc256e8351c
+  read losslessly: every construct in the file is modelled

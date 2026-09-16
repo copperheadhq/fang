@@ -1,13 +1,13 @@
 # Parity: the same board, built by both toolchains
 
 This is an [atopile](https://github.com/atopile/atopile) project whose boards mirror two Fang
-examples instance for instance — [`examples/divider/`](../divider/) and
+examples instance for instance: [`examples/divider/`](../divider/) and
 [`examples/blinky/`](../blinky/). Both toolchains are given the same design, and
 [`tests/test_parity.py`](../../tests/test_parity.py) asserts that what they produce agrees.
 
 ## What is compared, and what is not
 
-A Fang build emits a KiCad netlist. An atopile build emits a `.kicad_pcb` — atopile has no
+A Fang build emits a KiCad netlist. An atopile build emits a `.kicad_pcb`; atopile has no
 netlist target, and the layout is its artifact. Reduced to what a board *is*, both say the same
 two things, and those are what the test compares:
 
@@ -34,7 +34,7 @@ Fang gives it a net of its own, and neither is connectivity.
 Every component in [`elec/src/parts/parts.ato`](elec/src/parts/parts.ato) is an atomic part: its
 footprint and pins are declared here rather than picked. atopile 0.15's picker requires an
 account, and a test that needs a login is not a test. Declaring the parts also removes the last
-excuse for a difference — both toolchains are handed the same parts, so a disagreement is a
+excuse for a difference: both toolchains are handed the same parts, so a disagreement is a
 disagreement about the design.
 
 The footprints are minimal: pads only, on `F.Cu`, in the right count and with the right names.
@@ -57,11 +57,11 @@ cd ../.. && python -m pytest tests/test_parity.py
 ## Adding a board
 
 1. Write the Fang example under [`examples/`](..).
-2. Mirror it here as `elec/src/<name>.ato`, using the same instance names, and add it to
+2. Mirror it here as `elec/src/<name>.ato`, using the same instance names, then add it to
    `builds:` in [`ato.yaml`](ato.yaml). Add any part it needs to `parts.ato` with a footprint
    beside it.
 3. Add the name to `BOARDS` in [`tests/test_parity.py`](../../tests/test_parity.py).
 
-Keep every part in a board distinguishable — the comparison is by instance path, so two
+Keep every part in a board distinguishable. The comparison is by instance path, so two
 identical parts are fine, but a board written so that no instance can be told from another
 proves less than it appears to.

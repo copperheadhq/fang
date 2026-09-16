@@ -1,0 +1,4 @@
+UNDECIDED interface_compatibility: current capability is undecided on power_input: current_demand unknown
+UNDECIDED routing: min_trace_width on PORT-4cc256e8351c
+UNDECIDED routing: min_clearance on PORT-4cc256e8351c
+7 checks, 0 failed, 3 undecided

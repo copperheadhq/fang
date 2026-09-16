@@ -487,6 +487,36 @@ class ConstraintClass(Enum):
     TESTABILITY = "testability"
 
 
+#: The classes that are about where copper and parts go. They are checked by
+#: `routing.ROUTING_CHECK`; the rest are checked by the structural constraint
+#: check, so every class is covered exactly once. The set lives here rather than
+#: beside the check because it is a fact about the classes, and both the check
+#: and elaboration need it.
+LAYOUT_CLASSES: frozenset = frozenset(
+    {
+        ConstraintClass.ROUTING,
+        ConstraintClass.PLACEMENT,
+        ConstraintClass.MANUFACTURING,
+    }
+)
+
+
+def physical_references(node: "Node | None") -> tuple[str, ...]:
+    """Every entity whose *physical* attribute an expression reads, sorted.
+
+    This is what a layout constraint is about: the entity whose copper the rule
+    governs, as distinct from the module whose source line declared it.
+    """
+    if node is None:
+        return ()
+    if isinstance(node, Ref):
+        return (node.ref,) if node.attr.startswith(PHYSICAL_PREFIX) else ()
+    found: set[str] = set()
+    for argument in getattr(node, "args", ()):
+        found.update(physical_references(argument))
+    return tuple(sorted(found))
+
+
 class Enforcement(Enum):
     """How a violation is treated, not how bad it is."""
 

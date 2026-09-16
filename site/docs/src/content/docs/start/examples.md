@@ -10,8 +10,8 @@ sidebar:
 Every example in [`examples/`](https://github.com/copperheadhq/fang/tree/main/examples)
 elaborates, passes the gate and is exercised by the test suite, so none of them
 is a sketch that no longer runs. Each has a page here carrying its program, the
-views it renders and the files it writes — all generated from the folder itself,
-so a page cannot describe a program that has since changed.
+views it renders and the files it writes. All of it is generated from the folder
+itself, so a page cannot describe a program that has since changed.
 
 | Example | Shows |
 | --- | --- |

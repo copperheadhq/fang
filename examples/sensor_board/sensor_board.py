@@ -1,7 +1,7 @@
-"""A regulated sensor board: a rail, an MCU, and an I2C sensor on it.
+"""A regulated sensor board: a rail, an MCU and an I2C sensor on it.
 
 Shows the parts the toolchain is actually for: typed interfaces lowering to
-pins, a decision recorded where the MCU offered a choice, and constraints that
+pins, a decision recorded where the MCU offered a choice and constraints that
 stay undecided until someone supplies the missing datasheet number.
 """
 

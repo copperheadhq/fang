@@ -170,7 +170,25 @@ IFACE_MEMBERSHIP_DISAGREEMENT = _allocate(
     "IFACE-0002", "two interfaces disagree on membership"
 )
 
-# Import conditions.
+# Physical intent conditions. The `TOPO` area is physical intent that net
+# equivalence cannot express, which is what a routing rule is; a board finding
+# belongs here rather than in a new area, because `AREAS` is normative.
+TOPO_UNRESOLVED_PHYSICAL_REFERENCE = _allocate(
+    "TOPO-0001", "a physical reference resolves to no realization"
+)
+TOPO_BOARD_DISAGREES = _allocate(
+    "TOPO-0002", "a board joins pins the committed netlist does not"
+)
+TOPO_RULES_DIFFER = _allocate(
+    "TOPO-0003", "an emitted rule file differs from the registry it projects"
+)
+TOPO_NOTHING_TO_PROJECT = _allocate(
+    "TOPO-0004", "no constraint of the requested class is there to project"
+)
+
+# Import conditions. A board construct the physical entity model has no place
+# for is reported under `IMPORT-0001` like any other adapter loss; it is loss at
+# the boundary, not a disagreement about physical intent.
 IMPORT_LOSSY = _allocate("IMPORT-0001", "adapter could not represent a construct")
 
 # Agent surface conditions. A refusal at the protocol boundary is its own area:

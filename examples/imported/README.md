@@ -4,7 +4,7 @@ Not an example program: a KiCad netlist read *into* the kernel.
 
 [`reference.net`](reference.net) is a hand-written netlist in KiCad's `export`
 s-expression form. The import path in [`fang/importing.py`](../../fang/importing.py)
-reads it into entities — components, nets, and the pads that join them — with
+reads it into entities (components, nets and the pads that join them) with
 `imported` identity rather than derived identity, and produces a mapping table
 and an import report beside them.
 

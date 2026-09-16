@@ -20,7 +20,7 @@ load_regulation = Verifies("rail_tolerance", ...)
 So "why is this 4.7 µH?" has an answer the graph can give: a calculation, over a
 datasheet claim, serving a requirement, which a verification closes. Nobody had
 to write a design document, and nothing here can drift from the design, because
-it *is* the design — change the evidence and the decision resting on it is
+it *is* the design: change the evidence and the decision resting on it is
 flagged.
 
 The output voltage is deliberately not a parameter of the controller. It is set
@@ -29,18 +29,18 @@ constraint that produces it.
 
 ## What comes out
 
-12 parts, 9 nets, 118 entities, 15 checks — none failed, one undecided.
+12 parts, 9 nets, 118 entities, 15 checks, none failed and one undecided.
 
 [`out/rationale.md`](out/rationale.md) is the file to read. It is the whole
 argument, projected out of the graph in identifier order:
 
-> ### system.inductor_value — `CALC-7d60a2e8f772`
+> ### system.inductor_value (`CALC-7d60a2e8f772`)
 >
 > `L = v_out * (1 - v_out / v_in) / (f_sw * ripple_current)`
 >
 > Result: 4.7 uH at 1.25 MHz for 30% ripple at 1.5 A
 >
-> - Over `system.inductor` — Inductor (`CMP-64dfc4cd840c`)
+> - Over `system.inductor` (Inductor, `CMP-64dfc4cd840c`)
 
 - [`out/buck_regulator.net`](out/buck_regulator.net), [`out/netlist.txt`](out/netlist.txt)
 - [`out/checks.txt`](out/checks.txt), [`out/graph.txt`](out/graph.txt)

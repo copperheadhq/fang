@@ -33,8 +33,18 @@ if __name__ == "__main__" and str(ROOT.parent) not in sys.path:
 
 from fang.cli import cmd_check, cmd_export, cmd_graph, cmd_netlist, load_system
 from fang.elaborate import elaborate
+from fang.graph import Snapshot
+from fang.kicad import (
+    compare_board_to_netlist,
+    emit_design_rules,
+    emit_net_classes,
+    mapping_from_netlist,
+    read_board,
+)
 from fang.layout import PlacementSeeds, place
+from fang.netlist import compile_netlist
 from fang.render import to_svg
+from fang.routing import net_classes, routing_check, rule_projections
 from fang.views import view
 
 PROJECT = "PRJ-EXAMPLES"
@@ -51,6 +61,13 @@ VIEWS: dict[str, tuple[str, ...]] = {
     "usb_uart_bridge": ("interfaces", "power"),
     "buck_regulator": ("power", "system"),
     "servo_drive": ("system", "power", "safety"),
+}
+
+#: The boards an example ships beside its program, and the conductor each
+#: board's named net realizes. An example with boards gets the design rules, the
+#: net class assignments, and a listing of how each board answered them.
+BOARDS: dict[str, tuple[str, ...]] = {
+    "copper_rules": ("narrow", "wide"),
 }
 
 #: The entity kinds that carry reasoning rather than circuit. An example with
@@ -133,8 +150,8 @@ def _named(snapshot, identifier: str) -> str:
     if entity is None:
         return f"`{identifier}`"
     label, name = _label(entity), entity.identity.display_name
-    kind = f" — {name}" if name and label.rsplit(".", 1)[-1] != name else ""
-    return f"`{label}`{kind} (`{identifier}`)"
+    inside = f"{name}, " if name and label.rsplit(".", 1)[-1] != name else ""
+    return f"`{label}` ({inside}`{identifier}`)"
 
 
 def _rationale(name: str, snapshot) -> str | None:
@@ -152,7 +169,7 @@ def _rationale(name: str, snapshot) -> str | None:
         return None
 
     out = [
-        f"# {name} — rationale",
+        f"# {name}: rationale",
         "",
         "Every line below is an entity in the elaborated graph, projected by",
         "`python examples/regenerate.py`. Nothing here is prose kept beside the",
@@ -167,7 +184,7 @@ def _rationale(name: str, snapshot) -> str | None:
             verifications = [
                 v for v in kinds["verification"] if v.verifies == req.id
             ]
-            out.append(f"### {_label(req)} — `{req.id}`")
+            out.append(f"### {_label(req)} (`{req.id}`)")
             out.append("")
             out.append(f"> {_resolve(snapshot, req.statement)}")
             out.append("")
@@ -192,7 +209,7 @@ def _rationale(name: str, snapshot) -> str | None:
         out.append("## Decisions")
         out.append("")
         for decision in kinds["decision"]:
-            out.append(f"### {_label(decision)} — `{decision.id}`")
+            out.append(f"### {_label(decision)} (`{decision.id}`)")
             out.append("")
             choice = decision.choice or ""
             out.append(
@@ -215,7 +232,7 @@ def _rationale(name: str, snapshot) -> str | None:
         out.append("## Calculations")
         out.append("")
         for calculation in kinds["calculation"]:
-            out.append(f"### {_label(calculation)} — `{calculation.id}`")
+            out.append(f"### {_label(calculation)} (`{calculation.id}`)")
             out.append("")
             out.append(f"`{calculation.expression}`")
             out.append("")
@@ -229,7 +246,7 @@ def _rationale(name: str, snapshot) -> str | None:
         out.append("## Evidence")
         out.append("")
         for evidence in kinds["evidence"]:
-            out.append(f"### {_label(evidence)} — `{evidence.id}`")
+            out.append(f"### {_label(evidence)} (`{evidence.id}`)")
             out.append("")
             out.append(f"> {_resolve(snapshot, evidence.claim)}")
             out.append("")
@@ -245,6 +262,91 @@ def _rationale(name: str, snapshot) -> str | None:
 # --------------------------------------------------------------------------
 
 
+# --------------------------------------------------------------------------
+# The boards an example ships, and what its rules made of them
+# --------------------------------------------------------------------------
+
+
+def _rail_bindings(snapshot) -> dict[str, str]:
+    """Which conductor in the graph each board net name realizes.
+
+    An authored program has no net entities — the conductor a routing rule is
+    about is the port the program named — so a board that means to satisfy that
+    rule names its net after that port. Nothing is inferred here and nothing is
+    written: the board states which rail its copper is, and the kernel takes it
+    at its word or reports that nothing realizes the rule.
+    """
+    bindings: dict[str, str] = {}
+    for entity in snapshot.entities.values():
+        for target in getattr(entity, "targets", ()):
+            port = snapshot.entities.get(target)
+            if port is not None and port.kind == "port" and port.identity.display_name:
+                bindings[port.identity.display_name] = port.id
+    return bindings
+
+
+def _boards(name: str, result) -> dict[str, str]:
+    """The rule file, the net classes, and each board's verdict."""
+    boards = BOARDS.get(name, ())
+    if not boards:
+        return {}
+
+    netlist = compile_netlist(result.snapshot, traits=result.traits)
+    projections = rule_projections(result.snapshot)
+    rules = emit_design_rules(
+        projections, source=f"{name}.py", snapshot=result.snapshot.hash
+    )
+    files = {
+        "rules.kicad_dru": rules.text,
+        "net_classes.json": emit_net_classes(
+            net_classes(result.snapshot),
+            project_id=PROJECT,
+            snapshot=result.snapshot.hash,
+        )
+        + "\n",
+    }
+
+    # The rule targets a port, and the board names a net; this is the one place
+    # the two vocabularies are joined, and it is joined by reading, never by
+    # writing a second record of the connection.
+    realizes = _rail_bindings(result.snapshot)
+
+    lines = [
+        f"# {name}: the same rules against each board",
+        "",
+        "The rules are the registry's. Neither board records a width; each one",
+        "is copper that either satisfies the rule or does not.",
+        "",
+    ]
+    for board in boards:
+        text = (ROOT / name / f"{board}.kicad_pcb").read_text(encoding="utf-8")
+        imported = read_board(
+            text,
+            project_id=PROJECT,
+            source=f"{board}.kicad_pcb",
+            mapping=mapping_from_netlist(netlist),
+            realizes=realizes,
+        )
+        merged = dict(result.snapshot.entities)
+        merged.update(imported.entities)
+        against = Snapshot(PROJECT, result.snapshot.revision_id, merged)
+
+        lines.append(f"## {board}.kicad_pcb")
+        lines.append("")
+        for check in sorted(routing_check(against), key=lambda r: r.subject):
+            lines.append(f"  {check.status.value:14} {check.subject}  {check.message}")
+        for finding in compare_board_to_netlist(text, netlist, source=board):
+            lines.append(f"  {finding.code:14} {finding.message}")
+        for item in imported.report.unrepresented:
+            lines.append(f"  IMPORT-0001    {item.construct} at {item.where}")
+        if imported.report.lossless:
+            lines.append("  read losslessly: every construct in the file is modelled")
+        lines.append("")
+
+    files["boards.txt"] = "\n".join(lines).rstrip() + "\n"
+    return files
+
+
 def render(name: str) -> dict[str, str]:
     """Every output file for one example, as relative path to text."""
     result = elaborate(load_system(_program(name)), project_id=PROJECT)
@@ -254,6 +356,7 @@ def render(name: str) -> dict[str, str]:
         "checks.txt": _run(cmd_check, name),
         "graph.txt": _run(cmd_graph, name),
     }
+    files.update(_boards(name, result))
     for view_name in VIEWS.get(name, ()):
         graph = view(result.snapshot, view_name)
         files[f"views/{view_name}.svg"] = to_svg(place(graph, seeds=PlacementSeeds()))

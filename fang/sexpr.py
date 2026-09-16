@@ -74,7 +74,14 @@ class Node:
         return len(self.items)
 
 
-def tokenize(text: str) -> list[str]:
+#: The comment character every s-expression dialect here agrees on. A format
+#: that spells comments differently passes its own set: KiCad's design-rule
+#: files use `#`, and widening the default instead would quietly change how a
+#: netlist tokenizes.
+DEFAULT_COMMENTS = ";"
+
+
+def tokenize(text: str, *, comments: str = DEFAULT_COMMENTS) -> list[str]:
     tokens: list[str] = []
     index, length = 0, len(text)
     while index < length:
@@ -84,7 +91,7 @@ def tokenize(text: str) -> list[str]:
             index += 1
         elif char.isspace():
             index += 1
-        elif char == ";":                     # a comment runs to end of line
+        elif char in comments:                # a comment runs to end of line
             newline = text.find("\n", index)
             index = length if newline == -1 else newline + 1
         elif char == '"':
@@ -119,12 +126,12 @@ def _unquote(token: str) -> tuple[str, bool]:
     return token, False
 
 
-def parse(text: str) -> Node:
-    """Parse one top-level s-expression."""
-    tokens = tokenize(text)
-    if not tokens:
-        raise SExprError("the file is empty")
+def _reader(tokens: list[str]):
+    """A cursor over a token stream, and the one function that reads a form.
 
+    `parse` and `parse_many` differ only in what they do once a form has been
+    read, so the reading itself lives here rather than being written twice.
+    """
     position = 0
 
     def read() -> Node | Atom:
@@ -146,9 +153,40 @@ def parse(text: str) -> Node:
         value, quoted = _unquote(token)
         return Atom(value, quoted)
 
+    def remaining() -> int:
+        return len(tokens) - position
+
+    return read, remaining
+
+
+def parse(text: str, *, comments: str = DEFAULT_COMMENTS) -> Node:
+    """Parse one top-level s-expression."""
+    tokens = tokenize(text, comments=comments)
+    if not tokens:
+        raise SExprError("the file is empty")
+
+    read, remaining = _reader(tokens)
     result = read()
-    if position != len(tokens):
+    if remaining():
         raise SExprError("the file carries more than one top-level expression")
     if not isinstance(result, Node):
         raise SExprError("the file's top level is an atom, not a list")
     return result
+
+
+def parse_many(text: str, *, comments: str = DEFAULT_COMMENTS) -> list[Node]:
+    """Parse a file that is a sequence of top-level s-expressions.
+
+    A design-rule file is written this way: a version form followed by one form
+    per rule. An empty file is an empty sequence rather than an error, because
+    a project with no rules of that class has nothing to say, not a defect.
+    """
+    tokens = tokenize(text, comments=comments)
+    read, remaining = _reader(tokens)
+    forms: list[Node] = []
+    while remaining():
+        form = read()
+        if not isinstance(form, Node):
+            raise SExprError("a top-level atom where a list was expected")
+        forms.append(form)
+    return forms

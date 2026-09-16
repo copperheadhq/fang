@@ -109,6 +109,8 @@ DIMENSIONLESS = Dimension()
 # --------------------------------------------------------------------------
 
 _L = Dimension.base("length")
+#: The length dimension, under the name the rest of the kernel reads it by.
+LENGTH = _L
 _M = Dimension.base("mass")
 _T = Dimension.base("time")
 _I = Dimension.base("current")
@@ -159,6 +161,14 @@ UNITS: Mapping[str, _UnitDef] = {
     # dimensionless
     "1": _d(DIMENSIONLESS, prefixable=False),
     "rad": _d(DIMENSIONLESS, prefixable=False),
+    # Plane angle as a board file writes it. The factor is pi/180, which no
+    # decimal represents exactly, so a conversion between the two reports itself
+    # as rounded — which is the truth about it.
+    "deg": _d(
+        DIMENSIONLESS,
+        "0.01745329251994329576923690768488612713",
+        prefixable=False,
+    ),
     "percent": _d(DIMENSIONLESS, "0.01", prefixable=False),
     "ppm": _d(DIMENSIONLESS, "0.000001", prefixable=False),
     # accepted non-SI

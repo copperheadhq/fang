@@ -19,7 +19,7 @@ pinmap = PinMap({
 
 `self.mcu.i2c >> self.imu.i2c` is one line, and it has a choice inside it. The
 lowering resolves that choice, and records a `Decision` entity naming what it
-picked and what it passed over — [`out/rationale.md`](out/rationale.md) is those
+picked and what it passed over. [`out/rationale.md`](out/rationale.md) is those
 decisions, resolved back to the names in the program:
 
 > **Which pin of `system.mcu` carries i2c.scl?** → `system.mcu.PB8`
@@ -30,7 +30,7 @@ bus they belong to the net, and the regulator constraint states the intent
 
 ## What comes out
 
-7 parts, 4 nets, 71 entities, 11 checks — none failed, **four undecided**.
+7 parts, 4 nets, 71 entities, 11 checks, none failed and **four undecided**.
 
 The undecided ones are the reason this example exists.
 [`out/checks.txt`](out/checks.txt) says why each is undecided, naming the value
@@ -44,8 +44,8 @@ Nothing here assumed 3.3 V and moved on. Undecided is a third truth value, and
 it is the honest one until someone supplies the number.
 
 - [`out/sensor_board.net`](out/sensor_board.net), [`out/netlist.txt`](out/netlist.txt)
-- [`out/rationale.md`](out/rationale.md) — the four lowering decisions
-- [`out/graph.txt`](out/graph.txt) — 71 entities, 19 of them pins
+- [`out/rationale.md`](out/rationale.md): the four lowering decisions
+- [`out/graph.txt`](out/graph.txt): 71 entities, 19 of them pins
 
 ![the interfaces view](out/views/interfaces.svg)
 

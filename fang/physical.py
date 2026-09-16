@@ -25,7 +25,7 @@ from typing import Iterable, Mapping, Sequence
 from .constraints import PHYSICAL_PREFIX
 from .diagnostics import UNIT_DIMENSION_MISMATCH, error
 from .entities import Entity
-from .units import Quantity, _ctx, _decimal, _decimal_str
+from .units import LENGTH, Dimension, Quantity, _ctx, _decimal, _decimal_str
 from .values import Value
 
 # `PHYSICAL_PREFIX` is imported above rather than defined here, and re-exported
@@ -51,6 +51,18 @@ PHYSICAL_ATTRIBUTES: frozenset[str] = frozenset(
         "position_y",
     }
 )
+
+#: The dimension each referenceable attribute carries. A `Ref` states its
+#: dimension when it is written — that is what makes a dimensional error
+#: catchable before the expression is stored — so the vocabulary declares it
+#: rather than leaving it to be inferred at evaluation.
+#:
+#: Every one of them is a length, copper weight included: a weight names the
+#: thickness it produces, because a thickness is what a stackup and a width rule
+#: actually compose with.
+PHYSICAL_DIMENSIONS: Mapping[str, Dimension] = {
+    name: LENGTH for name in sorted(PHYSICAL_ATTRIBUTES)
+}
 
 #: How confident an aggregate over a realization is. It is measured from
 #: geometry the kernel did not compute, so it is inferred rather than explicit,

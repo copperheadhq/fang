@@ -18,7 +18,7 @@ it is never a persisted or public representation — and the MCP SDK, which only
 
 ```bash
 pip install -e ".[dev]"          # add ",analysis" for the NetworkX-backed queries, ",mcp" for `fang mcp`
-python -m pytest                 # whole suite (553 tests, ~10s); addopts = -q, testpaths = tests
+python -m pytest                 # whole suite (703 tests, ~14s); addopts = -q, testpaths = tests
 fang build examples/sensor_board/sensor_board.py   # the console script, after an editable install
 python -m pytest -rs             # also lists the acceptance tests deferred to later phases
 python -m pytest tests/test_graph.py::test_name -x
@@ -91,6 +91,19 @@ expression tree (`Literal`, `Ref`, `Arithmetic`, `Comparison`, `Logical`) evalua
 yields `Truth.UNKNOWN`, which propagates through Kleene three-valued `and`/`or`/`not`.
 [fang/topology.py](fang/topology.py) adds `TopologyConstraint` over enumerated conductive paths.
 
+**The physical layer.** [fang/physical.py](fang/physical.py) is board, stackup, layers,
+placements, pads, traces, vias, zones, and regions. A physical entity names the entity it
+*realizes* and never restates it, so the board is a lowering rather than a peer source of truth;
+a reference through the reserved `physical.` prefix resolves over everything realizing a target,
+as the interval they span. [fang/routing.py](fang/routing.py) is the check class over the
+`ROUTING`, `PLACEMENT`, and `MANUFACTURING` constraint classes plus the projections outward —
+net classes grouped by the rules that apply to them, and a `.kicad_dru` rendered in
+[fang/kicad.py](fang/kicad.py) where each rule is named by the constraint it projects. The
+`.kicad_pcb` reader runs the same path backwards; **the kernel never places, routes, or computes
+a trace geometry of its own**, and a board that disagrees with the committed netlist is reported
+(`TOPO-0002`) rather than adopted, with a layout-chosen pin swap offered back as
+`Realization.implied_changes` through the gate.
+
 **The graph and the gate.** [fang/graph.py](fang/graph.py) is the centre of the system.
 `Snapshot` is immutable and content-hashed. `Transaction` names the base snapshot it was built
 against and carries `Operation`s (`AddEntity`, `RemoveEntity`, `Connect`, `SetParameter`).
@@ -132,7 +145,7 @@ construct a more permissive `Policy` here than the project's**.
 
 The working contract is [openspec/specs/fang-kernel/spec.md](openspec/specs/fang-kernel/spec.md),
 a self-contained normative document: terminology, design principles, layers of representation,
-kernel architecture, and the project root, then 81 requirements over 217 scenarios and 23
+kernel architecture, and the project root, then 94 requirements over 261 scenarios and 23
 acceptance tests. There is no other standards document in this repository — the spec is the whole
 contract. Read the relevant requirement before changing kernel behaviour. Module docstrings quote
 the requirement they implement by name (e.g. `Spec: "The Commit Gate"`) — keep that link intact.
@@ -165,12 +178,13 @@ and give it a `README.md` and an `out/`, or it is not an example.
 
 ## Work is organized as OpenSpec changes
 
-[openspec/ROADMAP.md](openspec/ROADMAP.md) chunks the toolchain into 11 stages, each an OpenSpec
-change with a proposal, a delta spec, and tasks. All eleven are archived under
+[openspec/ROADMAP.md](openspec/ROADMAP.md) chunks the toolchain into 18 stages, each an OpenSpec
+change with a proposal, a delta spec, and tasks. The delivered ones are archived under
 `openspec/changes/archive/<date>-<id>/`; a new stage starts with `/opsx:propose`. The ordering is a
-product ordering: stages 1–6 close the loop from a Fang program to a KiCad netlist. **All eleven
-stages are delivered**, and every acceptance criterion in the spec is demonstrated rather than
-deferred. Every stage ships working code and tests — nothing is a placeholder.
+product ordering: stages 1–6 close the loop from a Fang program to a KiCad netlist, and stage 12
+adds the physical layer under it. **Twelve stages are delivered**, and every acceptance criterion in
+the spec is demonstrated rather than deferred. Every stage ships working code and tests — nothing is
+a placeholder.
 
 Use the `/opsx:*` skills (propose, apply, update, sync, archive, explore) for that workflow rather
 than editing `openspec/` artifacts ad hoc. `openspec/config.yaml` carries project context that

@@ -1,0 +1,5 @@
+C1     22 uF            Package:C_1206_3216Metric
+J1     LoadHeader       Package:PinHeader_1x02_P2.54mm
+J2     InputTerminal    Package:TerminalBlock_1x02_P5.08mm
+Net-(C1-Pad1)            C1.1 J1.5V J2.VIN
+Net-(C1-Pad2)            C1.2 J1.GND J2.GND

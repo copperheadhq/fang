@@ -1,0 +1,12 @@
+    1  block
+    1  board
+    3  component
+    9  connection
+    3  constraint
+    3  interface
+    3  layer
+    6  pin
+    5  port
+    1  stackup
+   35  total
+snapshot sha256:770cca494464aa654698aed5b625d14388fa56f77636b69f517e01ed43448f63

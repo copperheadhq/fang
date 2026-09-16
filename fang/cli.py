@@ -17,14 +17,20 @@ from typing import Iterable, Sequence
 from . import __version__
 from .checks import DEFAULT_CHECKS
 from .constraints import CheckStatus
-from .diagnostics import Diagnostic, FangError, Severity
+from .diagnostics import (
+    TOPO_NOTHING_TO_PROJECT,
+    Diagnostic,
+    FangError,
+    Severity,
+)
 from .elaborate import Elaboration, elaborate
 from .graph import AddEntity, KernelGraph, Snapshot, Transaction
-from .kicad import emit_netlist
+from .kicad import emit_design_rules, emit_net_classes, emit_netlist
 from .lang import System
 from .netlist import compile_netlist
 from .layout import PlacementSeeds, place
 from .render import to_svg
+from .routing import net_classes, rule_projections
 from .runtime import Status, default_registry, execute
 from .views import REGISTRY as VIEW_REGISTRY, REQUIRED_VIEWS, view
 from .workspace import Workspace, find_workspace
@@ -178,9 +184,56 @@ def cmd_netlist(args) -> int:
 
 
 def cmd_export(args) -> int:
+    """Write a KiCad netlist, the design rules, or the net class assignments.
+
+    All three are projections of one snapshot, which is why they are one command
+    with a choice of artifact rather than three commands that could drift.
+    """
     result = _elaborate(args)
-    netlist = compile_netlist(result.snapshot, traits=result.traits)
-    text = emit_netlist(netlist, source=Path(args.program).name)
+    source = Path(args.program).name
+
+    # Read defensibly: a caller that builds its own arguments, as the example
+    # regenerator does, asks for the netlist by not asking for anything else.
+    rules_wanted = getattr(args, "rules", False)
+    classes_wanted = getattr(args, "net_classes", False)
+
+    if rules_wanted or classes_wanted:
+        projections = rule_projections(result.snapshot)
+        if not projections:
+            # Nothing to project is a failure of the request, not of the design:
+            # the caller asked for rules this snapshot does not state.
+            report_diagnostics(
+                [
+                    Diagnostic(
+                        TOPO_NOTHING_TO_PROJECT,
+                        Severity.ERROR,
+                        f"{source} declares no routing, placement, or "
+                        "manufacturing constraint, so there is nothing to emit",
+                    )
+                ]
+            )
+            return EXIT_FAILED
+        if rules_wanted:
+            rules = emit_design_rules(
+                projections, source=source, snapshot=result.snapshot.hash
+            )
+            # Loss on the way out is reported exactly as loss on the way in is.
+            report_diagnostics(rules.diagnostics())
+            text = rules.text
+        else:
+            text = (
+                emit_net_classes(
+                    net_classes(result.snapshot),
+                    project_id=result.snapshot.project_id,
+                    snapshot=result.snapshot.hash,
+                )
+                + "\n"
+            )
+    else:
+        text = emit_netlist(
+            compile_netlist(result.snapshot, traits=result.traits), source=source
+        )
+
     if args.output:
         Path(args.output).write_text(text, encoding="utf-8")
         print(f"wrote {args.output}")
@@ -397,8 +450,19 @@ def build_parser() -> argparse.ArgumentParser:
     sim.add_argument("-o", "--output", help="write the SPICE deck here")
     sim.set_defaults(handler=cmd_sim)
 
-    export = program_arguments(subparsers.add_parser("export", help="write a KiCad netlist"))
+    export = program_arguments(
+        subparsers.add_parser("export", help="write a KiCad netlist, rules, or net classes")
+    )
     export.add_argument("-o", "--output", help="where to write it; stdout by default")
+    artifact = export.add_mutually_exclusive_group()
+    artifact.add_argument(
+        "--rules", action="store_true", help="write the design rules instead of the netlist"
+    )
+    artifact.add_argument(
+        "--net-classes",
+        action="store_true",
+        help="write the net class assignments instead of the netlist",
+    )
     export.set_defaults(handler=cmd_export)
 
     return parser

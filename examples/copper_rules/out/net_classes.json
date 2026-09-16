@@ -1,0 +1,2 @@
+{"net_classes":[{"name":"fang_min_clearance_min_trace_width_563357","net_names":["supply"],"nets":["PORT-4cc256e8351c"],"projects":["RULE-6608f625a922","RULE-bb986433e3df"]}],"project":"PRJ-EXAMPLES","snapshot":"sha256:770cca494464aa654698aed5b625d14388fa56f77636b69f517e01ed43448f63","tool":"fang 0.1.0"}
+

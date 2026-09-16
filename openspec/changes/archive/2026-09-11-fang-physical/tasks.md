@@ -87,54 +87,54 @@ that can regress the gate; it lands alone.
 
 ## 4. Projections outward
 
-- [ ] 4.1 Emit a `.kicad_dru` from routing-class projections, sorted by
+- [x] 4.1 Emit a `.kicad_dru` from routing-class projections, sorted by
       constraint identifier; verify each rule names the constraint it projects
       and restates no field the constraint record already defines.
-- [ ] 4.2 Emit net class assignments from the same projections; verify a net
+- [x] 4.2 Emit net class assignments from the same projections; verify a net
       belongs to exactly one class and that the assignment names its origin.
-- [ ] 4.3 Verify emission is byte-identical across two runs from one committed
+- [x] 4.3 Verify emission is byte-identical across two runs from one committed
       snapshot and across processes with differing `PYTHONHASHSEED`.
-- [ ] 4.4 Add the rules export to `fang/cli.py`; verify `fang export --rules`
+- [x] 4.4 Add the rules export to `fang/cli.py`; verify `fang export --rules`
       writes the file and exits non-zero with a diagnostic when the snapshot
       holds no routing constraint. Sequence this after `fang-mcp`'s CLI work
       rather than editing `cli.py` in parallel.
 
 ## 5. Reading geometry back
 
-- [ ] 5.1 Add a `.kicad_pcb` reader to `fang/kicad.py` over the existing
+- [x] 5.1 Add a `.kicad_pcb` reader to `fang/kicad.py` over the existing
       `sexpr` parser, recognizing board outline, stackup, `footprint`
       placement, `segment`, `via`, and `zone`; verify a real board file parses
       into physical entities with derived identities.
-- [ ] 5.2 Route every unrecognized construct through `importing.Unrepresented`;
+- [x] 5.2 Route every unrecognized construct through `importing.Unrepresented`;
       verify an unknown board element is reported with its location under
       `IMPORT-0001` and is not approximated by a different entity kind.
-- [ ] 5.3 Record every external identifier in the existing `MappingTable`;
+- [x] 5.3 Record every external identifier in the existing `MappingTable`;
       verify no external identifier becomes a canonical identity.
-- [ ] 5.4 Report a board that joins two pins the committed netlist does not as
+- [x] 5.4 Report a board that joins two pins the committed netlist does not as
       a finding against the board; verify the netlist is not rewritten.
-- [ ] 5.5 Offer a layout-chosen pin swap as `Realization.implied_changes`;
+- [x] 5.5 Offer a layout-chosen pin swap as `Realization.implied_changes`;
       verify it returns through `to_transaction` and the gate, and that the
       ingest itself changed no semantic state.
-- [ ] 5.6 Verify `materialize()` refuses a board realization whose parent is not
+- [x] 5.6 Verify `materialize()` refuses a board realization whose parent is not
       the committed snapshot, and that `ingest_external_results` refuses DRC
       results produced against anything but the committed head.
 
 ## 6. Diagnostics, spec, and the worked example
 
-- [ ] 6.1 Allocate the routing codes with `_allocate` at the bottom of the
+- [x] 6.1 Allocate the routing codes with `_allocate` at the bottom of the
       `TOPO` block — unresolved physical reference, board disagrees with the
       netlist, unrepresented board construct if `IMPORT-0001` does not cover it;
       verify no code was reused and the registry assertions pass. Sequence after
       `fang-mcp`'s `_allocate` calls to avoid a silent collision on rebase.
-- [ ] 6.2 Sync the delta into `openspec/specs/fang-kernel/spec.md` and give each
+- [x] 6.2 Sync the delta into `openspec/specs/fang-kernel/spec.md` and give each
       new module a docstring quoting the requirement it implements by name;
       verify the `Spec:` link is present in `physical.py` and `routing.py`.
-- [ ] 6.3 Add an example folder with `<name>.py`, `README.md`, and `out/`,
+- [x] 6.3 Add an example folder with `<name>.py`, `README.md`, and `out/`,
       demonstrating a width rule that fails against one board and passes against
       another; verify `tests/test_examples.py` discovers it and its committed
       outputs match, and update `MANIFEST.in` if it reads anything new.
-- [ ] 6.4 Add stage 12 to `openspec/ROADMAP.md` and mark it delivered; verify
+- [x] 6.4 Add stage 12 to `openspec/ROADMAP.md` and mark it delivered; verify
       the table renders and the stage names what it shipped.
-- [ ] 6.5 Run the full suite and confirm it is green with no new skips beyond
+- [x] 6.5 Run the full suite and confirm it is green with no new skips beyond
       optional binaries; verify `python -m pytest -rs` names only NetworkX and
       ngspice.

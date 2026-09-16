@@ -1,7 +1,7 @@
 # equations
 
 A divider written as the ratio it has to satisfy, rather than as two numbers
-someone computed offstage — and then reused, by inheritance, at a different
+someone computed offstage, and then reused, by inheritance, at a different
 ratio.
 
 ## The program
@@ -28,8 +28,8 @@ feedback = FeedbackDivider(v_in=12 * V, i_bleed=250 * uA, ratio_min=0.19 * ratio
 sense    = SenseDivider(v_in=24 * V, i_bleed=200 * uA, ratio_min=0.09 * ratio, ...)
 ```
 
-`ratio = UnitLiteral("1")` is how a project adds a unit — dimensionless, here —
-without editing the language.
+`ratio = UnitLiteral("1")` is how a project adds a unit, dimensionless in this
+case, without editing the language.
 
 ## What comes out
 
