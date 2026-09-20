@@ -1,0 +1,21 @@
+C1     0.5 uF           Package:C_0805
+C2     1 uF             Package:C_0805
+C3     0.1 uF           Package:C_0805
+C4     0.2 uF           Package:C_0805
+GND1   GroundReference  Package:GND
+R1     220 kOhm         Package:R_0805
+R2     220 kOhm         Package:R_0805
+R3     30 kOhm          Package:R_0805
+R4     2 kOhm           Package:R_0805
+R5     12 kOhm          Package:R_0805
+R6     100 kOhm         Package:R_0805
+TP1    TestPoint        Package:TestPoint_Pad_D1.0mm
+U1     OpAmp            Package:SOIC-8
+Net-(C1-Pad1)            C1.1 R1.1 R2.2 R6.2
+Net-(C1-Pad2)            C1.2 C2.2 GND1.1 R1.2 R5.2
+Net-(C2-Pad1)            C2.1 R4.2
+Net-(C3-Pad1)            C3.1 TP1.1
+Net-(C3-Pad2)            C3.2 R2.1 R6.1 U1.IN+
+Net-(C4-Pad1)            C4.1 R3.2 U1.OUT
+Net-(C4-Pad2)            C4.2 R5.1
+Net-(R3-Pad1)            R3.1 R4.1 U1.IN-
