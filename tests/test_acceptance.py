@@ -76,10 +76,22 @@ def test_at_r1_import_of_a_representative_kicad_project_without_unreported_loss(
     assert {alias for e in result.entities.values() if isinstance(e, Net)
             for alias in e.aliases} == {"+3V3", "GND", "NRST"}
 
+    # The footprint and the symbol the part was drawn with come back too: an
+    # imported design has no program behind it to recover them from.
+    components = {
+        e.designator: e for e in result.entities.values() if isinstance(e, Component)
+    }
+    assert components["U1"].package == "Package_QFP:LQFP-48"
+    assert components["U1"].extensions["libsource"] == "MCU_ST_STM32G4:STM32G474CBTx"
+
     # The symbol-library block carries no connectivity and this adapter does not
-    # model it. That is reported rather than dropped, which is the whole point.
+    # model it; neither does it model an arbitrary component field. Both are
+    # reported rather than dropped, which is the whole point.
     assert not result.report.lossless
-    assert {item.construct for item in result.report.unrepresented} == {"libparts"}
+    assert {item.construct for item in result.report.unrepresented} == {
+        "libparts",
+        "field:Tolerance",
+    }
 
 
 def test_at_r2_byte_identical_reserialization_of_unchanged_state(snapshot):

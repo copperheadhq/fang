@@ -94,7 +94,7 @@ def test_an_example_projects_to_a_netlist_with_no_component_left_out(example):
 def test_an_example_emits_a_kicad_netlist(example):
     result = build(example)
     netlist = compile_netlist(result.snapshot, traits=result.traits)
-    assert emit_netlist(netlist).startswith('(export "version" "E"')
+    assert emit_netlist(netlist).startswith('(export\n  (version "E")')
 
 
 def test_an_example_builds_identically_twice(example):

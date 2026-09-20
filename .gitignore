@@ -63,3 +63,6 @@ site/docs/.astro/
 # the layout each build updates in place.
 examples/parity/build/
 examples/parity/elec/layout/*/backups/
+
+# Scratch evidence for the KiCad round trip: netlists and rendered sheets.
+roundtrip/
