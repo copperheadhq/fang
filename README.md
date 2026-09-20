@@ -171,13 +171,14 @@ so rather than substituting anything.
 ## Tests
 
 ```bash
-python -m pytest          # 553 tests; 551 pass here, the rest skip by name
+python -m pytest          # 604 tests; those needing a binary skip by name
 python -m pytest -rs      # names each environment-dependent skip
 ```
 
 The suite includes one test per acceptance criterion (AT-R1 to AT-R13 and AT-K1
 to AT-K10). **All 23 pass.** The only skips name what is missing: the NetworkX
-and MCP extras, and the ngspice binary.
+and MCP extras, and the ngspice binary. One example ships a KiCad schematic and
+KiCad's render of it, so rebuilding that one needs `kicad-cli` on the path.
 
 ## Examples
 
@@ -204,6 +205,13 @@ in [tests/test_examples.py](https://github.com/copperheadhq/fang/blob/main/tests
   and the verification in the same graph as the inductor
 - [examples/servo_drive/](https://github.com/copperheadhq/fang/tree/main/examples/servo_drive/): three half-bridges, CAN and a
   quadrature encoder, from one block declaration instantiated three times
+- [examples/jee_advanced/](https://github.com/copperheadhq/fang/tree/main/examples/jee_advanced/): two exam
+  questions rather than two boards, each answered by constraints the checker
+  decides — one paper's four claimed currents, and one claimed current beside
+  the two branches that carry none
+- [examples/noninverting_amp/](https://github.com/copperheadhq/fang/tree/main/examples/noninverting_amp/): a textbook
+  figure's input impedance and gain, with the reading of the drawing they rest
+  on recorded as a decision
 - [examples/imported/](https://github.com/copperheadhq/fang/tree/main/examples/imported/): a KiCad
   netlist the import path reads
 - [examples/parity/](https://github.com/copperheadhq/fang/tree/main/examples/parity/): the divider and
