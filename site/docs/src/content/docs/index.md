@@ -18,7 +18,7 @@ agent you talk to. Fang is what it writes and what checks the writing.
 
 - [Introduction](/start/introduction/): what fang is and what it refuses to do
 - [Installation](/start/installation/): install it and build your first board
-- [Examples](/start/examples/): eight programs, smallest first
+- [Examples](/start/examples/): ten programs, smallest first
 
 ## Concepts
 

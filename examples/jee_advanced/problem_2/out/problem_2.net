@@ -1,0 +1,241 @@
+(export
+  (version "E")
+  (design
+    (source "problem_2.py")
+    (tool "fang 0.1.0")
+    (snapshot "sha256:dda4711d580e3954d45140d099b95fcf3f9fbf67c7dca354a532e1d7a43ae891")
+    (project "PRJ-EXAMPLES")
+  )
+  (components
+    (comp
+      (ref "GND1")
+      (value "GroundReference")
+      (footprint "Package:GND")
+      (property
+        (name "fang_id")
+        (value "CMP-fe129c51b056")
+      )
+    )
+    (comp
+      (ref "R1")
+      (value "2 Ohm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-cebf1455e844")
+      )
+    )
+    (comp
+      (ref "R10")
+      (value "8 Ohm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-81a8d38b564a")
+      )
+    )
+    (comp
+      (ref "R2")
+      (value "10 Ohm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-aa1b7e8d99e4")
+      )
+    )
+    (comp
+      (ref "R3")
+      (value "4 Ohm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-f62f15397698")
+      )
+    )
+    (comp
+      (ref "R4")
+      (value "6 Ohm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-819f18b962e2")
+      )
+    )
+    (comp
+      (ref "R5")
+      (value "12 Ohm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-4cd91a17117e")
+      )
+    )
+    (comp
+      (ref "R6")
+      (value "2 Ohm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-526797adc2d0")
+      )
+    )
+    (comp
+      (ref "R7")
+      (value "4 Ohm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-92d463895ba1")
+      )
+    )
+    (comp
+      (ref "R8")
+      (value "1 Ohm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-9ea70a3ed2b2")
+      )
+    )
+    (comp
+      (ref "R9")
+      (value "2 Ohm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-e6bd3daff048")
+      )
+    )
+    (comp
+      (ref "V1")
+      (value "6.5 V")
+      (footprint "Package:Battery")
+      (property
+        (name "fang_id")
+        (value "CMP-d1047166a495")
+      )
+    )
+  )
+  (nets
+    (net
+      (code "1")
+      (name "Net-(GND1-Pad1)")
+      (node
+        (ref "GND1")
+        (pin "1")
+      )
+      (node
+        (ref "R5")
+        (pin "2")
+      )
+      (node
+        (ref "R7")
+        (pin "2")
+      )
+      (node
+        (ref "V1")
+        (pin "2")
+      )
+    )
+    (net
+      (code "2")
+      (name "Net-(R1-Pad1)")
+      (node
+        (ref "R1")
+        (pin "1")
+      )
+      (node
+        (ref "V1")
+        (pin "1")
+      )
+    )
+    (net
+      (code "3")
+      (name "Net-(R1-Pad2)")
+      (node
+        (ref "R1")
+        (pin "2")
+      )
+      (node
+        (ref "R4")
+        (pin "1")
+      )
+      (node
+        (ref "R8")
+        (pin "1")
+      )
+      (node
+        (ref "R9")
+        (pin "1")
+      )
+    )
+    (net
+      (code "4")
+      (name "Net-(R10-Pad1)")
+      (node
+        (ref "R10")
+        (pin "1")
+      )
+      (node
+        (ref "R6")
+        (pin "1")
+      )
+      (node
+        (ref "R8")
+        (pin "2")
+      )
+    )
+    (net
+      (code "5")
+      (name "Net-(R10-Pad2)")
+      (node
+        (ref "R10")
+        (pin "2")
+      )
+      (node
+        (ref "R3")
+        (pin "1")
+      )
+      (node
+        (ref "R9")
+        (pin "2")
+      )
+    )
+    (net
+      (code "6")
+      (name "Net-(R2-Pad1)")
+      (node
+        (ref "R2")
+        (pin "1")
+      )
+      (node
+        (ref "R4")
+        (pin "2")
+      )
+      (node
+        (ref "R5")
+        (pin "1")
+      )
+    )
+    (net
+      (code "7")
+      (name "Net-(R2-Pad2)")
+      (node
+        (ref "R2")
+        (pin "2")
+      )
+      (node
+        (ref "R3")
+        (pin "2")
+      )
+      (node
+        (ref "R6")
+        (pin "2")
+      )
+      (node
+        (ref "R7")
+        (pin "1")
+      )
+    )
+  )
+)

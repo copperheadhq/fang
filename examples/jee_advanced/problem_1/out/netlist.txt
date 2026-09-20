@@ -1,0 +1,18 @@
+GND1   GroundReference  Package:GND
+R1     1 Ohm            Package:R_0805
+R2     1 Ohm            Package:R_0805
+R3     1 Ohm            Package:R_0805
+R4     1 Ohm            Package:R_0805
+R5     1 Ohm            Package:R_0805
+R6     1 Ohm            Package:R_0805
+R7     1 Ohm            Package:R_0805
+R8     1 Ohm            Package:R_0805
+V1     12 V             Package:Battery
+V2     6 V              Package:Battery
+Net-(GND1-Pad1)          GND1.1 R2.2 R3.2 R4.1 V1.2
+Net-(R1-Pad1)            R1.1 V1.1
+Net-(R1-Pad2)            R1.2 R7.2 R8.2
+Net-(R2-Pad1)            R2.1 R6.2 R7.1
+Net-(R3-Pad1)            R3.1 V2.1
+Net-(R4-Pad2)            R4.2 R5.2 R8.1
+Net-(R5-Pad1)            R5.1 R6.1 V2.2
