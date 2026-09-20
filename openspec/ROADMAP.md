@@ -1,6 +1,6 @@
 # Fang delivery roadmap
 
-**All eleven stages are delivered.** The suite is green and every acceptance
+**All twelve stages are delivered.** The suite is green and every acceptance
 criterion in the combined spec is demonstrated rather than deferred.
 
 The full code-defined electronics toolchain, chunked into stages. Each stage is
@@ -24,6 +24,7 @@ netlist a person can open.
 | 9 | ✅ `fang-simulation` | Simulation models as traits, plans, SPICE lowering, the ngspice backend, result normalization |
 | 10 | ✅ `fang-rationale` | Requirement, evidence, decision, and calculation authoring from Fang; the verification graph; impact propagation |
 | 11 | ✅ `fang-cli` | The workspace (`.copperhead/`), the manifest, and `fang build`, `check`, `view`, `sim`, `export` |
+| 12 | ✅ `fang-mcp` | The agent surface: the kernel over the Model Context Protocol, with the agent's mutation path running through the same commit gate |
 
 ## The vertical slice
 
