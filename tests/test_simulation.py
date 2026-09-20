@@ -6,7 +6,9 @@ from pathlib import Path
 import pytest
 
 from fang.elaborate import elaborate
-from fang.lang import Parameter, Part, Power, System, V, kOhm, uF
+from fang.interfaces import Pin, PinMap
+from fang.lang import Electrical, Parameter, Part, Power, System, V, kOhm, uF
+from fang.netlist import compile_netlist
 from fang.parts import Capacitor, Resistor
 from fang.simulation import (
     ACSweep,
@@ -25,6 +27,7 @@ from fang.simulation import (
     lower_to_spice,
     normalize,
     select_level,
+    spice_nodes,
 )
 from fang.traits import Simulatable
 
@@ -48,6 +51,31 @@ class Amplifier(Part):
     designator_prefix = "U"
     supply = Power()
     gain = Parameter("1")
+
+
+class GroundMarker(Part):
+    """One terminal whose canonical role is ground, and no value."""
+
+    designator_prefix = "GND"
+    node = Electrical()
+    PIN1 = Pin("1", role="ground", number="1")
+    pinmap = PinMap({"node.line": "1"})
+
+
+class Returned(System):
+    """A board whose ground net is named after a capacitor's pad.
+
+    An elaborated net is named after the first pad on it and a program cannot
+    say otherwise, so the name of this one says nothing about ground.
+    """
+
+    bypass = Capacitor(capacitance=1 * uF)
+    load = Resistor(resistance=10 * kOhm)
+    marker = GroundMarker()
+
+    def architecture(self):
+        self.bypass.p2 >> self.load.p2
+        self.load.p2 >> self.marker.node
 
 
 @pytest.fixture
@@ -189,6 +217,40 @@ def test_an_abstracted_component_emits_no_device():
     plan = compile_plan(result.snapshot, traits=result.traits, abstracted=[amplifier.id])
     deck = lower_to_spice(result.snapshot, plan, traits=result.traits)
     assert "abstracted; no device emitted" in deck
+
+
+def test_ground_is_found_in_the_graph_and_not_in_a_net_name():
+    """Node 0 is the pin roles' answer, not the net name's.
+
+    A deck with no node 0 is a deck the simulator refuses, so the return has to
+    be found where the fact actually lives.
+    """
+    result = elaborate(Returned, project_id=PROJECT)
+    assert result.ok
+    netlist = compile_netlist(result.snapshot, traits=result.traits)
+
+    grounded = next(
+        net for net in netlist.nets
+        if any(node.designator == "GND1" for node in net.nodes)
+    )
+    assert "gnd" not in grounded.name.lower()  # the name gives nothing away
+
+    nodes = spice_nodes(result.snapshot, netlist)
+    assert nodes[("C1", "2")] == "0"
+    assert nodes[("R1", "2")] == "0"
+    assert nodes[("C1", "1")] != "0"
+
+    plan = compile_plan(
+        result.snapshot,
+        traits=result.traits,
+        abstracted=[
+            component.entity_id
+            for component in netlist.components
+            if component.designator == "GND1"
+        ],
+    )
+    deck = lower_to_spice(result.snapshot, plan, traits=result.traits)
+    assert f"C1 {nodes[('C1', '1')]} 0 1u" in deck
 
 
 def test_a_restricted_model_is_referenced_never_inlined():
