@@ -7,6 +7,7 @@
     "site/docs"
   ],
   "scripts": {
+    "dev": "python3 -m http.server 8000 --directory site",
     "docs:dev": "npm run dev --workspace site/docs",
     "docs:build": "npm run build --workspace site/docs"
   }
