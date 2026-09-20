@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from fang.cli import EXIT_FAILED, EXIT_OK, load_system, main
+from fang.schematic import KicadRenderer
 from fang.simulation import NgspiceBackend
 from fang.workspace import Workspace
 
@@ -56,6 +57,33 @@ def test_export_writes_a_kicad_netlist(tmp_path, capsys):
 def test_export_writes_to_stdout_without_an_output_path(capsys):
     assert main(["export", DIVIDER, "--project", "PRJ-CLI"]) == EXIT_OK
     assert capsys.readouterr().out.startswith('(export\n  (version "E")')
+
+
+def test_schematic_writes_a_kicad_sheet(tmp_path):
+    target = tmp_path / "board.kicad_sch"
+    code = main(["schematic", SENSOR, "--project", "PRJ-CLI", "-o", str(target)])
+    assert code == EXIT_OK
+    assert target.read_text().startswith("(kicad_sch\n")
+
+
+def test_schematic_writes_to_stdout_without_an_output_path(capsys):
+    assert main(["schematic", DIVIDER, "--project", "PRJ-CLI"]) == EXIT_OK
+    assert capsys.readouterr().out.startswith("(kicad_sch\n")
+
+
+@pytest.mark.skipif(
+    not KicadRenderer().available(), reason="kicad-cli is not installed here"
+)
+def test_schematic_renders_when_asked_to(tmp_path):
+    target = tmp_path / "board.svg"
+    code = main(
+        [
+            "schematic", DIVIDER, "--project", "PRJ-CLI",
+            "--svg", str(target), "-C", str(tmp_path),
+        ]
+    )
+    assert code == EXIT_OK
+    assert target.read_text().lstrip().startswith("<?xml")
 
 
 def test_check_reports_and_exits_zero_when_nothing_fails(capsys):
