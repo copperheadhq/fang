@@ -338,27 +338,12 @@ def lower_to_spice(snapshot, plan: SimulationPlan, *, traits=None, title: str = 
     netlist = compile_netlist(snapshot, traits=traits)
     scope = set(plan.scope)
 
-    # Every terminal needs a node. A pin on a net takes that net's number; a pin
-    # on no net takes a node of its own, because SPICE has no notion of a
-    # terminal that is simply absent.
-    net_of: dict[tuple[str, str], str] = {}
-    for index, net in enumerate(netlist.nets, start=1):
-        name = "0" if _is_ground(net.name) else str(index)
-        for node in net.nodes:
-            net_of[(node.designator, node.pin)] = name
-
+    net_of = spice_nodes(snapshot, netlist)
     designator_of = {c.entity_id: c.designator for c in netlist.components}
     pins_of: dict[str, list[str]] = {}
     for entity in sorted(snapshot.entities.values(), key=lambda e: e.id):
         if isinstance(entity, Pin) and entity.owner in designator_of:
             pins_of.setdefault(designator_of[entity.owner], []).append(entity.vendor_name)
-
-    dangling = len(netlist.nets)
-    for designator in sorted(pins_of):
-        for pin in sorted(pins_of[designator]):
-            if (designator, pin) not in net_of:
-                dangling += 1
-                net_of[(designator, pin)] = str(dangling)
 
     lines = [f"* {title}", f"* plan for {plan.backend} over {plan.snapshot}"]
 
@@ -402,6 +387,53 @@ def lower_to_spice(snapshot, plan: SimulationPlan, *, traits=None, title: str = 
 def _is_ground(name: str) -> bool:
     lowered = name.lower()
     return "gnd" in lowered or lowered.endswith("-0")
+
+
+def spice_nodes(snapshot, netlist: Netlist) -> dict[tuple[str, str], str]:
+    """Which SPICE node every terminal sits on, keyed by designator and pin.
+
+    Every terminal needs a node. A pin on a net takes that net's number; a pin
+    on no net takes a node of its own, because SPICE has no notion of a terminal
+    that is simply absent.
+
+    Node 0 is the simulator's ground, and which net that is comes from the
+    graph: a net holding a pin whose canonical role is ground is the return.
+    The net's *name* is only a fallback, because an elaborated net is named
+    after the first pad on it and a program cannot say otherwise -- so a board
+    whose ground happens to start at a capacitor would otherwise lower to a deck
+    with no ground node at all.
+
+    A script that reads a run's output needs the same numbering the deck was
+    written with, so it asks for it here rather than deriving its own.
+    """
+    ground_pins = {
+        entity.id
+        for entity in snapshot.entities.values()
+        if isinstance(entity, Pin) and entity.role == "ground"
+    }
+
+    nodes: dict[tuple[str, str], str] = {}
+    for index, net in enumerate(netlist.nets, start=1):
+        grounded = _is_ground(net.name) or any(
+            node.pin_id in ground_pins for node in net.nodes
+        )
+        name = "0" if grounded else str(index)
+        for node in net.nodes:
+            nodes[(node.designator, node.pin)] = name
+
+    designator_of = {c.entity_id: c.designator for c in netlist.components}
+    pins_of: dict[str, list[str]] = {}
+    for entity in sorted(snapshot.entities.values(), key=lambda e: e.id):
+        if isinstance(entity, Pin) and entity.owner in designator_of:
+            pins_of.setdefault(designator_of[entity.owner], []).append(entity.vendor_name)
+
+    dangling = len(netlist.nets)
+    for designator in sorted(pins_of):
+        for pin in sorted(pins_of[designator]):
+            if (designator, pin) not in nodes:
+                dangling += 1
+                nodes[(designator, pin)] = str(dangling)
+    return nodes
 
 
 def _spice_value(value: str) -> str:
@@ -452,8 +484,16 @@ class NgspiceBackend:
         completed = subprocess.run(
             [self.executable, "--version"], capture_output=True, text=True, timeout=30
         )
-        first = (completed.stdout or completed.stderr).splitlines()
-        return first[0].strip() if first else "unknown"
+        printed = [
+            line.strip() for line in (completed.stdout or completed.stderr).splitlines()
+        ]
+        # ngspice opens its banner with a rule of asterisks, so the first line
+        # is not the version. The line that names the program is, and recording
+        # the rule instead would record nothing.
+        for line in printed:
+            if self.name in line.lower():
+                return line.strip("* ").split(" : ")[0].strip()
+        return next((line for line in printed if line), "unknown")
 
     def run(self, netlist: str, *, workspace: Path, timeout: int = 60) -> RawResult:
         if not self.available():
