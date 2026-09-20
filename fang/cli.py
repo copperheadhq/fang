@@ -189,6 +189,36 @@ def cmd_export(args) -> int:
     return EXIT_OK
 
 
+def cmd_schematic(args) -> int:
+    """Lower a snapshot to a KiCad schematic, and render it if asked to."""
+    from .schematic import KicadRenderer, RendererUnavailable, compile_schematic
+
+    result = _elaborate(args)
+    name = Path(args.program).stem
+    text = compile_schematic(result.snapshot, traits=result.traits, title=name)
+
+    if args.output:
+        Path(args.output).write_text(text, encoding="utf-8")
+        print(f"wrote {args.output}")
+    elif not args.svg:
+        sys.stdout.write(text)
+
+    if not args.svg:
+        return EXIT_OK
+
+    workspace = Workspace(args.directory)
+    try:
+        svg = KicadRenderer().to_svg(
+            text, workspace=workspace.dir / "schematics", name=name
+        )
+    except RendererUnavailable as exc:
+        print(f"fang: {exc}", file=sys.stderr)
+        return EXIT_FAILED
+    Path(args.svg).write_text(svg, encoding="utf-8")
+    print(f"wrote {args.svg}")
+    return EXIT_OK
+
+
 def cmd_graph(args) -> int:
     result = _elaborate(args)
     counts: dict[str, int] = {}
@@ -400,6 +430,15 @@ def build_parser() -> argparse.ArgumentParser:
     export = program_arguments(subparsers.add_parser("export", help="write a KiCad netlist"))
     export.add_argument("-o", "--output", help="where to write it; stdout by default")
     export.set_defaults(handler=cmd_export)
+
+    schematic = program_arguments(
+        subparsers.add_parser("schematic", help="write a KiCad schematic")
+    )
+    schematic.add_argument(
+        "-o", "--output", help="where to write the .kicad_sch; stdout by default"
+    )
+    schematic.add_argument("--svg", help="also render it here, with kicad-cli")
+    schematic.set_defaults(handler=cmd_schematic)
 
     return parser
 
