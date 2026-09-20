@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from fang.cli import EXIT_FAILED, EXIT_OK, load_system, main
+from fang.simulation import NgspiceBackend
 from fang.workspace import Workspace
 
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
@@ -180,10 +181,13 @@ def test_sim_compiles_a_plan_and_writes_a_deck(tmp_path, capsys):
     text = deck.read_text()
     assert ".tran" in text and ".print transient V(1)" in text
     assert text.strip().endswith(".end")
-    # ngspice is absent in most environments; the plan still compiles, and the
-    # command refuses to invent a result.
+    # The subject here is the plan and the deck, both of which exist either way.
+    # What follows depends on the machine: with no ngspice the command refuses
+    # to invent a result, and with one it reports what the run actually did.
     captured = capsys.readouterr()
-    if code != EXIT_OK:
+    if NgspiceBackend().available():
+        assert "on ngspice" in captured.out
+    elif code != EXIT_OK:
         assert "no result is fabricated" in captured.err
 
 
