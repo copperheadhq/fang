@@ -1,6 +1,6 @@
 ---
 title: Examples
-description: Ten programs in the repository, smallest first.
+description: Eleven programs in the repository, smallest first.
 sidebar:
   order: 3
   attrs:
@@ -26,6 +26,7 @@ program that has since changed.
 | [`servo_drive/`](/examples/servo_drive/) | Composition: one `HalfBridge` block instantiated three times |
 | [`jee_advanced/problem_1/`](/examples/jee_advanced/problem_1/) | Not a board: four claimed currents, all four decided |
 | [`jee_advanced/problem_2/`](/examples/jee_advanced/problem_2/) | Not a board either: one claimed current, and the two branches that carry none |
+| [`noninverting_amp/`](/examples/noninverting_amp/) | Not a board: two midband answers, and the reading of the figure they rest on |
 
 ## Running one
 

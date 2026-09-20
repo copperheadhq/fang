@@ -1,6 +1,6 @@
 # Examples
 
-Ten programs, smallest first. Each one is a folder: the program, a document
+Eleven programs, smallest first. Each one is a folder: the program, a document
 explaining what it is for and the files `fang` produces from it under `out/`.
 Every one elaborates, passes the gate and is built by
 [`tests/test_examples.py`](../tests/test_examples.py) on every run, so none of
@@ -18,10 +18,11 @@ them is a sketch that no longer works.
 | [`servo_drive/`](servo_drive/) | Composition: one `HalfBridge` instantiated three times | 24 | 26 |
 | [`jee_advanced/problem_1/`](jee_advanced/problem_1/) | Not a board: four claimed currents, all four decided | 11 | 7 |
 | [`jee_advanced/problem_2/`](jee_advanced/problem_2/) | Not a board either: one claimed current, and the two branches that carry none | 12 | 7 |
+| [`noninverting_amp/`](noninverting_amp/) | Not a board: two midband answers, and the reading of the figure they rest on | 13 | 8 |
 
-The last two are the odd ones out: eight boards and then two exam questions,
-because the kernel decides a claim about a circuit the same way whichever
-it is. They share a folder —
+The last three are the odd ones out: eight boards, then two exam questions
+and a textbook figure, because the kernel decides a claim about a circuit the
+same way whichever it is. The two exam questions share a folder —
 [`jee_advanced/`](jee_advanced/) groups them and is not itself an example,
 which is why an example's name here is its path below `examples/` rather than
 just a folder name.

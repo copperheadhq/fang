@@ -55,13 +55,14 @@ VIEWS: dict[str, tuple[str, ...]] = {
     "servo_drive": ("system", "power", "safety"),
     "jee_advanced/problem_1": ("interconnect",),
     "jee_advanced/problem_2": ("interconnect",),
+    "noninverting_amp": ("interconnect",),
 }
 
 #: The examples that ship a schematic. A schematic is the picture an engineer
 #: recognizes, and it is KiCad that draws it, so regenerating one of these needs
 #: `kicad-cli` on the path.
 SCHEMATICS: frozenset[str] = frozenset(
-    {"jee_advanced/problem_1", "jee_advanced/problem_2"}
+    {"jee_advanced/problem_1", "jee_advanced/problem_2", "noninverting_amp"}
 )
 
 #: The entity kinds that carry reasoning rather than circuit. An example with
