@@ -18,7 +18,7 @@ it is never a persisted or public representation — and the MCP SDK, which only
 
 ```bash
 pip install -e ".[dev]"          # add ",analysis" for the NetworkX-backed queries, ",mcp" for `fang mcp`
-python -m pytest                 # whole suite (553 tests, ~10s); addopts = -q, testpaths = tests
+python -m pytest                 # whole suite (604 tests, ~14s); addopts = -q, testpaths = tests
 fang build examples/sensor_board/sensor_board.py   # the console script, after an editable install
 python -m pytest -rs             # also lists the acceptance tests deferred to later phases
 python -m pytest tests/test_graph.py::test_name -x
@@ -107,6 +107,17 @@ Two ordering rules the gate encodes and that new code must not invert:
 `ingest_external_results()` refuses results produced against anything but the committed head —
 external check results re-enter as `Evidence` through an ordinary transaction.
 
+**Lowerings.** [fang/netlist.py](fang/netlist.py) projects a snapshot to a netlist and
+[fang/kicad.py](fang/kicad.py) emits it; [fang/schematic.py](fang/schematic.py) is the
+schematic compiler the spec's architecture names, lowering a snapshot to a `.kicad_sch`.
+It draws its own symbols rather than reading an installed KiCad's, so the file is a
+function of the snapshot and nothing else; connectivity is a global label on every pin,
+because fang places parts and names nets but does not route. `KicadRenderer` runs
+`kicad-cli` across a process boundary and strips the one timestamp line KiCad writes;
+it renders the ordinary KiCad picture — background, frame, title block — with fang's own
+`DRAWING_SHEET` rather than the installed KiCad's, whose title block prints that KiCad's
+version, and the page is cut to leave the frame and the block their room.
+
 **Above the graph.** [fang/validation.py](fang/validation.py) checks identifier uniqueness,
 referential integrity, provenance traceability, prohibited cycles, contradictory mandatory
 constraints, and the requirement state machine. [fang/diff.py](fang/diff.py) classifies each
@@ -132,7 +143,7 @@ construct a more permissive `Policy` here than the project's**.
 
 The working contract is [openspec/specs/fang-kernel/spec.md](openspec/specs/fang-kernel/spec.md),
 a self-contained normative document: terminology, design principles, layers of representation,
-kernel architecture, and the project root, then 81 requirements over 217 scenarios and 23
+kernel architecture, and the project root, then 87 requirements over 238 scenarios and 23
 acceptance tests. There is no other standards document in this repository — the spec is the whole
 contract. Read the relevant requirement before changing kernel behaviour. Module docstrings quote
 the requirement they implement by name (e.g. `Spec: "The Commit Gate"`) — keep that link intact.
@@ -157,7 +168,9 @@ under `out/` — the KiCad netlist, the netlist and check and graph listings, th
 views worth looking at, and a `rationale.md` for the examples that record any
 reasoning. `python examples/regenerate.py` rewrites them all;
 [tests/test_examples.py](tests/test_examples.py) rebuilds them and compares, so
-a committed output cannot drift from the program beside it. Two things in an
+a committed output cannot drift from the program beside it. An example named in
+`regenerate.SCHEMATICS` also ships a `.kicad_sch` and KiCad's render of it, so
+regenerating or testing that one needs `kicad-cli` on the path. Two things in an
 output are normalized before that comparison and only two: the compiler version
 and the snapshot hash, which covers provenance and so covers this checkout's
 absolute path. Add an example by adding the folder — the suite discovers it —
@@ -165,10 +178,10 @@ and give it a `README.md` and an `out/`, or it is not an example.
 
 ## Work is organized as OpenSpec changes
 
-[openspec/ROADMAP.md](openspec/ROADMAP.md) chunks the toolchain into 11 stages, each an OpenSpec
-change with a proposal, a delta spec, and tasks. All eleven are archived under
+[openspec/ROADMAP.md](openspec/ROADMAP.md) chunks the toolchain into 12 stages, each an OpenSpec
+change with a proposal, a delta spec, and tasks. All twelve are archived under
 `openspec/changes/archive/<date>-<id>/`; a new stage starts with `/opsx:propose`. The ordering is a
-product ordering: stages 1–6 close the loop from a Fang program to a KiCad netlist. **All eleven
+product ordering: stages 1–6 close the loop from a Fang program to a KiCad netlist. **All twelve
 stages are delivered**, and every acceptance criterion in the spec is demonstrated rather than
 deferred. Every stage ships working code and tests — nothing is a placeholder.
 
