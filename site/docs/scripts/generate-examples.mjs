@@ -48,14 +48,33 @@ async function exists(path) {
 // An example is a folder with a program named after it and an out/ beside it.
 // That is the rule the test suite discovers them by, so it is the rule here:
 // examples/imported/ and examples/parity/ have neither and say so themselves.
-async function discover() {
+//
+// A folder that has no such program may still group them -- examples/jee_advanced/
+// holds one problem per subfolder -- so the search descends instead of stopping.
+// An example's name is then its path below examples/, which is what keeps two of
+// them distinct, and its stem is the leaf, which is what its files are named for.
+const SKIP = new Set(["out", "views", "__pycache__"]);
+
+// A grouping folder gets a page of its own when it carries a README, because
+// otherwise the one document that says why the group exists would be the only
+// one on disk with nowhere to read it, and /examples/jee_advanced/ would be a
+// hole between two pages that do exist.
+async function discover(dir = EXAMPLES, prefix = "") {
   const found = [];
-  for (const entry of await readdir(EXAMPLES, { withFileTypes: true })) {
-    if (!entry.isDirectory() || entry.name.startsWith("__")) continue;
-    const dir = join(EXAMPLES, entry.name);
-    const files = await readdir(dir);
-    if (!files.includes(`${entry.name}.py`) || !files.includes("out")) continue;
-    found.push({ name: entry.name, dir });
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    if (!entry.isDirectory() || SKIP.has(entry.name) || entry.name.startsWith(".")) continue;
+    const child = join(dir, entry.name);
+    const name = prefix ? `${prefix}/${entry.name}` : entry.name;
+    const files = await readdir(child);
+    if (files.includes(`${entry.name}.py`) && files.includes("out")) {
+      found.push({ name, stem: entry.name, dir: child, group: false });
+    } else {
+      const members = await discover(child, name);
+      if (members.length && files.includes("README.md")) {
+        found.push({ name, stem: entry.name, dir: child, group: true });
+      }
+      found.push(...members);
+    }
   }
   return found;
 }
@@ -82,29 +101,34 @@ function describe(body) {
 }
 
 // A README's links are relative to its own folder, which is right in the
-// repository and wrong on the site. Views resolve to the copies under public/;
-// everything else — the program, the netlist, a sibling example — resolves to
-// the file on GitHub, because that is where the thing actually is.
+// repository and wrong on the site. A picture resolves to the copy under
+// public/; everything else — the program, the netlist, a sibling example —
+// resolves to the file on GitHub, because that is where the thing actually is.
 function resolveLinks(body, name) {
   return body.replace(/\]\(([^)]+)\)/g, (whole, target) => {
     if (/^(https?:|\/|#)/.test(target)) return whole;
-    const view = target.match(/^out\/views\/(.+\.svg)$/);
-    if (view) return `](/examples/${name}/${view[1]})`;
+    const picture = target.match(/^out\/(?:views\/)?(.+\.svg)$/);
+    if (picture) return `](/examples/${name}/${picture[1]})`;
     const segments = [];
     for (const segment of `examples/${name}/${target}`.split("/")) {
       if (segment === "..") segments.pop();
-      else if (segment !== ".") segments.push(segment);
+      else if (segment !== "." && segment !== "") segments.push(segment);
     }
+    // A link to another example is the one case that has a page here. It would
+    // otherwise send a reader out to GitHub to read something the site is
+    // already showing them.
+    const slug = segments.slice(1).join("/");
+    if (segments[0] === "examples" && SLUGS.has(slug)) return `](/examples/${slug}/)`;
     return `](${REPO}/blob/main/${segments.join("/")})`;
   });
 }
 
 const examples = [];
-for (const { name, dir } of await discover()) {
+for (const { name, stem, dir, group } of await discover()) {
   const out = join(dir, "out");
   const readme = await readFile(join(dir, "README.md"), "utf8");
-  const program = await readFile(join(dir, `${name}.py`), "utf8");
-  const graph = await readFile(join(out, "graph.txt"), "utf8");
+  const program = group ? "" : await readFile(join(dir, `${stem}.py`), "utf8");
+  const graph = group ? "" : await readFile(join(out, "graph.txt"), "utf8");
 
   // The H1 is the page title, which Starlight renders from the frontmatter, so
   // it is lifted out rather than left to be rendered a second time.
@@ -115,25 +139,45 @@ for (const { name, dir } of await discover()) {
   try {
     views = (await readdir(join(out, "views"))).filter((f) => f.endsWith(".svg"));
   } catch {
-    /* an example need not render a view */
+    /* an example need not render a view, and a group has no out/ at all */
   }
 
-  examples.push({ name, dir, out, title, body, program, views, size: entityCount(graph) });
+  // The KiCad schematic's render sits beside the views rather than among them:
+  // a view answers one engineering question and a schematic is the circuit.
+  const pictures = views.map((v) => join("views", v));
+  if (await exists(join(out, "schematic.svg"))) pictures.push("schematic.svg");
+
+  examples.push({
+    name, stem, dir, out, title, body, program, views, pictures, group,
+    size: group ? Number.MAX_SAFE_INTEGER : entityCount(graph),
+  });
+}
+
+// "Smallest first" puts a group nowhere, because a group has no graph. It
+// belongs immediately before the examples it holds, so it borrows the smallest
+// size among them and sits a hair under it.
+for (const group of examples.filter((e) => e.group)) {
+  const members = examples.filter((e) => !e.group && e.name.startsWith(`${group.name}/`));
+  group.size = Math.min(...members.map((m) => m.size)) - 0.5;
 }
 
 examples.sort((a, b) => a.size - b.size || a.name.localeCompare(b.name));
+
+//: Every page's slug, so a README link that points at another example can
+//: resolve to its page here rather than out to GitHub.
+const SLUGS = new Set(examples.map((e) => e.name));
 
 await rm(CONTENT, { recursive: true, force: true });
 await rm(PUBLIC, { recursive: true, force: true });
 await mkdir(CONTENT, { recursive: true });
 
 for (const [index, example] of examples.entries()) {
-  const { name, out, title, body, program, views } = example;
+  const { name, stem, out, title, body, program, pictures, group } = example;
 
-  if (views.length) {
+  if (pictures.length) {
     await mkdir(join(PUBLIC, name), { recursive: true });
-    for (const view of views) {
-      await copyFile(join(out, "views", view), join(PUBLIC, name, view));
+    for (const picture of pictures) {
+      await copyFile(join(out, picture), join(PUBLIC, name, basename(picture)));
     }
   }
 
@@ -142,16 +186,31 @@ title: ${JSON.stringify(title)}
 description: ${JSON.stringify(describe(body))}
 sidebar:
   order: ${index + 1}
-  label: ${JSON.stringify(name)}
+  label: ${JSON.stringify(stem)}
   attrs:
     data-icon: puzzle
 ---
 
 ${resolveLinks(body, name)}
+`;
 
+  // A group holds examples; it is not one. Its page is its README plus the way
+  // in to each of them, and there is no program or out/ to append.
+  if (group) {
+    const members = examples.filter((e) => !e.group && e.name.startsWith(`${name}/`));
+    page += `\n## In this folder\n\n`;
+    for (const member of members) {
+      page += `- [\`${member.stem}\`](/examples/${member.name}/) — ${describe(member.body)}\n`;
+    }
+    await mkdir(join(CONTENT, name), { recursive: true });
+    await writeFile(join(CONTENT, name, "index.md"), page, "utf8");
+    continue;
+  }
+
+  page += `
 ## The whole program
 
-\`\`\`python title="examples/${name}/${name}.py"
+\`\`\`python title="examples/${name}/${stem}.py"
 ${program.trim()}
 \`\`\`
 
@@ -172,15 +231,18 @@ ${program.trim()}
 [\`examples/${name}/out/\`](${REPO}/tree/main/examples/${name}/out/). Rebuild it with:
 
 \`\`\`bash
-fang build examples/${name}/${name}.py
+fang build examples/${name}/${stem}.py
 \`\`\`
 `;
 
+  // A grouped example's page nests the same way its folder does, so the URL
+  // reads /examples/jee_advanced/problem_1/.
+  await mkdir(dirname(join(CONTENT, `${name}.md`)), { recursive: true });
   await writeFile(join(CONTENT, `${name}.md`), page, "utf8");
 }
 
 console.log(
   `examples: ${examples.length} pages and ` +
-    `${examples.reduce((n, e) => n + e.views.length, 0)} views written ` +
+    `${examples.reduce((n, e) => n + e.pictures.length, 0)} pictures written ` +
     `(${examples.map((e) => e.name).join(", ")})`
 );

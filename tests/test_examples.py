@@ -28,7 +28,10 @@ from fang.netlist import compile_netlist
 
 ROOT = Path(__file__).resolve().parent.parent / "examples"
 
-EXAMPLES = [ROOT / name / f"{name}.py" for name in example_names()]
+#: An example is named by its path relative to examples/, so a grouped one
+#: is `jee_advanced/problem_1` and its program is named after the leaf.
+NAMES = example_names()
+EXAMPLES = [ROOT / name / f"{Path(name).name}.py" for name in NAMES]
 
 #: Two things in an output follow the machine rather than the design, and are
 #: normalized away before comparing. The compiler version moves on release; the
@@ -53,9 +56,15 @@ def build(path: Path):
     return result
 
 
-@pytest.fixture(params=EXAMPLES, ids=[path.stem for path in EXAMPLES])
-def example(request):
+@pytest.fixture(params=NAMES, ids=NAMES)
+def name(request):
+    """The example under test, named by its path relative to examples/."""
     return request.param
+
+
+@pytest.fixture
+def example(name):
+    return ROOT / name / f"{Path(name).name}.py"
 
 
 def test_the_examples_directory_is_not_empty():
@@ -103,18 +112,18 @@ def test_an_example_builds_identically_twice(example):
     assert first.hash == second.hash
 
 
-def test_an_example_ships_the_outputs_it_documents(example):
+def test_an_example_ships_the_outputs_it_documents(example, name):
     """A folder with no out/ is a folder that documents nothing."""
     out = example.parent / "out"
     committed = {
         path.relative_to(out).as_posix() for path in out.rglob("*") if path.is_file()
     }
-    assert committed == set(render(example.parent.name))
+    assert committed == set(render(name))
 
 
-def test_a_committed_output_still_matches_the_program(example):
+def test_a_committed_output_still_matches_the_program(example, name):
     """Regenerate every output and compare; `python examples/regenerate.py`
     is the fix when this fails."""
     out = example.parent / "out"
-    for relative, text in sorted(render(example.parent.name).items()):
+    for relative, text in sorted(render(name).items()):
         assert stable((out / relative).read_text(encoding="utf-8")) == stable(text), relative
