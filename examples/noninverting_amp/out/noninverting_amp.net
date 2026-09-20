@@ -1,0 +1,262 @@
+(export
+  (version "E")
+  (design
+    (source "noninverting_amp.py")
+    (tool "fang 0.1.0")
+    (snapshot "sha256:ca5378f7c2ba74e2e336ac8164d4b12701d3d0041ee3f0df60db28b4bfccb27b")
+    (project "PRJ-EXAMPLES")
+  )
+  (components
+    (comp
+      (ref "C1")
+      (value "0.5 uF")
+      (footprint "Package:C_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-65ee0edcbc2a")
+      )
+    )
+    (comp
+      (ref "C2")
+      (value "1 uF")
+      (footprint "Package:C_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-9efa396e94ee")
+      )
+    )
+    (comp
+      (ref "C3")
+      (value "0.1 uF")
+      (footprint "Package:C_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-80ddc77eef74")
+      )
+    )
+    (comp
+      (ref "C4")
+      (value "0.2 uF")
+      (footprint "Package:C_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-d0f40f6fc9a3")
+      )
+    )
+    (comp
+      (ref "GND1")
+      (value "GroundReference")
+      (footprint "Package:GND")
+      (property
+        (name "fang_id")
+        (value "CMP-fe129c51b056")
+      )
+    )
+    (comp
+      (ref "R1")
+      (value "220 kOhm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-09cfbd604e38")
+      )
+    )
+    (comp
+      (ref "R2")
+      (value "220 kOhm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-1886ca15d13a")
+      )
+    )
+    (comp
+      (ref "R3")
+      (value "30 kOhm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-d344d52555c1")
+      )
+    )
+    (comp
+      (ref "R4")
+      (value "2 kOhm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-4b1aad7cd2b4")
+      )
+    )
+    (comp
+      (ref "R5")
+      (value "12 kOhm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-8cf6153ec1bd")
+      )
+    )
+    (comp
+      (ref "R6")
+      (value "100 kOhm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-1974a36a0bec")
+      )
+    )
+    (comp
+      (ref "TP1")
+      (value "TestPoint")
+      (footprint "Package:TestPoint_Pad_D1.0mm")
+      (property
+        (name "fang_id")
+        (value "CMP-3219377790fa")
+      )
+    )
+    (comp
+      (ref "U1")
+      (value "OpAmp")
+      (footprint "Package:SOIC-8")
+      (property
+        (name "fang_id")
+        (value "CMP-ed601b553153")
+      )
+    )
+  )
+  (nets
+    (net
+      (code "1")
+      (name "Net-(C1-Pad1)")
+      (node
+        (ref "C1")
+        (pin "1")
+      )
+      (node
+        (ref "R1")
+        (pin "1")
+      )
+      (node
+        (ref "R2")
+        (pin "2")
+      )
+      (node
+        (ref "R6")
+        (pin "2")
+      )
+    )
+    (net
+      (code "2")
+      (name "Net-(C1-Pad2)")
+      (node
+        (ref "C1")
+        (pin "2")
+      )
+      (node
+        (ref "C2")
+        (pin "2")
+      )
+      (node
+        (ref "GND1")
+        (pin "1")
+      )
+      (node
+        (ref "R1")
+        (pin "2")
+      )
+      (node
+        (ref "R5")
+        (pin "2")
+      )
+    )
+    (net
+      (code "3")
+      (name "Net-(C2-Pad1)")
+      (node
+        (ref "C2")
+        (pin "1")
+      )
+      (node
+        (ref "R4")
+        (pin "2")
+      )
+    )
+    (net
+      (code "4")
+      (name "Net-(C3-Pad1)")
+      (node
+        (ref "C3")
+        (pin "1")
+      )
+      (node
+        (ref "TP1")
+        (pin "1")
+      )
+    )
+    (net
+      (code "5")
+      (name "Net-(C3-Pad2)")
+      (node
+        (ref "C3")
+        (pin "2")
+      )
+      (node
+        (ref "R2")
+        (pin "1")
+      )
+      (node
+        (ref "R6")
+        (pin "1")
+      )
+      (node
+        (ref "U1")
+        (pin "IN+")
+      )
+    )
+    (net
+      (code "6")
+      (name "Net-(C4-Pad1)")
+      (node
+        (ref "C4")
+        (pin "1")
+      )
+      (node
+        (ref "R3")
+        (pin "2")
+      )
+      (node
+        (ref "U1")
+        (pin "OUT")
+      )
+    )
+    (net
+      (code "7")
+      (name "Net-(C4-Pad2)")
+      (node
+        (ref "C4")
+        (pin "2")
+      )
+      (node
+        (ref "R5")
+        (pin "1")
+      )
+    )
+    (net
+      (code "8")
+      (name "Net-(R3-Pad1)")
+      (node
+        (ref "R3")
+        (pin "1")
+      )
+      (node
+        (ref "R4")
+        (pin "1")
+      )
+      (node
+        (ref "U1")
+        (pin "IN-")
+      )
+    )
+  )
+)

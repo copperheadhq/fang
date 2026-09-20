@@ -229,7 +229,7 @@ def test_export_writes_to_the_workspace_and_nowhere_else(tmp_path, elaborated):
     assert outcome.result(2).status is Status.SUCCEEDED
     written = list(tmp_path.iterdir())
     assert [p.name for p in written] == ["design.net"]
-    assert written[0].read_text().startswith('(export "version" "E"')
+    assert written[0].read_text().startswith('(export\n  (version "E")')
 
 
 def test_the_registry_reports_what_it_carries():

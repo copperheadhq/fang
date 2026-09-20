@@ -245,3 +245,106 @@ def test_an_imported_project_is_usable_without_ever_seeing_fang():
     netlist = compile_netlist(snapshot)
     assert len(netlist.nets) == 2
     assert {c.designator for c in netlist.components} == {"U1", "C1"}
+
+
+# -- the round trip, closed ------------------------------------------------
+
+
+def snapshot_line(text):
+    import re
+
+    return re.sub(r'\(snapshot "[^"]*"\)', '(snapshot "X")', text)
+
+
+def test_re_emitting_an_import_reproduces_the_file(emitted):
+    """The round trip closed: emit, import, emit, and compare the bytes.
+
+    The earlier round-trip tests stopped at the compiled netlist and compared
+    designators and net membership, which is why a footprint could be dropped
+    on the way out without any test noticing.
+    """
+    _, _, first = emitted
+    imported = read_netlist(first, project_id=PROJECT, source="divider.net")
+    second = emit_netlist(
+        compile_netlist(Snapshot(PROJECT, "REV-IMPORT", imported.entities)),
+        source="divider.py",
+    )
+    # Only the snapshot hash may differ: it names the graph, not the design.
+    assert snapshot_line(second) == snapshot_line(first)
+
+
+def test_a_file_in_kicads_own_syntax_imports_with_its_connectivity():
+    """KiCad writes a keyed value as a nested list, not as flat atoms.
+
+    Fang's own exports once used the flat form, and the reader only understood
+    that, so every net in a file exported from Eeschema was read as empty.
+    """
+    text = """
+    (export (version "E")
+      (components
+        (comp (ref "R1") (value "10k") (footprint "R_0402")
+          (libsource (lib "Device") (part "R")))
+        (comp (ref "C1") (value "100nF") (footprint "C_0402")
+          (libsource (lib "Device") (part "C"))))
+      (nets
+        (net (code "1") (name "VOUT")
+          (node (ref "R1") (pin "2") (pintype "passive"))
+          (node (ref "C1") (pin "1") (pintype "passive")))))
+    """
+    result = read_netlist(text, project_id=PROJECT, source="kicad.net")
+    netlist = compile_netlist(Snapshot(PROJECT, "REV-KICAD", result.entities))
+
+    assert {c.designator for c in netlist.components} == {"R1", "C1"}
+    # The connectivity, which is the thing a netlist is for.
+    vout = next(n for n in netlist.nets if n.name == "VOUT")
+    assert {(n.designator, n.pin) for n in vout.nodes} == {("R1", "2"), ("C1", "1")}
+    # And what cannot be recovered from a program: footprint and symbol.
+    assert {c.designator: c.footprint for c in netlist.components} == {
+        "R1": "R_0402",
+        "C1": "C_0402",
+    }
+    assert {c.designator: c.libsource for c in netlist.components} == {
+        "R1": "Device:R",
+        "C1": "Device:C",
+    }
+
+
+def test_a_file_in_the_older_flat_syntax_still_imports():
+    """Files Fang itself wrote before it spoke KiCad's syntax still read."""
+    text = """
+    (export "version" "E"
+      (components
+        (comp (ref "R1") (value "10k"))
+        (comp (ref "C1") (value "100nF")))
+      (nets (net "code" "1" "name" "VOUT"
+        (node "ref" "R1" "pin" "2")
+        (node "ref" "C1" "pin" "1"))))
+    """
+    result = read_netlist(text, project_id=PROJECT, source="legacy.net")
+    netlist = compile_netlist(Snapshot(PROJECT, "REV-LEGACY", result.entities))
+    assert [n.name for n in netlist.nets] == ["VOUT"]
+
+
+def test_a_designator_that_is_not_a_path_segment_still_imports():
+    """KiCad allows a hyphen in a reference; a semantic path segment does not.
+
+    The reference is transliterated the way pin and net names already were, so
+    a real board does not fail to import over a character in a designator.
+    """
+    text = """
+    (export (version "E")
+      (components
+        (comp (ref "TA-101") (value "74LS00"))
+        (comp (ref "C1") (value "100nF")))
+      (nets
+        (net (code "1") (name "GND")
+          (node (ref "TA-101") (pin "7"))
+          (node (ref "C1") (pin "2")))))
+    """
+    result = read_netlist(text, project_id=PROJECT, source="hyphen.net")
+    netlist = compile_netlist(Snapshot(PROJECT, "REV-HYPHEN", result.entities))
+
+    # The designator is untouched; only the path derived from it is normalized.
+    assert {c.designator for c in netlist.components} == {"TA-101", "C1"}
+    gnd = next(n for n in netlist.nets if n.name == "GND")
+    assert {(n.designator, n.pin) for n in gnd.nodes} == {("TA-101", "7"), ("C1", "2")}

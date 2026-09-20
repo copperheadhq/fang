@@ -50,12 +50,12 @@ def test_export_writes_a_kicad_netlist(tmp_path, capsys):
     target = tmp_path / "board.net"
     code = main(["export", SENSOR, "--project", "PRJ-CLI", "-o", str(target)])
     assert code == EXIT_OK
-    assert target.read_text().startswith('(export "version" "E"')
+    assert target.read_text().startswith('(export\n  (version "E")')
 
 
 def test_export_writes_to_stdout_without_an_output_path(capsys):
     assert main(["export", DIVIDER, "--project", "PRJ-CLI"]) == EXIT_OK
-    assert capsys.readouterr().out.startswith('(export "version" "E"')
+    assert capsys.readouterr().out.startswith('(export\n  (version "E")')
 
 
 def test_check_reports_and_exits_zero_when_nothing_fails(capsys):
