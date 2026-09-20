@@ -63,7 +63,7 @@ fang mcp     board.py     # serve the agent surface over stdio
 | --- | --- |
 | Kernel | Entity model, stable identity, units, values, constraints, transactions, the commit gate, canonical serialization, semantic diff, topology intent |
 | Language | `Module`, `System`, `Part`, parameters with units, traits, `require()`, the connect operator, deterministic sandboxed elaboration |
-| Interfaces | A catalogue of 17 typed interfaces, ports, buses, deterministic pin lowering, compatibility checks |
+| Interfaces | A catalogue of 21 typed interfaces, ports, buses, deterministic pin lowering, compatibility checks |
 | Parts | Designators, packages, footprints, sourcing and a standard library of generic parts |
 | Netlist | Net inference, designator assignment, KiCad netlist emission |
 | CAD | KiCad s-expression reading, project import, the mapping table, loss reporting, one safe round trip |
@@ -77,12 +77,12 @@ fang mcp     board.py     # serve the agent surface over stdio
 
 The contract is one document:
 [openspec/specs/fang-kernel/spec.md](https://github.com/copperheadhq/fang/blob/main/openspec/specs/fang-kernel/spec.md).
-It is self-contained and normative, covering the terminology, the design principles, the
-layers of representation, the kernel architecture and the project root, followed
-by 81 requirements over 217 scenarios covering the Engineering Intermediate
-Representation (identity, quantities, constraints, provenance, serialization,
-diff) and the kernel and language over it, with all 23 acceptance criteria.
-RFC 2119 keywords in it are normative.
+It is self-contained and normative. It covers the terminology, the design
+principles, the layers of representation, the kernel architecture and the
+project root. Then come 87 requirements over 238 scenarios, spanning the
+Engineering Intermediate Representation (identity, quantities, constraints,
+provenance, serialization, diff) and the kernel and language over it, with all
+23 acceptance criteria. RFC 2119 keywords in it are normative.
 
 Delivery is staged in
 [openspec/ROADMAP.md](https://github.com/copperheadhq/fang/blob/main/openspec/ROADMAP.md)
@@ -132,10 +132,10 @@ fang/
 ```bash
 pip install copperhead-fang               # the toolchain and the `fang` command
 pip install "copperhead-fang[analysis]"   # add NetworkX for the graph queries
-pip install "copperhead-fang[mcp]"       # add the agent surface, `fang mcp`
+pip install "copperhead-fang[mcp]"        # add the agent surface, `fang mcp`
 ```
 
-The distribution is named `copperhead-fang`; the import name is `fang`.
+The distribution is named `copperhead-fang`. The import name is `fang`.
 
 To work on it:
 
@@ -159,8 +159,8 @@ so rather than substituting anything.
   across processes with differing hash seeds.
 - **Explicit unknowns.** `null` never means "unknown", and an unknown operand
   makes a check undecided rather than passing.
-- **Undecided is a third truth value.** Never silently a pass, never silently a
-  failure; whether it blocks is the gate's decision.
+- **Undecided is a third truth value.** Never silently a pass and never silently
+  a failure. Whether it blocks is the gate's decision.
 - **Transactional mutation.** Every path, whether program, human, agent or import,
   passes the same gate, differing only in recorded provenance.
 - **Dimensional rejection at write time.** A dimensionally invalid expression
@@ -184,7 +184,7 @@ and MCP extras, and the ngspice binary.
 Each example is a folder: the program, a document explaining it and the files
 `fang` produces from it under `out/`: the KiCad netlist, the check and graph
 listings, the views and the rationale where there is any. Each one builds,
-checks and exports; the suite rebuilds the committed outputs and compares them
+checks and exports. The suite rebuilds the committed outputs and compares them
 in [tests/test_examples.py](https://github.com/copperheadhq/fang/blob/main/tests/test_examples.py).
 
 - [examples/divider/](https://github.com/copperheadhq/fang/tree/main/examples/divider/): a voltage divider with a filter cap
@@ -219,7 +219,7 @@ fang. The mark is a trace with a fang hanging from it, drawn on the same
 lowercase, always, and set in IBM Plex Mono because it names a language.
 
 [site/BRAND.md](https://github.com/copperheadhq/fang/blob/main/site/BRAND.md) is
-the identity in full — the mark's geometry and clear space, the palette in both
+the identity in full: the mark's geometry and clear space, the palette in both
 themes with the two values nudged for contrast and the reason recorded, the type
 and the voice. The assets are in
 [site/brand/](https://github.com/copperheadhq/fang/tree/main/site/brand/), and

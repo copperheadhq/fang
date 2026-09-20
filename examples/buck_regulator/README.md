@@ -1,7 +1,7 @@
 # buck_regulator
 
 12 V to 3.3 V, with the reasoning kept beside the circuit. The converter itself
-is ordinary; what is not ordinary is that the argument for it is in the same
+is ordinary. What is not ordinary is that the argument for it sits in the same
 graph as the inductor.
 
 ## The program
@@ -19,17 +19,17 @@ load_regulation = Verifies("rail_tolerance", ...)
 
 So "why is this 4.7 µH?" has an answer the graph can give: a calculation, over a
 datasheet claim, serving a requirement, which a verification closes. Nobody had
-to write a design document, and nothing here can drift from the design, because
-it *is* the design — change the evidence and the decision resting on it is
-flagged.
+to write a design document. Nothing here can drift from the design either,
+because it *is* the design. Change the evidence and the decision resting on it
+is flagged.
 
-The output voltage is deliberately not a parameter of the controller. It is set
-by the feedback divider on the board, which is why the divider carries the
+The output voltage is deliberately not a parameter of the controller. The
+feedback divider on the board sets it, which is why the divider carries the
 constraint that produces it.
 
 ## What comes out
 
-12 parts, 9 nets, 118 entities, 15 checks — none failed, one undecided.
+12 parts, 9 nets, 118 entities, 15 checks. None failed, one undecided.
 
 [`out/rationale.md`](out/rationale.md) is the file to read. It is the whole
 argument, projected out of the graph in identifier order:

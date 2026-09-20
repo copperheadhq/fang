@@ -1,7 +1,7 @@
 # usb_uart_bridge
 
 USB to serial: the interface board on nearly every desk. What it adds over the
-other examples is **part selection** — the difference between what the design
+other examples is **part selection**, the difference between what the design
 needs and what was bought.
 
 ## The program
@@ -18,13 +18,13 @@ def __init__(self, **overrides):
 ```
 
 The class body would attach the choice to the template every instance derives
-from. The instance is where it belongs: the logical part stays "a 3.3 V
+from. The instance is where it belongs. The logical part stays "a 3.3 V
 regulator", and which one was bought is a separate, cited fact that a second
 board can answer differently.
 
-The decision behind it is in the graph too, with what it rejected and why —
-`FT232RL` on unit cost, `CP2102N` on needing an oscillator — and it names the
-requirement it serves.
+The decision behind it is in the graph too, with what it rejected and why:
+`FT232RL` on unit cost, `CP2102N` on needing an oscillator. It names the
+requirement it serves as well.
 
 The UART crossing is worth reading as well:
 
@@ -33,18 +33,18 @@ self.bridge.uart.tx >> self.target.uart.rx
 self.bridge.uart.rx >> self.target.uart.tx
 ```
 
-Connecting the two *ports* would pair like names with like — tx to tx — so the
+Connecting the two *ports* would pair like names with like, tx to tx, so the
 two wires are named individually. That a signal of an interface is addressable
 on its own is the whole reason this works.
 
 ## What comes out
 
-17 parts, 11 nets, 162 entities, 24 checks — none failed, six undecided.
+17 parts, 11 nets, 162 entities, 24 checks. None failed, six undecided.
 
-- [`out/usb_uart_bridge.net`](out/usb_uart_bridge.net) — the KiCad netlist, ESD
+- [`out/usb_uart_bridge.net`](out/usb_uart_bridge.net): the KiCad netlist, ESD
   clamps and series resistors included
-- [`out/rationale.md`](out/rationale.md) — the requirement, the bridge decision
-  with both rejected alternatives, and the USB 2.0 citation behind the D+ pull-up
+- [`out/rationale.md`](out/rationale.md): the requirement, the bridge decision
+  with both rejected alternatives and the USB 2.0 citation behind the D+ pull-up
 - [`out/checks.txt`](out/checks.txt), [`out/graph.txt`](out/graph.txt)
 
 ![the power view](out/views/power.svg)

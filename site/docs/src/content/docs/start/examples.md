@@ -10,8 +10,8 @@ sidebar:
 Every example in [`examples/`](https://github.com/copperheadhq/fang/tree/main/examples)
 elaborates, passes the gate and is exercised by the test suite, so none of them
 is a sketch that no longer runs. Each has a page here carrying its program, the
-views it renders and the files it writes — all generated from the folder itself,
-so a page cannot describe a program that has since changed.
+views it renders and the files it writes. All of it is generated from the folder
+itself, so a page cannot describe a program that has since changed.
 
 | Example | Shows |
 | --- | --- |
@@ -44,7 +44,7 @@ fang view    examples/sensor_board/sensor_board.py ground -o ground.svg
 | `rationale.md` | The requirements, decisions, calculations and evidence in the graph | none |
 
 `python examples/regenerate.py` rewrites them. They are built in the project
-namespace `PRJ-EXAMPLES`, which is where the identifiers in them come from; a
+namespace `PRJ-EXAMPLES`, which is where the identifiers in them come from. A
 local `fang build` defaults to `PRJ-LOCAL` and derives its own.
 
 ## What each one is for
