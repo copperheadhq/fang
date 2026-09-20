@@ -19,7 +19,7 @@ cap = Capacitor(capacitance=100 * uF, voltage_rating=16 * V)
 
 Everything in the library is a `GenericPart`: a part with no vendor identity.
 That is a deliberate absence, not an unfinished state. A design that says "a
-10 kΩ resistor" is complete at the stage it is at; attaching a manufacturer
+10 kΩ resistor" is complete at the stage it is at. Attaching a manufacturer
 before one has been chosen would be inventing a fact.
 
 [`select()`](/reference/language/#selecting-a-vendor-part) attaches the vendor

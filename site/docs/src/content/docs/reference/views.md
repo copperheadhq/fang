@@ -54,7 +54,7 @@ about which one is which. Its colour follows the entity kind, and its tooltip is
 the identifier.
 
 An edge leaves the side of the box it is heading for and curves to the box it
-arrives at, rather than crossing whatever lies between; its colour follows the
+arrives at, rather than crossing whatever lies between. Its colour follows the
 connection kind, and the key under the drawing lists the kinds actually present.
 Several connections between the same two parts are fanned apart, so three gate
 drives read as three.

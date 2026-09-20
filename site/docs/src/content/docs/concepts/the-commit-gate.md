@@ -43,8 +43,8 @@ rejected rather than merged.
    affected entities. A check class is therefore defined by its scope as well as
    by what it evaluates.
 5. **No blocking result.** No check reported a blocking severity, or `TXN-0002`.
-6. **No undecided over a must-be-decided requirement**, or `TXN-0003`; and
-   policy approvals are satisfied, or `TXN-0004`.
+6. **No undecided over a must-be-decided requirement**, or `TXN-0003`, and
+   policy approvals satisfied, or `TXN-0004`.
 
 Only `commit()` advances the head. Rejection is correct by construction: the
 candidate copy is discarded, and canonical state was never touched.

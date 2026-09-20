@@ -42,7 +42,7 @@ engineering fact; deleting anything else does.
 ```
 
 The manifest exists so a snapshot's producer is reconstructible. `snapshot` is
-the content hash; `schema_version` is the serialized-EIR version, which moves
+the content hash. `schema_version` is the serialized-EIR version, and it moves
 independently of the compiler version.
 
 An artifact declaring an unimplemented major schema version is
