@@ -47,4 +47,4 @@ usually a difference that should not exist.
 `docs.copperhead.sh` currently serves Astro 7.1.1 / Starlight 0.41.3. This site
 resolves whatever the committed lockfile pins, which may be newer; Starlight
 regenerates its scoped class hashes between minors, so exact parity with the
-deployed site means matching the lockfile, not just the ranges.
+deployed site means matching the lockfile rather than the ranges.

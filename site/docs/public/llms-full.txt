@@ -48,9 +48,9 @@ agent you talk to. Fang is what it writes and what checks the writing.
 
 ## Start here
 
-- [Introduction](/start/introduction/): what fang is and what it refuses to do
+- [Introduction](/start/introduction/): what fang is and what it won't guess
 - [Installation](/start/installation/): install it and build your first board
-- [Examples](/start/examples/): eight programs, smallest first
+- [Examples](/start/examples/): eleven programs, smallest first
 
 ## Concepts
 
@@ -82,7 +82,7 @@ Where these pages and the spec disagree, the spec is right and this is a bug.
 # Introduction
 
 URL: https://fang.copperhead.sh/start/introduction/
-Summary: What fang is and what it refuses to do.
+Summary: What fang is and what it won't guess.
 
 Fang is a Python-embedded language for circuit boards and the kernel that holds
 what you write. You author intent: typed interfaces, parameters carrying units
@@ -116,7 +116,7 @@ becomes a decision entity naming what it rejected.
 Pin assignment is a lowering result. It is never an authoring input, which is
 what makes late assignment and part substitution tractable.
 
-## What it will not do
+## What it won't guess
 
 Most of the value is in the answers the kernel declines to give.
 
@@ -195,13 +195,14 @@ engineering fact.
 # Examples
 
 URL: https://fang.copperhead.sh/start/examples/
-Summary: Eight programs in the repository, smallest first.
+Summary: Eleven programs in the repository, smallest first.
 
 Every example in [`examples/`](https://github.com/copperheadhq/fang/tree/main/examples)
-elaborates, passes the gate and is exercised by the test suite, so none of them
-is a sketch that no longer runs. Each has a page here carrying its program, the
-views it renders and the files it writes — all generated from the folder itself,
-so a page cannot describe a program that has since changed.
+elaborates and passes the gate. The test suite rebuilds each one and compares
+what it produces, so none of these is a sketch that no longer runs. Each has a
+page here carrying its program, the views it renders and the files it writes.
+Those pages are generated from the folder itself. A page cannot describe a
+program that has since changed.
 
 | Example | Shows |
 | --- | --- |
@@ -213,6 +214,9 @@ so a page cannot describe a program that has since changed.
 | [`usb_uart_bridge/`](/examples/usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet |
 | [`buck_regulator/`](/examples/buck_regulator/) | Requirement, decision, calculations and verification beside the circuit |
 | [`servo_drive/`](/examples/servo_drive/) | Composition: one `HalfBridge` block instantiated three times |
+| [`jee_advanced/problem_1/`](/examples/jee_advanced/problem_1/) | Not a board: four claimed currents, all four decided |
+| [`jee_advanced/problem_2/`](/examples/jee_advanced/problem_2/) | Not a board either: one claimed current, and the two branches that carry none |
+| [`noninverting_amp/`](/examples/noninverting_amp/) | Not a board: two midband answers, and the reading of the figure they rest on |
 
 ## Running one
 
@@ -227,6 +231,8 @@ fang view    examples/sensor_board/sensor_board.py ground -o ground.svg
 | File | What it is | Command |
 | --- | --- | --- |
 | `<name>.net` | The KiCad netlist, the artifact a layout tool opens | `fang export` |
+| `<name>.kicad_sch` | The KiCad schematic, the sheet Eeschema opens | `fang schematic` |
+| `schematic.svg` | KiCad's own render of that sheet | `fang schematic --svg` |
 | `netlist.txt` | The same projection as text: parts, then nets and their pads | `fang netlist` |
 | `checks.txt` | Every check that ran, and every one left undecided | `fang check` |
 | `graph.txt` | What the elaborated graph contains, by entity kind | `fang graph` |
@@ -234,7 +240,7 @@ fang view    examples/sensor_board/sensor_board.py ground -o ground.svg
 | `rationale.md` | The requirements, decisions, calculations and evidence in the graph | none |
 
 `python examples/regenerate.py` rewrites them. They are built in the project
-namespace `PRJ-EXAMPLES`, which is where the identifiers in them come from; a
+namespace `PRJ-EXAMPLES`, which is where the identifiers in them come from. A
 local `fang build` defaults to `PRJ-LOCAL` and derives its own.
 
 ## What each one is for
@@ -542,8 +548,8 @@ rejected rather than merged.
    affected entities. A check class is therefore defined by its scope as well as
    by what it evaluates.
 5. **No blocking result.** No check reported a blocking severity, or `TXN-0002`.
-6. **No undecided over a must-be-decided requirement**, or `TXN-0003`; and
-   policy approvals are satisfied, or `TXN-0004`.
+6. **No undecided over a must-be-decided requirement**, or `TXN-0003`, and
+   policy approvals satisfied, or `TXN-0004`.
 
 Only `commit()` advances the head. Rejection is correct by construction: the
 candidate copy is discarded, and canonical state was never touched.
@@ -783,18 +789,18 @@ verification cannot rest on evidence the graph never saw.
 # divider
 
 URL: https://fang.copperhead.sh/examples/divider/
-Summary: A voltage divider with a capacitor across its output: two resistors, one cap, and nothing else. It is here to show the shape of a Fang program and no more than…
+Summary: A voltage divider with a capacitor across its output: two resistors, one cap and nothing else. It is here to show the shape of a Fang program and no more than…
 
-A voltage divider with a capacitor across its output: two resistors, one cap,
+A voltage divider with a capacitor across its output: two resistors, one cap
 and nothing else. It is here to show the shape of a Fang program and no more
 than that.
 
 ## The program
 
 [`divider.py`](https://github.com/copperheadhq/fang/blob/main/examples/divider/divider.py) declares three surfaces (`supply`, `output`,
-`ground`), three parts, and joins them in `architecture`. The `>>` operator is
-the only way parts get connected, and every connection is an entity in the graph
-rather than a line in a file:
+`ground`) and three parts, then joins them in `architecture`. The `>>` operator
+is the only way parts get connected, and every connection is an entity in the
+graph rather than a line in a file:
 
 ```python
 top = Resistor(resistance=10 * kOhm, package="R_0603_1608Metric")
@@ -803,10 +809,10 @@ def architecture(self):
     self.top.p2 >> self.bottom.p1
 ```
 
-The two constraints say what the divider is not allowed to be — a leg under
-1 kOhm — rather than restating the values that were already written above them.
-That is the distinction the whole language rests on: a value is a choice, a
-constraint is the reason the choice is allowed.
+The two constraints say what the divider is not allowed to be: a leg under
+1 kOhm. They do not restate the values written above them. That is the
+distinction the whole language rests on. A value is a choice, and a constraint
+is the reason the choice is allowed.
 
 ## What comes out
 
@@ -814,15 +820,15 @@ constraint is the reason the choice is allowed.
 the only example with nothing undecided in it, because it is the only one with
 no missing datasheet number anywhere.
 
-- [`out/divider.net`](https://github.com/copperheadhq/fang/blob/main/examples/divider/out/divider.net) — the KiCad netlist
-- [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/divider/out/netlist.txt) — the same projection as text
-- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/divider/out/checks.txt) — both checks, both decided
-- [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/divider/out/graph.txt) — 28 entities, by kind
+- [`out/divider.net`](https://github.com/copperheadhq/fang/blob/main/examples/divider/out/divider.net): the KiCad netlist
+- [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/divider/out/netlist.txt): the same projection as text
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/divider/out/checks.txt): both checks, both decided
+- [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/divider/out/graph.txt): 28 entities, by kind
 
 ![the interconnect view](/examples/divider/interconnect.svg)
 
-The two resistors are drawn by the name they have in the program — `top` and
-`bottom` — because `Resistor` twice would not tell you which one is which.
+The two resistors are drawn by the name they have in the program, `top` and
+`bottom`, because `Resistor` twice would not tell you which one is which.
 
 ## Running it
 
@@ -896,7 +902,7 @@ What the elaborated graph contains, by entity kind.
     6  pin
     9  port
    28  total
-snapshot sha256:4381a29f913c43a07f9e363282fecb7f97b0a3b784e7b096aaf59caec8eaae6b
+snapshot sha256:90c7db82474e7a7ebee776d09ab5fe526e8a96efa87e59bc66e215101c30c402
 ```
 
 All of it, including the KiCad netlist, is in
@@ -912,16 +918,16 @@ fang build examples/divider/divider.py
 # blinky
 
 URL: https://fang.copperhead.sh/examples/blinky/
-Summary: An MCU pin, a series resistor, and an LED: the board everybody builds first. Read it after divider/, because it is the first example where the parts have…
+Summary: An MCU pin, a series resistor and an LED: the board everybody builds first. Read it after divider/, because it is the first example where the parts have…
 
-An MCU pin, a series resistor, and an LED: the board everybody builds first.
-Read it after [`divider/`](https://github.com/copperheadhq/fang/blob/main/examples/divider/), because it is the first example where
+An MCU pin, a series resistor and an LED: the board everybody builds first.
+Read it after [`divider/`](/examples/divider/), because it is the first example where
 the parts have *interfaces* rather than bare pads.
 
 ## The program
 
 [`blinky.py`](https://github.com/copperheadhq/fang/blob/main/examples/blinky/blinky.py) declares its own parts. `MCU` is a `Part` with a
-`PowerIn`, a `Signal`, three pins, and a `PinMap` joining the two:
+`PowerIn`, a `Signal`, three pins and a `PinMap` joining the two:
 
 ```python
 power = PowerIn(voltage=3.3 * V, current_demand=30 * mA)
@@ -930,8 +936,8 @@ blink = Signal()
 pinmap = PinMap({"power.vcc": "VDD", "power.gnd": "VSS", "blink.line": "PA5"})
 ```
 
-The pin map is what makes `self.header.dc >> self.mcu.power` mean something: one
-connection between two typed surfaces lowers to the pads that carry it, and the
+The pin map is what makes `self.header.dc >> self.mcu.power` mean something.
+One connection between two typed surfaces lowers to the pads that carry it. The
 netlist below is that lowering, not a second description of it.
 
 The constraint is the point of the example:
@@ -947,14 +953,14 @@ inheriting an old answer.
 
 ## What comes out
 
-6 parts, 4 nets, 47 entities, 6 checks — none failed, one undecided.
+6 parts, 4 nets, 47 entities, 6 checks. None failed, one undecided.
 
 That undecided one is worth reading in [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/blinky/out/checks.txt): the
 board's `supply` surface has no `current_demand` on it, so "does the source
 carry the load?" has no answer. The kernel says so rather than passing the check
 on an assumed number.
 
-- [`out/blinky.net`](https://github.com/copperheadhq/fang/blob/main/examples/blinky/out/blinky.net) — the KiCad netlist
+- [`out/blinky.net`](https://github.com/copperheadhq/fang/blob/main/examples/blinky/out/blinky.net): the KiCad netlist
 - [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/blinky/out/netlist.txt), [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/blinky/out/graph.txt)
 
 ![the interconnect view](/examples/blinky/interconnect.svg)
@@ -974,8 +980,8 @@ fang view    examples/blinky/blinky.py power -o power.svg
 ```python title="examples/blinky/blinky.py"
 """The smallest program that drives something: an MCU pin, a resistor, an LED.
 
-The board everybody builds first. What it shows is the shape of a Fang program —
-declared surfaces, connections between them, and a constraint that states the
+The board everybody builds first. What it shows is the shape of a Fang program:
+declared surfaces, connections between them and a constraint that states the
 engineering intent rather than the answer.
 """
 
@@ -1078,7 +1084,7 @@ What the elaborated graph contains, by entity kind.
    11  pin
    10  port
    47  total
-snapshot sha256:48119cf0baeebb2f713db33833a931652d97307ada6f88e26d1c1073ddf1b31f
+snapshot sha256:b9d3406a7ccee9d1cc9ca95191d79213a7d69e14e5a36b1112afadb62dffde74
 ```
 
 All of it, including the KiCad netlist, is in
@@ -1114,19 +1120,19 @@ pinmap = PinMap({
 ```
 
 `self.mcu.i2c >> self.imu.i2c` is one line, and it has a choice inside it. The
-lowering resolves that choice, and records a `Decision` entity naming what it
-picked and what it passed over — [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/rationale.md) is those
+lowering resolves that choice and records a `Decision` entity naming what it
+picked and what it passed over. [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/rationale.md) is those
 decisions, resolved back to the names in the program:
 
 > **Which pin of `system.mcu` carries i2c.scl?** → `system.mcu.PB8`
 
 The pull-ups are on the board rather than in the parts, because on an open-drain
-bus they belong to the net, and the regulator constraint states the intent
+bus they belong to the net. The regulator constraint states the intent
 (`output_current_max >= 100 * mA`) instead of asserting an answer.
 
 ## What comes out
 
-7 parts, 4 nets, 71 entities, 11 checks — none failed, **four undecided**.
+7 parts, 4 nets, 71 entities, 11 checks. None failed, **four undecided**.
 
 The undecided ones are the reason this example exists.
 [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/checks.txt) says why each is undecided, naming the value
@@ -1140,8 +1146,8 @@ Nothing here assumed 3.3 V and moved on. Undecided is a third truth value, and
 it is the honest one until someone supplies the number.
 
 - [`out/sensor_board.net`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/sensor_board.net), [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/netlist.txt)
-- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/rationale.md) — the four lowering decisions
-- [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/graph.txt) — 71 entities, 19 of them pins
+- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/rationale.md): the four lowering decisions
+- [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/graph.txt): 71 entities, 19 of them pins
 
 ![the interfaces view](/examples/sensor_board/interfaces.svg)
 
@@ -1158,10 +1164,10 @@ fang build   examples/sensor_board/sensor_board.py
 ## The whole program
 
 ```python title="examples/sensor_board/sensor_board.py"
-"""A regulated sensor board: a rail, an MCU, and an I2C sensor on it.
+"""A regulated sensor board: a rail, an MCU and an I2C sensor on it.
 
 Shows the parts the toolchain is actually for: typed interfaces lowering to
-pins, a decision recorded where the MCU offered a choice, and constraints that
+pins, a decision recorded where the MCU offered a choice and constraints that
 stay undecided until someone supplies the missing datasheet number.
 """
 
@@ -1298,7 +1304,7 @@ What the elaborated graph contains, by entity kind.
    19  pin
    13  port
    71  total
-snapshot sha256:4f07e8692fc789920b26d6aecc4012624c28d5b6930054692bb556f19051ec2d
+snapshot sha256:dc4883d4efd3f2ef664a4c330a88f2557a3f0cebb06cd3211ddf73e94b32ccf9
 ```
 
 All of it, including the KiCad netlist, is in
@@ -1314,10 +1320,10 @@ fang build examples/sensor_board/sensor_board.py
 # equations
 
 URL: https://fang.copperhead.sh/examples/equations/
-Summary: A divider written as the ratio it has to satisfy, rather than as two numbers someone computed offstage — and then reused, by inheritance, at a different ratio.
+Summary: A divider written as the ratio it has to satisfy, rather than as two numbers someone computed offstage. It is then reused, by inheritance, at a different ratio.
 
 A divider written as the ratio it has to satisfy, rather than as two numbers
-someone computed offstage — and then reused, by inheritance, at a different
+someone computed offstage. It is then reused, by inheritance, at a different
 ratio.
 
 ## The program
@@ -1335,7 +1341,7 @@ require(self.v_in <= self.i_bleed * (self.top.resistance + self.bottom.resistanc
 dimensionally invalid equation cannot be stored, let alone evaluated. What
 survives to check time is arithmetic that already type-checks.
 
-`SenseDivider(FeedbackDivider)` is the reuse: it keeps every equation and
+`SenseDivider(FeedbackDivider)` is the reuse. It keeps every equation and
 replaces the two resistors, so 24 V onto a 3.3 V ADC is the same design at an
 eighth of the ratio. The board then instantiates both with different bounds:
 
@@ -1344,13 +1350,13 @@ feedback = FeedbackDivider(v_in=12 * V, i_bleed=250 * uA, ratio_min=0.19 * ratio
 sense    = SenseDivider(v_in=24 * V, i_bleed=200 * uA, ratio_min=0.09 * ratio, ...)
 ```
 
-`ratio = UnitLiteral("1")` is how a project adds a unit — dimensionless, here —
-without editing the language.
+`ratio = UnitLiteral("1")` is how a project adds a unit, dimensionless in this
+case, without editing the language.
 
 ## What comes out
 
 7 parts, 6 nets, 72 entities, 12 checks, none failed and none undecided. Twelve
-decided checks over two dividers is the whole point: every bound in both blocks
+decided checks over two dividers is the whole point. Every bound in both blocks
 has the numbers it needs to be answered.
 
 - [`out/equations.net`](https://github.com/copperheadhq/fang/blob/main/examples/equations/out/equations.net), [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/equations/out/netlist.txt)
@@ -1370,13 +1376,13 @@ fang graph   examples/equations/equations.py
 ```python title="examples/equations/equations.py"
 """Values chosen by equation: a divider stated as the ratio it must satisfy.
 
-The resistors carry real values, but the values are not the design — the
+The resistors carry real values, but the values are not the design; the
 constraints are. Ohm's law is written down as a constraint rather than left in a
 comment, so substituting a part re-checks the arithmetic instead of trusting it.
 
 Inheritance is how a second divider reuses the first: `SenseDivider` keeps the
-equations and replaces the two values. A block owns its interior — its parts, its
-parameters, and the constraints over them — and the board connects to the pads at
+equations and replaces the two values. A block owns its interior (its parts, its
+parameters and the constraints over them), and the board connects to the pads at
 its edge.
 """
 
@@ -1572,7 +1578,7 @@ What the elaborated graph contains, by entity kind.
    16  pin
    14  port
    72  total
-snapshot sha256:705c9e11bd04f7a5b1ec17e4f161a65bcbd41141b5ce9a35e033ec458a07b9e0
+snapshot sha256:fb5cdccbc1e2853897ad576defd04c5573c25a242d5a5edb9016de8f89663611
 ```
 
 All of it, including the KiCad netlist, is in
@@ -1592,7 +1598,7 @@ Summary: One controller and three targets on a shared I2C bus. A bus is multi-dr
 
 One controller and three targets on a shared I2C bus. A bus is multi-drop, so
 the same port is connected three times and the lowering resolves it into one net
-per signal — not three point-to-point links.
+per signal, not three point-to-point links.
 
 ## The program
 
@@ -1608,7 +1614,7 @@ require(self.temperature.address != self.memory.address)
 ```
 
 **The unread datasheet is recorded as unread.** `TempSensor` and `EEPROM` cite
-their thresholds with `Cites(...)`; the `RTC` does not have them, and says so:
+their thresholds with `Cites(...)`. The `RTC` does not have them, and says so:
 
 ```python
 thresholds = Assumes(
@@ -1622,22 +1628,22 @@ undecided, which is the state that gets someone to open the datasheet.
 
 ## What comes out
 
-9 parts, 4 nets, 98 entities, 39 checks — none failed, **seven undecided**.
+9 parts, 4 nets, 98 entities, 39 checks. None failed, **seven undecided**.
 
-Six of those seven are one missing pair of numbers, `vih_min` and `voh_min` on
-an I2C port — the RTC's, the only device on the bus whose datasheet nobody has
-read. The seventh is the board's supply, which states no current demand. The
-program predicted both, and the checks found them.
+Six of those seven come from one missing pair of numbers: `vih_min` and
+`voh_min` on the RTC's I2C port, the only device on the bus whose datasheet
+nobody has read. The seventh is the board's supply, which states no current
+demand. The program predicted both, and the checks found them.
 
 - [`out/i2c_bus.net`](https://github.com/copperheadhq/fang/blob/main/examples/i2c_bus/out/i2c_bus.net), [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/i2c_bus/out/netlist.txt)
-- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/i2c_bus/out/checks.txt) — 39 checks, seven of them undecided
-- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/i2c_bus/out/rationale.md) — the address requirement, and the two
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/i2c_bus/out/checks.txt): 39 checks, seven of them undecided
+- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/i2c_bus/out/rationale.md): the address requirement, and the two
   datasheet claims that *are* cited
 
 ![the interfaces view](/examples/i2c_bus/interfaces.svg)
 
-Four devices, one bus: the interfaces view draws each device's link to the
-controller, and the parts that carry no interface — the pull-ups, the bulk cap —
+Four devices, one bus. The interfaces view draws each device's link to the
+controller. The parts that carry no interface, the pull-ups and the bulk cap, go
 below the rule, because in this view nothing connects to them.
 
 ![the interconnect view](/examples/i2c_bus/interconnect.svg)
@@ -1895,7 +1901,7 @@ What the elaborated graph contains, by entity kind.
    16  port
     1  requirement
    98  total
-snapshot sha256:b1812dc0dac6943c60780303dcd0d7a6a10148a70cb4a742d8a812d3a871a590
+snapshot sha256:65a2349925c351990730abf81c86db40412f80d932ca022e18595dad47d36c2f
 ```
 
 All of it, including the KiCad netlist, is in
@@ -1908,13 +1914,1792 @@ fang build examples/i2c_bus/i2c_bus.py
 
 ---
 
+# jee_advanced
+
+URL: https://fang.copperhead.sh/examples/jee_advanced/index/
+Summary: Two circuit-analysis questions from the JEE (Advanced) papers, one folder each. This folder is not itself an example — it holds them.
+
+Two circuit-analysis questions from the JEE (Advanced) papers, one folder each.
+This folder is not itself an example — it holds them.
+
+| | Paper | Asks | Answer |
+| --- | --- | --- | --- |
+| [`problem_1/`](/examples/jee_advanced/problem_1/) | 2022, Paper 1, question 1 | which of four claimed currents are correct | all four of (A), (B), (C), (D) |
+| [`problem_2/`](/examples/jee_advanced/problem_2/) | 2015, question 13 | the current I through R (= 2 Ω) | I = 1 A |
+
+Neither is a board. They are here because the question a physics paper asks
+once is the question a board asks all day — *is this claim about my circuit
+true?* — and the kernel answers it the same way either time: the potentials are
+a value, Kirchhoff's current law is a constraint, and the paper's claim is a
+constraint the checker decides rather than a comment nobody re-reads.
+
+The pair is worth two folders because they show different halves of that.
+`problem_1` checks four claims at once, exactly the four the paper offers.
+`problem_2` checks one, and then checks two more the paper never asks for —
+that two of its ten resistors carry no current at all, which is the whole trick
+of the question and the reason its answer is a round ampere.
+
+Both work the same way, and neither solves anything:
+
+- the program claims the node potentials, derives every branch current from
+  them by Ohm's law, and writes Kirchhoff's current law once per node;
+- `solve.py` beside it lowers the same graph to SPICE through `fang.simulation`
+  and runs ngspice, which is where the potentials came from;
+- `out/rationale.md` carries the question, every resistor's value and current,
+  and the answer, because each of those is an entity in the graph.
+
+The two paths are independent: ngspice solves, the kernel decides.
+
+## Running them
+
+```bash
+fang check examples/jee_advanced/problem_1/problem_1.py
+fang check examples/jee_advanced/problem_2/problem_2.py
+
+python examples/jee_advanced/problem_1/solve.py   # needs ngspice on PATH
+python examples/jee_advanced/problem_2/solve.py
+```
+
+## In this folder
+
+- [`problem_1`](/examples/jee_advanced/problem_1/) — Eight 1 Ω resistors and two ideal batteries, ε₁ = 12 V and ε₂ = 6 V, arranged as a diamond with a centre node. It is JEE (Advanced) 2022, Paper 1, question 1,…
+- [`problem_2`](/examples/jee_advanced/problem_2/) — Ten resistors, one 6.5 V battery, and a single number. It is JEE (Advanced) 2015, question 13: "In the following circuit, the current through the resistor R (=…
+
+
+---
+
+# problem_1 — JEE (Advanced) 2022
+
+URL: https://fang.copperhead.sh/examples/jee_advanced/problem_1/
+Summary: Eight 1 Ω resistors and two ideal batteries, ε₁ = 12 V and ε₂ = 6 V, arranged as a diamond with a centre node. It is JEE (Advanced) 2022, Paper 1, question 1,…
+
+Eight 1 Ω resistors and two ideal batteries, ε₁ = 12 V and ε₂ = 6 V, arranged
+as a diamond with a centre node. It is JEE (Advanced) 2022, Paper 1, question 1,
+which asks which of four claimed currents are correct:
+
+| | Claim |
+| --- | --- |
+| (A) | the current through R1 is 7.2 A |
+| (B) | the current through R2 is 1.2 A |
+| (C) | the current through R3 is 4.8 A |
+| (D) | the current through R5 is 2.4 A |
+
+This is the one example that is not a board, and it is here because the
+question is the same one a board asks all day: *is this claim about my circuit
+true?* The kernel answers it the way it answers any other — the potentials are
+a value, Kirchhoff's current law is a constraint, and each of the four claims is
+a constraint the checker decides. **All four hold.**
+
+## The circuit
+
+The four corners are left, top, right and bottom. R6 and R7 are the upper
+sides, R5 and R8 the lower ones, and R2 and R4 run down the vertical axis into
+the centre. The middle row runs
+
+```
+left corner -- ε₂ -- R3 -- centre -- ε₁ -- R1 -- right corner
+```
+
+with both batteries pointing the same way, so each lifts the node on its right.
+`GND1` is the centre: a one-terminal part that marks the node the potentials
+are measured against, and adds nothing to it.
+
+## The program
+
+[`problem_1.py`](https://github.com/copperheadhq/fang/blob/main/examples/jee_advanced/problem_1/problem_1.py) claims five numbers and nothing else:
+
+```python
+v_centre = Parameter("V", default=0 * V, description="the reference node")
+v_left   = Parameter("V", default=-1.2 * V, description="the left corner")
+v_top    = Parameter("V", default=1.2 * V, description="the top corner")
+v_right  = Parameter("V", default=4.8 * V, description="the right corner")
+v_bottom = Parameter("V", default=1.2 * V, description="the bottom corner")
+```
+
+Every current below is derived from those by Ohm's law, so there is one claim
+to check and not thirteen. Kirchhoff's current law is then written once per
+node, and the four statements the paper asks about are written beside them in
+the same form — a constraint, not a comment:
+
+```python
+require(equals(total(into_centre, from_left_to_top, from_left_to_bottom), no_current))
+...
+require(equals(out_of_centre, 7.2 * A))       # (A) 7.2 A through R1
+```
+
+A parameter reference builds an expression node from one operator, and
+Kirchhoff needs them nested, so the tree is written out with three small
+helpers. That is not a workaround: every node checks its own dimensions as it
+is constructed, so a term that divides a potential by the wrong parameter is
+rejected where it is written rather than where it is evaluated.
+
+Five node equations and four claims: nine constraints, and **the checker
+decides all nine and fails none**. Move any potential and the node equations
+fail first, which is what makes the four claims worth anything.
+
+## Where the potentials came from
+
+They were not solved in the program — the kernel checks claims, it does not
+solve linear systems. [`solve.py`](https://github.com/copperheadhq/fang/blob/main/examples/jee_advanced/problem_1/solve.py) elaborates the same graph, has
+`fang.simulation` compile a plan and lower it to SPICE, and runs ngspice on the
+deck fang wrote:
+
+```
+R1 2 3 1          V1 2 0 12
+R2 4 0 1          V2 5 7 6
+...
+```
+
+`GND1` marks a node and is not a device, so it carries no simulation model, and
+a plan that reaches a component with no model is rejected rather than run with
+a stand-in. Naming it as abstracted is what lets the plan compile, and the plan
+then says so in its own assumptions:
+
+```
+assumption: CMP-fe129c51b056 is abstracted: it contributes no device to the netlist
+```
+
+The operating point gives all eight branch currents — R1 7.2 A, R2 1.2 A,
+R3 4.8 A, R4 1.2 A, R5 2.4 A, R6 2.4 A, R7 3.6 A, R8 3.6 A — and the five
+potentials go into the program, where the constraints judge them. The two paths
+are independent: ngspice solves, the kernel decides.
+
+## The question and the answer are in the graph too
+
+A netlist says what the circuit is. It does not say what was asked of it, or
+what came back. Both are entities here — the question and its four options are
+`Cites`, the answer is `Requires`, the numbers are `Calculates`, and a
+`Verifies` closes the requirement — so [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/jee_advanced/problem_1/out/rationale.md)
+carries them out of the program without anything being retyped:
+
+> **system.answer** — All four options hold: (A), (B), (C) and (D)
+> MUST, state KNOWN, validation by analysis.
+> Verified by `system.answered`: **PASS** by analysis
+
+with each option scored against the branch it names:
+
+> (A) r1 7.2 A — correct; (B) r2 1.2 A — correct; (C) r3 4.8 A — correct;
+> (D) r5 2.4 A — correct.
+
+and every resistor with its value and its current beside it:
+
+> every resistor is 1 Ω: r1 7.2 A, r2 1.2 A, r3 4.8 A, r4 1.2 A, r5 2.4 A,
+> r6 2.4 A, r7 3.6 A, r8 3.6 A
+
+## What comes out
+
+11 parts, 7 nets, 99 entities, 9 checks, none failed and none undecided.
+
+- [`out/problem_1.net`](https://github.com/copperheadhq/fang/blob/main/examples/jee_advanced/problem_1/out/problem_1.net): the KiCad netlist
+- [`out/problem_1.kicad_sch`](https://github.com/copperheadhq/fang/blob/main/examples/jee_advanced/problem_1/out/problem_1.kicad_sch): the KiCad
+  schematic, and [`out/schematic.svg`](/examples/jee_advanced/problem_1/schematic.svg) is KiCad's own render
+  of it
+- [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/jee_advanced/problem_1/out/netlist.txt): the same projection as text, with the
+  two batteries carrying 12 V and 6 V as their values
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/jee_advanced/problem_1/out/checks.txt): nine checks, all decided
+- [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/jee_advanced/problem_1/out/graph.txt): 99 entities, by kind
+- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/jee_advanced/problem_1/out/rationale.md): the question, its four options,
+  every resistor's value and current, and the answer — each one an entity,
+  not prose
+
+![the schematic, rendered by KiCad](/examples/jee_advanced/problem_1/schematic.svg)
+
+That is KiCad drawing a file `fang schematic` wrote, not a picture of a
+circuit: open [`out/problem_1.kicad_sch`](https://github.com/copperheadhq/fang/blob/main/examples/jee_advanced/problem_1/out/problem_1.kicad_sch) in
+Eeschema and it is a schematic like any other. Every terminal carries a global
+label naming the net it is on, because a net is a fact in the graph and a wire
+path is not — fang places parts and names nets, and does not route.
+
+Read it as the netlist reads: `R1` sits between `Net-(R1-Pad1)`, which is the
+junction inside the middle row, and `Net-(R1-Pad2)`, the right corner. Four net
+names are the four corners and `Net-(GND1-Pad1)` is the centre.
+
+![the interconnect view](/examples/jee_advanced/problem_1/interconnect.svg)
+
+The interconnect view is the other picture, and it answers a different
+question: it is fang's own projection, drawn by `fang view`, and it names the
+parts the way the program does. `r1` through `r8` are the resistors the paper
+labels R₁ through R₈, and the two junctions inside the middle row — between
+each battery and the resistor in series with it — are the two nets with only
+two pads on them.
+
+## Running it
+
+```bash
+fang check     examples/jee_advanced/problem_1/problem_1.py
+fang netlist   examples/jee_advanced/problem_1/problem_1.py
+fang view      examples/jee_advanced/problem_1/problem_1.py interconnect -o interconnect.svg
+fang schematic examples/jee_advanced/problem_1/problem_1.py -o board.kicad_sch --svg board.svg
+
+python examples/jee_advanced/problem_1/solve.py     # needs ngspice on PATH
+```
+
+## The whole program
+
+```python title="examples/jee_advanced/problem_1/problem_1.py"
+"""Eight 1 ohm resistors, two ideal batteries, and the question they pose.
+
+JEE (Advanced) 2022, Paper 1: a diamond with four corners and a centre node.
+R6 and R7 are the upper sides, R5 and R8 the lower ones; R2 and R4 run down the
+vertical axis into the centre. The middle row runs
+
+    left corner -- e2 -- R3 -- centre -- e1 -- R1 -- right corner
+
+and both batteries point the same way, so each lifts the node on its right.
+The paper asks which of four claimed currents are correct.
+
+This example is not a board. It is here because the question a board asks all
+day -- "is this claim about my circuit true?" -- is the question a physics
+paper asks once, and the kernel answers it the same way: the potentials are a
+value, Kirchhoff's current law is a constraint, and each of the four claims is
+a constraint the checker decides rather than a comment nobody re-reads.
+
+The potentials below were not solved here. `solve.py` beside this file lowers
+the graph to SPICE through `fang.simulation` and runs ngspice on it; the
+numbers it returns are written in, and the constraints are what judge them.
+"""
+
+from fang.constraints import Arithmetic, Comparison, Literal, Node
+from fang.interfaces import Pin, PinMap
+from fang.lang import (
+    A,
+    Electrical,
+    Ohm,
+    Parameter,
+    ParameterRef,
+    Part,
+    System,
+    V,
+    require,
+)
+from fang.parts import Resistor, TwoPin
+from fang.rationale import Calculates, Cites, Requires, Verifies
+
+# --------------------------------------------------------------------------
+# Writing the expression tree out
+# --------------------------------------------------------------------------
+#
+# A parameter reference builds a node from one operator: `a - b` is an
+# expression, and so is `a / b`. Kirchhoff needs them nested, and a node is not
+# itself an operand of Python's operators, so the tree is written out. That is
+# not a workaround. Every node checks its own dimensions as it is constructed,
+# so a term that divides a voltage by the wrong parameter is rejected where it
+# is written, not where it is evaluated.
+
+
+def _node(value) -> Node:
+    if isinstance(value, Node):
+        return value
+    if isinstance(value, ParameterRef):
+        return value._node()
+    return Literal.of(value)
+
+
+def total(*terms) -> Arithmetic:
+    """The sum of the currents named. Dimensions must agree."""
+    return Arithmetic("add", tuple(_node(term) for term in terms))
+
+
+def across(here, there) -> Arithmetic:
+    """The potential difference from one node to another."""
+    return Arithmetic("sub", (_node(here), _node(there)))
+
+
+def through(difference, resistance) -> Arithmetic:
+    """Ohm's law: the current a difference drives through a resistance."""
+    return Arithmetic("div", (_node(difference), _node(resistance)))
+
+
+def equals(left, right) -> Comparison:
+    return Comparison("eq", (_node(left), _node(right)))
+
+
+# --------------------------------------------------------------------------
+# The parts
+# --------------------------------------------------------------------------
+
+
+class Battery(TwoPin):
+    """An ideal EMF, no internal resistance. Pin 1 is the positive terminal."""
+
+    designator_prefix = "V"
+    voltage = Parameter("V")
+
+
+class GroundReference(Part):
+    """The node every potential below is measured against.
+
+    One terminal and no value: it marks a node rather than adding anything to
+    it, and a one-terminal part emits no device into a simulation deck.
+    """
+
+    designator_prefix = "GND"
+
+    node = Electrical()
+    PIN1 = Pin("1", role="ground", number="1")
+    pinmap = PinMap({"node.line": "1"})
+
+
+class Bridge(System):
+    """The figure, then the claim, then the law that judges it."""
+
+    # -- the question, its options, and the answer -------------------------
+    #
+    # A netlist says what the circuit is; it does not say what was asked of it
+    # or what came back. Both are entities here, so `out/rationale.md` carries
+    # them out of the program and nothing has to be retyped to say what this
+    # example concluded.
+
+    question = Cites(
+        "Which of the following statement(s) is(are) correct? "
+        "(A) the current through R1 is 7.2 A; (B) the current through R2 is "
+        "1.2 A; (C) the current through R3 is 4.8 A; (D) the current through "
+        "R5 is 2.4 A",
+        document="JEE (Advanced) 2022, Paper 1",
+        locator="question 1 — multiple correct, four options",
+    )
+
+    answer = Requires(
+        "All four options hold: (A), (B), (C) and (D)",
+        priority="MUST",
+        validation="analysis",
+    )
+
+    # -- the numbers behind it ----------------------------------------------
+
+    node_potentials = Calculates(
+        "the operating point, taken against the centre node",
+        inputs=("e1", "e2", "reference"),
+        result=(
+            "centre 0 V, left -1.2 V, top 1.2 V, right 4.8 V, bottom 1.2 V, "
+            "from batteries of 12 V and 6 V"
+        ),
+        requirements=("answer",),
+    )
+
+    branch_currents = Calculates(
+        "I = (V_here - V_there) / R, once per branch",
+        inputs=("r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8"),
+        result=(
+            "every resistor is 1 ohm: r1 7.2 A, r2 1.2 A, r3 4.8 A, "
+            "r4 1.2 A, r5 2.4 A, r6 2.4 A, r7 3.6 A, r8 3.6 A"
+        ),
+        requirements=("answer",),
+    )
+
+    options = Calculates(
+        "each claimed current against the branch it names",
+        inputs=("r1", "r2", "r3", "r5"),
+        result=(
+            "(A) r1 7.2 A — correct; (B) r2 1.2 A — correct; "
+            "(C) r3 4.8 A — correct; (D) r5 2.4 A — correct. "
+            "All four options are right, which is what the paper's key says"
+        ),
+        requirements=("answer",),
+    )
+
+    operating_point = Cites(
+        "ngspice reports 7.2, 1.2, 4.8, 1.2, 2.4, 2.4, 3.6 and 3.6 A "
+        "through R1 to R8",
+        document="examples/jee_advanced/problem_1/solve.py",
+        locator="the operating point fang.simulation lowered and ran",
+    )
+
+    answered = Verifies(
+        "answer",
+        method="analysis",
+        evidence=("question", "operating_point"),
+        result="PASS",
+    )
+
+    # The candidate answer, and the whole of it: every current below is derived
+    # from these five numbers by Ohm's law, so there is one claim to check and
+    # not thirteen.
+    v_centre = Parameter("V", default=0 * V, description="the reference node")
+    v_left = Parameter("V", default=-1.2 * V, description="the left corner")
+    v_top = Parameter("V", default=1.2 * V, description="the top corner")
+    v_right = Parameter("V", default=4.8 * V, description="the right corner")
+    v_bottom = Parameter("V", default=1.2 * V, description="the bottom corner")
+
+    e1 = Battery(voltage=12 * V, package="Battery")
+    e2 = Battery(voltage=6 * V, package="Battery")
+
+    r1 = Resistor(resistance=1 * Ohm, package="R_0805")
+    r2 = Resistor(resistance=1 * Ohm, package="R_0805")
+    r3 = Resistor(resistance=1 * Ohm, package="R_0805")
+    r4 = Resistor(resistance=1 * Ohm, package="R_0805")
+    r5 = Resistor(resistance=1 * Ohm, package="R_0805")
+    r6 = Resistor(resistance=1 * Ohm, package="R_0805")
+    r7 = Resistor(resistance=1 * Ohm, package="R_0805")
+    r8 = Resistor(resistance=1 * Ohm, package="R_0805")
+
+    reference = GroundReference(package="GND")
+
+    def architecture(self):
+        # Left corner: the two left-hand sides, and the negative end of e2.
+        self.r6.p1 >> self.r5.p1
+        self.r5.p1 >> self.e2.p2
+
+        # Top corner.
+        self.r6.p2 >> self.r7.p1
+        self.r7.p1 >> self.r2.p1
+
+        # Right corner.
+        self.r7.p2 >> self.r8.p2
+        self.r8.p2 >> self.r1.p2
+
+        # Bottom corner.
+        self.r5.p2 >> self.r8.p1
+        self.r8.p1 >> self.r4.p2
+
+        # Centre, and the reference the potentials are taken against.
+        self.r2.p2 >> self.r4.p1
+        self.r4.p1 >> self.r3.p2
+        self.r3.p2 >> self.e1.p2
+        self.e1.p2 >> self.reference.node
+
+        # The two junctions inside the middle row, between battery and resistor.
+        self.e1.p1 >> self.r1.p1
+        self.e2.p1 >> self.r3.p1
+
+    # -- the branch currents, each read as leaving the first node named -----
+
+    def _left_into_centre(self):
+        """Left corner -> e2 -> R3 -> centre. e2 lifts the node between them."""
+        return through(
+            across(total(self.v_left, self.e2.voltage), self.v_centre),
+            self.r3.resistance,
+        )
+
+    def _centre_into_right(self):
+        """Centre -> e1 -> R1 -> right corner."""
+        return through(
+            across(total(self.v_centre, self.e1.voltage), self.v_right),
+            self.r1.resistance,
+        )
+
+    def constraints(self):
+        no_current = 0 * A
+
+        from_centre_to_bottom = through(
+            across(self.v_centre, self.v_bottom), self.r4.resistance
+        )
+        from_top_to_centre = through(
+            across(self.v_top, self.v_centre), self.r2.resistance
+        )
+        from_left_to_top = through(
+            across(self.v_left, self.v_top), self.r6.resistance
+        )
+        from_top_to_right = through(
+            across(self.v_top, self.v_right), self.r7.resistance
+        )
+        from_left_to_bottom = through(
+            across(self.v_left, self.v_bottom), self.r5.resistance
+        )
+        from_bottom_to_right = through(
+            across(self.v_bottom, self.v_right), self.r8.resistance
+        )
+
+        into_centre = self._left_into_centre()
+        out_of_centre = self._centre_into_right()
+
+        # Kirchhoff's current law, once per node. The centre is implied by the
+        # other four and is written anyway: a redundant check that agrees is
+        # worth more than one that was left out.
+        require(
+            equals(
+                total(into_centre, from_left_to_top, from_left_to_bottom), no_current
+            )
+        )
+        require(equals(total(from_top_to_centre, from_top_to_right), from_left_to_top))
+        require(
+            equals(
+                total(out_of_centre, from_top_to_right, from_bottom_to_right),
+                no_current,
+            )
+        )
+        require(
+            equals(
+                total(from_left_to_bottom, from_centre_to_bottom),
+                from_bottom_to_right,
+            )
+        )
+        require(
+            equals(
+                total(into_centre, from_top_to_centre),
+                total(out_of_centre, from_centre_to_bottom),
+            )
+        )
+
+        # The four statements the paper asks about. Each is written in the
+        # direction the current actually flows, which is what makes the
+        # magnitude the paper asks for the value on the left.
+        require(equals(out_of_centre, 7.2 * A))       # (A) 7.2 A through R1
+        require(equals(from_top_to_centre, 1.2 * A))  # (B) 1.2 A through R2
+        require(equals(into_centre, 4.8 * A))         # (C) 4.8 A through R3
+        require(                                      # (D) 2.4 A through R5
+            equals(through(across(self.v_bottom, self.v_left), self.r5.resistance),
+                   2.4 * A)
+        )
+```
+
+## The files it writes
+
+The parts, then the nets and the pads on them.
+
+```text title="out/netlist.txt"
+GND1   GroundReference  Package:GND
+R1     1 Ohm            Package:R_0805
+R2     1 Ohm            Package:R_0805
+R3     1 Ohm            Package:R_0805
+R4     1 Ohm            Package:R_0805
+R5     1 Ohm            Package:R_0805
+R6     1 Ohm            Package:R_0805
+R7     1 Ohm            Package:R_0805
+R8     1 Ohm            Package:R_0805
+V1     12 V             Package:Battery
+V2     6 V              Package:Battery
+Net-(GND1-Pad1)          GND1.1 R2.2 R3.2 R4.1 V1.2
+Net-(R1-Pad1)            R1.1 V1.1
+Net-(R1-Pad2)            R1.2 R7.2 R8.2
+Net-(R2-Pad1)            R2.1 R6.2 R7.1
+Net-(R3-Pad1)            R3.1 V2.1
+Net-(R4-Pad2)            R4.2 R5.2 R8.1
+Net-(R5-Pad1)            R5.1 R6.1 V2.2
+```
+
+Every check that ran, and every one left undecided.
+
+```text title="out/checks.txt"
+9 checks, 0 failed, 0 undecided
+```
+
+What the elaborated graph contains, by entity kind.
+
+```text title="out/graph.txt"
+    1  block
+    3  calculation
+   11  component
+   28  connection
+    9  constraint
+    2  evidence
+    1  interface
+   21  pin
+   21  port
+    1  requirement
+    1  verification
+   99  total
+snapshot sha256:d04f25ae669ba1bc938295dc24438c84d09d4383db9321f7f4308c60ebeeea4b
+```
+
+All of it, including the KiCad netlist, is in
+[`examples/jee_advanced/problem_1/out/`](https://github.com/copperheadhq/fang/tree/main/examples/jee_advanced/problem_1/out/). Rebuild it with:
+
+```bash
+fang build examples/jee_advanced/problem_1/problem_1.py
+```
+
+
+---
+
+# problem_2 — JEE (Advanced) 2015
+
+URL: https://fang.copperhead.sh/examples/jee_advanced/problem_2/
+Summary: Ten resistors, one 6.5 V battery, and a single number. It is JEE (Advanced) 2015, question 13: \"In the following circuit, the current through the resistor R (=…
+
+Ten resistors, one 6.5 V battery, and a single number. It is JEE (Advanced)
+2015, question 13: *"In the following circuit, the current through the resistor
+R (= 2 Ω) is I Amperes. The value of I is"*. **I = 1 A.**
+
+The second of the two circuit-analysis examples, and it is here for the thing
+[`problem_1/`](/examples/jee_advanced/problem_1/) does not show: a claim worth checking that
+the paper never asks for. Two of the ten resistors carry nothing at all, and
+that is the whole trick of the question — so the program claims that too, and
+the checker decides it beside the answer.
+
+## The circuit
+
+A square with a resistor on each side, three spokes into a centre node, two
+legs down to the bottom rail, and R in series with the battery feeding it:
+
+| | | |
+| --- | --- | --- |
+| R | 2 Ω | in series with the battery; the one the question is about |
+| top, left, right, bottom | 1 Ω, 6 Ω, 2 Ω, 10 Ω | the four sides of the square |
+| top-left, top-right, bottom-right spokes | 2 Ω, 8 Ω, 4 Ω | into the centre |
+| left leg, right leg | 12 Ω, 4 Ω | the lower corners down to the rail |
+
+`GND1` is the bottom rail: a one-terminal part that marks the node the
+potentials are measured against, and adds nothing to it.
+
+## The program
+
+[`problem_2.py`](https://github.com/copperheadhq/fang/blob/main/examples/jee_advanced/problem_2/problem_2.py) claims six numbers and nothing else:
+
+```python
+v_ground       = Parameter("V", default=0 * V,   description="the bottom rail")
+v_top_left     = Parameter("V", default=4.5 * V, description="R's far end")
+v_top_right    = Parameter("V", default=4 * V,   description="the top right corner")
+v_centre       = Parameter("V", default=4 * V,   description="where the spokes meet")
+v_bottom_left  = Parameter("V", default=3 * V,   description="the bottom left corner")
+v_bottom_right = Parameter("V", default=3 * V,   description="the bottom right corner")
+```
+
+Every current is derived from those by Ohm's law, so there is one claim to
+check and not ten. Kirchhoff's current law is written once per node, and then
+the answer — and the two facts that explain it:
+
+```python
+require(equals(into_top_left, 1 * A))                     # I = 1 A through R
+
+require(equals(bottom_left_to_bottom_right, no_current))  # the 10 ohm
+require(equals(top_right_to_centre, no_current))          # the 8 ohm
+```
+
+Read the two potentials beside each of them and the trick is in the open:
+`v_bottom_left` and `v_bottom_right` are both 3 V, and `v_top_right` and
+`v_centre` are both 4 V. A resistor bridging equal potentials carries nothing,
+which takes the 10 Ω and the 8 Ω out of the circuit entirely and leaves the
+answer a round number.
+
+Six node equations and three claims: nine constraints, and **the checker
+decides all nine and fails none**. Move any potential and the node equations
+fail first, which is what makes the three claims worth anything.
+
+## Where the potentials came from
+
+They were not solved in the program — the kernel checks claims, it does not
+solve linear systems. [`solve.py`](https://github.com/copperheadhq/fang/blob/main/examples/jee_advanced/problem_2/solve.py) elaborates the same graph, has
+`fang.simulation` compile a plan and lower it to SPICE, and runs ngspice on the
+deck fang wrote. `GND1` carries no simulation model, so it is named as
+abstracted, which is what lets the plan compile and what puts the abstraction
+in the plan's own assumptions.
+
+The operating point gives every branch: **R1 1 A** — that is I — with R2 and
+R10, the 10 Ω and the 8 Ω, at exactly 0, and the rest 0.25 A to 0.75 A. The
+potentials go into the program, where the constraints judge them. The two paths
+are independent: ngspice solves, the kernel decides.
+
+## The question and the answer are in the graph too
+
+A netlist says what the circuit is. It does not say what was asked of it, or
+what came back. Both are entities here — the question is `Cites`, the answer is
+`Requires`, the numbers are `Calculates`, and a `Verifies` closes the
+requirement — so [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/jee_advanced/problem_2/out/rationale.md) carries them out of the
+program with nothing retyped:
+
+> **system.answer** — The current I through R (= 2 Ω) is 1 A
+> MUST, state KNOWN, validation by analysis.
+> Verified by `system.answered`: **PASS** by analysis
+
+and every resistor with its value and its current beside it:
+
+> r (2 Ω) 1 A, r_top (1 Ω) 0.5 A, r_left (6 Ω) 0.25 A, r_right (2 Ω) 0.5 A,
+> r_bottom (10 Ω) 0 A, r_top_left_spoke (2 Ω) 0.25 A,
+> r_top_right_spoke (8 Ω) 0 A, r_bottom_right_spoke (4 Ω) 0.25 A,
+> r_left_leg (12 Ω) 0.25 A, r_right_leg (4 Ω) 0.75 A
+
+This paper's question is the integer-answer kind and offers nothing to choose
+between, which is why the requirement states a number rather than a set of
+letters. `problem_1` beside it does offer four options, and states them.
+
+## What comes out
+
+12 parts, 7 nets, 108 entities, 9 checks, none failed and none undecided.
+
+- [`out/problem_2.net`](https://github.com/copperheadhq/fang/blob/main/examples/jee_advanced/problem_2/out/problem_2.net): the KiCad netlist
+- [`out/problem_2.kicad_sch`](https://github.com/copperheadhq/fang/blob/main/examples/jee_advanced/problem_2/out/problem_2.kicad_sch): the KiCad
+  schematic, and [`out/schematic.svg`](/examples/jee_advanced/problem_2/schematic.svg) is KiCad's own render
+- [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/jee_advanced/problem_2/out/netlist.txt): the same projection as text
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/jee_advanced/problem_2/out/checks.txt): nine checks, all decided
+- [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/jee_advanced/problem_2/out/graph.txt): 108 entities, by kind
+- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/jee_advanced/problem_2/out/rationale.md): the question, every resistor's
+  value and current, and the answer — each one an entity, not prose
+
+![the schematic, rendered by KiCad](/examples/jee_advanced/problem_2/schematic.svg)
+
+Designators are assigned in the order the program names its parts, so `R1` is
+`r`, the 2 Ω resistor the question asks about, and the rest run `R2` to `R10`
+alphabetically by the name they have in the program. Every terminal carries a
+global label naming the net it is on, because a net is a fact in the graph and
+a wire path is not — fang places parts and names nets, and does not route.
+
+![the interconnect view](/examples/jee_advanced/problem_2/interconnect.svg)
+
+The interconnect view answers the other question: it is fang's own projection,
+drawn by `fang view`, and it names the parts the way the program does, so
+`r_top_right_spoke` is the 8 Ω that turns out to carry nothing.
+
+## Running it
+
+```bash
+fang check     examples/jee_advanced/problem_2/problem_2.py
+fang netlist   examples/jee_advanced/problem_2/problem_2.py
+fang view      examples/jee_advanced/problem_2/problem_2.py interconnect -o interconnect.svg
+fang schematic examples/jee_advanced/problem_2/problem_2.py -o board.kicad_sch --svg board.svg
+
+python examples/jee_advanced/problem_2/solve.py     # needs ngspice on PATH
+```
+
+## The whole program
+
+```python title="examples/jee_advanced/problem_2/problem_2.py"
+"""Ten resistors, one 6.5 V battery, and the single number the paper asks for.
+
+JEE (Advanced) 2015, question 13: "In the following circuit, the current
+through the resistor R (= 2 ohm) is I Amperes. The value of I is". The figure
+is a square, three spokes meeting at a centre node, two legs down to the bottom
+rail, and R in series with the battery feeding the whole thing:
+
+    the square    r_top (1) and r_bottom (10) across, r_left (6) and
+                  r_right (2) down the sides
+    the spokes    r_top_left_spoke (2), r_top_right_spoke (8) and
+                  r_bottom_right_spoke (4), all meeting at the centre
+    the legs      r_left_leg (12) and r_right_leg (4), from the two lower
+                  corners to the bottom rail
+    in series     r (2), between the battery and the top left corner
+
+Like `jee_advanced` beside it, this is not a board. It is here because the
+question is the one a board asks all day -- "is this claim about my circuit
+true?" -- and the kernel answers it the same way: the potentials are a value,
+Kirchhoff's current law is a constraint, and the paper's claim is a constraint
+the checker decides rather than a comment nobody re-reads.
+
+Two of the ten resistors turn out to carry nothing at all, and that is the
+whole trick of the question. Those two are claimed here as well, because a fact
+that explains the answer is worth checking beside it.
+
+The potentials below were not solved here. `solve.py` beside this file lowers
+the graph to SPICE through `fang.simulation` and runs ngspice on it; the
+numbers it returns are written in, and the constraints are what judge them.
+"""
+
+from fang.constraints import Arithmetic, Comparison, Literal, Node
+from fang.interfaces import Pin, PinMap
+from fang.lang import (
+    A,
+    Electrical,
+    Ohm,
+    Parameter,
+    ParameterRef,
+    Part,
+    System,
+    V,
+    require,
+)
+from fang.parts import Resistor, TwoPin
+from fang.rationale import Calculates, Cites, Requires, Verifies
+
+# --------------------------------------------------------------------------
+# Writing the expression tree out
+# --------------------------------------------------------------------------
+#
+# A parameter reference builds a node from one operator: `a - b` is an
+# expression, and so is `a / b`. Kirchhoff needs them nested, and a node is not
+# itself an operand of Python's operators, so the tree is written out. That is
+# not a workaround. Every node checks its own dimensions as it is constructed,
+# so a term that divides a voltage by the wrong parameter is rejected where it
+# is written, not where it is evaluated.
+
+
+def _node(value) -> Node:
+    if isinstance(value, Node):
+        return value
+    if isinstance(value, ParameterRef):
+        return value._node()
+    return Literal.of(value)
+
+
+def total(*terms) -> Arithmetic:
+    """The sum of the currents named. Dimensions must agree."""
+    return Arithmetic("add", tuple(_node(term) for term in terms))
+
+
+def across(here, there) -> Arithmetic:
+    """The potential difference from one node to another."""
+    return Arithmetic("sub", (_node(here), _node(there)))
+
+
+def through(difference, resistance) -> Arithmetic:
+    """Ohm's law: the current a difference drives through a resistance."""
+    return Arithmetic("div", (_node(difference), _node(resistance)))
+
+
+def equals(left, right) -> Comparison:
+    return Comparison("eq", (_node(left), _node(right)))
+
+
+# --------------------------------------------------------------------------
+# The parts
+# --------------------------------------------------------------------------
+
+
+class Battery(TwoPin):
+    """An ideal EMF, no internal resistance. Pin 1 is the positive terminal."""
+
+    designator_prefix = "V"
+    voltage = Parameter("V")
+
+
+class GroundReference(Part):
+    """The node every potential below is measured against.
+
+    One terminal and no value: it marks a node rather than adding anything to
+    it, and a one-terminal part emits no device into a simulation deck.
+    """
+
+    designator_prefix = "GND"
+
+    node = Electrical()
+    PIN1 = Pin("1", role="ground", number="1")
+    pinmap = PinMap({"node.line": "1"})
+
+
+class Ladder(System):
+    """The figure, then the claim, then the law that judges it."""
+
+    # -- the question, and the answer it asks for --------------------------
+    #
+    # A netlist says what the circuit is; it does not say what was asked of it
+    # or what came back. Both are entities here, so `out/rationale.md` carries
+    # them out of the program and nothing has to be retyped to say what this
+    # example concluded.
+
+    question = Cites(
+        "In the following circuit, the current through the resistor "
+        "R (= 2 ohm) is I Amperes. The value of I is",
+        document="JEE (Advanced) 2015",
+        locator="question 13 — an integer answer, no options offered",
+    )
+
+    answer = Requires(
+        "The current I through R (= 2 ohm) is 1 A",
+        priority="MUST",
+        validation="analysis",
+    )
+
+    # -- the numbers behind it ----------------------------------------------
+
+    node_potentials = Calculates(
+        "the operating point, taken against the bottom rail",
+        inputs=("battery", "reference"),
+        result=(
+            "top left 4.5 V, top right 4 V, centre 4 V, "
+            "bottom left 3 V, bottom right 3 V, bottom rail 0 V"
+        ),
+        requirements=("answer",),
+    )
+
+    branch_currents = Calculates(
+        "I = (V_here - V_there) / R, once per branch",
+        inputs=(
+            "r",
+            "r_top",
+            "r_left",
+            "r_right",
+            "r_bottom",
+            "r_top_left_spoke",
+            "r_top_right_spoke",
+            "r_bottom_right_spoke",
+            "r_left_leg",
+            "r_right_leg",
+        ),
+        result=(
+            "r (2 ohm) 1 A, r_top (1 ohm) 0.5 A, r_left (6 ohm) 0.25 A, "
+            "r_right (2 ohm) 0.5 A, r_bottom (10 ohm) 0 A, "
+            "r_top_left_spoke (2 ohm) 0.25 A, r_top_right_spoke (8 ohm) 0 A, "
+            "r_bottom_right_spoke (4 ohm) 0.25 A, "
+            "r_left_leg (12 ohm) 0.25 A, r_right_leg (4 ohm) 0.75 A"
+        ),
+        requirements=("answer",),
+    )
+
+    balanced_branches = Calculates(
+        "a branch between two nodes at equal potential carries no current",
+        inputs=("r_bottom", "r_top_right_spoke"),
+        result=(
+            "r_bottom (10 ohm) bridges 3 V to 3 V and r_top_right_spoke "
+            "(8 ohm) bridges 4 V to 4 V, so both carry 0 A and what is left "
+            "is series-parallel — which is why I is a whole ampere"
+        ),
+        requirements=("answer",),
+    )
+
+    operating_point = Cites(
+        "ngspice reports 1.000000 A through R1, the 2 ohm the question names",
+        document="examples/jee_advanced/problem_2/solve.py",
+        locator="the operating point fang.simulation lowered and ran",
+    )
+
+    answered = Verifies(
+        "answer",
+        method="analysis",
+        evidence=("question", "operating_point"),
+        result="PASS",
+    )
+
+    # The candidate answer, and the whole of it: every current below is derived
+    # from these six numbers by Ohm's law, so there is one claim to check and
+    # not ten.
+    v_ground = Parameter("V", default=0 * V, description="the bottom rail")
+    v_top_left = Parameter("V", default=4.5 * V, description="R's far end")
+    v_top_right = Parameter("V", default=4 * V, description="the top right corner")
+    v_centre = Parameter("V", default=4 * V, description="where the spokes meet")
+    v_bottom_left = Parameter("V", default=3 * V, description="the bottom left corner")
+    v_bottom_right = Parameter("V", default=3 * V, description="the bottom right corner")
+
+    battery = Battery(voltage=6.5 * V, package="Battery")
+
+    # The resistor the paper asks about, in series with the battery.
+    r = Resistor(resistance=2 * Ohm, package="R_0805")
+
+    # The four sides of the square.
+    r_top = Resistor(resistance=1 * Ohm, package="R_0805")
+    r_left = Resistor(resistance=6 * Ohm, package="R_0805")
+    r_right = Resistor(resistance=2 * Ohm, package="R_0805")
+    r_bottom = Resistor(resistance=10 * Ohm, package="R_0805")
+
+    # The three spokes into the centre node.
+    r_top_left_spoke = Resistor(resistance=2 * Ohm, package="R_0805")
+    r_top_right_spoke = Resistor(resistance=8 * Ohm, package="R_0805")
+    r_bottom_right_spoke = Resistor(resistance=4 * Ohm, package="R_0805")
+
+    # The two legs from the lower corners down to the bottom rail.
+    r_left_leg = Resistor(resistance=12 * Ohm, package="R_0805")
+    r_right_leg = Resistor(resistance=4 * Ohm, package="R_0805")
+
+    reference = GroundReference(package="GND")
+
+    def architecture(self):
+        # The battery's positive terminal, and R in series with it.
+        self.battery.p1 >> self.r.p1
+
+        # Top left corner: R's far end, two sides of the square, one spoke.
+        self.r.p2 >> self.r_top.p1
+        self.r_top.p1 >> self.r_left.p1
+        self.r_left.p1 >> self.r_top_left_spoke.p1
+
+        # Top right corner.
+        self.r_top.p2 >> self.r_right.p1
+        self.r_right.p1 >> self.r_top_right_spoke.p1
+
+        # The centre, where the three spokes meet and nothing else does.
+        self.r_top_left_spoke.p2 >> self.r_top_right_spoke.p2
+        self.r_top_right_spoke.p2 >> self.r_bottom_right_spoke.p1
+
+        # Bottom left corner.
+        self.r_left.p2 >> self.r_bottom.p1
+        self.r_bottom.p1 >> self.r_left_leg.p1
+
+        # Bottom right corner.
+        self.r_right.p2 >> self.r_bottom.p2
+        self.r_bottom.p2 >> self.r_bottom_right_spoke.p2
+        self.r_bottom_right_spoke.p2 >> self.r_right_leg.p1
+
+        # The bottom rail, and the reference the potentials are taken against.
+        self.r_left_leg.p2 >> self.r_right_leg.p2
+        self.r_right_leg.p2 >> self.battery.p2
+        self.battery.p2 >> self.reference.node
+
+    # -- the branch currents, each read as leaving the first node named -----
+
+    def _through_r(self):
+        """Bottom rail -> battery -> R -> top left corner. This is I."""
+        return through(
+            across(total(self.v_ground, self.battery.voltage), self.v_top_left),
+            self.r.resistance,
+        )
+
+    def constraints(self):
+        no_current = 0 * A
+
+        into_top_left = self._through_r()
+
+        top_left_to_top_right = through(
+            across(self.v_top_left, self.v_top_right), self.r_top.resistance
+        )
+        top_left_to_bottom_left = through(
+            across(self.v_top_left, self.v_bottom_left), self.r_left.resistance
+        )
+        top_left_to_centre = through(
+            across(self.v_top_left, self.v_centre),
+            self.r_top_left_spoke.resistance,
+        )
+        top_right_to_centre = through(
+            across(self.v_top_right, self.v_centre),
+            self.r_top_right_spoke.resistance,
+        )
+        top_right_to_bottom_right = through(
+            across(self.v_top_right, self.v_bottom_right), self.r_right.resistance
+        )
+        centre_to_bottom_right = through(
+            across(self.v_centre, self.v_bottom_right),
+            self.r_bottom_right_spoke.resistance,
+        )
+        bottom_left_to_bottom_right = through(
+            across(self.v_bottom_left, self.v_bottom_right), self.r_bottom.resistance
+        )
+        bottom_left_to_ground = through(
+            across(self.v_bottom_left, self.v_ground), self.r_left_leg.resistance
+        )
+        bottom_right_to_ground = through(
+            across(self.v_bottom_right, self.v_ground), self.r_right_leg.resistance
+        )
+
+        # Kirchhoff's current law, once per node. The bottom rail is implied by
+        # the other five and is written anyway: a redundant check that agrees is
+        # worth more than one that was left out.
+        require(
+            equals(
+                into_top_left,
+                total(
+                    top_left_to_top_right,
+                    top_left_to_bottom_left,
+                    top_left_to_centre,
+                ),
+            )
+        )
+        require(
+            equals(
+                top_left_to_top_right,
+                total(top_right_to_centre, top_right_to_bottom_right),
+            )
+        )
+        require(
+            equals(
+                total(top_left_to_centre, top_right_to_centre),
+                centre_to_bottom_right,
+            )
+        )
+        require(
+            equals(
+                top_left_to_bottom_left,
+                total(bottom_left_to_bottom_right, bottom_left_to_ground),
+            )
+        )
+        require(
+            equals(
+                total(
+                    top_right_to_bottom_right,
+                    centre_to_bottom_right,
+                    bottom_left_to_bottom_right,
+                ),
+                bottom_right_to_ground,
+            )
+        )
+        require(
+            equals(
+                total(bottom_left_to_ground, bottom_right_to_ground), into_top_left
+            )
+        )
+
+        # The answer the paper asks for, written in the direction the current
+        # actually flows, which is what makes the magnitude it wants the value
+        # on the left.
+        require(equals(into_top_left, 1 * A))  # I = 1 A through R
+
+        # Not asked, and the reason the answer is a round number: the two
+        # resistors that bridge equal potentials carry nothing, which takes the
+        # 10 ohm and the 8 ohm out of the circuit entirely.
+        require(equals(bottom_left_to_bottom_right, no_current))  # the 10 ohm
+        require(equals(top_right_to_centre, no_current))          # the 8 ohm
+```
+
+## The files it writes
+
+The parts, then the nets and the pads on them.
+
+```text title="out/netlist.txt"
+GND1   GroundReference  Package:GND
+R1     2 Ohm            Package:R_0805
+R10    8 Ohm            Package:R_0805
+R2     10 Ohm           Package:R_0805
+R3     4 Ohm            Package:R_0805
+R4     6 Ohm            Package:R_0805
+R5     12 Ohm           Package:R_0805
+R6     2 Ohm            Package:R_0805
+R7     4 Ohm            Package:R_0805
+R8     1 Ohm            Package:R_0805
+R9     2 Ohm            Package:R_0805
+V1     6.5 V            Package:Battery
+Net-(GND1-Pad1)          GND1.1 R5.2 R7.2 V1.2
+Net-(R1-Pad1)            R1.1 V1.1
+Net-(R1-Pad2)            R1.2 R4.1 R8.1 R9.1
+Net-(R10-Pad1)           R10.1 R6.1 R8.2
+Net-(R10-Pad2)           R10.2 R3.1 R9.2
+Net-(R2-Pad1)            R2.1 R4.2 R5.1
+Net-(R2-Pad2)            R2.2 R3.2 R6.2 R7.1
+```
+
+Every check that ran, and every one left undecided.
+
+```text title="out/checks.txt"
+9 checks, 0 failed, 0 undecided
+```
+
+What the elaborated graph contains, by entity kind.
+
+```text title="out/graph.txt"
+    1  block
+    3  calculation
+   12  component
+   32  connection
+    9  constraint
+    2  evidence
+    1  interface
+   23  pin
+   23  port
+    1  requirement
+    1  verification
+  108  total
+snapshot sha256:dda4711d580e3954d45140d099b95fcf3f9fbf67c7dca354a532e1d7a43ae891
+```
+
+All of it, including the KiCad netlist, is in
+[`examples/jee_advanced/problem_2/out/`](https://github.com/copperheadhq/fang/tree/main/examples/jee_advanced/problem_2/out/). Rebuild it with:
+
+```bash
+fang build examples/jee_advanced/problem_2/problem_2.py
+```
+
+
+---
+
+# noninverting_amp
+
+URL: https://fang.copperhead.sh/examples/noninverting_amp/
+Summary: An a.c.-coupled non-inverting amplifier, and the two numbers a textbook asks of it: \"What is the input impedance in Figure 4.44? What is Av?\" Zin = 68.75 kΩ,…
+
+An a.c.-coupled non-inverting amplifier, and the two numbers a textbook asks
+of it: *"What is the input impedance in Figure 4.44? What is Av?"*
+**Zin = 68.75 kΩ, Av = 16** — non-inverting, or +24 dB, over the midband.
+
+The third example that is not a board. The two under
+[`jee_advanced/`](/examples/jee_advanced/) are exam questions with one right answer;
+this one is here for what they do not show, which is that the answer depends
+on a **reading of the schematic** before it depends on any arithmetic. The
+reading is a decision, so it is an entity in the graph rather than a sentence
+in a comment, and `out/rationale.md` carries it out with what it rejected.
+
+## The circuit
+
+| | | |
+| --- | --- | --- |
+| `c_in` | .1 µF | the source onto the + input |
+| `r_bias_upper`, `r_series` | 220 kΩ, 100 kΩ | + input → bias node, side by side |
+| `r_bias_lower`, `c_bias` | 220 kΩ, .5 µF | the bias node to ground, bypassed |
+| `r_feedback`, `r_gain`, `c_gain` | 30 kΩ, 2 kΩ, 1 µF | output → − input → ground |
+| `c_out`, `r_load` | .2 µF, 12 kΩ | the output into its load |
+
+`U1` is an ideal op amp: two analog inputs, one analog output, and no rails,
+because the figure draws none. `GND1` is a one-terminal part that marks the
+node every claim is measured against.
+
+## Neither answer is a property of the resistors
+
+Both are midband answers, and which nodes are a.c. grounds is what decides
+them:
+
+- **The .5 µF** holds the bias node at a.c. ground, so the 220 kΩ and the
+  100 kΩ both run from the input node to ground — in parallel, 68.75 kΩ. The
+  *lower* 220 kΩ never appears in the answer: the .5 µF is across it. The op
+  amp's own + input draws nothing worth subtracting.
+- **The 1 µF** puts the bottom of the 2 kΩ at a.c. ground, which is what makes
+  the gain `1 + 30k/2k` rather than 1. At d.c. that capacitor is an open and
+  the stage falls to unity gain, which is what keeps the output offset small.
+  The 12 kΩ load does not enter it: the op amp's output impedance is 0.
+
+## The reading
+
+The upper 220 kΩ is drawn over the top of the figure, and where its far end
+lands is the whole question. `reading` records the one taken and both it
+turned down:
+
+```python
+reading = Chooses(
+    "Where does the upper 220 k return to?",
+    selected="to the bias node, beside the 100 k, ...",
+    alternatives=[
+        {"reading": "to the op amp output, as a bootstrap", "reason": ...},
+        {"reading": "to a supply rail, making the two 220 k a divider", "reason": ...},
+    ],
+)
+```
+
+Under the bootstrap reading the input impedance would be far higher than
+68.75 kΩ, and under the divider reading the 100 kΩ would be the whole of it.
+Same drawing, three different answers — so the reading is recorded rather than
+assumed.
+
+## The program
+
+[`noninverting_amp.py`](https://github.com/copperheadhq/fang/blob/main/examples/noninverting_amp/noninverting_amp.py) claims three numbers:
+
+```python
+z_in    = Parameter("Ohm", default=68.75 * kOhm, description="what the source sees ...")
+a_v     = Parameter("1",   default=16 * ratio,   description="the midband voltage gain ...")
+midband = Parameter("Hz",  default=1 * kHz,      description="the bottom of the band ...")
+```
+
+Two constraints check the answers against the parts:
+
+```python
+require(equals(self.z_in, parallel(self.r_bias_upper.resistance, self.r_series.resistance)))
+require(equals(self.a_v, total(1 * ratio, over(self.r_feedback.resistance, self.r_gain.resistance))))
+```
+
+and four more check what earns them — each capacitor's reactance at the bottom
+of the claimed band, against the resistance it sits beside:
+
+```python
+require(at_most(reactance(self.c_in.capacitance, self.midband), a_tenth_of(self.z_in)))
+```
+
+`reactance` is `1 / (2πfC)`, written out as an expression tree. The reciprocal
+of a frequency times a capacitance is an ohm, and `Arithmetic` checks that
+where the expression is *constructed* — so a term with the wrong parameter in
+it is rejected at the line that wrote it, not at the line that evaluated it.
+
+At 1 kHz the four come out 1592 Ω against 6875, 318 Ω against 22 k, 159 Ω
+against 200, and 796 Ω against 1200. **Six checks, none failed and none
+undecided.** The gain leg is the tightest of the four, and that is not an
+accident: its corner is 79.6 Hz, the highest of
+
+| | R | C | corner |
+| --- | ---: | ---: | ---: |
+| input | 68.75 kΩ | .1 µF | 23.1 Hz |
+| bias node | 220 kΩ | .5 µF | 1.4 Hz |
+| gain leg | 2 kΩ | 1 µF | 79.6 Hz |
+| output | 12 kΩ | .2 µF | 66.3 Hz |
+
+so `midband` is a decade above it. Move any capacitor down a decade and the
+two answers do not quietly stay true — a check fails and names which one.
+
+## Where the numbers came from
+
+Neither claim was solved in the program — the kernel decides claims, it does
+not solve circuits — and a claim about a *band* asks for a sweep rather than an
+operating point. [`solve.py`](https://github.com/copperheadhq/fang/blob/main/examples/noninverting_amp/solve.py) elaborates the same graph, has
+`fang.simulation` compile an a.c. plan and lower it to SPICE, and runs ngspice
+over 10 Hz to 1 MHz:
+
+```
+--- solved by ngspice-45.2, exit status 0 ---
+  Av at 1 kHz                 15.94   16 claimed
+  Av at 10 kHz                16.00
+  Zin at 1 kHz           68,777 Ohm   68750 claimed
+  Zin at 100 kHz         68,750 Ohm
+```
+
+Both claimed numbers are limits: 68,750 Ω and 16 are what the circuit
+approaches once every capacitor is out of the way. At 1 kHz — the bottom edge
+the program claims — the gain is 0.4% short of 16 and the impedance 0.04% over
+68.75 kΩ, both from the reactance still left in the network. A decade higher
+they are the claimed numbers.
+
+Three parts carry no simulation model and are named as abstracted, which is
+what lets the plan compile and what puts each one in the plan's assumptions:
+`GND1` marks a node, `TP1` marks a terminal, and `U1` is an ideal op amp nobody
+wrote a model for. Two cards are the script's own and it says so — `V1`, the
+source the figure implies and never draws, and `E1`, a controlled source with a
+gain of a million standing in for the abstracted op amp. The analysis is still
+the plan's: the control block runs the `.ac` line `lower_to_spice` wrote rather
+than asking for a second one.
+
+## What comes out
+
+13 parts, 8 nets, 114 entities, 6 checks, none failed and none undecided.
+
+- [`out/noninverting_amp.net`](https://github.com/copperheadhq/fang/blob/main/examples/noninverting_amp/out/noninverting_amp.net): the KiCad netlist
+- [`out/noninverting_amp.kicad_sch`](https://github.com/copperheadhq/fang/blob/main/examples/noninverting_amp/out/noninverting_amp.kicad_sch): the KiCad
+  schematic, and [`out/schematic.svg`](/examples/noninverting_amp/schematic.svg) is KiCad's own render
+- [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/noninverting_amp/out/netlist.txt): the same projection as text
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/noninverting_amp/out/checks.txt): six checks, all decided
+- [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/noninverting_amp/out/graph.txt): 114 entities, by kind
+- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/noninverting_amp/out/rationale.md): the question, the reading, the three
+  calculations and the verification
+
+![the schematic, rendered by KiCad](/examples/noninverting_amp/schematic.svg)
+
+The resistors and the ground marker have drawn symbols; the op amp and the
+four capacitors are boxes with their own pins on them, which is what the
+schematic compiler does for a part nobody has a symbol for. `U1`'s pins come
+out where an engineer expects them — `IN-` and `IN+` on the left, `OUT` on the
+right — because they are numbered 2, 3 and 6, the single-op-amp pinout, and
+the box takes the pins in the order the graph gives them.
+
+![the interconnect view](/examples/noninverting_amp/interconnect.svg)
+
+The interconnect view is fang's own projection, and it names the parts the way
+the program does, so `r_bias_upper` and `r_series` are visibly the two that
+meet at the + input and leave together.
+
+## Running it
+
+```bash
+fang check     examples/noninverting_amp/noninverting_amp.py
+fang netlist   examples/noninverting_amp/noninverting_amp.py
+fang view      examples/noninverting_amp/noninverting_amp.py interconnect -o interconnect.svg
+fang schematic examples/noninverting_amp/noninverting_amp.py -o board.kicad_sch --svg board.svg
+
+python examples/noninverting_amp/solve.py     # needs ngspice on PATH
+```
+
+## The whole program
+
+```python title="examples/noninverting_amp/noninverting_amp.py"
+"""An a.c.-coupled non-inverting amplifier, and the two numbers asked of it.
+
+The question is the one every textbook asks about this figure: "what is the
+input impedance, and what is Av?" Both answers are midband answers, and that
+is the whole of the problem -- neither number is a property of the resistors
+alone. They are properties of which resistors return to an a.c. ground, and
+which nodes are a.c. grounds is set by the four capacitors.
+
+The figure, node by node:
+
+    the input    a .1 uF from the source onto the + input
+    the bias     220 k from the + input back to a bias node, 100 k beside it,
+                 and at that node 220 k to ground with .5 uF across it
+    the gain     30 k from the output to the - input, 2 k from there to
+                 ground through 1 uF
+    the output   .2 uF into a 12 k load
+
+Like the two `jee_advanced` examples beside it, this is not a board. It is
+here because the answer depends on a reading of the schematic, and a reading
+is a decision: `reading` below records which one was taken and what it
+rejected, so the two numbers can be read back to their premise instead of
+being believed.
+
+The claims are `z_in` and `a_v`. The four checks under them are what earns
+them: each capacitor's reactance at the bottom of the claimed band, against
+the resistance it sits beside. Move a capacitor by a decade and the answers do
+not quietly stay true -- a check fails and says which one.
+
+Both claims are limits, and neither was solved here. `solve.py` beside this
+file lowers the graph to SPICE through `fang.simulation` and sweeps it in
+ngspice, which is what a claim about a band asks for; the run agrees with both
+numbers and shows how fast they are approached.
+"""
+
+from fang.constraints import Arithmetic, Comparison, Literal, Node
+from fang.interfaces import AnalogIn, AnalogOut, Pin, PinMap
+from fang.lang import (
+    Electrical,
+    Parameter,
+    ParameterRef,
+    Part,
+    System,
+    UnitLiteral,
+    kHz,
+    kOhm,
+    require,
+    uF,
+)
+from fang.parts import Capacitor, Resistor, TestPoint
+from fang.rationale import Calculates, Chooses, Cites, Requires, Verifies
+
+#: A dimensionless literal, so a gain is a quantity like every other number.
+ratio = UnitLiteral("1")
+
+#: Written out to the precision a Decimal keeps, because the constraints are
+#: evaluated in decimal and a binary float never reaches a quantity.
+TWO_PI = ratio("6.283185307179586")
+
+
+# --------------------------------------------------------------------------
+# Writing the expression tree out
+# --------------------------------------------------------------------------
+#
+# A parameter reference builds a node from one operator, and a node is not
+# itself an operand of Python's operators, so anything nested is written out.
+# That is not a workaround. Every node checks its own dimensions as it is
+# constructed, so 1 / (2*pi*f*C) is an impedance where it is written or it is
+# rejected there -- the reciprocal of a frequency times a capacitance is an
+# ohm, and nothing downstream has to re-check that.
+
+
+def _node(value) -> Node:
+    if isinstance(value, Node):
+        return value
+    if isinstance(value, ParameterRef):
+        return value._node()
+    return Literal.of(value)
+
+
+def total(*terms) -> Arithmetic:
+    """The sum of the terms named. Dimensions must agree."""
+    return Arithmetic("add", tuple(_node(term) for term in terms))
+
+
+def product(*terms) -> Arithmetic:
+    """The product of the terms named."""
+    return Arithmetic("mul", tuple(_node(term) for term in terms))
+
+
+def over(numerator, denominator) -> Arithmetic:
+    return Arithmetic("div", (_node(numerator), _node(denominator)))
+
+
+def parallel(one, other) -> Arithmetic:
+    """Two impedances side by side: the product over the sum."""
+    return over(product(one, other), total(one, other))
+
+
+def reactance(capacitance, frequency) -> Arithmetic:
+    """1 / (2*pi*f*C): what a capacitor is worth, in ohms, at one frequency."""
+    return over(1 * ratio, product(TWO_PI, frequency, capacitance))
+
+
+def equals(left, right) -> Comparison:
+    return Comparison("eq", (_node(left), _node(right)))
+
+
+def at_most(left, right) -> Comparison:
+    return Comparison("le", (_node(left), _node(right)))
+
+
+def a_tenth_of(value) -> Arithmetic:
+    """The margin that makes "a short" and "an open" worth saying."""
+    return over(value, 10 * ratio)
+
+
+# --------------------------------------------------------------------------
+# The parts
+# --------------------------------------------------------------------------
+
+
+class OpAmp(Part):
+    """An ideal op amp: two analog inputs, one analog output, no rails.
+
+    The figure draws no supplies, so the part has none. The pin numbers are the
+    single-op-amp 8-pin pinout an engineer expects -- 2, 3 and 6 -- and the
+    package is the one a real part would arrive in, but nothing here claims a
+    vendor: no part has been selected, and inventing one would be exactly the
+    unearned certainty the kernel exists to prevent.
+    """
+
+    designator_prefix = "U"
+
+    inverting = AnalogIn()
+    non_inverting = AnalogIn()
+    output = AnalogOut()
+
+    IN_MINUS = Pin("IN-", role="analog", number="2")
+    IN_PLUS = Pin("IN+", role="analog", number="3")
+    OUT = Pin("OUT", role="analog", number="6")
+
+    pinmap = PinMap(
+        {
+            "inverting.signal": "IN-",
+            "non_inverting.signal": "IN+",
+            "output.signal": "OUT",
+        }
+    )
+
+
+class GroundReference(Part):
+    """The node every claim below is measured against.
+
+    One terminal and no value: it marks a node rather than adding anything to
+    it.
+    """
+
+    designator_prefix = "GND"
+
+    node = Electrical()
+    PIN1 = Pin("1", role="ground", number="1")
+    pinmap = PinMap({"node.line": "1"})
+
+
+class NonInvertingAmp(System):
+    """The figure, then the two claims, then what makes them true."""
+
+    # -- the question, the reading it needed, and the answer ----------------
+
+    question = Cites(
+        "What is the input impedance in Figure 4.44? What is Av?",
+        document="problem set, question 40",
+        locator="figure 4.44 -- the circuit as drawn, no frequency given",
+    )
+
+    reading = Chooses(
+        "Where does the upper 220 k return to?",
+        selected=(
+            "to the bias node, beside the 100 k, so both land on the + input "
+            "at one end and on the .5 uF's node at the other"
+        ),
+        alternatives=[
+            {
+                "reading": "to the op amp output, as a bootstrap",
+                "reason": (
+                    "the figure's top wire comes down to the left of the "
+                    "symbol, onto the + input, not to the output on its right"
+                ),
+            },
+            {
+                "reading": "to a supply rail, making the two 220 k a divider",
+                "reason": (
+                    "no rail is drawn anywhere in the figure, and the lower "
+                    "220 k already returns the + input's bias current to "
+                    "ground on its own"
+                ),
+            },
+        ],
+        rationale=(
+            "under this reading both the 220 k and the 100 k run from the "
+            "input node to a node the .5 uF holds at a.c. ground, which puts "
+            "them in parallel across the input",
+            "the answer is a reading of the drawing before it is arithmetic, "
+            "so the reading is recorded rather than assumed",
+        ),
+    )
+
+    answer = Requires(
+        "The input impedance is 68.75 kOhm and Av is 16, non-inverting",
+        priority="MUST",
+        validation="analysis",
+    )
+
+    # -- the numbers behind it ----------------------------------------------
+
+    input_impedance = Calculates(
+        "Zin = 220k || 100k, both returning to the a.c. ground the .5 uF makes",
+        inputs=("r_bias_upper", "r_series", "c_bias"),
+        result=(
+            "68.75 kOhm. The lower 220 k does not appear: the .5 uF is across "
+            "it, and the op amp's own + input draws nothing"
+        ),
+        requirements=("answer",),
+    )
+
+    voltage_gain = Calculates(
+        "Av = 1 + Rf/Rg, with the 1 uF shorting the 2 k leg to ground",
+        inputs=("r_feedback", "r_gain", "c_gain"),
+        result=(
+            "1 + 30k/2k = 16, or +24 dB, non-inverting. At d.c. the 1 uF is an "
+            "open and the stage falls to unity gain, which is what keeps the "
+            "output offset small. The 12 k load does not enter it"
+        ),
+        requirements=("answer",),
+    )
+
+    corner_frequencies = Calculates(
+        "f = 1 / (2*pi*R*C), once per capacitor",
+        inputs=("c_in", "c_bias", "c_gain", "c_out"),
+        result=(
+            "23.1 Hz at the input, 1.4 Hz at the bias node, 79.6 Hz at the "
+            "gain leg, 66.3 Hz into the load. The 1 uF against 2 k is the "
+            "highest of the four, so the midband both answers are claimed "
+            "over starts about a decade above it"
+        ),
+        requirements=("answer",),
+    )
+
+    answered = Verifies(
+        "answer",
+        method="analysis",
+        evidence=("question",),
+        result="PASS",
+    )
+
+    # -- the claims, and the band they are claimed over ---------------------
+
+    z_in = Parameter(
+        "Ohm",
+        default=68.75 * kOhm,
+        description="what the source sees, looking in through the .1 uF",
+    )
+    a_v = Parameter(
+        "1",
+        default=16 * ratio,
+        description="the midband voltage gain, output over input",
+    )
+    midband = Parameter(
+        "Hz",
+        default=1 * kHz,
+        description="the bottom of the band both answers are claimed over",
+    )
+
+    # -- the figure ---------------------------------------------------------
+
+    source = TestPoint(package="TestPoint_Pad_D1.0mm")
+    c_in = Capacitor(capacitance=0.1 * uF, package="C_0805")
+
+    # The two resistors that meet at the + input and leave together. Their far
+    # end is the bias node, which the .5 uF holds at a.c. ground.
+    r_bias_upper = Resistor(resistance=220 * kOhm, package="R_0805")
+    r_series = Resistor(resistance=100 * kOhm, package="R_0805")
+
+    # The bias node itself: the d.c. return for the + input, bypassed.
+    r_bias_lower = Resistor(resistance=220 * kOhm, package="R_0805")
+    c_bias = Capacitor(capacitance=0.5 * uF, package="C_0805")
+
+    # The feedback network, and the leg that sets the gain above 1.
+    r_feedback = Resistor(resistance=30 * kOhm, package="R_0805")
+    r_gain = Resistor(resistance=2 * kOhm, package="R_0805")
+    c_gain = Capacitor(capacitance=1 * uF, package="C_0805")
+
+    # The output, and what it drives.
+    c_out = Capacitor(capacitance=0.2 * uF, package="C_0805")
+    r_load = Resistor(resistance=12 * kOhm, package="R_0805")
+
+    amp = OpAmp(package="SOIC-8")
+    reference = GroundReference(package="GND")
+
+    def architecture(self):
+        # The input node: the coupling capacitor lands on the + input, and the
+        # two bias resistors leave from there.
+        self.source.probe >> self.c_in.p1
+        self.c_in.p2 >> self.amp.non_inverting.signal
+        self.amp.non_inverting.signal >> self.r_bias_upper.p1
+        self.r_bias_upper.p1 >> self.r_series.p1
+
+        # The bias node: both of them arrive, the 220 k goes on to ground, and
+        # the .5 uF is across it.
+        self.r_bias_upper.p2 >> self.r_series.p2
+        self.r_series.p2 >> self.r_bias_lower.p1
+        self.r_bias_lower.p1 >> self.c_bias.p1
+
+        # The - input: the feedback resistor and the gain leg.
+        self.amp.inverting.signal >> self.r_feedback.p1
+        self.r_feedback.p1 >> self.r_gain.p1
+        self.r_gain.p2 >> self.c_gain.p1
+
+        # The output node, and the load beyond the coupling capacitor.
+        self.amp.output.signal >> self.r_feedback.p2
+        self.r_feedback.p2 >> self.c_out.p1
+        self.c_out.p2 >> self.r_load.p1
+
+        # Ground, and the reference every claim is measured against.
+        self.r_bias_lower.p2 >> self.c_bias.p2
+        self.c_bias.p2 >> self.c_gain.p2
+        self.c_gain.p2 >> self.r_load.p2
+        self.r_load.p2 >> self.reference.node
+
+    def constraints(self):
+        # The first answer. Both resistors run from the input node to a node
+        # the .5 uF holds at a.c. ground, so they are in parallel across it,
+        # and the op amp's own + input draws nothing worth subtracting.
+        require(
+            equals(
+                self.z_in,
+                parallel(self.r_bias_upper.resistance, self.r_series.resistance),
+            )
+        )
+
+        # The second. The 1 uF puts the bottom of the 2 k on a.c. ground, which
+        # is what makes the gain 1 + Rf/Rg rather than 1.
+        require(
+            equals(
+                self.a_v,
+                total(
+                    1 * ratio,
+                    over(self.r_feedback.resistance, self.r_gain.resistance),
+                ),
+            )
+        )
+
+        # And what earns both: at the bottom of the claimed band, every
+        # capacitor is worth at most a tenth of the resistance beside it, which
+        # is what "treat it as a short" means when it is written down rather
+        # than assumed. The gain leg is the tightest of the four.
+        require(
+            at_most(
+                reactance(self.c_in.capacitance, self.midband),
+                a_tenth_of(self.z_in),
+            )
+        )
+        require(
+            at_most(
+                reactance(self.c_bias.capacitance, self.midband),
+                a_tenth_of(self.r_bias_lower.resistance),
+            )
+        )
+        require(
+            at_most(
+                reactance(self.c_gain.capacitance, self.midband),
+                a_tenth_of(self.r_gain.resistance),
+            )
+        )
+        require(
+            at_most(
+                reactance(self.c_out.capacitance, self.midband),
+                a_tenth_of(self.r_load.resistance),
+            )
+        )
+```
+
+## The files it writes
+
+The parts, then the nets and the pads on them.
+
+```text title="out/netlist.txt"
+C1     0.5 uF           Package:C_0805
+C2     1 uF             Package:C_0805
+C3     0.1 uF           Package:C_0805
+C4     0.2 uF           Package:C_0805
+GND1   GroundReference  Package:GND
+R1     220 kOhm         Package:R_0805
+R2     220 kOhm         Package:R_0805
+R3     30 kOhm          Package:R_0805
+R4     2 kOhm           Package:R_0805
+R5     12 kOhm          Package:R_0805
+R6     100 kOhm         Package:R_0805
+TP1    TestPoint        Package:TestPoint_Pad_D1.0mm
+U1     OpAmp            Package:SOIC-8
+Net-(C1-Pad1)            C1.1 R1.1 R2.2 R6.2
+Net-(C1-Pad2)            C1.2 C2.2 GND1.1 R1.2 R5.2
+Net-(C2-Pad1)            C2.1 R4.2
+Net-(C3-Pad1)            C3.1 TP1.1
+Net-(C3-Pad2)            C3.2 R2.1 R6.1 U1.IN+
+Net-(C4-Pad1)            C4.1 R3.2 U1.OUT
+Net-(C4-Pad2)            C4.2 R5.1
+Net-(R3-Pad1)            R3.1 R4.1 U1.IN-
+```
+
+Every check that ran, and every one left undecided.
+
+```text title="out/checks.txt"
+6 checks, 0 failed, 0 undecided
+```
+
+What the elaborated graph contains, by entity kind.
+
+```text title="out/graph.txt"
+    1  block
+    3  calculation
+   13  component
+   34  connection
+    6  constraint
+    1  decision
+    1  evidence
+    3  interface
+   25  pin
+   25  port
+    1  requirement
+    1  verification
+  114  total
+snapshot sha256:ca5378f7c2ba74e2e336ac8164d4b12701d3d0041ee3f0df60db28b4bfccb27b
+```
+
+All of it, including the KiCad netlist, is in
+[`examples/noninverting_amp/out/`](https://github.com/copperheadhq/fang/tree/main/examples/noninverting_amp/out/). Rebuild it with:
+
+```bash
+fang build examples/noninverting_amp/noninverting_amp.py
+```
+
+
+---
+
 # buck_regulator
 
 URL: https://fang.copperhead.sh/examples/buck_regulator/
-Summary: 12 V to 3.3 V, with the reasoning kept beside the circuit. The converter itself is ordinary; what is not ordinary is that the argument for it is in the same…
+Summary: 12 V to 3.3 V, with the reasoning kept beside the circuit. The converter itself is ordinary. What is not ordinary is that the argument for it sits in the same…
 
 12 V to 3.3 V, with the reasoning kept beside the circuit. The converter itself
-is ordinary; what is not ordinary is that the argument for it is in the same
+is ordinary. What is not ordinary is that the argument for it sits in the same
 graph as the inductor.
 
 ## The program
@@ -1932,28 +3717,28 @@ load_regulation = Verifies("rail_tolerance", ...)
 
 So "why is this 4.7 µH?" has an answer the graph can give: a calculation, over a
 datasheet claim, serving a requirement, which a verification closes. Nobody had
-to write a design document, and nothing here can drift from the design, because
-it *is* the design — change the evidence and the decision resting on it is
-flagged.
+to write a design document. Nothing here can drift from the design either,
+because it *is* the design. Change the evidence and the decision resting on it
+is flagged.
 
-The output voltage is deliberately not a parameter of the controller. It is set
-by the feedback divider on the board, which is why the divider carries the
+The output voltage is deliberately not a parameter of the controller. The
+feedback divider on the board sets it, which is why the divider carries the
 constraint that produces it.
 
 ## What comes out
 
-12 parts, 9 nets, 118 entities, 15 checks — none failed, one undecided.
+12 parts, 9 nets, 118 entities, 15 checks. None failed, one undecided.
 
 [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/rationale.md) is the file to read. It is the whole
 argument, projected out of the graph in identifier order:
 
-> ### system.inductor_value — `CALC-7d60a2e8f772`
+> ### system.inductor_value (`CALC-7d60a2e8f772`)
 >
 > `L = v_out * (1 - v_out / v_in) / (f_sw * ripple_current)`
 >
 > Result: 4.7 uH at 1.25 MHz for 30% ripple at 1.5 A
 >
-> - Over `system.inductor` — Inductor (`CMP-64dfc4cd840c`)
+> - Over `system.inductor` (Inductor, `CMP-64dfc4cd840c`)
 
 - [`out/buck_regulator.net`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/buck_regulator.net), [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/netlist.txt)
 - [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/checks.txt), [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/graph.txt)
@@ -1975,9 +3760,9 @@ fang view    examples/buck_regulator/buck_regulator.py power -o power.svg
 """A 12 V to 3.3 V buck converter, with the reasoning kept beside the circuit.
 
 The circuit is ordinary. What is not ordinary is that the requirement, the part
-decision, the datasheet numbers behind it, the two calculations, and the
+decision, the datasheet numbers behind it, the two calculations and the
 verification that closes the requirement are all entities in the same graph as
-the inductor — so `fang` can answer "why is this 4.7 uH?" without anyone having
+the inductor, so `fang` can answer "why is this 4.7 uH?" without anyone having
 written a design document.
 """
 
@@ -2284,7 +4069,7 @@ What the elaborated graph contains, by entity kind.
     1  requirement
     1  verification
   118  total
-snapshot sha256:7b62dc883f71e568ff77bf9c804b06bc3721982f00d915a5882672ee9c921cb0
+snapshot sha256:4e0d69731dab5362aad836d3303a37ed478175e4006576dd482e69484a1af9df
 ```
 
 All of it, including the KiCad netlist, is in
@@ -2300,10 +4085,10 @@ fang build examples/buck_regulator/buck_regulator.py
 # usb_uart_bridge
 
 URL: https://fang.copperhead.sh/examples/usb_uart_bridge/
-Summary: USB to serial: the interface board on nearly every desk. What it adds over the other examples is part selection — the difference between what the design needs…
+Summary: USB to serial: the interface board on nearly every desk. What it adds over the other examples is part selection, the difference between what the design needs…
 
 USB to serial: the interface board on nearly every desk. What it adds over the
-other examples is **part selection** — the difference between what the design
+other examples is **part selection**, the difference between what the design
 needs and what was bought.
 
 ## The program
@@ -2320,13 +4105,13 @@ def __init__(self, **overrides):
 ```
 
 The class body would attach the choice to the template every instance derives
-from. The instance is where it belongs: the logical part stays "a 3.3 V
+from. The instance is where it belongs. The logical part stays "a 3.3 V
 regulator", and which one was bought is a separate, cited fact that a second
 board can answer differently.
 
-The decision behind it is in the graph too, with what it rejected and why —
-`FT232RL` on unit cost, `CP2102N` on needing an oscillator — and it names the
-requirement it serves.
+The decision behind it is in the graph too, with what it rejected and why:
+`FT232RL` on unit cost, `CP2102N` on needing an oscillator. It names the
+requirement it serves as well.
 
 The UART crossing is worth reading as well:
 
@@ -2335,18 +4120,18 @@ self.bridge.uart.tx >> self.target.uart.rx
 self.bridge.uart.rx >> self.target.uart.tx
 ```
 
-Connecting the two *ports* would pair like names with like — tx to tx — so the
+Connecting the two *ports* would pair like names with like, tx to tx, so the
 two wires are named individually. That a signal of an interface is addressable
 on its own is the whole reason this works.
 
 ## What comes out
 
-17 parts, 11 nets, 162 entities, 24 checks — none failed, six undecided.
+17 parts, 11 nets, 162 entities, 24 checks. None failed, six undecided.
 
-- [`out/usb_uart_bridge.net`](https://github.com/copperheadhq/fang/blob/main/examples/usb_uart_bridge/out/usb_uart_bridge.net) — the KiCad netlist, ESD
+- [`out/usb_uart_bridge.net`](https://github.com/copperheadhq/fang/blob/main/examples/usb_uart_bridge/out/usb_uart_bridge.net): the KiCad netlist, ESD
   clamps and series resistors included
-- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/usb_uart_bridge/out/rationale.md) — the requirement, the bridge decision
-  with both rejected alternatives, and the USB 2.0 citation behind the D+ pull-up
+- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/usb_uart_bridge/out/rationale.md): the requirement, the bridge decision
+  with both rejected alternatives and the USB 2.0 citation behind the D+ pull-up
 - [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/usb_uart_bridge/out/checks.txt), [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/usb_uart_bridge/out/graph.txt)
 
 ![the power view](/examples/usb_uart_bridge/power.svg)
@@ -2366,9 +4151,9 @@ fang netlist examples/usb_uart_bridge/usb_uart_bridge.py
 """A USB-to-UART bridge: the interface board on nearly every desk.
 
 What it adds over the other examples is the part selection. The bridge and the
-regulator are chosen parts — a manufacturer, an MPN, a distributor code, and the
-datasheet the numbers came from — attached in `__init__` so the selection lands
-on the instance and not on the class template. The logical part stays "a 3.3 V
+regulator are chosen parts: a manufacturer, an MPN, a distributor code and the
+datasheet the numbers came from, all attached in `__init__` so the selection
+lands on the instance and not on the class template. The logical part stays "a 3.3 V
 regulator"; which one was bought is recorded separately.
 """
 
@@ -2578,7 +4363,7 @@ class USBSerial(System):
         self.regulator.vout.gnd >> self.load_c2.p2
 
         # A UART crosses. Connecting the two ports would pair like names with
-        # like — tx to tx — so the two wires are named, which is the whole
+        # like, tx to tx, so the two wires are named, which is the whole
         # reason a signal of an interface is addressable on its own.
         self.bridge.uart.tx >> self.target.uart.rx
         self.bridge.uart.rx >> self.target.uart.tx
@@ -2662,7 +4447,7 @@ What the elaborated graph contains, by entity kind.
    32  port
     1  requirement
   162  total
-snapshot sha256:92e4cd77262a09d561a4633f28c448712b8e63cc49b460e19353ee675421912d
+snapshot sha256:a09c3395b358268df190e81ec7f84d868acc2adcdca77557c9f6856ecb85ed9d
 ```
 
 All of it, including the KiCad netlist, is in
@@ -2678,11 +4463,11 @@ fang build examples/usb_uart_bridge/usb_uart_bridge.py
 # servo_drive
 
 URL: https://fang.copperhead.sh/examples/servo_drive/
-Summary: Three half-bridges, CAN, an encoder and a shunt per phase: the board this toolchain was written for. It is the composition example — the largest program here,…
+Summary: Three half-bridges, CAN, an encoder and a shunt per phase: the board this toolchain was written for. It is the composition example, the largest program here…
 
 Three half-bridges, CAN, an encoder and a shunt per phase: the board this
-toolchain was written for. It is the composition example — the largest program
-here, from the smallest amount of repetition.
+toolchain was written for. It is the composition example, the largest program
+here built from the smallest amount of repetition.
 
 ## The program
 
@@ -2703,10 +4488,10 @@ class HalfBridge(Module):
         require(self.shunt.power_rating >= 1 * W)
 ```
 
-and instantiates it three times. A block owns its interior — its parts, its
-connections, and its constraints — so the drive connects to the bridge's edge
-and never reaches inside it. The three constraint sets are three separate
-constraints in the graph, decided separately: a change to one phase does not
+and instantiates it three times. A block owns its interior: its parts, its
+connections and its constraints. So the drive connects to the bridge's edge and
+never reaches inside it. The three constraint sets become three separate
+constraints in the graph, decided separately, and a change to one phase does not
 quietly pass because the other two are fine.
 
 The phase, the encoder and the CAN bus are typed ports, so a connection says
@@ -2714,22 +4499,22 @@ what it carries rather than which pad it happens to land on.
 
 ## What comes out
 
-24 parts, 26 nets, 310 entities, 46 checks — none failed, seven undecided. It is
+24 parts, 26 nets, 310 entities, 46 checks. None failed, seven undecided. It is
 the biggest graph in the examples by a factor of two.
 
-- [`out/servo_drive.net`](https://github.com/copperheadhq/fang/blob/main/examples/servo_drive/out/servo_drive.net) — 24 components and 26 nets
-- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/servo_drive/out/rationale.md) — the requirements the drive states,
-  and the assumption it is honest about
-- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/servo_drive/out/checks.txt) — 46 checks over 21 constraints —
-  six of them from each bridge, three from the drive itself
+- [`out/servo_drive.net`](https://github.com/copperheadhq/fang/blob/main/examples/servo_drive/out/servo_drive.net): 24 components and 26 nets
+- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/servo_drive/out/rationale.md): the requirements the drive states, and
+  the assumption it is honest about
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/servo_drive/out/checks.txt): 46 checks over 21 constraints, six of them
+  from each bridge and three from the drive itself
 - [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/servo_drive/out/graph.txt)
 
 ![the system view](/examples/servo_drive/system.svg)
 
-The three `bridge_*` blocks sit under the rule at the bottom: the system view
-draws electrical connection, and a block connects through the parts inside it.
-Their transistors are labelled `bridge_u.high`, `bridge_v.high` and so on — the
-path is what distinguishes three instances of one declaration.
+The three `bridge_*` blocks sit under the rule at the bottom, because the system
+view draws electrical connection and a block connects through the parts inside
+it. Their transistors are labelled `bridge_u.high`, `bridge_v.high` and so on.
+The path is what distinguishes three instances of one declaration.
 
 ![the power view](/examples/servo_drive/power.svg)
 
@@ -2750,7 +4535,7 @@ fang view    examples/servo_drive/servo_drive.py safety -o safety.svg
 
 Everything here is composition. A `HalfBridge` is a block with two transistors and
 a shunt: it owns its own interior and its own constraints, and the drive
-instantiates three of them from one declaration. The phase, the encoder, and the
+instantiates three of them from one declaration. The phase, the encoder and the
 CAN bus are typed ports, so a connection says what it carries rather than which
 pad it happens to land on.
 """
@@ -2788,9 +4573,9 @@ from fang.rationale import Assumes, Requires
 
 
 class HalfBridge(Module):
-    """Two FETs, the node between them, and the shunt that measures it.
+    """Two FETs, the node between them and the shunt that measures it.
 
-    The block is the unit of reuse: one declaration, three instances, and one set
+    The block is the unit of reuse: one declaration, three instances and one set
     of constraints that holds for each of them.
     """
 
@@ -3173,7 +4958,7 @@ What the elaborated graph contains, by entity kind.
    71  port
     1  requirement
   310  total
-snapshot sha256:f309e8551a3443aafda95613ff3b1bf9a2e48780662207c3a52a83e8231529f9
+snapshot sha256:578528203fe550618e1e5957f7febeaf5a50a6dfb7be4a9074ef6f90e896c6ce
 ```
 
 All of it, including the KiCad netlist, is in
@@ -3378,7 +5163,7 @@ self.top.p2 >> self.bottom.p1          # the connect operator
 connect(self.top.p2, self.bottom.p1)   # the same thing, spelled out
 ```
 
-`>>` is not directional in the electrical sense; it reads left to right and
+`>>` is not directional in the electrical sense. It reads left to right and
 records a connection between two surfaces. A connection with no kind is
 [`ELAB-0005`](/reference/diagnostics/).
 
@@ -3464,7 +5249,7 @@ URL: https://fang.copperhead.sh/reference/interfaces/
 Summary: The shipped catalogue, its signals and its parameters.
 
 The catalogue holds 21 interface types. Seventeen have a port class, so a
-program writes `I2CPort()` rather than reaching for a factory; the remaining
+program writes `I2CPort()` rather than reaching for a factory. The remaining
 four are the primitives the typed ones are built from.
 
 See [Interfaces and lowering](/concepts/interfaces-and-lowering/) for how a
@@ -3572,7 +5357,7 @@ A pin declares a role, drawn from a fixed set: `power`, `ground`, `clock`,
 `phase`, `unknown`.
 
 A role says what a pin is for. It classifies the pin and determines what a
-single-signal surface behaves as; which pin a signal actually lands on is
+single-signal surface behaves as. Which pin a signal actually lands on is
 decided by the `PinMap`, not by matching roles.
 
 ## Adding one
@@ -3601,7 +5386,7 @@ cap = Capacitor(capacitance=100 * uF, voltage_rating=16 * V)
 
 Everything in the library is a `GenericPart`: a part with no vendor identity.
 That is a deliberate absence, not an unfinished state. A design that says "a
-10 kΩ resistor" is complete at the stage it is at; attaching a manufacturer
+10 kΩ resistor" is complete at the stage it is at. Attaching a manufacturer
 before one has been chosen would be inventing a fact.
 
 [`select()`](/reference/language/#selecting-a-vendor-part) attaches the vendor
@@ -3733,7 +5518,7 @@ about which one is which. Its colour follows the entity kind, and its tooltip is
 the identifier.
 
 An edge leaves the side of the box it is heading for and curves to the box it
-arrives at, rather than crossing whatever lies between; its colour follows the
+arrives at, rather than crossing whatever lies between. Its colour follows the
 connection kind, and the key under the drawing lists the kinds actually present.
 Several connections between the same two parts are fanned apart, so three gate
 drives read as three.
@@ -3805,8 +5590,8 @@ none.
 
 If a selected component has no compatible model and is not explicitly
 abstracted, the plan is **rejected with the reason** rather than run with a
-substitute. There is no generic fallback device, because a result computed from
-an invented model is worse than no result, because it looks like an answer.
+substitute. There is no generic fallback device. A result computed from an
+invented model is worse than no result, because it looks like an answer.
 
 Explicit abstraction is available and has to be written down. The difference
 between "this part is deliberately ideal here" and "we had nothing" is exactly
@@ -3830,7 +5615,7 @@ inspection does not pay for a transient run.
 ## Backends
 
 `NgspiceBackend` reaches ngspice across a process boundary. It is optional and
-external; fang finds it on `PATH`.
+external, and fang finds it on `PATH`.
 
 If it is not installed, `BackendUnavailable` is reported. The plan still
 compiles and the deck can still be written. The command says no run was made,
@@ -3894,7 +5679,7 @@ engineering fact; deleting anything else does.
 ```
 
 The manifest exists so a snapshot's producer is reconstructible. `snapshot` is
-the content hash; `schema_version` is the serialized-EIR version, which moves
+the content hash. `schema_version` is the serialized-EIR version, and it moves
 independently of the compiler version.
 
 An artifact declaring an unimplemented major schema version is

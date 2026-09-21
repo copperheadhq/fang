@@ -8,7 +8,7 @@ sidebar:
 ---
 
 The catalogue holds 21 interface types. Seventeen have a port class, so a
-program writes `I2CPort()` rather than reaching for a factory; the remaining
+program writes `I2CPort()` rather than reaching for a factory. The remaining
 four are the primitives the typed ones are built from.
 
 See [Interfaces and lowering](/concepts/interfaces-and-lowering/) for how a
@@ -116,7 +116,7 @@ A pin declares a role, drawn from a fixed set: `power`, `ground`, `clock`,
 `phase`, `unknown`.
 
 A role says what a pin is for. It classifies the pin and determines what a
-single-signal surface behaves as; which pin a signal actually lands on is
+single-signal surface behaves as. Which pin a signal actually lands on is
 decided by the `PinMap`, not by matching roles.
 
 ## Adding one

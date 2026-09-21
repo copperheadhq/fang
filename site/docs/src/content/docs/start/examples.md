@@ -1,6 +1,6 @@
 ---
 title: Examples
-description: Eight programs in the repository, smallest first.
+description: Eleven programs in the repository, smallest first.
 sidebar:
   order: 3
   attrs:
@@ -8,10 +8,11 @@ sidebar:
 ---
 
 Every example in [`examples/`](https://github.com/copperheadhq/fang/tree/main/examples)
-elaborates, passes the gate and is exercised by the test suite, so none of them
-is a sketch that no longer runs. Each has a page here carrying its program, the
-views it renders and the files it writes — all generated from the folder itself,
-so a page cannot describe a program that has since changed.
+elaborates and passes the gate. The test suite rebuilds each one and compares
+what it produces, so none of these is a sketch that no longer runs. Each has a
+page here carrying its program, the views it renders and the files it writes.
+Those pages are generated from the folder itself. A page cannot describe a
+program that has since changed.
 
 | Example | Shows |
 | --- | --- |
@@ -23,6 +24,9 @@ so a page cannot describe a program that has since changed.
 | [`usb_uart_bridge/`](/examples/usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet |
 | [`buck_regulator/`](/examples/buck_regulator/) | Requirement, decision, calculations and verification beside the circuit |
 | [`servo_drive/`](/examples/servo_drive/) | Composition: one `HalfBridge` block instantiated three times |
+| [`jee_advanced/problem_1/`](/examples/jee_advanced/problem_1/) | Not a board: four claimed currents, all four decided |
+| [`jee_advanced/problem_2/`](/examples/jee_advanced/problem_2/) | Not a board either: one claimed current, and the two branches that carry none |
+| [`noninverting_amp/`](/examples/noninverting_amp/) | Not a board: two midband answers, and the reading of the figure they rest on |
 
 ## Running one
 
@@ -37,6 +41,8 @@ fang view    examples/sensor_board/sensor_board.py ground -o ground.svg
 | File | What it is | Command |
 | --- | --- | --- |
 | `<name>.net` | The KiCad netlist, the artifact a layout tool opens | `fang export` |
+| `<name>.kicad_sch` | The KiCad schematic, the sheet Eeschema opens | `fang schematic` |
+| `schematic.svg` | KiCad's own render of that sheet | `fang schematic --svg` |
 | `netlist.txt` | The same projection as text: parts, then nets and their pads | `fang netlist` |
 | `checks.txt` | Every check that ran, and every one left undecided | `fang check` |
 | `graph.txt` | What the elaborated graph contains, by entity kind | `fang graph` |
@@ -44,7 +50,7 @@ fang view    examples/sensor_board/sensor_board.py ground -o ground.svg
 | `rationale.md` | The requirements, decisions, calculations and evidence in the graph | none |
 
 `python examples/regenerate.py` rewrites them. They are built in the project
-namespace `PRJ-EXAMPLES`, which is where the identifiers in them come from; a
+namespace `PRJ-EXAMPLES`, which is where the identifiers in them come from. A
 local `fang build` defaults to `PRJ-LOCAL` and derives its own.
 
 ## What each one is for

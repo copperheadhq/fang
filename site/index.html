@@ -4,7 +4,7 @@
 <title>fang: Hardware as Code</title>
 <meta name="description" content="Hardware as Code. A Python-embedded language for circuit boards, and a kernel that decides what is true about the design.">
 <link rel="canonical" href="https://fang.copperhead.sh/">
-<!-- Google tag (gtag.js) — copperhead's own GA4 property, so fang's traffic
+<!-- Google tag (gtag.js): copperhead's own GA4 property, so fang's traffic
      reports beside the rest of the brand rather than into a second one. -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-KGEWCR918W"></script>
 <script>
@@ -16,7 +16,7 @@
 </script>
 
 <!-- The brand, for everything that renders the page without opening it: the
-     card a shared link becomes, the browser chrome's colour in each theme, and
+     card a shared link becomes, the browser chrome's colour in each theme and
      the icons. brand/og.png and brand/apple-touch-icon.png are rasters because
      neither a crawler nor a home screen renders SVG; brand/make.py draws them
      from the same geometry as the mark. -->
@@ -25,12 +25,12 @@
 <meta property="og:url" content="https://fang.copperhead.sh/">
 <meta property="og:locale" content="en">
 <meta property="og:title" content="fang: Hardware as Code">
-<meta property="og:description" content="Write hardware in Python. The kernel elaborates it into one canonical model, refuses anything it cannot justify, and lowers what survives into netlists, views, simulation decks, and KiCad.">
+<meta property="og:description" content="Write hardware in Python. The kernel elaborates it into one canonical model, refuses anything it cannot justify and lowers what survives into netlists, views, simulation decks and KiCad.">
 <meta property="og:image" content="https://fang.copperhead.sh/brand/og.png">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="fang: Hardware as Code — the line set under the copperhead / fang lockup, on fang's dark ground.">
+<meta property="og:image:alt" content="fang: Hardware as Code, the line set under the copperhead / fang lockup, on fang's dark ground.">
 <!-- Every crawler worth the name falls back to the og:* pair above, so
      these are the same values said twice. They are here because the ones
      that do not fall back render a bare title instead. -->
@@ -38,7 +38,7 @@
 <meta name="twitter:title" content="fang: Hardware as Code">
 <meta name="twitter:description" content="Hardware as Code. A Python-embedded language for circuit boards, and a kernel that decides what is true about the design.">
 <meta name="twitter:image" content="https://fang.copperhead.sh/brand/og.png">
-<meta name="twitter:image:alt" content="fang: Hardware as Code — the line set under the copperhead / fang lockup, on fang's dark ground.">
+<meta name="twitter:image:alt" content="fang: Hardware as Code, the line set under the copperhead / fang lockup, on fang's dark ground.">
 
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#1b1b1c" media="(prefers-color-scheme: dark)">
@@ -371,10 +371,10 @@
       <p class="eyebrow">Hardware as Code</p>
       <h1>Write the hardware.<br>Let the kernel decide <em>what is true</em>.</h1>
       <p class="lede">
-        A Python-embedded language for circuit boards. You author intent — typed
+        A Python-embedded language for circuit boards. You author intent: typed
         interfaces, parameters with units, constraints. The kernel elaborates it into one
-        canonical model, refuses anything it cannot justify, and lowers what survives into
-        netlists, views, simulation decks, and KiCad.
+        canonical model, refuses anything it cannot justify and lowers what survives into
+        netlists, views, simulation decks and KiCad.
       </p>
       <div class="actions">
         <a class="btn primary" href="#install">Get started</a>
@@ -419,14 +419,14 @@
             <dl class="out-row">
               <dt>PB8 → SCL</dt><dd>i2c.scl, lowered from the interface connection</dd>
               <dt>PB9 → SDA</dt><dd>i2c.sda, lowered from the interface connection</dd>
-              <dt>DEC-4a1c…</dt><dd>chose PB8 over PB6 — rationale recorded</dd>
-              <dt>DEC-9f30…</dt><dd>chose PB9 over PB7 — rationale recorded</dd>
+              <dt>DEC-4a1c…</dt><dd>chose PB8 over PB6, rationale recorded</dd>
+              <dt>DEC-9f30…</dt><dd>chose PB9 over PB7, rationale recorded</dd>
             </dl>
             <div class="verdict">
               <span class="dot" aria-hidden="true"></span>
               <p>
                 Pin assignment is a lowering result, never an authoring input. Because a
-                choice existed, it became a decision entity naming what it rejected — so a
+                choice existed, it became a decision entity naming what it rejected, so a
                 part substitution later can be argued with rather than guessed at.
               </p>
             </div>
@@ -442,7 +442,7 @@
       <h2>Three phases, never interleaved</h2>
       <p class="intro">
         The order is the whole point. A program that could observe a tool's result would
-        not be reproducible, so it never can — it records what it wants done and stops.
+        not be reproducible, so it never can; it records what it wants done and stops.
       </p>
 
       <div class="phases">
@@ -470,7 +470,7 @@
           <p class="step">PHASE 3</p>
           <h3>Commit</h3>
           <p>
-            One gate, six conditions, and the same path for a human edit, a re-elaboration,
+            One gate, six conditions and the same path for a human edit, a re-elaboration,
             a CAD import and an agent proposal. A rejection still returns its diagnostics
             and its diff.
           </p>
@@ -483,10 +483,10 @@
   <section class="band" id="refuses">
     <div class="wrap">
       <p class="eyebrow">Diagnostics</p>
-      <h2>What it refuses to do</h2>
+      <h2>What it won't let through</h2>
       <p class="intro">
         Most of the value is in the answers the kernel declines to give. Every refusal
-        carries a stable code, a severity, and the line that caused it.
+        carries a stable code, a severity and the line that caused it.
       </p>
 
       <div class="terminal">
@@ -502,13 +502,13 @@
 <p class="diag"><span class="loc">sensor_board.py:47:</span> <span class="sev-error">error</span>: <span class="code">IFACE-0001</span> <span class="msg">the required signal 'sda' has no candidate pin on the right side</span></p>
 <p class="diag"><span class="loc">sensor_board.py:12:</span> <span class="sev-error">error</span>: <span class="code">ELAB-0005</span>  <span class="msg">a power_output surface does not connect to a mechanical surface</span></p>
 <p class="diag"><span class="loc">                  </span> <span class="sev-undecided">undecided</span>: <span class="code">IFACE</span>      <span class="msg">logic high margin is undecided: vih_min unknown</span></p>
-<p class="diag"><span class="loc">                  </span> <span class="sev-error">blocked</span>: <span class="code">TXN-0002</span>   <span class="msg">a required check reported a blocking severity — nothing committed</span></p>
+<p class="diag"><span class="loc">                  </span> <span class="sev-error">blocked</span>: <span class="code">TXN-0002</span>   <span class="msg">a required check reported a blocking severity; nothing committed</span></p>
         </div>
       </div>
 
       <p class="refusal-note">
         <strong>Undecided is a third truth value.</strong> An unknown datasheet number makes a
-        check undecided — never a quiet pass. Whether undecided blocks is the gate's policy
+        check undecided, never a quiet pass. Whether undecided blocks is the gate's policy
         decision, not the evaluator's. A dimensionally invalid expression is rejected where
         it is written, so it can never be stored. A missing simulator reports unsupported
         rather than substituting a model. An unmodelled CAD construct is named in the import
@@ -535,14 +535,14 @@
             <tr><td class="stage">kernel</td><td class="what">Entity model, stable identity, units, values, constraints, transactions, the commit gate, canonical serialization, semantic diff, topology intent</td><td class="count">graph.py</td></tr>
             <tr><td class="stage">language</td><td class="what">Modules, systems, parts, parameters with units, traits, <code>require()</code>, the connect operator, deterministic sandboxed elaboration</td><td class="count">lang.py</td></tr>
             <tr><td class="stage">interfaces</td><td class="what">A catalogue of 17 typed interfaces, ports, buses, deterministic pin lowering, compatibility checks that return undecided</td><td class="count">lowering.py</td></tr>
-            <tr><td class="stage">parts</td><td class="what">Designators, packages, footprints, sourcing, and a standard library of generic parts</td><td class="count">parts.py</td></tr>
+            <tr><td class="stage">parts</td><td class="what">Designators, packages, footprints, sourcing and a standard library of generic parts</td><td class="count">parts.py</td></tr>
             <tr><td class="stage">netlist</td><td class="what">Net inference, deterministic designator assignment, KiCad netlist emission</td><td class="count">netlist.py</td></tr>
             <tr><td class="stage">cad</td><td class="what">S-expression reading, project import, the external identifier mapping table, loss reporting, one safe round trip</td><td class="count">kicad.py</td></tr>
             <tr><td class="stage">tool plan</td><td class="what">Handles as symbolic conditions, the tool contract, the operation phase, realizations</td><td class="count">runtime.py</td></tr>
             <tr><td class="stage">views</td><td class="what">System, interconnect, power, ground, interfaces and safety views; the layout boundary; SVG; stable placement seeds</td><td class="count">views.py</td></tr>
             <tr><td class="stage">simulation</td><td class="what">Models as traits, explicit plans, SPICE lowering, the ngspice backend, normalized results with their coverage gaps</td><td class="count">simulation.py</td></tr>
             <tr><td class="stage">rationale</td><td class="what">Requirements, assumptions, decisions, evidence, calculations, the verification graph, impact propagation</td><td class="count">rationale.py</td></tr>
-            <tr><td class="stage">cli</td><td class="what">The <code>.copperhead/</code> workspace, its manifest, and the commands</td><td class="count">cli.py</td></tr>
+            <tr><td class="stage">cli</td><td class="what">The <code>.copperhead/</code> workspace, its manifest and the commands</td><td class="count">cli.py</td></tr>
           </tbody>
         </table>
       </div>
@@ -569,7 +569,7 @@
       <div class="cmds">
         <div class="cmd">
           <code><span class="p">$ </span>pip install fang</code>
-          <span class="say">The kernel, the language, and the <code>fang</code> command.</span>
+          <span class="say">The kernel, the language and the <code>fang</code> command.</span>
         </div>
         <div class="cmd">
           <code><span class="p">$ </span>fang build board.py</code>
@@ -589,7 +589,7 @@
         </div>
         <div class="cmd">
           <code><span class="p">$ </span>fang sim board.py --analysis transient --probe "V(1)"</code>
-          <span class="say">A SPICE deck, a run, and a result that names its coverage gaps.</span>
+          <span class="say">A SPICE deck, a run and a result that names its coverage gaps.</span>
         </div>
       </div>
     </div>

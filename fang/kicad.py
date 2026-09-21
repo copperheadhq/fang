@@ -71,7 +71,7 @@ def emit_netlist(netlist: Netlist, *, source: str = "fang") -> str:
     The design block names the snapshot the netlist was compiled from, so a file
     on disk can always be traced back to the graph state that produced it.
     """
-    export = SExpr("export", "version", NETLIST_VERSION)
+    export = SExpr("export", SExpr("version", NETLIST_VERSION))
 
     export.add(
         SExpr(
@@ -89,23 +89,28 @@ def emit_netlist(netlist: Netlist, *, source: str = "fang") -> str:
         node.add(SExpr("value", component.value))
         if component.footprint:
             node.add(SExpr("footprint", component.footprint))
+        if component.libsource and ":" in component.libsource:
+            library, part = component.libsource.split(":", 1)
+            node.add(SExpr("libsource", SExpr("lib", library), SExpr("part", part)))
         fields = SExpr("fields")
         if component.manufacturer:
-            fields.add(SExpr("field", "name", "Manufacturer").add(component.manufacturer))
+            fields.add(SExpr("field", SExpr("name", "Manufacturer")).add(component.manufacturer))
         if component.mpn:
-            fields.add(SExpr("field", "name", "MPN").add(component.mpn))
+            fields.add(SExpr("field", SExpr("name", "MPN")).add(component.mpn))
         if fields.children:
             node.add(fields)
         # The entity id is what makes the round trip identity-preserving.
-        node.add(SExpr("property", "name", "fang_id").add(component.entity_id))
+        node.add(
+            SExpr("property", SExpr("name", FANG_ID_PROPERTY), SExpr("value", component.entity_id))
+        )
         components.add(node)
     export.add(components)
 
     nets = SExpr("nets")
     for net in netlist.nets:
-        node = SExpr("net", "code", str(net.code), "name", net.name)
+        node = SExpr("net", SExpr("code", str(net.code)), SExpr("name", net.name))
         for member in net.nodes:
-            node.add(SExpr("node", "ref", member.designator, "pin", member.pin))
+            node.add(SExpr("node", SExpr("ref", member.designator), SExpr("pin", member.pin)))
         nets.add(node)
     export.add(nets)
 
@@ -130,7 +135,10 @@ def write_netlist(netlist: Netlist, path, *, source: str = "fang") -> bytes:
 #: `libparts` and `libraries` are absent deliberately: the reader recovers
 #: nothing from them, so naming only some nested key would imply the rest was
 #: modelled. The whole block is reported instead, which is what is true.
-_KNOWN_EXPORT_BLOCKS = frozenset({"design", "components", "nets"})
+#: `version` is the format version, which KiCad writes as a nested block rather
+#: than as a flat atom; it is read, not dropped, so it does not belong in a loss
+#: report.
+_KNOWN_EXPORT_BLOCKS = frozenset({"version", "design", "components", "nets"})
 
 #: What the reader models inside each container block. A child outside these is
 #: named in the report, because accepting a block and discarding its contents is
@@ -140,7 +148,9 @@ _KNOWN_CHILDREN: Mapping[str, frozenset[str]] = {
     "libraries": frozenset({"library"}),
     "design": frozenset({"source", "date", "tool", "sheet", "snapshot", "project"}),
 }
-_KNOWN_COMP_BLOCKS = frozenset({"ref", "value", "footprint", "fields", "property", "datasheet"})
+_KNOWN_COMP_BLOCKS = frozenset(
+    {"ref", "value", "footprint", "fields", "property", "datasheet", "libsource"}
+)
 
 #: The property name an export writes the canonical identifier under.
 FANG_ID_PROPERTY = "fang_id"
@@ -199,6 +209,8 @@ def read_netlist(
                 )
 
     pins_by_reference: dict[tuple[str, str], str] = {}
+    #: Field names already named in the report; one note per name, not per part.
+    reported_fields: set[str] = set()
 
     components_block = root.child("components")
     for comp in components_block.children("comp") if components_block else []:
@@ -211,7 +223,7 @@ def read_netlist(
         identity = canonical_id_for(
             reference,
             "component",
-            f"imported.{reference.lower()}",
+            f"imported.{_path_safe(reference)}",
             project_id=project_id,
             mapping=table,
             recovered=recovered,
@@ -222,6 +234,35 @@ def read_netlist(
             if isinstance(child, Node) and child.head not in _KNOWN_COMP_BLOCKS:
                 report.note(child.head, f"{source}:{reference}", "component block is not modelled")
 
+        extensions = {"designator_prefix": _prefix_of_reference(reference)}
+        libsource = comp.child("libsource")
+        if libsource is not None:
+            fields = libsource.pairs()
+            part = fields.get("part")
+            if part:
+                # The symbol the component was drawn with. Fang does not model
+                # symbols, but dropping the reference would make the design
+                # undrawable, so it travels as an extension. The library name is
+                # empty for a symbol that came from the schematic's own cache,
+                # which is a fact about the file and is kept as it was found.
+                extensions["libsource"] = f"{fields.get('lib') or ''}:{part}"
+
+        # Manufacturer and MPN have a place in the netlist projection, so they
+        # are read rather than accepted and dropped.
+        fields_block = comp.child("fields")
+        for field in (fields_block.children("field") if fields_block else []):
+            name = field.pairs().get("name")
+            atoms = field.atoms()
+            value = atoms[-1] if atoms and atoms[-1] != name else None
+            if name in ("Manufacturer", "MPN") and value:
+                extensions[name.lower()] = value
+            elif name and name not in reported_fields:
+                # Every other field is a fact the entity model has no place for.
+                # Naming it once per file keeps the report readable while still
+                # refusing to accept the block and quietly discard its contents.
+                reported_fields.add(name)
+                report.note(f"field:{name}", source, "component field is not modelled")
+
         entities[identity.id] = Component(
             identity,
             designator=reference,
@@ -229,7 +270,7 @@ def read_netlist(
             package=comp.value("footprint"),
             provenance=provenance(reference),
             source_location=SourceLocation(source, 0),
-            extensions={"designator_prefix": _prefix_of_reference(reference)},
+            extensions=extensions,
         )
         report.recovered += 1
 
@@ -254,7 +295,7 @@ def read_netlist(
                 pin_identity = canonical_id_for(
                     f"{reference}.{pin_name}",
                     "pin",
-                    f"imported.{reference.lower()}.{_path_safe(pin_name)}",
+                    f"imported.{_path_safe(reference)}.{_path_safe(pin_name)}",
                     project_id=project_id,
                     mapping=table,
                     taken=set(entities),
@@ -300,6 +341,10 @@ def read_netlist(
 def _recover_fang_id(comp: Node) -> str | None:
     """An identifier an earlier export wrote is reused rather than re-minted."""
     for prop in comp.children("property"):
+        fields = prop.pairs()
+        if fields.get("name") == FANG_ID_PROPERTY and fields.get("value"):
+            return fields["value"]
+        # The flat shape earlier exports wrote: ("name" "fang_id" "<id>").
         atoms = prop.atoms()
         if len(atoms) >= 3 and atoms[0] == "name" and atoms[1] == FANG_ID_PROPERTY:
             return atoms[2]

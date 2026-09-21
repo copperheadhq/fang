@@ -31,6 +31,9 @@ VALUE_PARAMETERS: Mapping[str, str] = {
     "F": "current_rating",
     "D": "forward_voltage",
     "DS": "forward_voltage",
+    # An independent source is a primitive to a simulator as much as a
+    # resistor is, so its EMF is the value it carries into a projection.
+    "V": "voltage",
 }
 
 
@@ -105,6 +108,9 @@ class NetlistComponent:
     entity_id: str
     manufacturer: str | None = None
     mpn: str | None = None
+    #: The `lib:part` symbol the component was drawn with. Fang does not model
+    #: symbols; it carries the reference so an imported design stays drawable.
+    libsource: str | None = None
 
     def as_dict(self) -> dict:
         out = {
@@ -116,6 +122,7 @@ class NetlistComponent:
             ("footprint", self.footprint),
             ("manufacturer", self.manufacturer),
             ("mpn", self.mpn),
+            ("libsource", self.libsource),
         ):
             if value is not None:
                 out[name] = value
@@ -294,8 +301,15 @@ def compile_netlist(snapshot, *, traits=None) -> Netlist:
             value=_value_of(component, designators[component.id]),
             footprint=_footprint_of(component, traits),
             entity_id=component.id,
-            manufacturer=_trait_field(component, traits, "sourcing", "manufacturer"),
-            mpn=_trait_field(component, traits, "sourcing", "mpn"),
+            manufacturer=(
+                _trait_field(component, traits, "sourcing", "manufacturer")
+                or (component.extensions or {}).get("manufacturer")
+            ),
+            mpn=(
+                _trait_field(component, traits, "sourcing", "mpn")
+                or (component.extensions or {}).get("mpn")
+            ),
+            libsource=(component.extensions or {}).get("libsource"),
         )
         for component in sorted(
             (e for e in entities.values() if isinstance(e, Component)),
@@ -352,9 +366,12 @@ def _value_of(component: Component, designator: str) -> str:
 def _footprint_of(component: Component, traits) -> str | None:
     field = _trait_field(component, traits, "footprint", "name")
     library = _trait_field(component, traits, "footprint", "library")
-    if field is None:
-        return None
-    return f"{library}:{field}" if library else field
+    if field is not None:
+        return f"{library}:{field}" if library else field
+    # A component that reached the graph without a program behind it - one that
+    # was imported - carries its footprint on the entity, which is the only
+    # place it can survive a commit. The trait registry is not in the snapshot.
+    return component.package or None
 
 
 def _trait_field(component: Component, traits, protocol: str, field: str):

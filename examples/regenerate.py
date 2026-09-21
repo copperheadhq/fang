@@ -25,6 +25,7 @@ import re
 import sys
 from argparse import Namespace
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 ROOT = Path(__file__).resolve().parent
 
@@ -35,6 +36,7 @@ from fang.cli import cmd_check, cmd_export, cmd_graph, cmd_netlist, load_system
 from fang.elaborate import elaborate
 from fang.layout import PlacementSeeds, place
 from fang.render import to_svg
+from fang.schematic import KicadRenderer, compile_schematic
 from fang.views import view
 
 PROJECT = "PRJ-EXAMPLES"
@@ -51,22 +53,56 @@ VIEWS: dict[str, tuple[str, ...]] = {
     "usb_uart_bridge": ("interfaces", "power"),
     "buck_regulator": ("power", "system"),
     "servo_drive": ("system", "power", "safety"),
+    "jee_advanced/problem_1": ("interconnect",),
+    "jee_advanced/problem_2": ("interconnect",),
+    "noninverting_amp": ("interconnect",),
 }
+
+#: The examples that ship a schematic. A schematic is the picture an engineer
+#: recognizes, and it is KiCad that draws it, so regenerating one of these needs
+#: `kicad-cli` on the path.
+SCHEMATICS: frozenset[str] = frozenset(
+    {"jee_advanced/problem_1", "jee_advanced/problem_2", "noninverting_amp"}
+)
 
 #: The entity kinds that carry reasoning rather than circuit. An example with
 #: none of them gets no rationale document, because it would have nothing in it.
 RATIONALE_KINDS = ("requirement", "decision", "evidence", "calculation", "verification")
 
 
+#: Folders a search never descends into: an example's own outputs, and Python's
+#: leavings. Everything else under examples/ is either an example or a folder
+#: that groups them.
+_SKIP = frozenset({"out", "views", "__pycache__"})
+
+
+def _find(folder: Path) -> list[str]:
+    """Every example at or below a folder, as a path relative to examples/.
+
+    An example is a folder holding a program named after it. A folder that has
+    no such program may still *group* examples — `jee_advanced/` holds one
+    problem per subfolder — so the search descends rather than stopping, and an
+    example's name is its path, which is what keeps two of them distinct.
+    """
+    if (folder / f"{folder.name}.py").is_file():
+        return [folder.relative_to(ROOT).as_posix()]
+    found = []
+    for child in folder.iterdir():
+        if child.is_dir() and child.name not in _SKIP and not child.name.startswith("."):
+            found.extend(_find(child))
+    return found
+
+
 def examples() -> list[str]:
     """Every example folder, in the order the documents list them."""
-    return sorted(
-        path.name for path in ROOT.iterdir() if (path / f"{path.name}.py").is_file()
-    )
+    return sorted(name for child in ROOT.iterdir() if child.is_dir()
+                  and child.name not in _SKIP and not child.name.startswith(".")
+                  for name in _find(child))
 
 
 def _program(name: str) -> Path:
-    return ROOT / name / f"{name}.py"
+    """The program of an example named by its path relative to examples/."""
+    return ROOT / name / f"{Path(name).name}.py"
 
 
 def _run(command, name: str, **extra) -> str:
@@ -133,8 +169,8 @@ def _named(snapshot, identifier: str) -> str:
     if entity is None:
         return f"`{identifier}`"
     label, name = _label(entity), entity.identity.display_name
-    kind = f" — {name}" if name and label.rsplit(".", 1)[-1] != name else ""
-    return f"`{label}`{kind} (`{identifier}`)"
+    inside = f"{name}, " if name and label.rsplit(".", 1)[-1] != name else ""
+    return f"`{label}` ({inside}`{identifier}`)"
 
 
 def _rationale(name: str, snapshot) -> str | None:
@@ -152,7 +188,7 @@ def _rationale(name: str, snapshot) -> str | None:
         return None
 
     out = [
-        f"# {name} — rationale",
+        f"# {name}: rationale",
         "",
         "Every line below is an entity in the elaborated graph, projected by",
         "`python examples/regenerate.py`. Nothing here is prose kept beside the",
@@ -167,7 +203,7 @@ def _rationale(name: str, snapshot) -> str | None:
             verifications = [
                 v for v in kinds["verification"] if v.verifies == req.id
             ]
-            out.append(f"### {_label(req)} — `{req.id}`")
+            out.append(f"### {_label(req)} (`{req.id}`)")
             out.append("")
             out.append(f"> {_resolve(snapshot, req.statement)}")
             out.append("")
@@ -192,7 +228,7 @@ def _rationale(name: str, snapshot) -> str | None:
         out.append("## Decisions")
         out.append("")
         for decision in kinds["decision"]:
-            out.append(f"### {_label(decision)} — `{decision.id}`")
+            out.append(f"### {_label(decision)} (`{decision.id}`)")
             out.append("")
             choice = decision.choice or ""
             out.append(
@@ -215,7 +251,7 @@ def _rationale(name: str, snapshot) -> str | None:
         out.append("## Calculations")
         out.append("")
         for calculation in kinds["calculation"]:
-            out.append(f"### {_label(calculation)} — `{calculation.id}`")
+            out.append(f"### {_label(calculation)} (`{calculation.id}`)")
             out.append("")
             out.append(f"`{calculation.expression}`")
             out.append("")
@@ -229,7 +265,7 @@ def _rationale(name: str, snapshot) -> str | None:
         out.append("## Evidence")
         out.append("")
         for evidence in kinds["evidence"]:
-            out.append(f"### {_label(evidence)} — `{evidence.id}`")
+            out.append(f"### {_label(evidence)} (`{evidence.id}`)")
             out.append("")
             out.append(f"> {_resolve(snapshot, evidence.claim)}")
             out.append("")
@@ -246,10 +282,16 @@ def _rationale(name: str, snapshot) -> str | None:
 
 
 def render(name: str) -> dict[str, str]:
-    """Every output file for one example, as relative path to text."""
+    """Every output file for one example, as relative path to text.
+
+    The name is a path relative to examples/, so a grouped example is
+    `jee_advanced/problem_1`. Files inside its own out/ are named after the
+    leaf, because that is the name the program has.
+    """
+    stem = Path(name).name
     result = elaborate(load_system(_program(name)), project_id=PROJECT)
     files = {
-        f"{name}.net": _run(cmd_export, name),
+        f"{stem}.net": _run(cmd_export, name),
         "netlist.txt": _run(cmd_netlist, name),
         "checks.txt": _run(cmd_check, name),
         "graph.txt": _run(cmd_graph, name),
@@ -257,7 +299,16 @@ def render(name: str) -> dict[str, str]:
     for view_name in VIEWS.get(name, ()):
         graph = view(result.snapshot, view_name)
         files[f"views/{view_name}.svg"] = to_svg(place(graph, seeds=PlacementSeeds()))
-    rationale = _rationale(name, result.snapshot)
+    if name in SCHEMATICS:
+        schematic = compile_schematic(
+            result.snapshot, traits=result.traits, title=stem
+        )
+        files[f"{stem}.kicad_sch"] = schematic
+        with TemporaryDirectory() as scratch:
+            files["schematic.svg"] = KicadRenderer().to_svg(
+                schematic, workspace=Path(scratch), name=stem
+            )
+    rationale = _rationale(stem, result.snapshot)
     if rationale is not None:
         files["rationale.md"] = rationale
     return files

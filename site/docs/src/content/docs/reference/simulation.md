@@ -31,8 +31,8 @@ none.
 
 If a selected component has no compatible model and is not explicitly
 abstracted, the plan is **rejected with the reason** rather than run with a
-substitute. There is no generic fallback device, because a result computed from
-an invented model is worse than no result, because it looks like an answer.
+substitute. There is no generic fallback device. A result computed from an
+invented model is worse than no result, because it looks like an answer.
 
 Explicit abstraction is available and has to be written down. The difference
 between "this part is deliberately ideal here" and "we had nothing" is exactly
@@ -56,7 +56,7 @@ inspection does not pay for a transient run.
 ## Backends
 
 `NgspiceBackend` reaches ngspice across a process boundary. It is optional and
-external; fang finds it on `PATH`.
+external, and fang finds it on `PATH`.
 
 If it is not installed, `BackendUnavailable` is reported. The plan still
 compiles and the deck can still be written. The command says no run was made,

@@ -109,7 +109,7 @@ self.top.p2 >> self.bottom.p1          # the connect operator
 connect(self.top.p2, self.bottom.p1)   # the same thing, spelled out
 ```
 
-`>>` is not directional in the electrical sense; it reads left to right and
+`>>` is not directional in the electrical sense. It reads left to right and
 records a connection between two surfaces. A connection with no kind is
 [`ELAB-0005`](/reference/diagnostics/).
 

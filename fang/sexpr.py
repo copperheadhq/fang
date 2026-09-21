@@ -63,9 +63,22 @@ class Node:
         return atoms[index] if index < len(atoms) else None
 
     def pairs(self) -> dict[str, str]:
-        """A child's atoms read as key/value pairs, as KiCad writes them."""
+        """This node's key/values, in either of the two shapes a netlist uses.
+
+        KiCad writes a keyed value as a nested list - `(net (code "1") (name "X"))`
+        - and that is the shape a file exported from Eeschema arrives in. Older
+        Fang exports wrote the same facts as flat alternating atoms,
+        `(net "code" "1" "name" "X")`. Both are read here so that a file from
+        either source parses; nested wins, because it is the real format.
+        """
         atoms = self.atoms()
-        return {atoms[i]: atoms[i + 1] for i in range(0, len(atoms) - 1, 2)}
+        found = {atoms[i]: atoms[i + 1] for i in range(0, len(atoms) - 1, 2)}
+        for item in self.items[1:]:
+            if isinstance(item, Node):
+                nested = item.atoms()
+                if len(nested) == 1:
+                    found[item.head] = nested[0]
+        return found
 
     def __iter__(self) -> Iterator["Node | Atom"]:
         return iter(self.items)

@@ -1,6 +1,6 @@
 ---
 title: Introduction
-description: What fang is and what it refuses to do.
+description: What fang is and what it won't guess.
 sidebar:
   order: 1
   attrs:
@@ -39,7 +39,7 @@ becomes a decision entity naming what it rejected.
 Pin assignment is a lowering result. It is never an authoring input, which is
 what makes late assignment and part substitution tractable.
 
-## What it will not do
+## What it won't guess
 
 Most of the value is in the answers the kernel declines to give.
 

@@ -1,0 +1,224 @@
+(export
+  (version "E")
+  (design
+    (source "problem_1.py")
+    (tool "fang 0.1.0")
+    (snapshot "sha256:d04f25ae669ba1bc938295dc24438c84d09d4383db9321f7f4308c60ebeeea4b")
+    (project "PRJ-EXAMPLES")
+  )
+  (components
+    (comp
+      (ref "GND1")
+      (value "GroundReference")
+      (footprint "Package:GND")
+      (property
+        (name "fang_id")
+        (value "CMP-fe129c51b056")
+      )
+    )
+    (comp
+      (ref "R1")
+      (value "1 Ohm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-390a79be1fe2")
+      )
+    )
+    (comp
+      (ref "R2")
+      (value "1 Ohm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-1749a5a18a37")
+      )
+    )
+    (comp
+      (ref "R3")
+      (value "1 Ohm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-99ef3f8b2557")
+      )
+    )
+    (comp
+      (ref "R4")
+      (value "1 Ohm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-c139a9a6fa47")
+      )
+    )
+    (comp
+      (ref "R5")
+      (value "1 Ohm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-52cb475cbc08")
+      )
+    )
+    (comp
+      (ref "R6")
+      (value "1 Ohm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-3411ae333c6c")
+      )
+    )
+    (comp
+      (ref "R7")
+      (value "1 Ohm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-2122ee180827")
+      )
+    )
+    (comp
+      (ref "R8")
+      (value "1 Ohm")
+      (footprint "Package:R_0805")
+      (property
+        (name "fang_id")
+        (value "CMP-d7073486dd1c")
+      )
+    )
+    (comp
+      (ref "V1")
+      (value "12 V")
+      (footprint "Package:Battery")
+      (property
+        (name "fang_id")
+        (value "CMP-5cf608e39c4e")
+      )
+    )
+    (comp
+      (ref "V2")
+      (value "6 V")
+      (footprint "Package:Battery")
+      (property
+        (name "fang_id")
+        (value "CMP-d16d8ff7af01")
+      )
+    )
+  )
+  (nets
+    (net
+      (code "1")
+      (name "Net-(GND1-Pad1)")
+      (node
+        (ref "GND1")
+        (pin "1")
+      )
+      (node
+        (ref "R2")
+        (pin "2")
+      )
+      (node
+        (ref "R3")
+        (pin "2")
+      )
+      (node
+        (ref "R4")
+        (pin "1")
+      )
+      (node
+        (ref "V1")
+        (pin "2")
+      )
+    )
+    (net
+      (code "2")
+      (name "Net-(R1-Pad1)")
+      (node
+        (ref "R1")
+        (pin "1")
+      )
+      (node
+        (ref "V1")
+        (pin "1")
+      )
+    )
+    (net
+      (code "3")
+      (name "Net-(R1-Pad2)")
+      (node
+        (ref "R1")
+        (pin "2")
+      )
+      (node
+        (ref "R7")
+        (pin "2")
+      )
+      (node
+        (ref "R8")
+        (pin "2")
+      )
+    )
+    (net
+      (code "4")
+      (name "Net-(R2-Pad1)")
+      (node
+        (ref "R2")
+        (pin "1")
+      )
+      (node
+        (ref "R6")
+        (pin "2")
+      )
+      (node
+        (ref "R7")
+        (pin "1")
+      )
+    )
+    (net
+      (code "5")
+      (name "Net-(R3-Pad1)")
+      (node
+        (ref "R3")
+        (pin "1")
+      )
+      (node
+        (ref "V2")
+        (pin "1")
+      )
+    )
+    (net
+      (code "6")
+      (name "Net-(R4-Pad2)")
+      (node
+        (ref "R4")
+        (pin "2")
+      )
+      (node
+        (ref "R5")
+        (pin "2")
+      )
+      (node
+        (ref "R8")
+        (pin "1")
+      )
+    )
+    (net
+      (code "7")
+      (name "Net-(R5-Pad1)")
+      (node
+        (ref "R5")
+        (pin "1")
+      )
+      (node
+        (ref "R6")
+        (pin "1")
+      )
+      (node
+        (ref "V2")
+        (pin "2")
+      )
+    )
+  )
+)

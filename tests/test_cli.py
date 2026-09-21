@@ -6,6 +6,8 @@ from pathlib import Path
 import pytest
 
 from fang.cli import EXIT_FAILED, EXIT_OK, load_system, main
+from fang.schematic import KicadRenderer
+from fang.simulation import NgspiceBackend
 from fang.workspace import Workspace
 
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
@@ -49,12 +51,39 @@ def test_export_writes_a_kicad_netlist(tmp_path, capsys):
     target = tmp_path / "board.net"
     code = main(["export", SENSOR, "--project", "PRJ-CLI", "-o", str(target)])
     assert code == EXIT_OK
-    assert target.read_text().startswith('(export "version" "E"')
+    assert target.read_text().startswith('(export\n  (version "E")')
 
 
 def test_export_writes_to_stdout_without_an_output_path(capsys):
     assert main(["export", DIVIDER, "--project", "PRJ-CLI"]) == EXIT_OK
-    assert capsys.readouterr().out.startswith('(export "version" "E"')
+    assert capsys.readouterr().out.startswith('(export\n  (version "E")')
+
+
+def test_schematic_writes_a_kicad_sheet(tmp_path):
+    target = tmp_path / "board.kicad_sch"
+    code = main(["schematic", SENSOR, "--project", "PRJ-CLI", "-o", str(target)])
+    assert code == EXIT_OK
+    assert target.read_text().startswith("(kicad_sch\n")
+
+
+def test_schematic_writes_to_stdout_without_an_output_path(capsys):
+    assert main(["schematic", DIVIDER, "--project", "PRJ-CLI"]) == EXIT_OK
+    assert capsys.readouterr().out.startswith("(kicad_sch\n")
+
+
+@pytest.mark.skipif(
+    not KicadRenderer().available(), reason="kicad-cli is not installed here"
+)
+def test_schematic_renders_when_asked_to(tmp_path):
+    target = tmp_path / "board.svg"
+    code = main(
+        [
+            "schematic", DIVIDER, "--project", "PRJ-CLI",
+            "--svg", str(target), "-C", str(tmp_path),
+        ]
+    )
+    assert code == EXIT_OK
+    assert target.read_text().lstrip().startswith("<?xml")
 
 
 def test_check_reports_and_exits_zero_when_nothing_fails(capsys):
@@ -180,10 +209,13 @@ def test_sim_compiles_a_plan_and_writes_a_deck(tmp_path, capsys):
     text = deck.read_text()
     assert ".tran" in text and ".print transient V(1)" in text
     assert text.strip().endswith(".end")
-    # ngspice is absent in most environments; the plan still compiles, and the
-    # command refuses to invent a result.
+    # The subject here is the plan and the deck, both of which exist either way.
+    # What follows depends on the machine: with no ngspice the command refuses
+    # to invent a result, and with one it reports what the run actually did.
     captured = capsys.readouterr()
-    if code != EXIT_OK:
+    if NgspiceBackend().available():
+        assert "on ngspice" in captured.out
+    elif code != EXIT_OK:
         assert "no result is fabricated" in captured.err
 
 

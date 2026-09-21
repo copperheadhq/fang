@@ -59,11 +59,9 @@ def test_every_component_is_emitted_with_ref_value_and_footprint(netlist):
 def test_every_net_is_emitted_with_its_nodes(netlist):
     rendered = emit_netlist(netlist)
     for net in netlist.nets:
-        assert f'(net "code" "{net.code}" "name" "{net.name}")' in rendered or (
-            f'"name" "{net.name}"' in rendered
-        )
+        assert f'(code "{net.code}")' in rendered and f'(name "{net.name}")' in rendered
         for node in net.nodes:
-            assert f'(node "ref" "{node.designator}" "pin" "{node.pin}")' in rendered
+            assert f'(ref "{node.designator}")' in rendered and f'(pin "{node.pin}")' in rendered
 
 
 def test_the_entity_id_travels_with_the_component(netlist):
@@ -106,7 +104,7 @@ def test_the_end_to_end_path_from_a_program_to_a_file(tmp_path):
     data = write_netlist(compiled, tmp_path / "divider.net", source="divider.py")
 
     text = data.decode()
-    assert text.startswith('(export "version" "E"')
+    assert text.startswith('(export\n  (version "E")')
     assert '(source "divider.py")' in text
     assert text.count("(comp\n") == 3   # "(components" must not match
-    assert text.count("(net ") == len(compiled.nets)
+    assert text.count("(net\n") == len(compiled.nets)
