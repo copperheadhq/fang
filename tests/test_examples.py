@@ -18,13 +18,14 @@ from pathlib import Path
 
 import pytest
 
-from examples.regenerate import PROJECT, examples as example_names, render
+from examples.regenerate import PROJECT, SCHEMATICS, examples as example_names, render
 from fang.checks import DEFAULT_CHECKS
 from fang.cli import load_system
 from fang.constraints import CheckStatus
 from fang.elaborate import elaborate
 from fang.kicad import emit_netlist
 from fang.netlist import compile_netlist
+from fang.schematic import KicadRenderer
 
 ROOT = Path(__file__).resolve().parent.parent / "examples"
 
@@ -60,6 +61,14 @@ def build(path: Path):
 def name(request):
     """The example under test, named by its path relative to examples/."""
     return request.param
+
+
+@pytest.fixture
+def renderable(name):
+    """An example that ships a schematic ships KiCad's render of it, so its
+    outputs can only be regenerated where `kicad-cli` is installed."""
+    if name in SCHEMATICS and not KicadRenderer().available():
+        pytest.skip("kicad-cli is not installed here")
 
 
 @pytest.fixture
@@ -112,7 +121,7 @@ def test_an_example_builds_identically_twice(example):
     assert first.hash == second.hash
 
 
-def test_an_example_ships_the_outputs_it_documents(example, name):
+def test_an_example_ships_the_outputs_it_documents(example, name, renderable):
     """A folder with no out/ is a folder that documents nothing."""
     out = example.parent / "out"
     committed = {
@@ -121,7 +130,7 @@ def test_an_example_ships_the_outputs_it_documents(example, name):
     assert committed == set(render(name))
 
 
-def test_a_committed_output_still_matches_the_program(example, name):
+def test_a_committed_output_still_matches_the_program(example, name, renderable):
     """Regenerate every output and compare; `python examples/regenerate.py`
     is the fix when this fails."""
     out = example.parent / "out"
