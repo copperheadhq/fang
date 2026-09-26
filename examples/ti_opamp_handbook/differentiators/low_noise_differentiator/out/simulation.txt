@@ -1,0 +1,36 @@
+# low_noise_differentiator: SBOA092B page 62, Low Noise Differentiator
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## response: ac, `.ac dec 200 1 1meg`
+
+The second unity crossing, near 159 kHz, is where the falling gain passes 1
+on its way down; it is not a claim of the page.
+
+  drive  e_in: DC 0 AC 1
+
+  f_unity           15.92 Hz   claimed 15.92 Hz (f_unity) +/- 0.1%, holds
+  gain_corner             50   claimed 50 (a_peak) +/- 0.1%, holds
+                Half of R_O/R_I: both poles at once, sqrt(2) each
+  gain_peak               50   claimed 50 (a_peak) +/- 0.1%, holds
+                and it is the top of the response: no plateau
+  gain_decade          9.751   claimed 9.901 (a_decade) +/- 2%, holds
+                1000/101: falling at 20 dB per decade, where the circuit
+                with stop holds near 100. 2%: a decade up, the op amp's loop
+                gain is only about 60 and takes 1.5% off.
+  f_unity_high     156.6 kHz   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (common): a terminal; it marks a node and adds nothing
+  TP2 (e_in): a terminal; it marks a node and adds nothing
+  TP3 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+4 of 4 claims hold.

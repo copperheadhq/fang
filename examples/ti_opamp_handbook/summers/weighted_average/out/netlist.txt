@@ -1,0 +1,19 @@
+GND1   Ground           -
+R1     10 kOhm          -
+R2     20 kOhm          -
+R3     30 kOhm          -
+R4     5.1 kOhm         -
+RV1    Potentiometer    -
+TP1    Terminal         -
+TP2    Terminal         -
+TP3    Terminal         -
+TP4    Terminal         -
+TP5    Terminal         -
+U1     OpAmp            -
+Net-(GND1-Pad1)          GND1.1 TP1.1 U1.IN+
+Net-(R1-Pad1)            R1.1 TP2.1
+Net-(R1-Pad2)            R1.2 R2.2 R3.2 R4.1 U1.IN-
+Net-(R2-Pad1)            R2.1 TP3.1
+Net-(R3-Pad1)            R3.1 TP4.1
+Net-(R4-Pad2)            R4.2 RV1.1
+Net-(RV1-Pad2)           RV1.2 RV1.3 TP5.1 U1.OUT

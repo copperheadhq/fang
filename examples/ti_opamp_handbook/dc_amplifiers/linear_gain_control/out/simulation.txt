@@ -1,0 +1,66 @@
+# linear_gain_control: SBOA092B page 71, Linear Gain Control
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## full_travel: operating point, `.op`
+
+  drive  e_in: DC 1
+
+  gain           -10   claimed -10 (a_v) +/- 0.1%, holds
+  z_in       10 kOhm   claimed 10 kOhm (z_in) +/- 0.1%, holds
+
+## setting_075: operating point, `.op`
+
+  drive  e_in: DC 1
+  set    r_out.setting = 0.75
+
+  gain          -7.5   claimed -7.5 +/- 0.1%, holds
+        -10 x 0.75: the rheostat puts 75 kOhm in the loop
+
+## setting_050: operating point, `.op`
+
+  drive  e_in: DC 1
+  set    r_out.setting = 0.5
+
+  gain            -5   claimed -5 +/- 0.1%, holds
+        -10 x 0.5: the rheostat puts 50 kOhm in the loop
+
+## setting_025: operating point, `.op`
+
+  drive  e_in: DC 1
+  set    r_out.setting = 0.25
+
+  gain          -2.5   claimed -2.5 +/- 0.1%, holds
+        -10 x 0.25: the rheostat puts 25 kOhm in the loop
+
+## setting_000: operating point, `.op`
+
+Z_in does not move with the setting, unlike the simple gain control just
+before it in the handbook.
+
+  drive  e_in: DC 1
+  set    r_out.setting = 0
+
+  e_out       -100 nV   claimed 0 V +/- 1 uV, holds
+         the bottom of the range: only the pot's 1 mOhm contact is in the
+         loop
+  z_in        10 kOhm   claimed 10 kOhm (z_in) +/- 0.1%, holds
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  RV1 (r_out): 100 kOhm split at the wiper, set to 1 of its travel
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+7 of 7 claims hold.

@@ -1,0 +1,41 @@
+# simple_inverting: SBOA092B page 70, Simple Inverting sign changing amplifier
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## gain: operating point, `.op`
+
+E_I = 0.1 V, so E_O = -10 V stays inside the swing. The drive's current is
+taken positive into its + terminal, hence the sign.
+
+  drive  e_in: DC 0.1
+
+  gain        -99.99   claimed -100 (a_v) +/- 0.1%, holds
+  z_in        1 kOhm   claimed 1 kOhm (z_in) +/- 0.1%, holds
+
+## bias_error: operating point, `.op`
+
+  drive  e_in: DC 0
+
+  e_o      9.999 mV   claimed 10 mV (e_bias) +/- 0.1%, holds
+       100 nA drawn out of the - input (see `bias`), E_I at 0 V. The same
+       current into the + input through the page's 990 Ohm would put it at
+       -99 uV, which times the noise gain of 101 cancels this; the figure
+       does not draw that resistor, so the run does not either
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+3 of 3 claims hold.

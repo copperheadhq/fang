@@ -1,0 +1,50 @@
+* linear_current_source: r3_10_ohm
+* plan for ngspice over sha256:5027fca842b5da05ccc25ca4e46d1185201118addc8aa99e90a6ac33d9c2a6c8
+C1 1 2 100p
+* GND1 abstracted; no device emitted
+R1 1 2 100k
+R2 2 4 100k
+R3 5 1 100k
+R4 4 6 100k
+R5 1 7 100k
+* RS1 abstracted; no device emitted
+* RS2 abstracted; no device emitted
+* TP1 abstracted; no device emitted
+* U1 abstracted; no device emitted
+* U2 abstracted; no device emitted
+.options abstol=1e-12
+.options method=gear
+.options reltol=1e-3
+.options vntol=1e-6
+.op
+* added by the bench: the drive, and the parts fang abstracted
+VDRIVE_e_in 5 0 DC 0.1
+RRS1 6 sense_RS1 10
+VRS1_SENSE sense_RS1 7 DC 0
+RRS2 7 sense_RS2 100
+VRS2_SENSE sense_RS2 0 DC 0
+XU1 0 1 2 HB_OPAMP A=1e+06 GBW=1e+07 VOH=13.5 VOL=-13.5 VOS=0
+XU2 0 4 6 HB_OPAMP A=1e+06 GBW=1e+07 VOH=13.5 VOL=-13.5 VOS=0
+.subckt HB_OPAMP inp inn out A=1e6 GBW=1e7 VOH=13.5 VOL=-13.5 VOS=0
+VOS inp x DC {VOS}
+RIN x inn 1e12
+GM 0 n1 x inn 1e-3
+R1 n1 0 {A*1e3}
+C1 n1 0 {1e-3/(6.283185307179586*GBW)}
+DH n1 h HB_CLAMP
+VH h 0 DC {VOH}
+DL l n1 HB_CLAMP
+VL l 0 DC {VOL}
+EO out 0 n1 0 1
+.model HB_CLAMP D(IS=1e-15 N=0.01)
+.ends HB_OPAMP
+.control
+run
+let i_per_volt = i(vrs2_sense) / v(5)
+print i_per_volt
+let v_load = v(7)
+print v_load
+let second_out = v(6)
+print second_out
+.endc
+.end

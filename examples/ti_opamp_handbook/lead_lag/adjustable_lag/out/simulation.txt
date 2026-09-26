@@ -1,0 +1,65 @@
+# adjustable_lag: SBOA092B page 84, Adjustable Lag
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## dc_gain: operating point, `.op`
+
+  drive  e_in: DC 1
+
+  gain            -1   claimed -1 (a_v) +/- 0.1%, holds
+
+## dc_gain_other: operating point, `.op`
+
+  drive  e_in: DC 1
+  set    pot.setting = 0.1
+
+  gain            -1   claimed -1 (a_v) +/- 0.1%, holds
+        the wiper moved, and the DC gain did not
+
+## lag_centered: ac, `.ac dec 200 100m 1k`
+
+D = 1/2: the page's -40/(40 + P), a corner at 40 rad/s.
+
+  drive  e_in: DC 0 AC 1
+  set    pot.setting = 0.5
+
+  gain_low        0.9999   claimed 1 +/- 0.1%, holds
+            unity, the DC gain's magnitude, well below the corner
+  f_3db         6.366 Hz   claimed 6.366 Hz (f_c) +/- 0.5%, holds
+  phase_c          2.356   claimed 2.356 +/- 0.5%, holds
+            radians: 135 degrees at the corner, the inversion's 180 less the
+            pole's 45
+
+## lag_other: ac, `.ac dec 200 100m 1k`
+
+D = 0.1: (D - D^2) R C = 9 ms, a corner at 111 rad/s. Less lag than at the
+center.
+
+  drive  e_in: DC 0 AC 1
+  set    pot.setting = 0.1
+
+  gain_low             1   claimed 1 +/- 0.1%, holds
+            unity, the DC gain's magnitude, well below the corner
+  f_3db         17.68 Hz   claimed 17.68 Hz (f_other) +/- 0.5%, holds
+  phase_c          2.356   claimed 2.356 +/- 0.5%, holds
+            radians: 135 degrees at the corner, the inversion's 180 less the
+            pole's 45
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  RV1 (pot): 10 kOhm split at the wiper, set to 0.5 of its travel
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+8 of 8 claims hold.

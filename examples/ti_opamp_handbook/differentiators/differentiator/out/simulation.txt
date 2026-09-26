@@ -1,0 +1,46 @@
+# differentiator: SBOA092B page 61, Differentiators
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## derivative: ac, `.ac dec 100 1 1k`
+
+Well below the peak the circuit is what the page says: a gain of 2 pi f R_O
+C_I, 90 degrees behind the inversion.
+
+  drive  e_in: DC 0 AC 1
+
+  f_unity        15.92 Hz   claimed 15.92 Hz (f_unity) +/- 0.1%, holds
+  gain_100          6.284   claimed 6.283 +/- 0.1%, holds
+             2 pi x 100 Hz x 10 ms: the gain of a derivative rises with f
+  phase_100        -1.571   claimed -1.571 +/- 0.1%, holds
+             -pi/2 radians: -j 2 pi f R_O C_I, a derivative inverted
+
+## peak: ac, `.ac lin 2401 12k 13.2k`
+
+The handbook's Figure 43 point. The rising gain meets the 10 MHz op amp's
+roll-off at sqrt(GBW f_unity) and the loop is left with almost no damping,
+so a gain the page calls 2 pi f R_O C_I (793 there) peaks hundreds of times
+higher. The height is the op amp model's, and is reported, not claimed.
+
+  drive  e_in: DC 0 AC 1
+
+  f_peak           12.62 kHz   claimed 12.62 kHz (f_peak) +/- 0.1%, holds
+                Where the output's imaginary part changes sign, which for a
+                resonance this narrow is the top of the peak.
+  gain_peak        3.855e+05   not a claim
+  gain_peak_db      111.7 dB   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (common): a terminal; it marks a node and adds nothing
+  TP2 (e_in): a terminal; it marks a node and adds nothing
+  TP3 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+4 of 4 claims hold.

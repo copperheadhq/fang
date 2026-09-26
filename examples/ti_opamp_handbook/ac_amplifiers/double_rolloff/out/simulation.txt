@@ -1,0 +1,53 @@
+# double_rolloff: SBOA092B page 77, Double Rolloff
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## response: ac, `.ac dec 200 0.0001 10meg`
+
+The sweep has 200 points a decade so the peak, near 0.52 Hz, is read to
+better than 0.5%. The -3 dB point, where the gain first reaches 10 / sqrt 2
+on the way up, is not a handbook claim.
+
+  drive  e_in: DC 0 AC 1
+
+  gain_1k                10   claimed 10 (a_v) +/- 0.1%, holds
+  peak                29.21   claimed 29.21 +/- 0.5%, holds
+               9.3 dB above the midband, from the transfer function with T_1
+               = 1 s and T_2 = 0.1 s; the page's rule C_1 R_1 = C_2 R_2
+               would hold it under 1 dB
+  slope_steep         40.48   claimed 40 +/- 1, holds
+               dB per decade between 0.05 Hz and 0.15 Hz: the double rolloff
+  slope_low           21.22   claimed 20 +/- 1.5, holds
+               dB per decade from 1 mHz to 10 mHz, below the zero at (1 +
+               R_1/R_2) / (2 pi (R_0 + R_1) C_1) = 17.5 mHz, where the
+               response is back to a single rolloff
+  g_005              0.1056   not a claim
+  g_015              0.9752   not a claim
+  g_0001          0.0006923   not a claim
+  g_001            0.007962   not a claim
+  f_3db           330.9 mHz   not a claim
+
+## dc: operating point, `.op`
+
+  drive  e_in: DC 1
+
+  e_out   5.049e-25 V   claimed 0 V +/- 1 uV, holds
+         C_2 blocks the 1 V; R_2 and R_1 hold the + input at ground
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+5 of 5 claims hold.

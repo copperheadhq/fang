@@ -1,0 +1,48 @@
+* balanced_output_amplifier: difference
+* plan for ngspice over sha256:52916be2b1cbd69bfc4fb55bdcf5c3652b1c229218ce1f52110c42b886cfa074
+* GND1 abstracted; no device emitted
+R1 2 3 10k
+R2 4 5 10k
+R3 3 6 100k
+R4 5 7 100k
+* TP1 abstracted; no device emitted
+* TP2 abstracted; no device emitted
+* TP3 abstracted; no device emitted
+* TP4 abstracted; no device emitted
+* TP5 abstracted; no device emitted
+* U1 abstracted; no device emitted
+.options abstol=1e-12
+.options method=gear
+.options reltol=1e-3
+.options vntol=1e-6
+.op
+* added by the bench: the drive, and the parts fang abstracted
+VDRIVE_e1 4 0 DC 0.2
+VDRIVE_e2 2 0 DC 0.5
+XU1 3 5 7 6 HB_FDA A=1e+06 GBW=1e+07 VOH=13.5 VOL=-13.5 VOS=0
+.subckt HB_FDA inp inn outp outn A=1e6 GBW=1e7 VOH=13.5 VOL=-13.5 VOS=0
+XHALF inp inn half HB_OPAMP A={A} GBW={GBW} VOH={VOH} VOL={VOL} VOS={VOS}
+EP outp 0 half 0 0.5
+EN outn 0 half 0 -0.5
+.ends HB_FDA
+.subckt HB_OPAMP inp inn out A=1e6 GBW=1e7 VOH=13.5 VOL=-13.5 VOS=0
+VOS inp x DC {VOS}
+RIN x inn 1e12
+GM 0 n1 x inn 1e-3
+R1 n1 0 {A*1e3}
+C1 n1 0 {1e-3/(6.283185307179586*GBW)}
+DH n1 h HB_CLAMP
+VH h 0 DC {VOH}
+DL l n1 HB_CLAMP
+VL l 0 DC {VOL}
+EO out 0 n1 0 1
+.model HB_CLAMP D(IS=1e-15 N=0.01)
+.ends HB_OPAMP
+.control
+run
+let gain = (v(7) - v(6)) / (v(2) - v(4))
+print gain
+let e_p = v(6)
+print e_p
+.endc
+.end

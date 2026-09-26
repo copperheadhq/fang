@@ -1,0 +1,73 @@
+# adder_subtractor: SBOA092B page 68, Adder-Subtractor or Floating Input Combiner
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## e1_alone: operating point, `.op`
+
+  drive  e1: DC 1
+  drive  e2: DC 0
+  drive  e3: DC 0
+  drive  e4: DC 0
+
+  gain_e1            -1   claimed -1 (a_1) +/- 0.1%, holds
+
+## e2_alone: operating point, `.op`
+
+  drive  e1: DC 0
+  drive  e2: DC 1
+  drive  e3: DC 0
+  drive  e4: DC 0
+
+  gain_e2            -1   claimed -1 (a_2) +/- 0.1%, holds
+
+## e3_alone: operating point, `.op`
+
+  drive  e1: DC 0
+  drive  e2: DC 0
+  drive  e3: DC 1
+  drive  e4: DC 0
+
+  gain_e3             1   claimed 1 (a_3) +/- 0.1%, holds
+
+## e4_alone: operating point, `.op`
+
+  drive  e1: DC 0
+  drive  e2: DC 0
+  drive  e3: DC 0
+  drive  e4: DC 1
+
+  gain_e4             1   claimed 1 (a_4) +/- 0.1%, holds
+
+## all_four: operating point, `.op`
+
+  drive  e1: DC 0.1
+  drive  e2: DC 0.2
+  drive  e3: DC 0.4
+  drive  e4: DC 0.8
+
+  e_o           900 mV   claimed 900 mV +/- 0.1%, holds
+          -0.1 - 0.2 + 0.4 + 0.8 = 0.9 V
+  e_plus        400 mV   claimed 400 mV +/- 0.1%, holds
+          (E3 + E4)/3: the + input sits at the average of E3, E4 and ground
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (common): a terminal; it marks a node and adds nothing
+  TP2 (e1): a terminal; it marks a node and adds nothing
+  TP3 (e2): a terminal; it marks a node and adds nothing
+  TP4 (e3): a terminal; it marks a node and adds nothing
+  TP5 (e4): a terminal; it marks a node and adds nothing
+  TP6 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+6 of 6 claims hold.

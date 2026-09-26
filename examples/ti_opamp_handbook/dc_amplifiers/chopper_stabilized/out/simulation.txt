@@ -1,0 +1,46 @@
+# chopper_stabilized: SBOA092B page 70, Chopper Stabilized
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## gain: operating point, `.op`
+
+  drive  e_in: DC 0.1
+
+  gain        -99.99   claimed -100 (a_v) +/- 0.1%, holds
+        the 1 uV offset moves E_O by 101 uV of its -10 V
+
+## offset_chopper: operating point, `.op`
+
+E_I at 0 V: everything at the output is the TLC265x's 1 uV times 101.
+
+  drive  e_in: DC 0
+
+  error        101 uV   claimed 101 uV (error_chopper) +/- 0.1%, holds
+
+## offset_general: operating point, `.op`
+
+The same circuit with a 2 mV general-purpose op amp in the socket: 2000
+times the error.
+
+  drive  e_in: DC 0
+  set    amp.input_offset = 0.002
+
+  error        202 mV   claimed 202 mV (error_general) +/- 0.1%, holds
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 1 uV
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+3 of 3 claims hold.

@@ -1,0 +1,72 @@
+# ac_preamplifier: SBOA092B page 78, AC Preamplifier
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## response: ac, `.ac dec 200 0.001 10meg`
+
+E_O is 3 dB down from 509.2 at 51.11 dB. z_in_100 is E_I over the current in
+R_2 at 100 Hz, the bootstrapped input impedance the page calls high Z_in; it
+is not a numeric claim of the handbook.
+
+  drive  e_in: DC 0 AC 1
+
+  gain_100           509   claimed 509.2 (a_v) +/- 0.1%, holds
+            1 + 100k / (200 || 12.2k), read at 100 Hz, clear of the low
+            corners and of the op amp's 20 kHz. The handbook prints 500;
+            (R_0 + R_1) / R_1 is 501, and with the trim beside R_1 the gain
+            is 509 to 546
+  f_3db        809.5 mHz   claimed 800 mHz (f_low) +/- 2%, holds
+            the handbook prints 1.6 Hz; 1/(2 pi R_1 C_1) is 0.80 Hz. The
+            circuit, with its double pole and C_3 into 100 k, is 3 dB down
+            at 0.81 Hz, hence 2%
+  peak             756.9   claimed 757.7 +/- 0.5%, holds
+            3.45 dB above the midband near 1.3 Hz, from the transfer
+            function with R_1 C_1 = 0.2 s and R_2 C_2 = 0.1 s; the page's
+            rule R_1 C_1 = R_2 C_2 would bring it down to 1.2 dB
+  slope            40.85   claimed 40 +/- 1.5, holds
+            dB per decade at the op amp's output between 0.1 Hz and 0.3 Hz:
+            the double rolloff
+  g_01             3.979   not a claim
+  g_03             37.51   not a claim
+  p_re                 1   not a claim
+  p_im         8.261e-06   not a claim
+  j_re            0.9995   not a claim
+  j_im          0.003002   not a claim
+  z_in_100    32.92 MOhm   not a claim
+  f_upper      19.67 kHz   not a claim
+
+## trim_at_zero: ac, `.ac dec 10 10 1k`
+
+  drive  e_in: DC 0 AC 1
+  set    r_4.setting = 0
+
+  gain_100         546.2   claimed 546.5 (a_v_max) +/- 0.1%, holds
+            1 + 100k / (200 || 2.2k)
+
+## dc: operating point, `.op`
+
+  drive  e_in: DC 1
+
+  e_amp   5.049e-25 V   claimed 0 V +/- 1 uV, holds
+         C_2 blocks the 1 V, and C_1 leaves the stage a follower of its
+         grounded + input
+  e_out           0 V   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  RV1 (r_4): 10 kOhm split at the wiper, set to 1 of its travel
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+6 of 6 claims hold.

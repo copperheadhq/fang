@@ -1,0 +1,48 @@
+# summing_integrator: SBOA092B page 58, Summing Integrator
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## sum: transient, `.tran 1m 1.1`
+
+E1 + E2 + E3 = 0.6 V, so the output falls 6 V/s once the switch opens at 10
+ms. The slope over 0.1 s to 1.1 s, divided by 0.6 V, is the rate.
+
+  drive  e1: DC 0.1
+  drive  e2: DC 0.2
+  drive  e3: DC 0.3
+  switch reset: PWL(0 1 10m 1 10.001m 0)
+
+  rate_per_volt        -10 /s   claimed -10 /s (rate) +/- 0.1%, holds
+  e_early             -540 mV   not a claim
+  e_late              -6.54 V   not a claim
+
+## mixed_signs: transient, `.tran 1m 1.1`
+
+E1 + E2 + E3 = 0.4 V with E2 negative: the output falls 4 V/s, the rate of
+the algebraic sum.
+
+  drive  e1: DC 0.5
+  drive  e2: DC -0.2
+  drive  e3: DC 0.1
+  switch reset: PWL(0 1 10m 1 10.001m 0)
+
+  rate_per_volt        -10 /s   claimed -10 /s (rate) +/- 0.1%, holds
+  e_early             -360 mV   not a claim
+  e_late              -4.36 V   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  SW1 (reset): switch: 1 Ohm closed, 1 TOhm open
+  TP1 (e1): a terminal; it marks a node and adds nothing
+  TP2 (e2): a terminal; it marks a node and adds nothing
+  TP3 (e3): a terminal; it marks a node and adds nothing
+  TP4 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+2 of 2 claims hold.

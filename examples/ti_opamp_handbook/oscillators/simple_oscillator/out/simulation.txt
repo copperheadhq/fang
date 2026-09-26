@@ -1,0 +1,35 @@
+# simple_oscillator: SBOA092B page 83, Simple Oscillator
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## oscillation: transient, `.tran 2u 200m`
+
+A 1 V kick on the 2C capacitor at the start, released at once, and 150 ms
+for the oscillation to grow into the rails; the frequency is timed over the
+forty rising zero crossings after.
+
+  f_o              1.006 kHz   claimed 1 kHz (f_o) +/- 1%, holds
+                1% for the trim: R/2 set 2% low moves the frequency at which
+                the twin-T turns negative up by about 0.5%
+  e_high             13.51 V   claimed 13.5 V +/- 1%, holds
+                nothing in the loop limits the amplitude; the output clips
+                at the op amp's swing
+  e_low             -13.51 V   claimed -13.5 V +/- 1%, holds
+  t_first           150.5 ms   not a claim
+  t_last            190.2 ms   not a claim
+  early_high         13.51 V   not a claim
+  summing_peak      223.2 mV   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  RV1 (r_half): 10 kOhm split at the wiper, set to 0.49 of its travel
+  TP1 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+3 of 3 claims hold.

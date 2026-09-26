@@ -1,0 +1,44 @@
+# simple_non_inverting: SBOA092B page 71, Simple Non-Inverting
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## gain: operating point, `.op`
+
+  drive  e_in: DC 1
+
+  gain               10   claimed 10 (a_v) +/- 0.1%, holds
+  e_minus           1 V   claimed 1 V +/- 0.1%, holds
+           the - input follows E_I: both inputs sit at the input voltage,
+           which is the common-mode limit the page warns of
+
+## swing: dc, `.dc VDRIVE_e_in -2 2 0.01`
+
+A sweep of E_I from -2 V to 2 V. The output is linear at 10 E_I until it
+meets the +/-13.5 V swing.
+
+  drive  e_in: DC 0
+
+  gain_at_1v              10   claimed 10 (a_v) +/- 0.1%, holds
+                E_O at E_I = 1 V, so the gain
+  e_out_top          13.51 V   claimed 13.5 V +/- 1%, holds
+                the macro-model's swing, reached at E_I = 1.35 V; its clamp
+                diode lets it pass by a few mV, hence 1%
+  e_out_bottom      -13.51 V   claimed -13.5 V +/- 1%, holds
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+5 of 5 claims hold.

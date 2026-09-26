@@ -1,0 +1,70 @@
+# simple_gain_control: SBOA092B page 70, Simple Gain Control
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## wiper_0_10: operating point, `.op`
+
+  drive  e_in: DC 0.1
+  set    pot.setting = 0.1
+
+  gain            -9   claimed -9 +/- 0.1%, holds
+        -(1 - 0.1) / 0.1
+  z_in        1 kOhm   claimed 1 kOhm +/- 0.1%, holds
+        0.1 x 10 kOhm
+
+## wiper_0_25: operating point, `.op`
+
+  drive  e_in: DC 0.1
+  set    pot.setting = 0.25
+
+  gain            -3   claimed -3 +/- 0.1%, holds
+        -(1 - 0.25) / 0.25
+  z_in      2.5 kOhm   claimed 2.5 kOhm +/- 0.1%, holds
+        0.25 x 10 kOhm
+
+## wiper_centre: operating point, `.op`
+
+  drive  e_in: DC 0.1
+
+  gain            -1   claimed -1 (a_v) +/- 0.1%, holds
+        unity gain with R centred
+  z_in        5 kOhm   claimed 5 kOhm (z_in) +/- 0.1%, holds
+
+## wiper_0_75: operating point, `.op`
+
+  drive  e_in: DC 0.1
+  set    pot.setting = 0.75
+
+  gain       -0.3333   claimed -0.3333 +/- 0.1%, holds
+        -(1 - 0.75) / 0.75
+  z_in      7.5 kOhm   claimed 7.5 kOhm +/- 0.1%, holds
+        0.75 x 10 kOhm
+
+## wiper_0_90: operating point, `.op`
+
+  drive  e_in: DC 0.1
+  set    pot.setting = 0.9
+
+  gain       -0.1111   claimed -0.1111 +/- 0.1%, holds
+        -(1 - 0.9) / 0.9
+  z_in        9 kOhm   claimed 9 kOhm +/- 0.1%, holds
+        0.9 x 10 kOhm
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  RV1 (pot): 10 kOhm split at the wiper, set to 0.5 of its travel
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+10 of 10 claims hold.

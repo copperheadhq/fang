@@ -1,0 +1,49 @@
+# ac_non_inverting: SBOA092B page 77, Non-Inverting
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## response: ac, `.ac dec 40 0.001 10meg`
+
+  drive  e_in: DC 0 AC 1
+
+  gain_1k                         10   claimed 10 (a_v) +/- 0.1%, holds
+  phase_1k                 0.0007348   claimed 0 +/- 0.01, holds
+                        in radians: E_O in phase with E_I, as the page says
+  f_3db                     1.608 Hz   claimed 1.6 Hz (f_low) +/- 1%, holds
+                        the handbook prints 0.16 Hz; the drawn circuit is 3
+                        dB down at 1.61 Hz, set by C_2 R_2 (1.59 Hz) with a
+                        little from the gain network
+  gain_network                 7.106   claimed 7.106 +/- 0.1%, holds
+                        E_O over the + input at 1/(2 pi R_1 C_1) = 0.159 Hz:
+                        sqrt(1 + 10^2) / sqrt(2), the gain network 3 dB down
+                        from 10. This is the corner the page prints
+  plus_at_input_corner        707 mV   claimed 707.1 mV +/- 0.1%, holds
+                        the + input 3 dB down at 1/(2 pi R_2 C_2) = 1.59 Hz:
+                        the corner that comes first
+  out_at_gain_corner        707.1 mV   not a claim
+  plus_at_gain_corner        99.5 mV   not a claim
+
+## dc: operating point, `.op`
+
+  drive  e_in: DC 1
+
+  e_out   5.049e-25 V   claimed 0 V +/- 1 uV, holds
+         C_2 blocks the 1 V; R_2 holds the + input at ground
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+6 of 6 claims hold.

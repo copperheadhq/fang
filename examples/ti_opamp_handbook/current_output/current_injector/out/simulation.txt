@@ -1,0 +1,52 @@
+# current_injector: SBOA092B page 80, Current Injector
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## load_100_ohm: operating point, `.op`
+
+  drive  e_in: DC 1
+  set    r_load.resistance = 100
+
+  i_per_volt        -1 mA/V   claimed -1 mA/V (i_per_volt) +/- 0.1%, holds
+  common_mode       -100 mV   not a claim
+  e_out              -1.2 V   not a claim
+
+## load_1000_ohm: operating point, `.op`
+
+  drive  e_in: DC 1
+  set    r_load.resistance = 1000
+
+  i_per_volt        -1 mA/V   claimed -1 mA/V (i_per_volt) +/- 0.1%, holds
+               The page prints I = -E_I / R_L. For the drawn circuit with
+               R1/R2 = R0/R3 it is -R0 E_I / (R1 R3), or -E_I / R2, whatever
+               R_L is; with 1 kOhm throughout both are the -E_I mA the page
+               prints.
+  common_mode          -1 V   not a claim
+  e_out                -3 V   not a claim
+
+## load_4700_ohm: operating point, `.op`
+
+  drive  e_in: DC 1
+  set    r_load.resistance = 4700
+
+  i_per_volt        -1 mA/V   claimed -1 mA/V (i_per_volt) +/- 0.1%, holds
+  common_mode        -4.7 V   not a claim
+  e_out             -10.4 V   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  RL1 (r_load): load of 1000 Ohm, with its current sensed
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+3 of 3 claims hold.

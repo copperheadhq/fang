@@ -1,0 +1,30 @@
+C1     10 uF            -
+D1     SignalDiode      -
+D2     SignalDiode      -
+D3     SignalDiode      -
+D4     SignalDiode      -
+GND1   Ground           -
+R1     100 kOhm         -
+R2     100 kOhm         -
+R3     4.7 kOhm         -
+R4     100 kOhm         -
+R5     100 kOhm         -
+R6     100 kOhm         -
+TP1    Terminal         -
+TP2    Terminal         -
+U1     OpAmp            -
+U2     OpAmp            -
+V1     15 V             -
+V2     15 V             -
+Net-(C1-Pad1)            C1.1 R6.2 U2.IN-
+Net-(C1-Pad2)            C1.2 R1.2 TP2.1 U2.OUT
+Net-(D1-PadA)            D1.A D3.K U1.OUT
+Net-(D1-PadK)            D1.K D2.K R5.1
+Net-(D2-PadA)            D2.A D4.K R6.1
+Net-(D3-PadA)            D3.A D4.A R4.1
+Net-(GND1-Pad1)          GND1.1 R3.2 U2.IN+ V1.+ V2.-
+Net-(R1-Pad1)            R1.1 R2.2 U1.IN+
+Net-(R2-Pad1)            R2.1 TP1.1
+Net-(R3-Pad1)            R3.1 U1.IN-
+Net-(R4-Pad2)            R4.2 V2.+
+Net-(R5-Pad2)            R5.2 V1.-

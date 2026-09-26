@@ -1,0 +1,42 @@
+* differential_integrator: difference
+* plan for ngspice over sha256:3058a7bb5f82c08d79189a1ec59f27f85190cac0df285d3024e0728534a8bcc7
+C1 1 2 1u
+C2 3 0 1u
+* GND1 abstracted; no device emitted
+R1 5 1 100k
+R2 6 3 100k
+* TP1 abstracted; no device emitted
+* TP2 abstracted; no device emitted
+* TP3 abstracted; no device emitted
+* U1 abstracted; no device emitted
+.options abstol=1e-12
+.options method=gear
+.options reltol=1e-3
+.options vntol=1e-6
+.tran 1m 1
+* added by the bench: the drive, and the parts fang abstracted
+VDRIVE_e1 5 0 DC 0.1
+VDRIVE_e2 6 0 DC 0.3
+XU1 3 1 2 HB_OPAMP A=1e+06 GBW=1e+07 VOH=13.5 VOL=-13.5 VOS=0
+.ic v(2)=0 v(1)=0 v(3)=0
+.subckt HB_OPAMP inp inn out A=1e6 GBW=1e7 VOH=13.5 VOL=-13.5 VOS=0
+VOS inp x DC {VOS}
+RIN x inn 1e12
+GM 0 n1 x inn 1e-3
+R1 n1 0 {A*1e3}
+C1 n1 0 {1e-3/(6.283185307179586*GBW)}
+DH n1 h HB_CLAMP
+VH h 0 DC {VOH}
+DL l n1 HB_CLAMP
+VL l 0 DC {VOL}
+EO out 0 n1 0 1
+.model HB_CLAMP D(IS=1e-15 N=0.01)
+.ends HB_OPAMP
+.control
+run
+meas tran e_early find v(2) at=0.1
+meas tran e_late find v(2) at=1
+let rate_per_volt = (e_late - e_early) / 0.9 / 0.2
+print rate_per_volt
+.endc
+.end

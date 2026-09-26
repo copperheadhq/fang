@@ -1,0 +1,52 @@
+# ac_to_dc_converter: SBOA092B page 88, AC to DC Converter
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## six_volts: transient, `.tran 50u 10`
+
+E_I is 6 V rms (8.485 V peak) at 100 Hz, the top of the page's range. The
+average is taken over the last second of ten.
+
+  drive  e_in: SIN(0 8.485281 100)
+
+  k_measured           0.9   claimed 0.9 (k_avg) +/- 0.1%, holds
+              the page's 0.9; the circuit gives 0.9003 at unity gain, and
+              what is left of the filter's start-up after 9 s is e^-9, a
+              hundredth of a percent
+  e_average          5.4 V   not a claim
+  ripple          6.104 mV   not a claim
+
+## six_millivolts: transient, `.tran 50u 10`
+
+E_I is 6 mV rms at 100 Hz, the bottom of the page's range, where a diode
+drop outside the loop would swallow the signal whole. The average is taken
+over the last second of ten.
+
+  drive  e_in: SIN(0 8.485281m 100)
+
+  k_measured        0.8941   claimed 0.9 (k_avg) +/- 1%, holds
+              1% here: at 8.5 mV peak the signal current through R_1 is
+              under 1 uA, and the 1N4148 model's 2.5 nA of saturation
+              current through the diode that should be off, with the 4 pF
+              junction charge moved at each zero crossing, takes a few
+              tenths of a percent of it
+  e_average       5.365 mV   not a claim
+  ripple          6.148 uV   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  D1 (d_half): 1N4148 diode model
+  D2 (d_return): 1N4148 diode model
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  RV1 (r_8): 2 kOhm split at the wiper, set to 0 of its travel
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp_1): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+  U2 (amp_2): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+2 of 2 claims hold.

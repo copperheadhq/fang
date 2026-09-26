@@ -1,0 +1,78 @@
+# clamped_comparator: SBOA092B page 47, Fully Clamped Voltage Comparator
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## above_threshold: operating point, `.op`
+
+  drive  e_in: DC 3
+
+  v_cr1      393.9 mV   claimed 394 mV (v_diode) +/- 1%, holds
+         CR_1 carrying the summing point's 15 uA.
+  e_out      -10.81 V   claimed -10.81 V (clamp_low) +/- 0.2%, holds
+         The handbook prints -10 V (clamp_low_ideal); that is the clamp with
+         a diode that drops nothing. With CR_1's 0.394 V and its 15 uA in
+         R_b it is 0.8 V lower.
+
+## below_threshold: operating point, `.op`
+
+  drive  e_in: DC 0
+
+  v_cr2      393.9 mV   claimed 394 mV (v_diode) +/- 1%, holds
+         CR_2 carrying the 15 uA the reference pulls out of the summing
+         point.
+  e_out       3.518 V   claimed 3.518 V (clamp_high) +/- 0.2%, holds
+         The handbook prints +3 V (clamp_high_ideal); with CR_2's drop and
+         current it is 0.52 V higher.
+
+## transfer: dc, `.dc VDRIVE_e_in -3 5 1m`
+
+E_I swept from -3 V to 5 V. Between the clamps the loop has no feedback, so
+the output crosses the whole 14 V within tens of microvolts of 1.5 V, what
+the open-loop gain needs.
+
+  drive  e_in: DC 0
+
+  e_i_at_switch         1.5 V   claimed 1.5 V (threshold) +/- 0.1%, holds
+                 Where the output crosses the middle of its two clamps. The
+                 handbook's -(R_2 / R_1) V_ref would be 150 V; -(R_1 / R_2)
+                 V_ref is the 1.5 V it prints.
+  e_out_at_1v         3.428 V   not a claim
+  e_out_at_2v        -10.62 V   not a claim
+
+## figure_waveform: transient, `.tran 0.5u 2m`
+
+The figure's own drive, a 2 V peak sine at 1 kHz. The figure's trace sits
+near +3.7 V and -10.7 V, well off the printed +3 V and -10 V.
+
+  drive  e_in: SIN(0 2 1k)
+
+  e_out_max       3.624 V   claimed 3.624 V +/- 0.5%, holds
+             Not a handbook number. At the -2 V trough CR_2 carries 35 uA,
+             not 15, and drops 0.432 V, so the same formula gives 3 + 1.2 x
+             0.432 + 3 kOhm x 35 uA = 3.624 V.
+  e_out_min      -10.62 V   claimed -10.62 V +/- 0.5%, holds
+             At the +2 V crest CR_1 carries only 5 uA and drops 0.344 V: -10
+             - (25/15) x 0.344 - 10 kOhm x 5 uA = -10.62 V.
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  D1 (cr_1): 1N4148 diode model
+  D2 (cr_2): 1N4148 diode model
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_in_return): a terminal; it marks a node and adds nothing
+  TP3 (e_out): a terminal; it marks a node and adds nothing
+  TP4 (e_out_return): a terminal; it marks a node and adds nothing
+  TP5 (ref): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+7 of 7 claims hold.

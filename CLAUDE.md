@@ -171,7 +171,12 @@ reasoning. `python examples/regenerate.py` rewrites them all;
 a committed output cannot drift from the program beside it. An example named in
 `regenerate.SCHEMATICS` also ships a `.kicad_sch` and KiCad's render of it, so
 regenerating that one needs `kicad-cli` on the path; without it the tests
-still check every one of its outputs but the render. Two things in an
+still check every one of its outputs but the render. A program that
+declares a module-level `BENCH` (the circuits under `examples/ti_opamp_handbook/`
+do, through its `handbook.py`) is simulated too: its `out/` ships each SPICE deck
+and a `simulation.txt` of measurements against claims, so it needs `ngspice`, and
+[tests/test_handbook.py](tests/test_handbook.py) fails on any claim that does not
+hold. Two things in an
 output are normalized before that comparison and only two: the compiler version
 and the snapshot hash, which covers provenance and so covers this checkout's
 absolute path. Add an example by adding the folder — the suite discovers it —

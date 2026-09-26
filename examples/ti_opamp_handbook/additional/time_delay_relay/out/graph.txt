@@ -1,0 +1,12 @@
+    1  block
+    1  calculation
+   15  component
+   44  connection
+    2  constraint
+    4  decision
+    1  evidence
+    3  interface
+   31  pin
+   31  port
+  133  total
+snapshot sha256:9f9df5d0225ab17c9dded4a90f2783f7e1e52fa293218ef739c7f85a189cf6aa

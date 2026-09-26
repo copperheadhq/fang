@@ -1,0 +1,34 @@
+# augmenting_integrator: SBOA092B page 60, Augmenting Integrator
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## step: transient, `.tran 1m 1.01`
+
+E_I steps from 0 to 0.1 V at 10 ms. The output should jump to -1 V and fall
+1 V/s after it: -10 E_I - 10 integral E_I dt.
+
+  drive  e_in: PWL(0 0 10m 0 10.001m 0.1)
+
+  gain_step               -10   claimed -10 (gain) +/- 0.1%, holds
+                 the jump at the step: the ramp extrapolated back to 10 ms,
+                 over E_I
+  rate_per_volt        -10 /s   claimed -10 /s (rate) +/- 0.1%, holds
+                 the handbook prints the integral term as -integral E_I dt,
+                 a rate of -1/s; 1/(C_O R_I) = 1/(10 uF x 10 kOhm) is 10/s,
+                 and that is what the circuit does
+  e_early              -1.1 V   not a claim
+  e_late                 -2 V   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+2 of 2 claims hold.

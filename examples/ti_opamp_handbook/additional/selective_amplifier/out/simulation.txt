@@ -1,0 +1,48 @@
+# selective_amplifier: SBOA092B page 91, Selective Amplifier
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## around_the_peak: ac, `.ac lin 3001 900 1050`
+
+A linear sweep, 0.05 Hz a step, from 900 Hz to 1050 Hz. The peak is sharp,
+about 20 Hz wide, and sits a few hertz above the notch: there the twin-T's
+transfer admittance has a negative real part that cancels part of R_O's
+conductance, so the gain at the top is higher than R_O / |Z_in|: 44, where
+the page says 33.
+
+  drive  e_in: DC 0 AC 1
+
+  gain_notch           31.66   claimed 31.34 (a_notch) +/- 2%, holds
+                at the notch, 964.6 Hz: R_O over |Z_in|. The page's R_O /
+                R_I = 33 leaves out C_I's 3.3 kOhm of reactance. 2%, because
+                the gain climbs 1.6 per hertz here and the simulated notch
+                sits about 0.2 Hz below 1/(2 pi R_a C_a)
+  z_in_notch      10.52 kOhm   claimed 10.53 kOhm (z_in) +/- 0.5%, holds
+                1 V over the current through R_I, at the notch. The page
+                says Z_in = R_I = 10 kOhm, which leaves out C_I. 0.5%,
+                because the current is read as the voltage at R_I's input
+                end over 10 kOhm, and the summing point is a few millivolts
+                off ground with 80 dB of open-loop gain at 1 kHz
+  f_centre          973.9 Hz   claimed 964.6 Hz (f_notch) +/- 2%, holds
+                the middle of the -3 dB band, 1% above the notch. The page
+                prints 1000 Hz; 1/(2 pi R_a C_a) is 964.6 Hz
+  v_r_i             950.5 mV   not a claim
+  gain_peak            44.05   not a claim
+  gain_peak_db      32.88 dB   not a claim
+  half_power           31.15   not a claim
+  f_low             964.3 Hz   not a claim
+  f_high            983.6 Hz   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+3 of 3 claims hold.

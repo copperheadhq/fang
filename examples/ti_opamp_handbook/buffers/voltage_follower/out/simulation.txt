@@ -1,0 +1,47 @@
+# voltage_follower: SBOA092B page 49, The Voltage Follower
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## gain: operating point, `.op`
+
+  drive  e_in: DC 1
+
+  gain             1   claimed 1 (a_v) +/- 0.1%, holds
+
+## large_signal: operating point, `.op`
+
+10 V in, still inside the 13.5 V swing: the gain is the same.
+
+  drive  e_in: DC 10
+
+  gain             1   claimed 1 (a_v) +/- 0.1%, holds
+
+## bandwidth: ac, `.ac dec 20 10 100meg`
+
+The -3 dB point is not a handbook claim: a follower's noise gain is 1, so it
+is the op amp's own 10 MHz gain-bandwidth.
+
+  drive  e_in: DC 0 AC 1
+
+  gain_1k             1   claimed 1 (a_v) +/- 0.1%, holds
+  f_3db       9.976 MHz   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_in_return): a terminal; it marks a node and adds nothing
+  TP3 (e_out): a terminal; it marks a node and adds nothing
+  TP4 (e_out_return): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+3 of 3 claims hold.

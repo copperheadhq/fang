@@ -1,0 +1,50 @@
+# differential_output: SBOA092B page 73, Differential Output
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## floating: operating point, `.op`
+
+E_I = 1 V split symmetrically about ground: -0.5 V on the top terminal, +0.5
+V on the bottom.
+
+  drive  e_in_bottom: DC 0.5
+  drive  e_in_top: DC -0.5
+
+  gain            10   claimed 10 (a_v) +/- 0.1%, holds
+
+## offset_source: operating point, `.op`
+
+The same 1 V of E_I, riding 3 V above ground: only the difference reaches
+E_O.
+
+  drive  e_in_bottom: DC 4
+  drive  e_in_top: DC 3
+
+  gain            10   claimed 10 (a_v) +/- 0.1%, holds
+
+## common_mode: operating point, `.op`
+
+  drive  e_in_bottom: DC 1
+  drive  e_in_top: DC 1
+
+  e_out     -1.676 fV   claimed 0 V +/- 100 uV, holds
+         both terminals at 1 V, E_I = 0: the matched pairs reject it
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in_bottom): a terminal; it marks a node and adds nothing
+  TP2 (e_in_top): a terminal; it marks a node and adds nothing
+  TP3 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+3 of 3 claims hold.

@@ -1,0 +1,75 @@
+# power_booster: SBOA092B page 72, Power Booster
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## thirty_volts: operating point, `.op`
+
+E_I = 1.4286 V into a 10 Ohm load. The OPA277 alone would stop at 13 V; here
+it swings 9.6 V while E_O reaches 30 V and 3 A.
+
+  drive  e_in: DC 1.4286
+
+  gain                 21   claimed 21 (g) +/- 0.1%, holds
+             the OPA277's 20 uV offset, times 21, moves this by 0.001%
+  e_out              30 V   claimed 30 V (e_out) +/- 0.1%, holds
+  e_front         9.598 V   claimed 9.6 V (e_front) +/- 0.5%, holds
+             30 V x 4.7k / 14.7k is 9.592 V, plus the OPA512's 6 mV of
+             offset, which its own input carries; the claim rounds to 9.6 V,
+             hence 0.5%
+  i_load              3 A   not a claim
+  e_booster       30.15 V   not a claim
+
+## offset: operating point, `.op`
+
+  drive  e_in: DC 0
+
+  v_os_out     -420.1 uV   claimed -420 uV (v_os_out) +/- 1%, holds
+            21 x the OPA277's 20 uV, negative because the model subtracts
+            its offset from the + input. The OPA512's 6 mV is inside the
+            outer loop and divided by the OPA277's gain
+
+## stability: ac, `.ac dec 40 10 100meg`
+
+The -3 dB point is not a handbook claim; it is where the OPA277's 1 MHz,
+over a noise gain of 21 and helped by the OPA512's 3.13, runs out.
+
+  drive  e_in: DC 0 AC 1
+
+  gain_db         26.44   claimed 26.44 +/- 0.01, holds
+           20 log 21
+  peaking             0   claimed 0 +/- 1, holds
+           no more than 1 dB of peak above the DC gain: the two loops
+           together do not ring
+  peak_db         26.44   not a claim
+  f_3db         139 kHz   not a claim
+
+## step: transient, `.tran 10n 40u`
+
+A small step, so the missing slew limit does not matter.
+
+  drive  e_in: PULSE(0 0.1 1u 10n 10n 100u 200u)
+
+  final             2.1 V   claimed 2.1 V +/- 0.1%, holds
+             21 x 0.1 V
+  overshoot             0   claimed 0 +/- 0.05, holds
+             a 0.1 V step settles with under 5% overshoot
+  peak              2.1 V   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out_terminal): a terminal; it marks a node and adds nothing
+  U1 (booster): op amp macro-model: 1e+06 open-loop gain, 4 MHz gain-bandwidth, output -35 V to 35 V, offset 6 mV
+  U2 (front): op amp macro-model: 1e+06 open-loop gain, 1 MHz gain-bandwidth, output -13 V to 13 V, offset 20 uV
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+8 of 8 claims hold.
