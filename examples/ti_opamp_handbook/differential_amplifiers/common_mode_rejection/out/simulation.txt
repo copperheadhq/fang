@@ -1,0 +1,70 @@
+# common_mode_rejection: SBOA092B page 75, Common Mode Rejection
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## e1_alone: operating point, `.op`
+
+  drive  e1: DC 1
+  drive  e2: DC 0
+
+  gain_e1           -10   claimed -10 (a_e1) +/- 0.1%, holds
+           on the reading that R1 is 10 kOhm; the figure's 1 kOhm would give
+           a gain of 100 and no reachable null
+
+## e2_alone: operating point, `.op`
+
+  drive  e1: DC 0
+  drive  e2: DC 1
+
+  gain_e2             10   claimed 10 (a_e2) +/- 0.1%, holds
+            R0 / (R2 + 0.9 kOhm of R3), through the inverter
+  inverted            -1   claimed -1 (a_inv) +/- 0.1%, holds
+
+## difference: operating point, `.op`
+
+  drive  e1: DC 0.4
+  drive  e2: DC 0.6
+
+  e_o           2 V   claimed 2 V +/- 0.1%, holds
+       10 (E2 - E1) = 10 x 0.2 V, as printed
+
+## common_mode_trimmed: operating point, `.op`
+
+  drive  e1: DC 1
+  drive  e2: DC 1
+
+  e_o     -20.04 uV   claimed 0 V +/- 100 uV, holds
+       1 V on both inputs with R3 trimmed so R2 + R3 = R1. What is left is
+       the two op amps' finite gain
+
+## common_mode_untrimmed: operating point, `.op`
+
+  drive  e1: DC 1
+  drive  e2: DC 1
+  set    r3.setting = 0.5
+
+  e_o      -1.379 V   claimed -1.379 V +/- 0.1%, holds
+       R3 at mid-travel: R2 + R3 = 11.6 kOhm, so E_O = -10 + 100/11.6 =
+       -1.379 V for 1 V on both inputs. This is what the trim is for
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  RV1 (r3): 5 kOhm split at the wiper, set to 0.82 of its travel
+  TP1 (common): a terminal; it marks a node and adds nothing
+  TP2 (e1): a terminal; it marks a node and adds nothing
+  TP3 (e2): a terminal; it marks a node and adds nothing
+  TP4 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp_invert): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+  U2 (amp_sum): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+6 of 6 claims hold.

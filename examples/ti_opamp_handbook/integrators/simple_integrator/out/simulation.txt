@@ -1,0 +1,33 @@
+# simple_integrator: SBOA092B page 56, Simple Integrators
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## ramp: transient, `.tran 1m 1.1`
+
+E_I is 0.1 V throughout; the reset switch opens at 10 ms. The slope is taken
+between 0.1 s and 1.1 s and divided by E_I.
+
+  drive  e_in: DC 0.1
+  switch reset: PWL(0 1 10m 1 10.001m 0)
+
+  held                  -1 uV   claimed 0 V +/- 1 mV, holds
+                 the switch is closed: the output sits at zero with the
+                 input applied
+  rate_per_volt        -10 /s   claimed -10 /s (rate) +/- 0.1%, holds
+  e_early              -90 mV   not a claim
+  e_late              -1.09 V   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  SW1 (reset): switch: 1 Ohm closed, 1 TOhm open
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+2 of 2 claims hold.

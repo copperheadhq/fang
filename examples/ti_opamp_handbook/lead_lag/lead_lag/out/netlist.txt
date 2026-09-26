@@ -1,0 +1,14 @@
+C1     10 uF            -
+C2     10 uF            -
+GND1   Ground           -
+RV1    Potentiometer    -
+RV2    Potentiometer    -
+TP1    Terminal         -
+TP2    Terminal         -
+U1     OpAmp            -
+Net-(C1-Pad1)            C1.1 RV1.2
+Net-(C1-Pad2)            C1.2 C2.2 GND1.1 U1.IN+
+Net-(C2-Pad1)            C2.1 RV2.2
+Net-(RV1-Pad1)           RV1.1 RV2.3 U1.IN-
+Net-(RV1-Pad3)           RV1.3 TP2.1 U1.OUT
+Net-(RV2-Pad1)           RV2.1 TP1.1

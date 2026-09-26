@@ -1,0 +1,42 @@
+# differential_integrator: SBOA092B page 59, Differential Integrator
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## difference: transient, `.tran 1m 1`
+
+E2 - E1 = 0.2 V, so the output rises 2 V/s. The slope over 0.1 s to 1 s,
+divided by 0.2 V, is the rate.
+
+  drive  e1: DC 0.1
+  drive  e2: DC 0.3
+
+  rate_per_volt         10 /s   claimed 10 /s (rate) +/- 0.1%, holds
+  e_early              200 mV   not a claim
+  e_late                  2 V   not a claim
+
+## common_mode: transient, `.tran 1m 1`
+
+Both inputs at 0.5 V. Both op amp inputs charge together toward 0.5 V, and
+the output does not move.
+
+  drive  e1: DC 0.5
+  drive  e2: DC 0.5
+
+  e_late         -40.85 fV   claimed 0 V +/- 1 mV, holds
+              equal inputs: nothing to integrate, the output stays at zero
+  plus_input        500 mV   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e1): a terminal; it marks a node and adds nothing
+  TP2 (e2): a terminal; it marks a node and adds nothing
+  TP3 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+2 of 2 claims hold.

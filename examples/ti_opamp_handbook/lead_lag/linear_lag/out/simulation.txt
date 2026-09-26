@@ -1,0 +1,55 @@
+# linear_lag: SBOA092B page 85, Lag value linear with R setting
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## dc_gain: operating point, `.op`
+
+  drive  e_in: DC 1
+
+  gain             1   claimed 1 (a_v) +/- 0.1%, holds
+
+## full_travel: ac, `.ac dec 200 10m 1k`
+
+D = 1: the page's 10/(10 + P), a corner at 10 rad/s.
+
+  drive  e_in: DC 0 AC 1
+  set    pot.setting = 1
+
+  f_3db      1.592 Hz   claimed 1.592 Hz (f_c) +/- 0.5%, holds
+
+## half_travel: ac, `.ac dec 200 10m 1k`
+
+D = 1/2: half the resistance, twice the corner.
+
+  drive  e_in: DC 0 AC 1
+  set    pot.setting = 0.5
+
+  f_3db      3.183 Hz   claimed 3.183 Hz (f_half) +/- 0.5%, holds
+
+## quarter_travel: ac, `.ac dec 200 10m 1k`
+
+D = 1/4: a quarter of it, four times the corner.
+
+  drive  e_in: DC 0 AC 1
+  set    pot.setting = 0.25
+
+  f_3db      6.366 Hz   claimed 6.366 Hz (f_quarter) +/- 0.5%, holds
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  RV1 (pot): 10 kOhm split at the wiper, set to 1 of its travel
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+4 of 4 claims hold.

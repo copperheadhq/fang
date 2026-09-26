@@ -1,0 +1,101 @@
+# zeroed_integrator: SBOA092B page 56, Simple Integrators (offset-current null)
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## centred: transient, `.tran 1m 1.1`
+
+Zero input, the reset switch open from 10 ms, and the wiper centred at 0 V:
+the 1 mV offset drives 10.1 nA into C_O and the output drifts.
+
+  drive  e_in: DC 0
+  drive  rail_minus: DC -15
+  drive  rail_plus: DC 15
+  set    r3.setting = 0.5
+  switch reset: PWL(0 1 10m 1 10.001m 0)
+
+  drift      -10.1 mV/s   claimed -10.1 mV/s (drift_centred) +/- 0.5%, holds
+           0.5%: the wiper's 7.5 kOhm source resistance is 0.08% of R5
+  e_early     -1.909 mV   not a claim
+  e_late      -12.01 mV   not a claim
+  wiper       -749.4 nV   not a claim
+
+## nulled: transient, `.tran 1m 1.1`
+
+The same, with R3 at the setting the constraints solve for: the wiper at
+-101 mV sends back through R5 what the offset takes through R1.
+
+  drive  e_in: DC 0
+  drive  rail_minus: DC -15
+  drive  rail_plus: DC 15
+  switch reset: PWL(0 1 10m 1 10.001m 0)
+
+  drift     -7.483 uV/s   claimed 0 V/s +/- 100 uV/s, holds
+           under 1% of the centred drift
+  wiper       -100.9 mV   claimed -101 mV (v_wiper_null) +/- 0.5%, holds
+  e_early     -1.001 mV   not a claim
+  e_late      -1.008 mV   not a claim
+
+## past_null: transient, `.tran 1m 1.1`
+
+R3 turned past the null toward the - terminal: the wiper at -0.5 V over-
+cancels and the drift reverses. dE_O/dt = -(Vos/R1 + (Vos + V_w)/R5)/C_O =
++39.9 mV/s.
+
+  drive  e_in: DC 0
+  drive  rail_minus: DC -15
+  drive  rail_plus: DC 15
+  set    r3.setting = 0.55
+  switch reset: PWL(0 1 10m 1 10.001m 0)
+
+  drift      39.86 mV/s   claimed 39.9 mV/s +/- 1%, holds
+  e_early      2.588 mV   not a claim
+  e_late       42.45 mV   not a claim
+  wiper       -499.6 mV   not a claim
+
+## short_of_null: transient, `.tran 1m 1.1`
+
+R3 turned the other way: the wiper at +0.5 V adds to the offset's current.
+dE_O/dt = -60.1 mV/s.
+
+  drive  e_in: DC 0
+  drive  rail_minus: DC -15
+  drive  rail_plus: DC 15
+  set    r3.setting = 0.45
+  switch reset: PWL(0 1 10m 1 10.001m 0)
+
+  drift     -60.06 mV/s   claimed -60.1 mV/s +/- 1%, holds
+  e_early     -6.406 mV   not a claim
+  e_late      -66.47 mV   not a claim
+  wiper        499.6 mV   not a claim
+
+## rate: transient, `.tran 1m 1.1`
+
+Nulled, with 0.1 V on E_I: -10 V/s per volt, the rate with C_O read as 1 uF.
+As printed, 1 mF would give -0.01 per second.
+
+  drive  e_in: DC 0.1
+  drive  rail_minus: DC -15
+  drive  rail_plus: DC 15
+  switch reset: PWL(0 1 10m 1 10.001m 0)
+
+  rate_per_volt        -10 /s   claimed -10 /s (rate) +/- 0.1%, holds
+  e_early              -91 mV   not a claim
+  e_late             -1.091 V   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  RV1 (r3): 10 kOhm split at the wiper, set to 0.5101 of its travel
+  SW1 (reset): switch: 1 Ohm closed, 1 TOhm open
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  TP3 (rail_minus): a terminal; it marks a node and adds nothing
+  TP4 (rail_plus): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 1 mV
+
+6 of 6 claims hold.

@@ -1,0 +1,63 @@
+# time_delay_relay: SBOA092B page 90, Time Delay
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## k_tenth: transient, `.tran 1m 6`
+
+The switch is open (reset) until 0.1 s and closed after. R_7 at K = 0.1.
+Pull-in is the coil current crossing 4.5 mA, and the delay is counted from
+the switch closing.
+
+  set    r_7.setting = 0.1
+  switch start: PWL(0 0 0.1 0 0.1001 1)
+
+  delay_measured        4.753 s   claimed 5 s (delay) +/- 7%, holds
+                   the page's R_1 C_0 / (2K) is 5 s. The circuit is 5% short
+                   of it, as the start-up diode drop, the ramp ending at R_5
+                   K E / R_1 and the wiper's 0.9 kOhm predict (4.75 s)
+  coil_reset          -2.528 nA   claimed 0 A +/- 10 uA, holds
+                   reset: the coil's diode is reverse biased by S at 7.8 V,
+                   and nothing flows
+  coil_peak_early      17.97 uA   claimed 0 A +/- 1 mA, holds
+                   closing the switch does not itself pull the relay in: the
+                   output leaves its clamp as the switch closes
+  t_reset               7.215 V   not a claim
+  t_pull_in             4.853 s   not a claim
+  coil_on              7.013 mA   not a claim
+
+## k_half: transient, `.tran 1m 1.5`
+
+R_7 at K = 0.5, where the page's formula gives 1 s.
+
+  set    r_7.setting = 0.5
+  switch start: PWL(0 0 0.1 0 0.1001 1)
+
+  delay_measured       886.4 ms   claimed 886 ms +/- 2%, holds
+                   against the program's own estimate (`shortfall`), not the
+                   page's 1 s: the ramp's end at R_5 K E / R_1 and the
+                   wiper's 2.5 kOhm cost 11% here
+  coil_peak_early      18.49 uA   claimed 0 A +/- 1 mA, holds
+                   closing the switch does not itself pull the relay in: the
+                   output leaves its clamp as the switch closes
+  t_reset               7.215 V   not a claim
+  coil_reset          -2.528 nA   not a claim
+  t_pull_in            986.4 ms   not a claim
+  coil_on              7.387 mA   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  D1 (d_clamp): 1N4148 diode model
+  D2 (d_coil): 1N4148 diode model
+  D3 (d_ramp): 1N4148 diode model
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  M1 (coil): meter movement of 1 kOhm
+  RV1 (r_7): 10 kOhm split at the wiper, set to 0.1 of its travel
+  SW1 (start): switch: 1 Ohm closed, 1 TOhm open
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+5 of 5 claims hold.

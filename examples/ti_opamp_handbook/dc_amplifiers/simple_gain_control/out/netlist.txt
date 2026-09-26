@@ -1,0 +1,9 @@
+GND1   Ground           -
+RV1    Potentiometer    -
+TP1    Terminal         -
+TP2    Terminal         -
+U1     OpAmp            -
+Net-(GND1-Pad1)          GND1.1 U1.IN+
+Net-(RV1-Pad1)           RV1.1 TP1.1
+Net-(RV1-Pad2)           RV1.2 U1.IN-
+Net-(RV1-Pad3)           RV1.3 TP2.1 U1.OUT

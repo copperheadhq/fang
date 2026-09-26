@@ -1,0 +1,121 @@
+(export
+  (version "E")
+  (design
+    (source "linear_lag.py")
+    (tool "fang 0.1.0")
+    (snapshot "sha256:490f0c7a9c6a5d460a989c01cdf0ac063dfa531fd949cc7d832f7287af9da6b7")
+    (project "PRJ-EXAMPLES")
+  )
+  (components
+    (comp
+      (ref "C1")
+      (value "10 uF")
+      (property
+        (name "fang_id")
+        (value "CMP-95c5a91616a7")
+      )
+    )
+    (comp
+      (ref "GND1")
+      (value "Ground")
+      (property
+        (name "fang_id")
+        (value "CMP-2a934da363ec")
+      )
+    )
+    (comp
+      (ref "RV1")
+      (value "Potentiometer")
+      (property
+        (name "fang_id")
+        (value "CMP-119072d29a41")
+      )
+    )
+    (comp
+      (ref "TP1")
+      (value "Terminal")
+      (property
+        (name "fang_id")
+        (value "CMP-103230d81393")
+      )
+    )
+    (comp
+      (ref "TP2")
+      (value "Terminal")
+      (property
+        (name "fang_id")
+        (value "CMP-a263a1d98125")
+      )
+    )
+    (comp
+      (ref "U1")
+      (value "OpAmp")
+      (property
+        (name "fang_id")
+        (value "CMP-ed601b553153")
+      )
+    )
+  )
+  (nets
+    (net
+      (code "1")
+      (name "Net-(C1-Pad1)")
+      (node
+        (ref "C1")
+        (pin "1")
+      )
+      (node
+        (ref "RV1")
+        (pin "1")
+      )
+      (node
+        (ref "U1")
+        (pin "IN+")
+      )
+    )
+    (net
+      (code "2")
+      (name "Net-(C1-Pad2)")
+      (node
+        (ref "C1")
+        (pin "2")
+      )
+      (node
+        (ref "GND1")
+        (pin "1")
+      )
+    )
+    (net
+      (code "3")
+      (name "Net-(RV1-Pad2)")
+      (node
+        (ref "RV1")
+        (pin "2")
+      )
+      (node
+        (ref "RV1")
+        (pin "3")
+      )
+      (node
+        (ref "TP1")
+        (pin "1")
+      )
+    )
+    (net
+      (code "4")
+      (name "Net-(TP2-Pad1)")
+      (node
+        (ref "TP2")
+        (pin "1")
+      )
+      (node
+        (ref "U1")
+        (pin "IN-")
+      )
+      (node
+        (ref "U1")
+        (pin "OUT")
+      )
+    )
+  )
+)

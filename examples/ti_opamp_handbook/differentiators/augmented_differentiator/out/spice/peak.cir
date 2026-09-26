@@ -1,0 +1,38 @@
+* augmented_differentiator: peak
+* plan for ngspice over sha256:3623d93d93ba69a6ae2d7099eb91f77c8c1208b2cf7d9e291ffa6eb0fbe21d3a
+C1 1 2 0.1u
+* GND1 abstracted; no device emitted
+R1 4 0 50k
+R2 1 2 100k
+R3 2 5 100k
+* TP1 abstracted; no device emitted
+* TP2 abstracted; no device emitted
+* TP3 abstracted; no device emitted
+* U1 abstracted; no device emitted
+.options abstol=1e-12
+.options method=gear
+.options reltol=1e-3
+.options vntol=1e-6
+.ac lin 2401 12k 13.2k
+* added by the bench: the drive, and the parts fang abstracted
+VDRIVE_e_in 1 0 DC 0 AC 1
+XU1 4 2 5 HB_OPAMP A=1e+06 GBW=1e+07 VOH=13.5 VOL=-13.5 VOS=0
+.subckt HB_OPAMP inp inn out A=1e6 GBW=1e7 VOH=13.5 VOL=-13.5 VOS=0
+VOS inp x DC {VOS}
+RIN x inn 1e12
+GM 0 n1 x inn 1e-3
+R1 n1 0 {A*1e3}
+C1 n1 0 {1e-3/(6.283185307179586*GBW)}
+DH n1 h HB_CLAMP
+VH h 0 DC {VOH}
+DL l n1 HB_CLAMP
+VL l 0 DC {VOL}
+EO out 0 n1 0 1
+.model HB_CLAMP D(IS=1e-15 N=0.01)
+.ends HB_OPAMP
+.control
+run
+meas ac f_peak when vi(5)=0
+meas ac gain_peak_db max vdb(5)
+.endc
+.end

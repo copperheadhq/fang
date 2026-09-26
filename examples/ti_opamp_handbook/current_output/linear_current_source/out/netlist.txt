@@ -1,0 +1,19 @@
+C1     100 pF           -
+GND1   Ground           -
+R1     100 kOhm         -
+R2     100 kOhm         -
+R3     100 kOhm         -
+R4     100 kOhm         -
+R5     100 kOhm         -
+RS1    SettableResistor -
+RS2    SettableResistor -
+TP1    Terminal         -
+U1     OpAmp            -
+U2     OpAmp            -
+Net-(C1-Pad1)            C1.1 R1.1 R3.2 R5.1 U1.IN-
+Net-(C1-Pad2)            C1.2 R1.2 R2.1 U1.OUT
+Net-(GND1-Pad1)          GND1.1 RS2.2 U1.IN+ U2.IN+
+Net-(R2-Pad2)            R2.2 R4.1 U2.IN-
+Net-(R3-Pad1)            R3.1 TP1.1
+Net-(R4-Pad2)            R4.2 RS1.1 U2.OUT
+Net-(R5-Pad2)            R5.2 RS1.2 RS2.1

@@ -1,0 +1,46 @@
+# peak_follower: SBOA092B page 87, Peak Follower
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## pulse: transient, `.tran 1u 10m`
+
+E_I pulses to 4 V from 1 ms to 2 ms and falls back to 0. The reset switch
+closes at 7 ms.
+
+  drive  e_in: PULSE(0 4 1m 1u 1u 1m 20m)
+  switch reset: PWL(0 0 7m 0 7.001m 1)
+
+  held             3.556 V   claimed 3.5 V (e_held) +/- 100 mV, holds
+              3 ms after a 4 V, 1 ms pulse: 0.44 V under the peak, the drop
+              at the 45 uA the capacitor still took when the pulse ended.
+              The page's E_O = E_I maximum would be 4 V
+  held_later       3.556 V   claimed 3.5 V (e_held) +/- 100 mV, holds
+              still there 1.9 ms later: the model's capacitor does not leak
+  cleared      4.931e-25 V   claimed 0 V +/- 1 mV, holds
+              the reset switch closed at 7 ms
+
+## sine: transient, `.tran 1u 10m`
+
+  drive  e_in: SIN(0 4 1k)
+
+  held             3.517 V   claimed 3.5 V (e_held) +/- 100 mV, holds
+              after ten cycles of a 4 V, 1 kHz sine: 0.48 V under the peak.
+              Each cycle tops the capacitor up in a short burst near the
+              crest, which leaves a little more drop than the pulse did
+  input_peak           4 V   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  D1 (diode): 1N4148 diode model
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  SW1 (reset): switch: 1 Ohm closed, 1 TOhm open
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+4 of 4 claims hold.

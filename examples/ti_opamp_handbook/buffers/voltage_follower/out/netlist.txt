@@ -1,0 +1,9 @@
+GND1   Ground           -
+TP1    Terminal         -
+TP2    Terminal         -
+TP3    Terminal         -
+TP4    Terminal         -
+U1     OpAmp            -
+Net-(GND1-Pad1)          GND1.1 TP2.1 TP4.1
+Net-(TP1-Pad1)           TP1.1 U1.IN+
+Net-(TP3-Pad1)           TP3.1 U1.IN- U1.OUT

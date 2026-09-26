@@ -20,6 +20,12 @@ them is a sketch that no longer works.
 | [`jee_advanced/problem_2/`](jee_advanced/problem_2/) | Not a board either: one claimed current, and the two branches that carry none | 12 | 7 |
 | [`noninverting_amp/`](noninverting_amp/) | Not a board: two midband answers, and the reading of the figure they rest on | 13 | 8 |
 
+Beside them, [`ti_opamp_handbook/`](ti_opamp_handbook/) holds 73 more: every
+circuit in TI's *Handbook of Operational Amplifier Applications* (SBOA092B),
+each simulated in ngspice through `fang.simulation`, with 339 claims that all
+hold. The folder groups them by the handbook's sections, and its README lists
+each circuit and what the handbook got wrong about it.
+
 The last three are the odd ones out: eight boards, then two exam questions
 and a textbook figure, because the kernel decides a claim about a circuit the
 same way whichever it is. The two exam questions share a folder.

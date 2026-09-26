@@ -1,0 +1,97 @@
+(export
+  (version "E")
+  (design
+    (source "buffer_variation.py")
+    (tool "fang 0.1.0")
+    (snapshot "sha256:33bb383037eb24d9f21eeec341ad4206bfa69359109d5750ccb8212b2fe0a88f")
+    (project "PRJ-EXAMPLES")
+  )
+  (components
+    (comp
+      (ref "GND1")
+      (value "Ground")
+      (property
+        (name "fang_id")
+        (value "CMP-2a934da363ec")
+      )
+    )
+    (comp
+      (ref "TP1")
+      (value "Terminal")
+      (property
+        (name "fang_id")
+        (value "CMP-f9b59c6bbccf")
+      )
+    )
+    (comp
+      (ref "TP2")
+      (value "Terminal")
+      (property
+        (name "fang_id")
+        (value "CMP-9827d20d168d")
+      )
+    )
+    (comp
+      (ref "U1")
+      (value "OpAmp")
+      (property
+        (name "fang_id")
+        (value "CMP-ed601b553153")
+      )
+    )
+    (comp
+      (ref "V1")
+      (value "1.0183 V")
+      (property
+        (name "fang_id")
+        (value "CMP-90e203cf744d")
+      )
+    )
+  )
+  (nets
+    (net
+      (code "1")
+      (name "Net-(GND1-Pad1)")
+      (node
+        (ref "GND1")
+        (pin "1")
+      )
+      (node
+        (ref "TP2")
+        (pin "1")
+      )
+      (node
+        (ref "U1")
+        (pin "IN+")
+      )
+    )
+    (net
+      (code "2")
+      (name "Net-(TP1-Pad1)")
+      (node
+        (ref "TP1")
+        (pin "1")
+      )
+      (node
+        (ref "U1")
+        (pin "OUT")
+      )
+      (node
+        (ref "V1")
+        (pin "+")
+      )
+    )
+    (net
+      (code "3")
+      (name "Net-(U1-PadIN-)")
+      (node
+        (ref "U1")
+        (pin "IN-")
+      )
+      (node
+        (ref "V1")
+        (pin "-")
+      )
+    )
+  )
+)

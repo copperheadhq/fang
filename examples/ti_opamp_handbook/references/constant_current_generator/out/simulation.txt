@@ -1,0 +1,53 @@
+# constant_current_generator: SBOA092B page 51, Constant Current Generator
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## inside_limit: operating point, `.op`
+
+  i_over_vz_r2             1   claimed 1 +/- 0.01%, holds
+                I = V_Z / R_2 against the zener voltage the run measured:
+                the op amp adds nothing to it.
+  i_load            20.09 mA   claimed 20 mA (i_out) +/- 1%, holds
+                Held to 1%, not 0.1%: the current is only as good as V_Z,
+                and the zener model sits about 0.5% above 6 V at 7.3 mA. A
+                real 6 V zener is a 5% part.
+  i_zener           7.096 mA   claimed 7.273 mA (i_zener) +/- 5%, holds
+                Held to 5%: every 10 mV of V_Z moves it by 64 uA. The
+                printed 25 mA is not what 330 Ohm gives.
+  v_zener            6.028 V   not a claim
+  e_out             -10.05 V   not a claim
+
+## past_limit: operating point, `.op`
+
+  set    r_load.resistance = 800
+
+  e_out               -13.51 V   claimed -13.5 V +/- 0.1%, holds
+                  Not a handbook claim: at 800 Ohm, past the 675 Ohm limit,
+                  the output is pinned at the -13.5 V swing. So 675 Ohm is
+                  the largest load, not the smallest.
+  i_over_divider             1   claimed 1 +/- 0.1%, holds
+                  With the output pinned the loop is open, and the summing
+                  point is no longer at ground: R_2 and R_L are a plain
+                  divider from V_Z to -13.5 V, and I is (V_Z + 13.5 V) /
+                  (R_2 + R_L), about 17.8 mA.
+  i_load              17.77 mA   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  D1 (zener): zener model breaking down at 6 V
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  RV1 (r_load): 500 Ohm split at the wiper, set to 1 of its travel
+  TP1 (load_bottom): a terminal; it marks a node and adds nothing
+  TP2 (load_top): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+5 of 5 claims hold.

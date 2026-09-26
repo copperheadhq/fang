@@ -1,0 +1,44 @@
+# differentiator_with_stop: SBOA092B page 61, Differentiators, With "Stop"
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## response: ac, `.ac dec 200 1 1meg`
+
+  drive  e_in: DC 0 AC 1
+
+  f_low             15.92 Hz   claimed 15.92 Hz (f_low) +/- 0.1%, holds
+                The handbook prints 16 kHz; 1/(2 pi R_O C_I) is 15.9 Hz.
+  gain_100             6.271   claimed 6.271 +/- 0.1%, holds
+                100 Hz: 2 pi f R_O C_I = 6.283, less the first touch of R_I,
+                1/sqrt(1 + (f/f_high)^2)
+  f_high           1.567 kHz   claimed 1.592 kHz (f_high) +/- 2%, holds
+                The handbook prints 0.6 kHz; 1/(2 pi R_I C_I) is 1.59 kHz.
+                2%: the gain at the corner comes out 0.8% high (below), and
+                on a slope of half a decade per decade that moves the 3 dB
+                crossing about 1.6% lower.
+  gain_f_high          71.27   claimed 70.71 (a_corner) +/- 1%, holds
+                R_O/R_I over sqrt(2), 3 dB down at the corner. 1%: the loop
+                gain there is only about 88, and with the op amp's 90 degree
+                lag the finite gain lifts |E_O/E_I| by 0.8% rather than
+                lowering it.
+  gain_peak            99.97   claimed 100 (a_flat) +/- 0.5%, holds
+                The top of the plateau, R_O/R_I. The op amp, closed for a
+                noise gain of 101, rolls off near 100 kHz, only 60 times
+                above f_high, so the plateau is a rounded top rather than a
+                flat one.
+  f_3db_op_amp     100.6 kHz   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (common): a terminal; it marks a node and adds nothing
+  TP2 (e_in): a terminal; it marks a node and adds nothing
+  TP3 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+5 of 5 claims hold.

@@ -1,0 +1,10 @@
+C1     0.1 uF           -
+GND1   Ground           -
+R1     10 kOhm          -
+TP1    Terminal         -
+TP2    Terminal         -
+U1     OpAmp            -
+Net-(C1-Pad1)            C1.1 R1.2 U1.IN-
+Net-(C1-Pad2)            C1.2 TP2.1 U1.OUT
+Net-(GND1-Pad1)          GND1.1 U1.IN+
+Net-(R1-Pad1)            R1.1 TP1.1

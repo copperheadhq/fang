@@ -1,0 +1,11 @@
+C1     1 uF             -
+D1     SignalDiode      -
+GND1   Ground           -
+SW1    Switch           -
+TP1    Terminal         -
+TP2    Terminal         -
+U1     OpAmp            -
+Net-(C1-Pad1)            C1.1 D1.K SW1.1 U1.IN+
+Net-(C1-Pad2)            C1.2 GND1.1 SW1.2
+Net-(D1-PadA)            D1.A TP1.1
+Net-(TP2-Pad1)           TP2.1 U1.IN- U1.OUT

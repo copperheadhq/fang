@@ -1,0 +1,35 @@
+# reference_voltage_supply: SBOA092B page 52, Reference Voltage Supply
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## outputs: operating point, `.op`
+
+  e_out_minus      -10.18 V   claimed -10.18 V (e_out_minus) +/- 0.01%, holds
+               Held to 100 ppm: a noise gain of 11 costs 11 ppm of loop-gain
+               error.
+  e_out_plus        10.18 V   claimed 10.18 V (e_out_plus) +/- 0.01%, holds
+  i_cell           453.5 pA   claimed 0 A (i_cell) +/- 1 nA, holds
+               Held to 1 nA, absolute, against the 101.8 uA R_1 draws
+               (i_r1): the two currents at the cell's node cancel to within
+               the outputs' ppm-level error.
+  i_r1             101.8 uA   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (out_minus): a terminal; it marks a node and adds nothing
+  TP2 (out_plus): a terminal; it marks a node and adds nothing
+  TP3 (out_return): a terminal; it marks a node and adds nothing
+  U1 (amp_1): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+  U2 (amp_2): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+3 of 3 claims hold.

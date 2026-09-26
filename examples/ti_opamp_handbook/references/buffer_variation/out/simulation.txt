@@ -1,0 +1,38 @@
+# buffer_variation: SBOA092B page 52, Buffer Variation
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## chopper: operating point, `.op`
+
+  e_out        1.018 V   claimed 1.018 V (e_out) +/- 0.001%, holds
+          Held to 10 ppm: the 1 uV offset is 1 ppm of Eref.
+  i_cell   -1.02e-18 A   claimed 0 A (i_cell) +/- 1 nA, holds
+          Held to 1 nA, absolute. The model's - input draws no bias current;
+          a TLC2652 draws a few picoamps.
+
+## general_part: operating point, `.op`
+
+  set    amp.input_offset = 0.005
+
+  error     -5.001 mV   claimed -5 mV +/- 0.1%, holds
+         Not a handbook claim: with a 5 mV offset (the model's offset is in
+         series with the + input) the output is off by the whole 5 mV, 0.5%
+         of Eref, because nothing in the loop divides it.
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (out): a terminal; it marks a node and adds nothing
+  TP2 (out_return): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 1 uV
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+3 of 3 claims hold.

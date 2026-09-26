@@ -1,0 +1,58 @@
+# balanced_output: SBOA092B page 50, Balanced Output
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## dc_gains: operating point, `.op`
+
+  drive  e_in: DC 1
+
+  gain_plus             -1   claimed -1 (a_plus) +/- 0.1%, holds
+  gain_minus             1   claimed 1 (a_minus) +/- 0.1%, holds
+  gain_diff             -2   claimed -2 (a_diff) +/- 0.1%, holds
+
+## sine_1v_peak: transient, `.tran 1u 3m`
+
+  drive  e_in: SIN(0 1 1k)
+
+  pp_diff             4 V   claimed 4 V (pp_per_peak) +/- 0.2%, holds
+             4 E_I p-p for E_I = 1 V peak, so the volts read as pp_per_peak:
+             the handbook's claim, with E_I read as the peak. Held to 0.2%
+             for the sampled peaks.
+  pp_plus             2 V   claimed 2 V +/- 0.2%, holds
+             Against ground, E_O+ swings 2 E_I p-p, no more than the input.
+  max_plus            1 V   not a claim
+  max_minus           1 V   not a claim
+
+## sine_10v_peak: transient, `.tran 1u 3m`
+
+  drive  e_in: SIN(0 10 1k)
+
+  pp_diff            40 V   claimed 40 V +/- 0.2%, holds
+             40 V p-p across the two outputs while each stays inside +/-13.5
+             V: more than the 27 V p-p one output can give. Held to 0.2%.
+  pp_plus            20 V   claimed 20 V +/- 0.2%, holds
+             Against ground, E_O+ swings 2 E_I p-p, no more than the input.
+  max_plus           10 V   not a claim
+  max_minus          10 V   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_in_return): a terminal; it marks a node and adds nothing
+  TP3 (e_out_minus): a terminal; it marks a node and adds nothing
+  TP4 (e_out_plus): a terminal; it marks a node and adds nothing
+  TP5 (e_out_return): a terminal; it marks a node and adds nothing
+  U1 (amp_1): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+  U2 (amp_2): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+7 of 7 claims hold.

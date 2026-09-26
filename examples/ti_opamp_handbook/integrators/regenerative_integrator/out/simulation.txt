@@ -1,0 +1,81 @@
+# regenerative_integrator: SBOA092B page 57, Integrator with zero control and regeneration
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## rate: transient, `.tran 1m 1.1`
+
+0.1 V on E_I with R5 at a quarter; the reset switch opens at 10 ms.
+
+  drive  e_in: DC 0.1
+  drive  rail_minus: DC -15
+  drive  rail_plus: DC 15
+  switch reset: PWL(0 1 10m 1 10.001m 0)
+
+  rate_per_volt     -9.995 /s   claimed -10 /s (rate) +/- 0.1%, holds
+  e_early           -89.99 mV   not a claim
+  e_late              -1.09 V   not a claim
+
+## hold_without_regeneration: transient, `.tran 10m 101`
+
+Regeneration taken out: node X tied to ground by a card the bench adds, so
+the + input sees none of the output. The input runs the output up to about
+-5 V and is opened at 0.51 s; the output then leaks through R6 with the time
+constant A R6 C_O.
+
+  drive  rail_minus: DC -15
+  drive  rail_plus: DC 15
+  switch reset: PWL(0 1 10m 1 10.001m 0)
+
+  tau         5.015 ks   claimed 5 ks (hold_open) +/- 3%, holds
+          3%: A R6 C_O leaves out the zero control's source resistance and
+          the path through R7 and R2 to the + input
+  e_1s        -4.996 V   not a claim
+  e_101s      -4.898 V   not a claim
+
+## hold_with_regeneration: transient, `.tran 10m 101`
+
+The circuit as drawn, R5 at a quarter of its travel: the same run up and the
+same open input, and a hold three times longer.
+
+  drive  rail_minus: DC -15
+  drive  rail_plus: DC 15
+  switch reset: PWL(0 1 10m 1 10.001m 0)
+
+  tau         15.35 ks   claimed 15.71 ks (hold_quarter) +/- 3%, holds
+          3%, for the same simplifications as the run above
+  e_1s        -4.999 V   not a claim
+  e_101s      -4.967 V   not a claim
+
+## too_much_regeneration: transient, `.tran 10m 101`
+
+R5 at the top of its travel: k = 2.7e-4 is past 1/A = 2e-4, so the output
+grows (a negative time constant), the handbook's cue to decrease
+regeneration. Not a claim: it shows the other side of the balance.
+
+  drive  rail_minus: DC -15
+  drive  rail_plus: DC 15
+  set    r5.setting = 1
+  switch reset: PWL(0 1 10m 1 10.001m 0)
+
+  e_1s        -5.002 V   not a claim
+  e_101s      -5.037 V   not a claim
+  tau        -14.53 ks   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  RV1 (r5): 2 kOhm split at the wiper, set to 0.25 of its travel
+  RV2 (r8): 10 kOhm split at the wiper, set to 0.5 of its travel
+  SW1 (reset): switch: 1 Ohm closed, 1 TOhm open
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  TP3 (rail_minus): a terminal; it marks a node and adds nothing
+  TP4 (rail_plus): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 5000 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+3 of 3 claims hold.

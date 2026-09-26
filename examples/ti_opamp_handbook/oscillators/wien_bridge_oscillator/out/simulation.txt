@@ -1,0 +1,90 @@
+# wien_bridge_oscillator: SBOA092B page 83, Wien Bridge Oscillator
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## as_drawn: transient, `.tran 5u 0.6`
+
+The drawn circuit on the +/-13.5 V swing, tuned for 1 kHz. The lamp would
+have to reach 705 Ohm, and a clipped output drives it nowhere near: the gain
+stays far above 3, the output is a clipped wave, and its frequency is well
+below 1 / (2 pi R C).
+
+  e_high                13.51 V   claimed 13.5 V +/- 1%, holds
+                   the output clips at the swing: the lamp has not warmed
+                   enough to bring the gain down to 3
+  e_low                -13.51 V   claimed -13.5 V +/- 1%, holds
+  t_first              501.3 ms   not a claim
+  t_last               532.8 ms   not a claim
+  f_o                  634.8 Hz   not a claim
+  lamp_rms             508.7 mV   not a claim
+  summing_rms           1.839 V   not a claim
+  lamp_resistance     84.13 Ohm   not a claim
+
+## regulating_1khz: transient, `.tran 5u 1.2`
+
+The same circuit with a +/-60 V swing, R at 10 kOhm. The oscillation grows
+from a 0.1 V kick until the lamp warms to the gain-3 point.
+
+  set    amp.output_high = 60
+  set    amp.output_low = -60
+  set    r_series.setting = 0.1
+  set    r_shunt.setting = 0.1
+
+  f_o                 1.001 kHz   claimed 1 kHz (f_o) +/- 0.5%, holds
+                   0.5% for the op amp's own phase shift, which grows with
+                   frequency, and for the lamp's small ripple
+  settled                     1   claimed 1 +/- 0.2%, holds
+                   the peak a fifth of the run apart: the amplitude has
+                   stopped moving
+  lamp_resistance       705 Ohm   claimed 705 Ohm (lamp_resistance) +/- 1%, holds
+                   the gain-3 point, read back from the lamp's own voltage
+                   and current
+  t_first               1.141 s   not a claim
+  t_last                1.161 s   not a claim
+  peak_late             54.95 V   not a claim
+  peak_end              54.95 V   not a claim
+  lamp_rms              9.865 V   not a claim
+  summing_rms           12.94 V   not a claim
+
+## regulating_6khz: transient, `.tran 1u 1`
+
+R turned down to 1/60 of its travel, 1.667 kOhm: the top of the page's
+range, 1 / (2 pi R C) = 6.006 kHz.
+
+  set    amp.output_high = 60
+  set    amp.output_low = -60
+  set    r_series.setting = 0.0166667
+  set    r_shunt.setting = 0.0166667
+
+  f_o                 5.987 kHz   claimed 6.006 kHz +/- 0.5%, holds
+                   0.5% for the op amp's own phase shift, which grows with
+                   frequency, and for the lamp's small ripple
+  settled                     1   claimed 1 +/- 0.2%, holds
+                   the peak a fifth of the run apart: the amplitude has
+                   stopped moving
+  lamp_resistance       705 Ohm   claimed 705 Ohm (lamp_resistance) +/- 1%, holds
+                   the gain-3 point, read back from the lamp's own voltage
+                   and current
+  t_first              950.2 ms   not a claim
+  t_last               953.5 ms   not a claim
+  peak_late             54.95 V   not a claim
+  peak_end              54.95 V   not a claim
+  lamp_rms              9.871 V   not a claim
+  summing_rms           12.95 V   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  LP1 (lamp): lamp: 70 Ohm cold, 714.3 Ohm at 10 V and 14 mA, heating with a 50 ms time constant
+  RV1 (r1): 500 Ohm split at the wiper, set to 0.9 of its travel
+  RV2 (r_series): 100 kOhm split at the wiper, set to 0.1 of its travel
+  RV3 (r_shunt): 100 kOhm split at the wiper, set to 0.1 of its travel
+  TP1 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+8 of 8 claims hold.

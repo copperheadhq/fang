@@ -1,0 +1,30 @@
+C1     1 uF             -
+GND1   Ground           -
+R1     100 kOhm         -
+R2     10 kOhm          -
+R3     100 kOhm         -
+R4     10 MOhm          -
+R5     1 kOhm           -
+R6     1 MOhm           -
+R7     1 MOhm           -
+R8     10 kOhm          -
+RV1    Potentiometer    -
+RV2    Potentiometer    -
+SW1    Switch           -
+TP1    Terminal         -
+TP2    Terminal         -
+TP3    Terminal         -
+TP4    Terminal         -
+U1     OpAmp            -
+Net-(C1-Pad1)            C1.1 R1.2 R6.2 SW1.1 U1.IN-
+Net-(C1-Pad2)            C1.2 R4.2 SW1.2 TP2.1 U1.OUT
+Net-(GND1-Pad1)          GND1.1 RV1.2 RV1.3
+Net-(R1-Pad1)            R1.1 TP1.1
+Net-(R2-Pad1)            R2.1 TP3.1
+Net-(R2-Pad2)            R2.2 RV2.3
+Net-(R3-Pad1)            R3.1 R7.2 U1.IN+
+Net-(R3-Pad2)            R3.2 R4.1 R5.1
+Net-(R5-Pad2)            R5.2 RV1.1
+Net-(R6-Pad1)            R6.1 R7.1 RV2.2
+Net-(R8-Pad1)            R8.1 TP4.1
+Net-(R8-Pad2)            R8.2 RV2.1
