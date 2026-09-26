@@ -1,5 +1,5 @@
 * linear_lag: quarter_travel
-* plan for ngspice over sha256:490f0c7a9c6a5d460a989c01cdf0ac063dfa531fd949cc7d832f7287af9da6b7
+* plan for ngspice over sha256:70df740ee18522b268c168035c689f987724c3ffa06dd7bb89e84bbeff3a6b4c
 C1 1 0 10u
 * GND1 abstracted; no device emitted
 * RV1 abstracted; no device emitted

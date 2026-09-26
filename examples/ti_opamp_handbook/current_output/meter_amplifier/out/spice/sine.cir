@@ -1,5 +1,5 @@
 * meter_amplifier: sine
-* plan for ngspice over sha256:4b28be760e3d7bda7b187d57acce574b90d4eab58c3ab2778d0d2d5ec53d747a
+* plan for ngspice over sha256:9a3be49982d91790cf74efaea2e2992d669cc468f76f63b0c1614fda19b7f57b
 C1 1 2 1u
 C2 3 4 10u
 C3 5 4 10u

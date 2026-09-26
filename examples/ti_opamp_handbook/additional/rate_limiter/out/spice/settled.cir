@@ -1,5 +1,5 @@
 * rate_limiter: settled
-* plan for ngspice over sha256:443708c0073914e92489de58b50ccd8a01619352f3e3cc9e1826a0eecbdba51d
+* plan for ngspice over sha256:00e2572805ea6ef18caa4f06bb6cb36a8a1a81da6c2aa04ace3c7c1eb94d6a98
 C1 1 2 10u
 * D1 abstracted; no device emitted
 * D2 abstracted; no device emitted

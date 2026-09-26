@@ -1,5 +1,5 @@
 * simple_gain_control: wiper_centre
-* plan for ngspice over sha256:07f5c6d8bf85e46d6e56e94078c3030e3781fd0259d836035cf6524b1393ab49
+* plan for ngspice over sha256:de2edd452f833fa688802ab1ad4b2b6d1874e7f4e3e543f5cf5e4c317ba9a01c
 * GND1 abstracted; no device emitted
 * RV1 abstracted; no device emitted
 * TP1 abstracted; no device emitted

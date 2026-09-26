@@ -29,6 +29,7 @@ checked against the value the graph holds rather than a copy of it.
 
 from __future__ import annotations
 
+import math
 import re
 import sys
 import tempfile
@@ -577,10 +578,14 @@ class Circuit:
             not in _NATIVE
         ]
 
-    def value_of(self, name: str, overrides: Mapping[str, float] = {}):
+    def value_of(
+        self, name: str, overrides: Mapping[str, float] = {}, asked: set | None = None
+    ):
         component = self.components[name]
 
         def value(parameter: str) -> float:
+            if asked is not None:
+                asked.add(parameter)
             if parameter in overrides:
                 return float(overrides[parameter])
             return si(component.parameters[parameter])
@@ -616,8 +621,11 @@ _NATIVE = frozenset({"R", "C", "L", "V", "I"})
 _MEAS = re.compile(r"^(find|when|max|min|avg|rms|pp|integ|deriv|trig)\b", re.IGNORECASE)
 #: `{part.PIN}` in a measurement, a drive or a card.
 _PLACEHOLDER = re.compile(r"\{(\w+)\.([^{}\s]+)\}")
-#: A line ngspice prints for a measurement or a printed scalar.
-_MEASURED = re.compile(r"^(\w+)\s*=\s*([-+0-9.eE]+)")
+#: A line ngspice prints for a measurement or a printed scalar. A `max` or a
+#: `when` goes on to say where (`at= ...`), which is not the value. A complex
+#: result prints as `re,im`, and taking its real part alone would check a
+#: claim against half a number, so a value followed by a comma is not one.
+_MEASURED = re.compile(r"^(\w+)\s*=\s*([^\s,]+)(,?)")
 #: An entity identifier, inside a sentence fang wrote.
 _IDENTIFIER = re.compile(r"\b[A-Z]{2,8}-[0-9a-f]{12,}\b")
 
@@ -628,13 +636,15 @@ def run_one(run: Run, circuit: Circuit, stem: str) -> Outcome:
     # Everything that is not a device SPICE knows is abstracted, and the parts
     # that can say what they are write their own cards.
     abstracted, cards, models = [], [], {}
+    asked: dict[str, set] = {}
     for name in circuit.abstracted():
         abstracted.append(circuit.components[name].id)
         part = circuit.parts[name]
         if not hasattr(part, "spice"):
             continue  # a terminal or the ground: it marks a node and adds nothing
         ref = circuit.ref[name]
-        value = circuit.value_of(name, run.settings.get(name, {}))
+        asked[name] = set()
+        value = circuit.value_of(name, run.settings.get(name, {}), asked[name])
         node = lambda pin, ref=ref: circuit.nodes[(ref, pin)]
         if isinstance(part, Switch):
             written, needed = part.spice(ref, node, value, run.switches.get(name, "open"))
@@ -652,6 +662,13 @@ def run_one(run: Run, circuit: Circuit, stem: str) -> Outcome:
                 f"{run.name}: settings name {name!r}, which the bench does not write; "
                 "a resistor fang lowers keeps its value, so model one that changes "
                 "as a Potentiometer"
+            )
+        # A parameter the part never reads would be ignored just as quietly.
+        unread = set(run.settings[name]) - asked.get(name, set())
+        if unread:
+            raise ValueError(
+                f"{run.name}: settings give {name} {sorted(unread)}, which its "
+                f"cards never read; it reads {sorted(asked.get(name, set()))}"
             )
 
     plan = compile_plan(
@@ -688,8 +705,13 @@ def run_one(run: Run, circuit: Circuit, stem: str) -> Outcome:
     measured: dict[str, float] = {}
     for line in raw.stdout.splitlines():
         match = _MEASURED.match(line.strip())
-        if match:
-            measured[match.group(1).lower()] = float(match.group(2))
+        if match and not match.group(3):
+            try:
+                number = float(match.group(2))
+            except ValueError:
+                continue  # not a number: it stays unmeasured
+            if math.isfinite(number):
+                measured[match.group(1).lower()] = number
 
     report = [f"## {run.name}: {_analysis(run.analysis)}", ""]
     if run.note:

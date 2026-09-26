@@ -3,7 +3,7 @@
   (design
     (source "linear_current_source.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:5027fca842b5da05ccc25ca4e46d1185201118addc8aa99e90a6ac33d9c2a6c8")
+    (snapshot "sha256:44a326ee3ca0789911682f124b2c58e19d57fccfea1f1aba2811d2c5c5499a94")
     (project "PRJ-EXAMPLES")
   )
   (components

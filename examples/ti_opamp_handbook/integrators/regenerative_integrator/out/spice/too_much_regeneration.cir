@@ -1,5 +1,5 @@
 * regenerative_integrator: too_much_regeneration
-* plan for ngspice over sha256:dcb5898024c1d5e788df42505e4510ff96b11384a9697b0f1876573d52a275fa
+* plan for ngspice over sha256:6bc285156e9d126c6bdd52693e10377115c1a0ecdd05dca13ee3d2c12b88b3ac
 C1 1 2 1u
 * GND1 abstracted; no device emitted
 R1 4 1 100k

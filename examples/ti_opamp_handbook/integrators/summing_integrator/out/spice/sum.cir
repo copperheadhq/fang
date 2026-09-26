@@ -1,5 +1,5 @@
 * summing_integrator: sum
-* plan for ngspice over sha256:578cb1fd3838a9c8ab2ecbab6592877841ddd3169a44926028e1780a81f9ee35
+* plan for ngspice over sha256:2f28a345d2f185b3455b7fd90657a3e17a3283dbd986c8e4cc8d1f9b3eaecbb4
 C1 1 2 1u
 * GND1 abstracted; no device emitted
 R1 4 1 100k

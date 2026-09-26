@@ -1,5 +1,5 @@
 * peak_follower: sine
-* plan for ngspice over sha256:1d8c58a90b8c5919e76f240470f746849485b94d3321a19767f90d460d234d73
+* plan for ngspice over sha256:fc2b5b42029ca938aaf0a050832b4c9cea2344145465c45019e8d06316f48650
 C1 1 0 1u
 * D1 abstracted; no device emitted
 * GND1 abstracted; no device emitted

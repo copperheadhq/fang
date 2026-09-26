@@ -1,5 +1,5 @@
 * differential_input_output: floating_load
-* plan for ngspice over sha256:308a4c12186b32d351ecf5214ad50d7ac8f4a1fc247913ba879536f09c1f0934
+* plan for ngspice over sha256:c59ac8d72adc4bc43f55eab107df76256723efffcfeedb973362ce6ea4c5da2f
 * GND1 abstracted; no device emitted
 R1 2 3 1k
 R2 4 5 1k

@@ -3,7 +3,7 @@
   (design
     (source "ac_preamplifier.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:90e16f679f36a5c833418296008b4c47b2b6dd3cc75fe4a38cf7d0ee1daa0a24")
+    (snapshot "sha256:614d9814628fee7e7fb51686c65f26bde65009c33ce2fc7ee0503ecda2c5d754")
     (project "PRJ-EXAMPLES")
   )
   (components

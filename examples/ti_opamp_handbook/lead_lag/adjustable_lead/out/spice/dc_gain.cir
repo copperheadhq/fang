@@ -1,5 +1,5 @@
 * adjustable_lead: dc_gain
-* plan for ngspice over sha256:3cc678ced401dabdd28cdcd57d86ecc83e6827a6981882edc39a0f088119431a
+* plan for ngspice over sha256:dc67ce2a66052a903c4811b543747d8431dea5e5d4a7cc767a6298a41cb31c45
 C1 1 0 10u
 * GND1 abstracted; no device emitted
 R1 3 4 10k

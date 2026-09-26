@@ -1,5 +1,5 @@
 * current_injector: load_4700_ohm
-* plan for ngspice over sha256:bc325494927bca6be5cb607062ebb38acf2fe8de639f1c9b5338d39a393643c0
+* plan for ngspice over sha256:b1dd1ae3cb9f151013fd44561727d561d64d604333420f4081959a8478450571
 * GND1 abstracted; no device emitted
 R1 2 3 1k
 R2 4 2 1k

@@ -1,5 +1,5 @@
 * low_noise_differentiator: response
-* plan for ngspice over sha256:5ca04b72773b9b716d98845c93281e43c3d793e29cf81b93fe85003082635474
+* plan for ngspice over sha256:10976bde9a429ac5be10a35d0ed0cdd4d0d0ce3aecf7a320c32db2b1c823fc01
 C1 1 2 0.1u
 C2 2 3 1n
 * GND1 abstracted; no device emitted

@@ -1,5 +1,5 @@
 * inverting_buffer_adjustable_gain: centre
-* plan for ngspice over sha256:860715690fc0bded009e847aa0eea5037a0862b2e217867b7ec1e9e33dfde93e
+* plan for ngspice over sha256:d806c37dfb106eeb5e1964a25701d9871e068e6c2304c356b47df1d7966b97c6
 * GND1 abstracted; no device emitted
 R1 2 3 10k
 R2 4 5 10k

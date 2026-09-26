@@ -1,5 +1,5 @@
 * differentiator_with_stop: response
-* plan for ngspice over sha256:c940984539bceb7dcb4e74e08b2bb041580cdfe5d997b81496b0df59fc9412fd
+* plan for ngspice over sha256:fc104865edfa66658b3d46e3412c0bc85a5d57669aa2d27f16dad63a97fad35c
 C1 1 2 0.1u
 * GND1 abstracted; no device emitted
 R1 4 1 1k

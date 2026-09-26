@@ -1,5 +1,5 @@
 * weighted_average: e1_alone
-* plan for ngspice over sha256:37e9fc7e105e5ae84df63ab0b3bfdf072f4fcf6850ee10ae1a669b5a5c40815b
+* plan for ngspice over sha256:bc74f442669f8ade44c7848c9d68e21e3a272c9e835df6d2d6c927ae25ba62ee
 * GND1 abstracted; no device emitted
 R1 2 3 10k
 R2 4 3 20k

@@ -1,5 +1,5 @@
 * voltage_follower: gain
-* plan for ngspice over sha256:7e593bd70f2e05429bcb65ece712580241d3a6ec8f0d4be31f72008eab766743
+* plan for ngspice over sha256:6ad7bc03ba1ca11075962772f094568489c1268475ce690bc5c732aeecfff596
 * GND1 abstracted; no device emitted
 * TP1 abstracted; no device emitted
 * TP2 abstracted; no device emitted

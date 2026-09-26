@@ -3,7 +3,7 @@
   (design
     (source "double_integrator.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:3c71f6de600b33bf36676f12f1f425908843d70ca622ccbe8555d68c303459f7")
+    (snapshot "sha256:61b63a41056495231c88dcebbb6f64bdf0f5a972219607b4042620bd7b3225ec")
     (project "PRJ-EXAMPLES")
   )
   (components

@@ -1,5 +1,5 @@
 * wien_bridge_oscillator: regulating_1khz
-* plan for ngspice over sha256:34021c9a900b0e3dccb209c0cb459b7a2a15b1985fb5a8a2dfd74a6cddc93717
+* plan for ngspice over sha256:f6de442046722b3f601b40b5cd508d31e26580953d4d8b003a696f2fccf6ff75
 C1 1 2 15.9n
 C2 2 0 15.9n
 * GND1 abstracted; no device emitted

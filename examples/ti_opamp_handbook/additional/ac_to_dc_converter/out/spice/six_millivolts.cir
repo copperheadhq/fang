@@ -1,5 +1,5 @@
 * ac_to_dc_converter: six_millivolts
-* plan for ngspice over sha256:0b8a1f7480df22df9930418e5495c06a6f9959c7a2a801d773b5f992034ec3e1
+* plan for ngspice over sha256:19868a28c163540244bf5e3719ded29fcb1b5ac4c4c9268bbdc7727a369748df
 C1 1 2 100u
 * D1 abstracted; no device emitted
 * D2 abstracted; no device emitted

@@ -1,5 +1,5 @@
 * balanced_output_amplifier: floating
-* plan for ngspice over sha256:52916be2b1cbd69bfc4fb55bdcf5c3652b1c229218ce1f52110c42b886cfa074
+* plan for ngspice over sha256:188dfad74e3def689733825748b5f19bb4fb159502eb89d593a202edbcc1c2c8
 * GND1 abstracted; no device emitted
 R1 2 3 10k
 R2 4 5 10k

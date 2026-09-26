@@ -1,5 +1,5 @@
 * direct_addition: e2_alone
-* plan for ngspice over sha256:a854aebef749cc5917bfc5b81037d17efe190d20de21c62747fc1ef0cc404d74
+* plan for ngspice over sha256:3550f193cc86822ab9da8cac448203ac257f4032cc63eeab91ecf12c24db6fc9
 * GND1 abstracted; no device emitted
 R1 2 3 20k
 R2 0 2 10k

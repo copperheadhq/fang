@@ -1,5 +1,5 @@
 * inverting_gain_control: s_090
-* plan for ngspice over sha256:8a2118c6c16efc1892ae2bfd845d639edd79d3df8ee8a235f380cd75a4664c92
+* plan for ngspice over sha256:1e778d3d187604d125fa88790ed5b830349b95a0d238b40f130d920b6b4f1f47
 * GND1 abstracted; no device emitted
 R1 2 3 10k
 R2 3 4 10k
