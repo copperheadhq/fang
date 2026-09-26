@@ -1,6 +1,7 @@
 """Spec: One canonical model (the schematic compiler is a lowering) and
 A projection names the snapshot it came from."""
 
+from dataclasses import replace
 from decimal import Decimal
 
 import pytest
@@ -215,6 +216,78 @@ def test_a_part_with_no_drawn_symbol_gets_a_box_of_its_own_pins(built):
     assert {pin.key for pin in box.pins} == {"VDD", "OUT"}
     # Nothing is invented: the numbers are the graph's.
     assert {pin.number for pin in box.pins} == {"1", "2"}
+
+
+def _wide(count: int) -> type[Part]:
+    """A part with `count` pins, each on its own port: tall enough to reach
+    past a row of the sheet."""
+    body: dict = {"designator_prefix": "U"}
+    for n in range(1, count + 1):
+        body[f"e{n}"] = Electrical()
+        body[f"P{n}"] = Pin(f"P{n}", role="analog", number=str(n))
+    body["pinmap"] = PinMap({f"e{n}.line": f"P{n}" for n in range(1, count + 1)})
+    return type(f"Wide{count}", (Part,), body)
+
+
+def test_a_tall_part_does_not_reach_the_part_below_it():
+    """KiCad joins whatever meets at a point, so a box that ran into the next
+    row would short one net onto another on the sheet."""
+    Wide = _wide(40)
+
+    class Tall(System):
+        # Six of them fill two rows, so every column stacks one on another.
+        a = Wide(package="QFP-40")
+        b = Wide(package="QFP-40")
+        c = Wide(package="QFP-40")
+        d = Wide(package="QFP-40")
+        e = Wide(package="QFP-40")
+        f = Wide(package="QFP-40")
+
+        def architecture(self):
+            for left, right in ((self.a, self.b), (self.c, self.d), (self.e, self.f)):
+                for n in range(1, 41):
+                    getattr(left, f"e{n}") >> getattr(right, f"e{n}")
+
+    result = elaborate(Tall, project_id=PROJECT)
+    assert result.ok, [d.message for d in result.diagnostics]
+    netlist = compile_netlist(result.snapshot, traits=result.traits)
+    # Each part's vertical reach: its pins, and the stubs its labels hang on.
+    reach: dict[Decimal, list[tuple[Decimal, Decimal, str]]] = {}
+    for placement in place(result.snapshot, netlist):
+        ys = [
+            point[1]
+            for terminal in terminals(placement, netlist)
+            for point in (terminal.connect, terminal.anchor)
+        ]
+        reach.setdefault(placement.x, []).append(
+            (min(ys), max(ys), placement.designator)
+        )
+    for column in reach.values():
+        column.sort()
+        for (_, bottom, upper), (top, _, lower) in zip(column, column[1:]):
+            assert bottom < top, f"{upper} reaches down onto {lower}"
+
+
+def test_a_quote_in_the_design_stays_inside_its_string(built, tmp_path):
+    """A value is the design's own text, and `1/4" jack` is an ordinary one.
+    Written bare, its quote would end the string, and KiCad refuses the file."""
+    netlist = compile_netlist(built.snapshot, traits=built.traits)
+    odd = 'Conn 1/4" jack \\ tip'
+    first, *rest = netlist.components
+    netlist = replace(netlist, components=(replace(first, value=odd), *rest))
+    text = compile_schematic(built.snapshot, netlist=netlist, title='the "odd" one')
+
+    def properties(node: Node):
+        if node.head == "property":
+            yield node.items[1].value, node.items[2].value
+        for item in node.items:
+            if isinstance(item, Node):
+                yield from properties(item)
+
+    assert ("Value", odd) in set(properties(parse(text)))
+    if KicadRenderer().available():
+        # KiCad's own reader is the one that refused the unescaped file.
+        assert KicadRenderer().to_svg(text, workspace=tmp_path)
 
 
 def test_a_drawn_symbol_is_not_read_out_of_an_installed_kicad(schematic):

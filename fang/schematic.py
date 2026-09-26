@@ -17,8 +17,8 @@ import re
 import shutil
 import subprocess
 import uuid
-from dataclasses import dataclass
-from decimal import Decimal
+from dataclasses import dataclass, replace
+from decimal import ROUND_CEILING, Decimal
 from pathlib import Path
 from typing import Mapping, Sequence
 
@@ -70,6 +70,13 @@ def _mm(value: Decimal | int | str) -> str:
         return "0"
     text = format(decimal, "f")
     return text
+
+
+def _quoted(text: str) -> str:
+    """A string as the file writes it. A value or a net name is the design's,
+    and one with a quote or a backslash in it would otherwise end the string
+    early, which KiCad then refuses to load."""
+    return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
 def _uuid(*key: str) -> str:
@@ -316,26 +323,50 @@ def place(snapshot, netlist: Netlist) -> tuple[Placement, ...]:
 
     The order is the netlist's, which is the graph's, so the sheet is a
     function of the design rather than of the order anything was written.
+
+    A row is ROW below the one above it, or further when a part in either is
+    tall enough to reach across that gap. A box grows with its pin count, and
+    one that ran into the part below would put pins of different nets on the
+    same point, which KiCad reads as a connection.
     """
     by_id = {
         entity.id: entity
         for entity in snapshot.entities.values()
         if isinstance(entity, Component)
     }
-    placements = []
-    for index, component in enumerate(netlist.components):
+    unplaced = []
+    for component in netlist.components:
         symbol = _symbol_for(snapshot, by_id[component.entity_id], component.designator)
-        placements.append(
+        unplaced.append(
             Placement(
                 designator=component.designator,
                 value=component.value,
                 symbol=symbol,
-                x=ORIGIN_X + COLUMN * Decimal(index % COLUMNS),
-                y=ORIGIN_Y + ROW * Decimal(index // COLUMNS),
+                x=Decimal(0),
+                y=Decimal(0),
                 entity_id=component.entity_id,
             )
         )
+    rows = [unplaced[i : i + COLUMNS] for i in range(0, len(unplaced), COLUMNS)]
+    placements = []
+    y = ORIGIN_Y
+    below = None
+    for row in rows:
+        extents = [_extent((p,), terminals(p, netlist)) for p in row]
+        above = min(extent[1] for extent in extents)
+        if below is not None:
+            y += max(ROW, _on_grid(below - above + GRID * 2))
+        below = max(extent[3] for extent in extents)
+        for column, placement in enumerate(row):
+            placements.append(
+                replace(placement, x=ORIGIN_X + COLUMN * Decimal(column), y=y)
+            )
     return tuple(placements)
+
+
+def _on_grid(length: Decimal) -> Decimal:
+    """The length rounded up to the sheet's grid, so every part still snaps."""
+    return (length / GRID).to_integral_value(rounding=ROUND_CEILING) * GRID
 
 
 @dataclass(frozen=True)
@@ -420,7 +451,7 @@ def _extent(placements, wired) -> tuple[Decimal, Decimal, Decimal, Decimal]:
 
 
 def _lib_symbol(symbol: Symbol, indent: str) -> list[str]:
-    lines = [f'{indent}(symbol "fang:{symbol.name}"']
+    lines = [f'{indent}(symbol {_quoted("fang:" + symbol.name)}']
     inner = indent + "\t"
     lines.append(f"{inner}(pin_numbers (hide {'yes' if symbol.hide_pin_numbers else 'no'}))")
     lines.append(f"{inner}(pin_names (offset 0) (hide {'yes' if symbol.hide_pin_names else 'no'}))")
@@ -429,21 +460,21 @@ def _lib_symbol(symbol: Symbol, indent: str) -> list[str]:
     lines.append(f"{inner}(on_board yes)")
     for name in ("Reference", "Value"):
         lines.append(
-            f'{inner}(property "{name}" "{symbol.name}" (at 0 0 0) '
+            f'{inner}(property {_quoted(name)} {_quoted(symbol.name)} (at 0 0 0) '
             f"(effects (font (size 1.27 1.27))))"
         )
-    lines.append(f'{inner}(symbol "{symbol.name}_0_1"')
+    lines.append(f'{inner}(symbol {_quoted(symbol.name + "_0_1")}')
     for graphic in symbol.graphics:
         lines.append(f"{inner}\t{graphic}")
     lines.append(f"{inner})")
-    lines.append(f'{inner}(symbol "{symbol.name}_1_1"')
+    lines.append(f'{inner}(symbol {_quoted(symbol.name + "_1_1")}')
     for pin in symbol.pins:
         lines.append(
             f"{inner}\t(pin {pin.electrical} line (at {pin.x} {pin.y} {pin.angle}) "
             f"(length {pin.length})"
         )
-        lines.append(f'{inner}\t\t(name "{pin.name}" (effects (font (size 1.27 1.27))))')
-        lines.append(f'{inner}\t\t(number "{pin.number}" (effects (font (size 1.27 1.27))))')
+        lines.append(f'{inner}\t\t(name {_quoted(pin.name)} (effects (font (size 1.27 1.27))))')
+        lines.append(f'{inner}\t\t(number {_quoted(pin.number)} (effects (font (size 1.27 1.27))))')
         lines.append(f"{inner}\t)")
     lines.append(f"{inner})")
     lines.append(f"{indent})")
@@ -492,8 +523,8 @@ def compile_schematic(
         f'\t(uuid "{root}")',
         f'\t(paper "User" {_mm(width)} {_mm(height)})',
         "\t(title_block",
-        f'\t\t(title "{title}")',
-        f'\t\t(comment 1 "project {snapshot.project_id}")',
+        f'\t\t(title {_quoted(title)})',
+        f'\t\t(comment 1 {_quoted("project " + snapshot.project_id)})',
         f'\t\t(comment 2 "snapshot {snapshot.hash}")',
         "\t)",
         "\t(lib_symbols",
@@ -509,7 +540,7 @@ def compile_schematic(
     for placement in placements:
         symbol = placement.symbol
         lines.append("\t(symbol")
-        lines.append(f'\t\t(lib_id "fang:{symbol.name}")')
+        lines.append(f'\t\t(lib_id {_quoted("fang:" + symbol.name)})')
         lines.append(
             f"\t\t(at {_mm(placement.x + shift_x)} {_mm(placement.y + shift_y)} "
             f"{symbol.rotation})"
@@ -527,19 +558,19 @@ def compile_schematic(
             at_x = placement.x + shift_x + Decimal(dx)
             at_y = placement.y + shift_y + Decimal(dy)
             lines.append(
-                f'\t\t(property "{name}" "{value}" '
+                f'\t\t(property {_quoted(name)} {_quoted(value)} '
                 f"(at {_mm(at_x)} {_mm(at_y)} {(360 - symbol.rotation) % 360}) "
                 f"(effects (font (size 1.27 1.27))))"
             )
         for pin in symbol.pins:
             lines.append(
-                f'\t\t(pin "{pin.number}" '
+                f'\t\t(pin {_quoted(pin.number)} '
                 f'(uuid "{_uuid("pin", placement.entity_id, pin.number)}"))'
             )
         lines.append("\t\t(instances")
-        lines.append(f'\t\t\t(project "{title}"')
+        lines.append(f'\t\t\t(project {_quoted(title)}')
         lines.append(
-            f'\t\t\t\t(path "/{root}" (reference "{placement.designator}") (unit 1))'
+            f'\t\t\t\t(path "/{root}" (reference {_quoted(placement.designator)}) (unit 1))'
         )
         lines.append("\t\t\t)")
         lines.append("\t\t)")
@@ -559,7 +590,7 @@ def compile_schematic(
             continue
         key = (terminal.designator, terminal.pin.number)
         lines.append(
-            f'\t(global_label "{terminal.net}" (shape passive) '
+            f'\t(global_label {_quoted(terminal.net)} (shape passive) '
             f"(at {_mm(terminal.anchor[0] + shift_x)} "
             f"{_mm(terminal.anchor[1] + shift_y)} {terminal.angle}) "
             f"(effects (font (size 1.27 1.27)) (justify {terminal.justify})) "
