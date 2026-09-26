@@ -1,5 +1,5 @@
 * simple_non_inverting: swing
-* plan for ngspice over sha256:6c0afbe8d352849d827d240fb674e1a239faaec0bf05b7d822e41d827aeacb05
+* plan for ngspice over sha256:1cc447b9bb7b138367efbb9bf8f811d9be4c68fbf5c55fe81f61ddb6c12ad3ef
 * GND1 abstracted; no device emitted
 R1 2 0 10k
 R2 2 3 90k

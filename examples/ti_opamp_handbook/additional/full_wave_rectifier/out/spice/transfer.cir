@@ -1,5 +1,5 @@
 * full_wave_rectifier: transfer
-* plan for ngspice over sha256:59f9f505b3ac5eea4e149b8731f2846df6848e439c9bba8ff57d769c5c9df431
+* plan for ngspice over sha256:43e0f6f0358e90098b407a40090f53cbbff86e691b1a1f1dd685e12e6724aa28
 * D1 abstracted; no device emitted
 * D2 abstracted; no device emitted
 * GND1 abstracted; no device emitted

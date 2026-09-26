@@ -3,7 +3,7 @@
   (design
     (source "ac_integrator.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:366a05ca5c63f44239aa43bd5e10b33306131d08bbc4f5524637f8e7e055ba64")
+    (snapshot "sha256:8935583c17619f39c6c5d9d52f68a503346b058ee0b0d4a4b4c52c318b31aabf")
     (project "PRJ-EXAMPLES")
   )
   (components

@@ -1,5 +1,5 @@
 * simple_integrator: ramp
-* plan for ngspice over sha256:58f25caf625553a9d4293290372f77d90c4b47574fbf69d6b894f4a5804e7e1a
+* plan for ngspice over sha256:5856eb26ec49a97fabe480752d6617b530d21dc92104c3a01635309051e8ae9d
 C1 1 2 1u
 * GND1 abstracted; no device emitted
 R1 4 1 100k

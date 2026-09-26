@@ -1,5 +1,5 @@
 * integrator: sine
-* plan for ngspice over sha256:cf19960a96363b98d6112aedaf783a4550f2fe4a8c10287c0f2146e3e76bedb6
+* plan for ngspice over sha256:0cffdaf1b65c26d0dd44ecc1baf62db7e08f1547bc74972d34b1b93332467e77
 C1 1 2 0.1u
 * GND1 abstracted; no device emitted
 R1 4 1 10k

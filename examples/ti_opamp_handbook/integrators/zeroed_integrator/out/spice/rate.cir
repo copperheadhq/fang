@@ -1,5 +1,5 @@
 * zeroed_integrator: rate
-* plan for ngspice over sha256:b2625a650a1a2b70f463288ce5a9e5fb06242de2bb7ecf4d54a85662d20451aa
+* plan for ngspice over sha256:6924d586c9c54465f8bc46b207f4ed5f7593c1519aea30c4ac62f9206d3ec030
 C1 1 2 1u
 * GND1 abstracted; no device emitted
 R1 4 1 100k

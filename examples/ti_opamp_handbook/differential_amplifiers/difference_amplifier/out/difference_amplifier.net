@@ -3,7 +3,7 @@
   (design
     (source "difference_amplifier.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:670580d14e27079d403c8debe410143ad4d20bac3fc02d0e28926f619422728e")
+    (snapshot "sha256:19cbc9ce5748277885253b7954643ade799502fcd98a2350f3615508722ee8be")
     (project "PRJ-EXAMPLES")
   )
   (components

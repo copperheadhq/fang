@@ -3,7 +3,7 @@
   (design
     (source "isolated_standard_cell.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:efc25e8a15fc1e92f003e2f1e4d6f73a87daacb57a8cf4e9890c26408cf8e2a4")
+    (snapshot "sha256:09d506ae97913ce476769b460407a319942e3bb1e3f68598abe528563314c098")
     (project "PRJ-EXAMPLES")
   )
   (components

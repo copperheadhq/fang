@@ -1,5 +1,5 @@
 * adder_subtractor: e3_alone
-* plan for ngspice over sha256:6962bc4c4edf5c048e28307a03497780d8c0b4a1eacb738e5e0b066399d368b1
+* plan for ngspice over sha256:7f08181a776a537174f38dff34a0ebe068030e5cbdc1f83f4cce0f0ef2bd4a98
 * GND1 abstracted; no device emitted
 R1 2 3 10k
 R2 4 3 10k

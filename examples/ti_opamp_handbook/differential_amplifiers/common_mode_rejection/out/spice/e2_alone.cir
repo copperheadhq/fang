@@ -1,5 +1,5 @@
 * common_mode_rejection: e2_alone
-* plan for ngspice over sha256:c66d43e78c826bc5c86eb87bb8c479151a7a5f7f07a53014996e0a22a7fc50c8
+* plan for ngspice over sha256:742b50bd2960896d7646913031b11b24684c2d757cd1fdc8920fcd76a7f6fbd9
 * GND1 abstracted; no device emitted
 R1 2 3 100k
 R2 4 2 10k

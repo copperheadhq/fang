@@ -1,5 +1,5 @@
 * simple_ac_amplifier: dc
-* plan for ngspice over sha256:dc35a3a196e9ec4c596724ae38c011e6121e991967bd25af8dc41cc240a26d63
+* plan for ngspice over sha256:20f3b623d8af07af2128e9119671e2fb8ef04f3386fa8ffa72c3d954e4a482ea
 C1 1 2 1u
 * GND1 abstracted; no device emitted
 R1 2 4 10k

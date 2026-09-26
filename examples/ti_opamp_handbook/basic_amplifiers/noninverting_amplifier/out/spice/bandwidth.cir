@@ -1,5 +1,5 @@
 * noninverting_amplifier: bandwidth
-* plan for ngspice over sha256:33ba43de845ce02eb11d53631e40caa3db22ea373a3bd7ba14b0915d4d0bcf07
+* plan for ngspice over sha256:4cafcab64312599875cb47a2cb81ca79bd13b2e9ac84ebdcca358517d96ee94d
 * GND1 abstracted; no device emitted
 R1 2 0 10k
 R2 2 3 90k

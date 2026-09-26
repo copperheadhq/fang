@@ -1,5 +1,5 @@
 * adjustable_lag: lag_other
-* plan for ngspice over sha256:e911045157756f1d3be8e62434e9c741739de70f278cf68dfc6984accc952c1a
+* plan for ngspice over sha256:065ae996025fdd748f88f4b328130b85108bd8fe3c0ec6c33e14baab64d24b02
 C1 1 0 10u
 * GND1 abstracted; no device emitted
 R1 3 4 10k

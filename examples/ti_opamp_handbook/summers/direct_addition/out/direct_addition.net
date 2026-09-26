@@ -3,7 +3,7 @@
   (design
     (source "direct_addition.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:a854aebef749cc5917bfc5b81037d17efe190d20de21c62747fc1ef0cc404d74")
+    (snapshot "sha256:3550f193cc86822ab9da8cac448203ac257f4032cc63eeab91ecf12c24db6fc9")
     (project "PRJ-EXAMPLES")
   )
   (components

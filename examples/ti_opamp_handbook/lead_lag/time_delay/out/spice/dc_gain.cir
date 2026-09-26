@@ -1,5 +1,5 @@
 * time_delay: dc_gain
-* plan for ngspice over sha256:d5c7b5aa80e63f0d97709420a2678b7fdf020a29ab643c9c09dde304196bcf52
+* plan for ngspice over sha256:b9496646325e3757497cd6ea91d22c959604db509a3acce603bf8b18ff9d69ba
 C1 1 2 8n
 C2 2 3 8n
 C3 4 0 36n

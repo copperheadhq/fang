@@ -1,5 +1,5 @@
 * differential_output: offset_source
-* plan for ngspice over sha256:157131e316fbe669f46e1d36963632238aebc2e80ebdda846edee584776e4b8f
+* plan for ngspice over sha256:451976839c250b4c40f9a658c2d36cdac8228ff9018348f2e299f033833d4230
 * GND1 abstracted; no device emitted
 R1 2 3 10k
 R2 4 5 10k

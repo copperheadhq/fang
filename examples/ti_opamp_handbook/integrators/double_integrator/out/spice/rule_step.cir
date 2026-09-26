@@ -1,5 +1,5 @@
 * double_integrator: rule_step
-* plan for ngspice over sha256:3c71f6de600b33bf36676f12f1f425908843d70ca622ccbe8555d68c303459f7
+* plan for ngspice over sha256:61b63a41056495231c88dcebbb6f64bdf0f5a972219607b4042620bd7b3225ec
 C1 1 0 1u
 C2 3 4 1u
 C3 4 5 1u

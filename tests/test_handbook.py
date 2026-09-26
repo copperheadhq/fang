@@ -11,11 +11,22 @@ failure rather than a line in a file nobody opened.
 """
 
 import re
+import shutil
+import sys
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
-from examples.regenerate import examples as example_names, simulated
+from examples.regenerate import (
+    PROJECT,
+    _program,
+    bench_of,
+    examples as example_names,
+    simulated,
+)
+from fang.elaborate import elaborate
+from fang.cli import load_system
 
 ROOT = Path(__file__).resolve().parent.parent / "examples"
 HANDBOOK = [name for name in example_names() if name.startswith("ti_opamp_handbook/")]
@@ -34,3 +45,40 @@ def test_every_claim_a_handbook_circuit_makes_holds_in_simulation(name):
     held, total = map(int, VERDICT.search(report).groups())
     assert total >= 1, "a bench that claims nothing checks nothing"
     assert held == total, [line for line in report.splitlines() if "FAILS" in line]
+
+
+# -- the bench itself ---------------------------------------------------------
+
+sys.path.insert(0, str(ROOT / "ti_opamp_handbook"))
+from handbook import _MEASURED  # noqa: E402
+
+
+def _read(line: str):
+    match = _MEASURED.match(line)
+    return None if not match or match.group(3) else match.group(2)
+
+
+def test_a_measurement_is_read_up_to_where_ngspice_says_it_was_taken():
+    assert _read("gain = -9.99e+01") == "-9.99e+01"
+    assert _read("peak = 2.5e+00 at= 5.0e-03") == "2.5e+00"
+
+
+def test_a_complex_result_is_not_read_as_its_real_part():
+    """ngspice prints a complex scalar as `re,im`. Half of it is not the value,
+    and a claim checked against it could hold by accident."""
+    assert _read("w = 0.000000e+00,1.000000e+00") is None
+
+
+@pytest.mark.skipif(shutil.which("ngspice") is None, reason="ngspice is not installed")
+def test_a_setting_its_part_never_reads_is_refused():
+    """A misspelt parameter would otherwise leave the default in place, and a
+    claim that happens to match the default would hold without testing it."""
+    name = "ti_opamp_handbook/buffers/inverting_buffer_adjustable_gain"
+    system = load_system(_program(name))
+    bench = bench_of(system)
+    run = next(run for run in bench.runs if run.settings)
+    part = next(iter(run.settings))
+    typo = replace(run, settings={part: {"setings": 0}})
+    result = elaborate(system, project_id=PROJECT)
+    with pytest.raises(ValueError, match="setings"):
+        replace(bench, runs=[typo]).render(result, system, Path(name).name)

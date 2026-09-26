@@ -3,7 +3,7 @@
   (design
     (source "adjustable_lead.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:3cc678ced401dabdd28cdcd57d86ecc83e6827a6981882edc39a0f088119431a")
+    (snapshot "sha256:dc67ce2a66052a903c4811b543747d8431dea5e5d4a7cc767a6298a41cb31c45")
     (project "PRJ-EXAMPLES")
   )
   (components

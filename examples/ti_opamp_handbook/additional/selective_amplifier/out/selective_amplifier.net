@@ -3,7 +3,7 @@
   (design
     (source "selective_amplifier.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:3f97a6faa92fd6abf729afb56cddd57b9a3eaa30c7cbde71acd84064bf36dd0e")
+    (snapshot "sha256:4832a6226f90f2d5941286a5e25f87dfd9e1de9c6a1875cabd5ad30baec6ec45")
     (project "PRJ-EXAMPLES")
   )
   (components

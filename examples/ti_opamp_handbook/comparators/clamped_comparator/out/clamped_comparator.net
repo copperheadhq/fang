@@ -3,7 +3,7 @@
   (design
     (source "clamped_comparator.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:7c17811651e162246344b919e5e875446e8189fdb21509ae42f957ea6d643ac6")
+    (snapshot "sha256:6a176c8e200136013ae2b2d022c5b1e6609c9317eabee55e824d1ea6b2569a91")
     (project "PRJ-EXAMPLES")
   )
   (components

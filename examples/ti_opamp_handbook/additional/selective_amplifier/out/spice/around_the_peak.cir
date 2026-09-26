@@ -1,5 +1,5 @@
 * selective_amplifier: around_the_peak
-* plan for ngspice over sha256:3f97a6faa92fd6abf729afb56cddd57b9a3eaa30c7cbde71acd84064bf36dd0e
+* plan for ngspice over sha256:4832a6226f90f2d5941286a5e25f87dfd9e1de9c6a1875cabd5ad30baec6ec45
 C1 1 0 100n
 C2 3 4 50n
 C3 4 5 50n

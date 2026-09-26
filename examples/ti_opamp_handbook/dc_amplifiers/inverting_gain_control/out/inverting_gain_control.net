@@ -3,7 +3,7 @@
   (design
     (source "inverting_gain_control.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:8a2118c6c16efc1892ae2bfd845d639edd79d3df8ee8a235f380cd75a4664c92")
+    (snapshot "sha256:1e778d3d187604d125fa88790ed5b830349b95a0d238b40f130d920b6b4f1f47")
     (project "PRJ-EXAMPLES")
   )
   (components

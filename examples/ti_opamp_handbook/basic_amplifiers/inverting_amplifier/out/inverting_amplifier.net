@@ -3,7 +3,7 @@
   (design
     (source "inverting_amplifier.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:78f46b91353bf9cfcb267aadb521c2fda2d87e7d73a145b6f34db1dcea13aa18")
+    (snapshot "sha256:de3089bd950f9e1eb91a299f517b62728ef1a5a7043e3584b1fc57588fab4c63")
     (project "PRJ-EXAMPLES")
   )
   (components
