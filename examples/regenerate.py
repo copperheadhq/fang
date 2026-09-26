@@ -291,7 +291,8 @@ def render(name: str, *, with_render: bool = True) -> dict[str, str]:
     `kicad-cli`, so everything else can still be checked without it.
     """
     stem = Path(name).name
-    result = elaborate(load_system(_program(name)), project_id=PROJECT)
+    system = load_system(_program(name))
+    result = elaborate(system, project_id=PROJECT)
     files = {
         f"{stem}.net": _run(cmd_export, name),
         "netlist.txt": _run(cmd_netlist, name),
@@ -311,10 +312,29 @@ def render(name: str, *, with_render: bool = True) -> dict[str, str]:
             files["schematic.svg"] = KicadRenderer().to_svg(
                 schematic, workspace=Path(scratch), name=stem
             )
+    bench = bench_of(system)
+    if bench is not None:
+        files.update(bench.render(result, system, stem))
     rationale = _rationale(stem, result.snapshot)
     if rationale is not None:
         files["rationale.md"] = rationale
     return files
+
+
+def bench_of(system):
+    """The bench a program declares beside its system, if it declares one.
+
+    A program that carries a ``BENCH`` is simulated when its outputs are
+    written: the bench lowers the graph through `fang.simulation`, runs
+    ngspice, and ships each deck and what it measured. Regenerating one needs
+    `ngspice` on the path, as a schematic needs `kicad-cli`.
+    """
+    return getattr(sys.modules.get(system.__module__), "BENCH", None)
+
+
+def simulated(name: str) -> bool:
+    """Whether an example's outputs include a simulation."""
+    return bench_of(load_system(_program(name))) is not None
 
 
 def write(name: str) -> list[Path]:

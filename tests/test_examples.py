@@ -18,7 +18,13 @@ from pathlib import Path
 
 import pytest
 
-from examples.regenerate import PROJECT, SCHEMATICS, examples as example_names, render
+from examples.regenerate import (
+    PROJECT,
+    SCHEMATICS,
+    examples as example_names,
+    render,
+    simulated,
+)
 from fang.checks import DEFAULT_CHECKS
 from fang.cli import load_system
 from fang.constraints import CheckStatus
@@ -26,6 +32,7 @@ from fang.elaborate import elaborate
 from fang.kicad import emit_netlist
 from fang.netlist import compile_netlist
 from fang.schematic import KicadRenderer
+from fang.simulation import NgspiceBackend
 
 ROOT = Path(__file__).resolve().parent.parent / "examples"
 
@@ -71,7 +78,11 @@ RENDER = "schematic.svg"
 def renderable(name):
     """Whether this example's outputs can all be made here. One that ships a
     schematic ships KiCad's render of it, which needs `kicad-cli`; without it
-    that one file is left out and every other output is still checked."""
+    that one file is left out and every other output is still checked. One
+    that carries a bench ships what ngspice measured, and nothing of that can
+    be checked without `ngspice`."""
+    if simulated(name) and not NgspiceBackend().available():
+        pytest.skip("ngspice is not installed here")
     return name not in SCHEMATICS or KicadRenderer().available()
 
 
