@@ -170,7 +170,8 @@ reasoning. `python examples/regenerate.py` rewrites them all;
 [tests/test_examples.py](tests/test_examples.py) rebuilds them and compares, so
 a committed output cannot drift from the program beside it. An example named in
 `regenerate.SCHEMATICS` also ships a `.kicad_sch` and KiCad's render of it, so
-regenerating or testing that one needs `kicad-cli` on the path. Two things in an
+regenerating that one needs `kicad-cli` on the path; without it the tests
+still check every one of its outputs but the render. Two things in an
 output are normalized before that comparison and only two: the compiler version
 and the snapshot hash, which covers provenance and so covers this checkout's
 absolute path. Add an example by adding the folder — the suite discovers it —
