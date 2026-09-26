@@ -63,12 +63,16 @@ def name(request):
     return request.param
 
 
+#: KiCad's render of a schematic, the one output only `kicad-cli` can make.
+RENDER = "schematic.svg"
+
+
 @pytest.fixture
 def renderable(name):
-    """An example that ships a schematic ships KiCad's render of it, so its
-    outputs can only be regenerated where `kicad-cli` is installed."""
-    if name in SCHEMATICS and not KicadRenderer().available():
-        pytest.skip("kicad-cli is not installed here")
+    """Whether this example's outputs can all be made here. One that ships a
+    schematic ships KiCad's render of it, which needs `kicad-cli`; without it
+    that one file is left out and every other output is still checked."""
+    return name not in SCHEMATICS or KicadRenderer().available()
 
 
 @pytest.fixture
@@ -127,12 +131,14 @@ def test_an_example_ships_the_outputs_it_documents(example, name, renderable):
     committed = {
         path.relative_to(out).as_posix() for path in out.rglob("*") if path.is_file()
     }
-    assert committed == set(render(name))
+    if not renderable:
+        committed.discard(RENDER)
+    assert committed == set(render(name, with_render=renderable))
 
 
 def test_a_committed_output_still_matches_the_program(example, name, renderable):
     """Regenerate every output and compare; `python examples/regenerate.py`
     is the fix when this fails."""
     out = example.parent / "out"
-    for relative, text in sorted(render(name).items()):
+    for relative, text in sorted(render(name, with_render=renderable).items()):
         assert stable((out / relative).read_text(encoding="utf-8")) == stable(text), relative

@@ -281,12 +281,14 @@ def _rationale(name: str, snapshot) -> str | None:
 # --------------------------------------------------------------------------
 
 
-def render(name: str) -> dict[str, str]:
+def render(name: str, *, with_render: bool = True) -> dict[str, str]:
     """Every output file for one example, as relative path to text.
 
     The name is a path relative to examples/, so a grouped example is
     `jee_advanced/problem_1`. Files inside its own out/ are named after the
-    leaf, because that is the name the program has.
+    leaf, because that is the name the program has. `with_render=False`
+    leaves out KiCad's render of a schematic, the one output that needs
+    `kicad-cli`, so everything else can still be checked without it.
     """
     stem = Path(name).name
     result = elaborate(load_system(_program(name)), project_id=PROJECT)
@@ -304,6 +306,7 @@ def render(name: str) -> dict[str, str]:
             result.snapshot, traits=result.traits, title=stem
         )
         files[f"{stem}.kicad_sch"] = schematic
+    if name in SCHEMATICS and with_render:
         with TemporaryDirectory() as scratch:
             files["schematic.svg"] = KicadRenderer().to_svg(
                 schematic, workspace=Path(scratch), name=stem
