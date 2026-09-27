@@ -791,7 +791,7 @@ verification cannot rest on evidence the graph never saw.
 URL: https://fang.copperhead.sh/examples/divider/
 Summary: A voltage divider with a capacitor across its output: two resistors, one cap and nothing else. It is here to show the shape of a Fang program and no more than that.
 
-<figure class="example-figure"><img src="/examples/divider/interconnect.svg" alt="the interconnect view" loading="lazy" decoding="async" /><figcaption>The interconnect view</figcaption></figure>
+<figure class="example-figure"><a href="/examples/divider/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/divider/interconnect.svg" alt="the interconnect view" loading="lazy" decoding="async" /></a><figcaption>The interconnect view</figcaption></figure>
 
 ## The program
 
@@ -1183,7 +1183,7 @@ E_O = E_I
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/buffers/voltage_follower/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/buffers/voltage_follower/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/buffers/voltage_follower/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -1193,7 +1193,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/buffers/voltage_follower/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/buffers/voltage_follower/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/buffers/voltage_follower/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -1392,7 +1392,7 @@ R_O = (1 - k) R and R_I = k R.
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/dc_amplifiers/gain_control/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/dc_amplifiers/gain_control/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/dc_amplifiers/gain_control/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -1402,7 +1402,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/dc_amplifiers/gain_control/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/dc_amplifiers/gain_control/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/dc_amplifiers/gain_control/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -1642,7 +1642,7 @@ E_O = Eref
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/references/buffer_variation/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/references/buffer_variation/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/references/buffer_variation/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -1652,7 +1652,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/references/buffer_variation/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/references/buffer_variation/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/references/buffer_variation/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -1901,7 +1901,7 @@ Summary: SBOA092B pages 70 and 71, Simple Gain Control: one 10 kΩ potentiometer
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/dc_amplifiers/simple_gain_control/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/dc_amplifiers/simple_gain_control/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/dc_amplifiers/simple_gain_control/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -1911,7 +1911,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/dc_amplifiers/simple_gain_control/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/dc_amplifiers/simple_gain_control/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/dc_amplifiers/simple_gain_control/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -2187,7 +2187,7 @@ E_O = (R_O + R_I) / R_I x E_I = 10 E_I
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/dc_amplifiers/simple_non_inverting/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/dc_amplifiers/simple_non_inverting/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/dc_amplifiers/simple_non_inverting/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -2197,7 +2197,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/dc_amplifiers/simple_non_inverting/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/dc_amplifiers/simple_non_inverting/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/dc_amplifiers/simple_non_inverting/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -2414,7 +2414,7 @@ E_O / E_I = -R_O / R_I
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/basic_amplifiers/inverting_amplifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/basic_amplifiers/inverting_amplifier/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/basic_amplifiers/inverting_amplifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -2424,7 +2424,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/basic_amplifiers/inverting_amplifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/basic_amplifiers/inverting_amplifier/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/basic_amplifiers/inverting_amplifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -2644,7 +2644,7 @@ I = E_I / R1 = E_I mA,    Z_in = R1 = 1 kΩ
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/current_output/feedback_loop/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/current_output/feedback_loop/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/current_output/feedback_loop/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -2654,7 +2654,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/current_output/feedback_loop/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/current_output/feedback_loop/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/current_output/feedback_loop/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -2910,7 +2910,7 @@ fang build examples/ti_opamp_handbook/current_output/feedback_loop/feedback_loop
 URL: https://fang.copperhead.sh/examples/blinky/
 Summary: An MCU pin, a series resistor and an LED: the board everybody builds first. Read it after divider/, because it is the first example where the parts have interfaces rather than bare pads.
 
-<figure class="example-figure"><img src="/examples/blinky/interconnect.svg" alt="the interconnect view" loading="lazy" decoding="async" /><figcaption>The interconnect view</figcaption></figure>
+<figure class="example-figure"><a href="/examples/blinky/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/blinky/interconnect.svg" alt="the interconnect view" loading="lazy" decoding="async" /></a><figcaption>The interconnect view</figcaption></figure>
 
 ## The program
 
@@ -2951,7 +2951,7 @@ on an assumed number.
 - [`out/blinky.net`](https://github.com/copperheadhq/fang/blob/main/examples/blinky/out/blinky.net): the KiCad netlist
 - [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/blinky/out/netlist.txt), [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/blinky/out/graph.txt)
 
-<figure class="example-figure"><img src="/examples/blinky/power.svg" alt="the power view" loading="lazy" decoding="async" /><figcaption>The power view</figcaption></figure>
+<figure class="example-figure"><a href="/examples/blinky/power.svg" target="_blank" rel="noopener"><img src="/examples/blinky/power.svg" alt="the power view" loading="lazy" decoding="async" /></a><figcaption>The power view</figcaption></figure>
 
 ## Running it
 
@@ -3094,7 +3094,7 @@ E_O = -Z_O/Z_I E_I = -E_I/(R_I C_O p) = -1/(R_I C_O) ∫ E_I dt
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/integrators/integrator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/integrators/integrator/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/integrators/integrator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -3104,7 +3104,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/integrators/integrator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/integrators/integrator/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/integrators/integrator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -3375,7 +3375,7 @@ E_O = -(R_O / R_I) E_I = -100 E_I
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/dc_amplifiers/chopper_stabilized/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/dc_amplifiers/chopper_stabilized/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/dc_amplifiers/chopper_stabilized/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -3385,7 +3385,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/dc_amplifiers/chopper_stabilized/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/dc_amplifiers/chopper_stabilized/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/dc_amplifiers/chopper_stabilized/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -3652,7 +3652,7 @@ Z_in = R_I = 1 kΩ
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/dc_amplifiers/simple_inverting/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/dc_amplifiers/simple_inverting/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/dc_amplifiers/simple_inverting/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -3662,7 +3662,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/dc_amplifiers/simple_inverting/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/dc_amplifiers/simple_inverting/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/dc_amplifiers/simple_inverting/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -3953,7 +3953,7 @@ Z_in = R_I = 10 kΩ
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/dc_amplifiers/linear_gain_control/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/dc_amplifiers/linear_gain_control/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/dc_amplifiers/linear_gain_control/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -3963,7 +3963,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/dc_amplifiers/linear_gain_control/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/dc_amplifiers/linear_gain_control/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/dc_amplifiers/linear_gain_control/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -4248,7 +4248,7 @@ E_O = Eref, and the cell supplies no current
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/references/isolated_standard_cell/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/references/isolated_standard_cell/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/references/isolated_standard_cell/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -4258,7 +4258,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/references/isolated_standard_cell/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/references/isolated_standard_cell/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/references/isolated_standard_cell/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -4498,7 +4498,7 @@ E_O = -R_O C_I dE_I/dt
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differentiators/differentiator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differentiators/differentiator/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differentiators/differentiator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -4508,7 +4508,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differentiators/differentiator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differentiators/differentiator/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differentiators/differentiator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -4801,7 +4801,7 @@ E_O = E_I / (1 + D R C P) = 10 E_I / (10 + P)
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/lead_lag/linear_lag/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/lead_lag/linear_lag/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/lead_lag/linear_lag/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -4811,7 +4811,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/lead_lag/linear_lag/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/lead_lag/linear_lag/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/lead_lag/linear_lag/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -5042,7 +5042,7 @@ f_-3dB = 1 / (2 pi R_I C_I) = 16 Hz
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/ac_amplifiers/simple_ac_amplifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/ac_amplifiers/simple_ac_amplifier/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/ac_amplifiers/simple_ac_amplifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -5052,7 +5052,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/ac_amplifiers/simple_ac_amplifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/ac_amplifiers/simple_ac_amplifier/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/ac_amplifiers/simple_ac_amplifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -5297,7 +5297,7 @@ E_O = E_I maximum
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/additional/peak_follower/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/additional/peak_follower/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/additional/peak_follower/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -5307,7 +5307,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/additional/peak_follower/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/additional/peak_follower/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/additional/peak_follower/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -5590,7 +5590,7 @@ E_O = -(R_O/R_I) E_I - 1/(C_O R_I) ∫ E_I dt
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/integrators/augmenting_integrator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/integrators/augmenting_integrator/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/integrators/augmenting_integrator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -5600,7 +5600,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/integrators/augmenting_integrator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/integrators/augmenting_integrator/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/integrators/augmenting_integrator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -5851,7 +5851,7 @@ E_O = -1/(R_I C_O) ∫ E_I dt = -10 ∫ E_I dt
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/integrators/simple_integrator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/integrators/simple_integrator/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/integrators/simple_integrator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -5861,7 +5861,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/integrators/simple_integrator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/integrators/simple_integrator/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/integrators/simple_integrator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -6103,7 +6103,7 @@ E_O / E_I = (R_O + R_I) / R_I = 1 + R_O / R_I
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/basic_amplifiers/noninverting_amplifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/basic_amplifiers/noninverting_amplifier/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/basic_amplifiers/noninverting_amplifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -6113,7 +6113,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/basic_amplifiers/noninverting_amplifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/basic_amplifiers/noninverting_amplifier/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/basic_amplifiers/noninverting_amplifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -6339,7 +6339,7 @@ E_O = -(R_O / R_I) E_I / (1 + R_O C_O P) = -10 E_I / (10 + P)
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/lead_lag/lag_element/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/lead_lag/lag_element/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/lead_lag/lag_element/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -6349,7 +6349,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/lead_lag/lag_element/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/lead_lag/lag_element/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/lead_lag/lag_element/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -6612,7 +6612,7 @@ E_O = -[(D - D²) R C P] E_I          (as printed)
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/lead_lag/adjustable_lead/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/lead_lag/adjustable_lead/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/lead_lag/adjustable_lead/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -6622,7 +6622,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/lead_lag/adjustable_lead/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/lead_lag/adjustable_lead/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/lead_lag/adjustable_lead/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -6883,7 +6883,7 @@ E_O = (-1 to infinity) E_I,   Z_in = 10 kΩ
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/dc_amplifiers/inverting_gain_control/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/dc_amplifiers/inverting_gain_control/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/dc_amplifiers/inverting_gain_control/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -6893,7 +6893,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/dc_amplifiers/inverting_gain_control/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/dc_amplifiers/inverting_gain_control/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/dc_amplifiers/inverting_gain_control/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -7182,7 +7182,7 @@ E_O = -E_I / (1 + (D - D²) R C P) = -40 E_I / (40 + P)
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/lead_lag/adjustable_lag/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/lead_lag/adjustable_lag/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/lead_lag/adjustable_lag/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -7192,7 +7192,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/lead_lag/adjustable_lag/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/lead_lag/adjustable_lag/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/lead_lag/adjustable_lag/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -7469,7 +7469,7 @@ E_O / E_I = -j 2π f R_O C_I / (1 + j 2π f R_I C_I)
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differentiators/differentiator_with_stop/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differentiators/differentiator_with_stop/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differentiators/differentiator_with_stop/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -7479,7 +7479,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differentiators/differentiator_with_stop/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differentiators/differentiator_with_stop/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differentiators/differentiator_with_stop/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -7757,7 +7757,7 @@ E_O = |E_I|
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/additional/absolute_value/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/additional/absolute_value/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/additional/absolute_value/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -7767,7 +7767,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/additional/absolute_value/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/additional/absolute_value/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/additional/absolute_value/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -8089,7 +8089,7 @@ I / E_I = -R0 / (R1 R3) = -100 mA / Volt
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/current_output/deflection_coil_driver/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/current_output/deflection_coil_driver/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/current_output/deflection_coil_driver/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -8099,7 +8099,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/current_output/deflection_coil_driver/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/current_output/deflection_coil_driver/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/current_output/deflection_coil_driver/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -8388,7 +8388,7 @@ E_O = (R_I + R_O) / R_I x Eref
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/references/presettable_voltage_source/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/references/presettable_voltage_source/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/references/presettable_voltage_source/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -8398,7 +8398,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/references/presettable_voltage_source/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/references/presettable_voltage_source/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/references/presettable_voltage_source/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -8729,7 +8729,7 @@ E_O = -1/(R_I C_O) ∫ (E1 - E2) dt = 10 ∫ (E2 - E1) dt
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/integrators/differential_integrator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/integrators/differential_integrator/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/integrators/differential_integrator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -8739,7 +8739,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/integrators/differential_integrator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/integrators/differential_integrator/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/integrators/differential_integrator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -9003,7 +9003,7 @@ E_O / E_I = -(R_O + (1 - s) R_2) / (R_I + s R_2)
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/buffers/inverting_buffer_adjustable_gain/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/buffers/inverting_buffer_adjustable_gain/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/buffers/inverting_buffer_adjustable_gain/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -9013,7 +9013,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/buffers/inverting_buffer_adjustable_gain/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/buffers/inverting_buffer_adjustable_gain/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/buffers/inverting_buffer_adjustable_gain/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -9279,7 +9279,7 @@ I = -E_I / R_L = -E_I mA,    R1 / R2 = R0 / R3
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/current_output/current_injector/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/current_output/current_injector/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/current_output/current_injector/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -9289,7 +9289,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/current_output/current_injector/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/current_output/current_injector/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/current_output/current_injector/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -9586,7 +9586,7 @@ E_O = R_O / R_I x E_I = 10 E_I      "For driving floating load."
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/dc_amplifiers/differential_output/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/dc_amplifiers/differential_output/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/dc_amplifiers/differential_output/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -9596,7 +9596,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/dc_amplifiers/differential_output/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/dc_amplifiers/differential_output/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/dc_amplifiers/differential_output/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -9872,7 +9872,7 @@ E_O = (R_O/R1)(E2 - E1)          for R2 = R1, R3 = R_O
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differential_input/differential_input_amplifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differential_input/differential_input_amplifier/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differential_input/differential_input_amplifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -9882,7 +9882,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differential_input/differential_input_amplifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differential_input/differential_input_amplifier/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differential_input/differential_input_amplifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -10183,7 +10183,7 @@ E_O = -R_O E_I / R_I - R_O C_I dE_I/dt = -E_I - (1/100) dE_I/dt
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differentiators/augmented_differentiator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differentiators/augmented_differentiator/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differentiators/augmented_differentiator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -10193,7 +10193,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differentiators/augmented_differentiator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differentiators/augmented_differentiator/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differentiators/augmented_differentiator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -10471,7 +10471,7 @@ E_O peak = -(R_O / R_I) E_I peak = -5 E_I peak
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/additional/precision_rectifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/additional/precision_rectifier/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/additional/precision_rectifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -10481,7 +10481,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/additional/precision_rectifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/additional/precision_rectifier/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/additional/precision_rectifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -10774,7 +10774,7 @@ E_O = -(R_O / R_I)(E1 - E2) = 100 (E2 - E1)
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differential_amplifiers/difference_amplifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differential_amplifiers/difference_amplifier/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differential_amplifiers/difference_amplifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -10784,7 +10784,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differential_amplifiers/difference_amplifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differential_amplifiers/difference_amplifier/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differential_amplifiers/difference_amplifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -11002,7 +11002,7 @@ E_O = E2 - E1
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differential_amplifiers/subtractor/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differential_amplifiers/subtractor/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differential_amplifiers/subtractor/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -11012,7 +11012,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differential_amplifiers/subtractor/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differential_amplifiers/subtractor/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differential_amplifiers/subtractor/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -11227,7 +11227,7 @@ R_I C_I = R_O C_O
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differentiators/low_noise_differentiator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differentiators/low_noise_differentiator/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differentiators/low_noise_differentiator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -11237,7 +11237,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differentiators/low_noise_differentiator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differentiators/low_noise_differentiator/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differentiators/low_noise_differentiator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -11508,7 +11508,7 @@ E_O = (1 + (D1 - D1²) R C1 P) / (1 + (D2 - D2²) R C2 P)          (as printed)
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/lead_lag/lead_lag/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/lead_lag/lead_lag/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/lead_lag/lead_lag/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -11518,7 +11518,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/lead_lag/lead_lag/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/lead_lag/lead_lag/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/lead_lag/lead_lag/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -11819,7 +11819,7 @@ fang build examples/ti_opamp_handbook/lead_lag/lead_lag/lead_lag.py
 URL: https://fang.copperhead.sh/examples/sensor_board/
 Summary: A regulated board with an MCU and an I2C sensor on it. This is the example to read to understand lowering: what happens between a typed interface and the pads it lands on.
 
-<figure class="example-figure"><img src="/examples/sensor_board/interfaces.svg" alt="the interfaces view" loading="lazy" decoding="async" /><figcaption>The interfaces view</figcaption></figure>
+<figure class="example-figure"><a href="/examples/sensor_board/interfaces.svg" target="_blank" rel="noopener"><img src="/examples/sensor_board/interfaces.svg" alt="the interfaces view" loading="lazy" decoding="async" /></a><figcaption>The interfaces view</figcaption></figure>
 
 ## The program
 
@@ -11864,7 +11864,7 @@ it is the honest one until someone supplies the number.
 - [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/rationale.md): the four lowering decisions
 - [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_board/out/graph.txt): 71 entities, 19 of them pins
 
-<figure class="example-figure"><img src="/examples/sensor_board/ground.svg" alt="the ground view" loading="lazy" decoding="async" /><figcaption>The ground view</figcaption></figure>
+<figure class="example-figure"><a href="/examples/sensor_board/ground.svg" target="_blank" rel="noopener"><img src="/examples/sensor_board/ground.svg" alt="the ground view" loading="lazy" decoding="async" /></a><figcaption>The ground view</figcaption></figure>
 
 ## Running it
 
@@ -12042,7 +12042,7 @@ f_-3dB = 1 / (2 pi R_I C_I) = 0.16 Hz
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/ac_amplifiers/ac_non_inverting/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/ac_amplifiers/ac_non_inverting/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/ac_amplifiers/ac_non_inverting/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -12052,7 +12052,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/ac_amplifiers/ac_non_inverting/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/ac_amplifiers/ac_non_inverting/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/ac_amplifiers/ac_non_inverting/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -12339,7 +12339,7 @@ fang build examples/ti_opamp_handbook/ac_amplifiers/ac_non_inverting/ac_non_inve
 URL: https://fang.copperhead.sh/examples/equations/
 Summary: A divider written as the ratio it has to satisfy, rather than as two numbers someone computed offstage. It is then reused, by inheritance, at a different ratio.
 
-<figure class="example-figure"><img src="/examples/equations/interconnect.svg" alt="the interconnect view" loading="lazy" decoding="async" /><figcaption>The interconnect view</figcaption></figure>
+<figure class="example-figure"><a href="/examples/equations/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/equations/interconnect.svg" alt="the interconnect view" loading="lazy" decoding="async" /></a><figcaption>The interconnect view</figcaption></figure>
 
 ## The program
 
@@ -12615,7 +12615,7 @@ Summary: SBOA092B page 77, Double Rolloff: EI through C2 1 µF onto the + input;
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/ac_amplifiers/double_rolloff/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/ac_amplifiers/double_rolloff/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/ac_amplifiers/double_rolloff/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -12625,7 +12625,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/ac_amplifiers/double_rolloff/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/ac_amplifiers/double_rolloff/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/ac_amplifiers/double_rolloff/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -12963,7 +12963,7 @@ Summary: SBOA092B page 59, AC Integrator: EI through RI (100 kΩ) to the - input
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/integrators/ac_integrator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/integrators/ac_integrator/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/integrators/ac_integrator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -12973,7 +12973,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/integrators/ac_integrator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/integrators/ac_integrator/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/integrators/ac_integrator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -13354,7 +13354,7 @@ R_O = R_I divided by number of inputs
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/summers/averager/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/summers/averager/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/summers/averager/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -13364,7 +13364,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/summers/averager/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/summers/averager/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/summers/averager/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -13618,7 +13618,7 @@ E_O = -R_O (E1/R1 + E2/R2 + E3/R3)
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/summers/voltage_summer/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/summers/voltage_summer/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/summers/voltage_summer/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -13628,7 +13628,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/summers/voltage_summer/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/summers/voltage_summer/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/summers/voltage_summer/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -13900,7 +13900,7 @@ E_O = (R_O / R_I)(E2 - E1)
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differential_input/balanced_output_amplifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differential_input/balanced_output_amplifier/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differential_input/balanced_output_amplifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -13910,7 +13910,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differential_input/balanced_output_amplifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differential_input/balanced_output_amplifier/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differential_input/balanced_output_amplifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -14178,7 +14178,7 @@ Z_in = 10 kΩ for each input
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/summers/adder/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/summers/adder/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/summers/adder/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -14188,7 +14188,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/summers/adder/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/summers/adder/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/summers/adder/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -14420,7 +14420,7 @@ Z_in = 1 kΩ for E1, 10 kΩ for E2, 100 kΩ for E3
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/summers/scaling_adder/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/summers/scaling_adder/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/summers/scaling_adder/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -14430,7 +14430,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/summers/scaling_adder/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/summers/scaling_adder/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/summers/scaling_adder/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -14684,7 +14684,7 @@ E_O = (R_O / R_I)(E2 - E1) = 10 (E2 - E1)
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differential_amplifiers/differential_input_output/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differential_amplifiers/differential_input_output/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differential_amplifiers/differential_input_output/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -14694,7 +14694,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differential_amplifiers/differential_input_output/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differential_amplifiers/differential_input_output/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differential_amplifiers/differential_input_output/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -14974,7 +14974,7 @@ E_O = -1/(RC) ∫ (E1 + E2 + E3) dt = -10 ∫ (E1 + E2 + E3) dt
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/integrators/summing_integrator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/integrators/summing_integrator/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/integrators/summing_integrator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -14984,7 +14984,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/integrators/summing_integrator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/integrators/summing_integrator/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/integrators/summing_integrator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -15244,7 +15244,7 @@ R_L min = Saturation Voltage / I = 13.5 V / 20 mA = 675 Ω
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/references/constant_current_generator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/references/constant_current_generator/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/references/constant_current_generator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -15254,7 +15254,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/references/constant_current_generator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/references/constant_current_generator/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/references/constant_current_generator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -15664,7 +15664,7 @@ I_meter = E_I / (3 R_I) = E_I / 30 mA
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/current_output/simple_meter_amplifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/current_output/simple_meter_amplifier/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/current_output/simple_meter_amplifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -15674,7 +15674,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/current_output/simple_meter_amplifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/current_output/simple_meter_amplifier/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/current_output/simple_meter_amplifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -15999,7 +15999,7 @@ R_O = 2 R_I
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/summers/direct_addition/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/summers/direct_addition/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/summers/direct_addition/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -16009,7 +16009,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/summers/direct_addition/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/summers/direct_addition/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/summers/direct_addition/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -16285,7 +16285,7 @@ E_O = -4/(R_I C_I)² ∬ E_I dt = -4 ∬ E_I dt,   where C_O = C_I/2, R_O = R_I/
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/integrators/double_integrator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/integrators/double_integrator/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/integrators/double_integrator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -16295,7 +16295,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/integrators/double_integrator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/integrators/double_integrator/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/integrators/double_integrator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -16711,7 +16711,7 @@ f = 1 / (2 pi R C)
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/oscillators/simple_oscillator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/oscillators/simple_oscillator/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/oscillators/simple_oscillator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -16721,7 +16721,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/oscillators/simple_oscillator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/oscillators/simple_oscillator/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/oscillators/simple_oscillator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -17013,7 +17013,7 @@ Summary: SBOA092B page 76, Single Supply: the simple a.c. amplifier above it, wi
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/ac_amplifiers/single_supply/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/ac_amplifiers/single_supply/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/ac_amplifiers/single_supply/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -17023,7 +17023,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/ac_amplifiers/single_supply/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/ac_amplifiers/single_supply/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/ac_amplifiers/single_supply/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -17320,7 +17320,7 @@ E_O+ = -E_I,   E_O- = +E_I,   E_O+ - E_O- = -2 E_I
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/buffers/balanced_output/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/buffers/balanced_output/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/buffers/balanced_output/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -17330,7 +17330,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/buffers/balanced_output/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/buffers/balanced_output/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/buffers/balanced_output/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -17626,7 +17626,7 @@ R_O + R_O' = R1 ∥ R2 ∥ R3
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/summers/weighted_average/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/summers/weighted_average/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/summers/weighted_average/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -17636,7 +17636,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/summers/weighted_average/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/summers/weighted_average/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/summers/weighted_average/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -17948,7 +17948,7 @@ E_O = -E1 - E2 + E3 + E4
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differential_input/adder_subtractor/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differential_input/adder_subtractor/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differential_input/adder_subtractor/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -17958,7 +17958,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differential_input/adder_subtractor/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differential_input/adder_subtractor/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differential_input/adder_subtractor/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -18257,7 +18257,7 @@ fang build examples/ti_opamp_handbook/differential_input/adder_subtractor/adder_
 URL: https://fang.copperhead.sh/examples/i2c_bus/
 Summary: One controller and three targets on a shared I2C bus. A bus is multi-drop, so the same port is connected three times and the lowering resolves it into one net per signal, not three point-to-point links.
 
-<figure class="example-figure"><img src="/examples/i2c_bus/interfaces.svg" alt="the interfaces view" loading="lazy" decoding="async" /><figcaption>The interfaces view</figcaption></figure>
+<figure class="example-figure"><a href="/examples/i2c_bus/interfaces.svg" target="_blank" rel="noopener"><img src="/examples/i2c_bus/interfaces.svg" alt="the interfaces view" loading="lazy" decoding="async" /></a><figcaption>The interfaces view</figcaption></figure>
 
 ## The program
 
@@ -18303,7 +18303,7 @@ Four devices, one bus. The interfaces view draws each device's link to the
 controller. The parts that carry no interface, the pull-ups and the bulk cap, go
 below the rule, because in this view nothing connects to them.
 
-<figure class="example-figure"><img src="/examples/i2c_bus/interconnect.svg" alt="the interconnect view" loading="lazy" decoding="async" /><figcaption>The interconnect view</figcaption></figure>
+<figure class="example-figure"><a href="/examples/i2c_bus/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/i2c_bus/interconnect.svg" alt="the interconnect view" loading="lazy" decoding="async" /></a><figcaption>The interconnect view</figcaption></figure>
 
 ## Running it
 
@@ -18584,7 +18584,7 @@ The handbook prints no formula. The drawing's:
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/references/reference_voltage_supply/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/references/reference_voltage_supply/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/references/reference_voltage_supply/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -18594,7 +18594,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/references/reference_voltage_supply/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/references/reference_voltage_supply/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/references/reference_voltage_supply/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -18883,7 +18883,7 @@ Summary: Two circuit-analysis questions from the JEE (Advanced) papers, one fold
 
 | | Paper | Asks | Answer |
 | --- | --- | --- | --- |
-| [`problem_1/`](/examples/jee_advanced/problem_1/) | 2022, Paper 1, question 1 | which of four claimed currents are correct | all four of (A), (B), (C), (D) |
+| [`problem_1/`](/examples/jee_advanced/problem_1/) | 2022, Paper 1, question 10 | which of four claimed currents are correct | all four of (A), (B), (C), (D) |
 | [`problem_2/`](/examples/jee_advanced/problem_2/) | 2015, Paper 2, question 8 | the current I through R (= 2 Ω) | I = 1 A |
 
 Neither is a board. They are here because the question a physics paper asks
@@ -18921,7 +18921,7 @@ python examples/jee_advanced/problem_2/solve.py
 
 ## In this folder
 
-- [`problem_1`](/examples/jee_advanced/problem_1/): JEE (Advanced) 2022, Paper 1, question 1, written as a fang program: the diamond of eight 1 Ω resistors and two batteries below, with each of its four claimed currents a constraint the kernel decides.
+- [`problem_1`](/examples/jee_advanced/problem_1/): JEE (Advanced) 2022, Paper 1, question 10, written as a fang program: the diamond of eight 1 Ω resistors and two batteries below, with each of its four claimed currents a constraint the kernel decides.
 - [`problem_2`](/examples/jee_advanced/problem_2/): JEE (Advanced) 2015, Paper 2, question 8, written as a fang program: the ten resistors and one 6.5 V battery below, with the one current the paper asks for, I through R, claimed and checked. I = 1 A.
 
 
@@ -18930,9 +18930,9 @@ python examples/jee_advanced/problem_2/solve.py
 # Problem 1: JEE (Advanced) 2022
 
 URL: https://fang.copperhead.sh/examples/jee_advanced/problem_1/
-Summary: JEE (Advanced) 2022, Paper 1, question 1, written as a fang program: the diamond of eight 1 Ω resistors and two batteries below, with each of its four claimed currents a constraint the kernel decides.
+Summary: JEE (Advanced) 2022, Paper 1, question 10, written as a fang program: the diamond of eight 1 Ω resistors and two batteries below, with each of its four claimed currents a constraint the kernel decides.
 
-<figure class="example-figure"><img src="/examples/jee_advanced/problem_1/question.png" alt="the question as the paper prints it" loading="lazy" decoding="async" /><figcaption>The question as the paper prints it</figcaption></figure>
+<figure class="example-figure"><a href="/examples/jee_advanced/problem_1/question.png" target="_blank" rel="noopener"><img src="/examples/jee_advanced/problem_1/question.png" alt="the question as the paper prints it" loading="lazy" decoding="async" /></a><figcaption>The question as the paper prints it</figcaption></figure>
 
 This is the one example that is not a board, and it is here because the
 question is the same one a board asks all day: *is this claim about my circuit
@@ -19049,7 +19049,7 @@ and every resistor with its value and its current beside it:
   every resistor's value and current, and the answer, each one an entity,
   not prose
 
-<figure class="example-figure"><img src="/examples/jee_advanced/problem_1/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/jee_advanced/problem_1/schematic.svg" target="_blank" rel="noopener"><img src="/examples/jee_advanced/problem_1/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -19062,7 +19062,7 @@ the netlist reads: `R1` sits between `Net-(R1-Pad1)`, the junction inside the
 middle row, and `Net-(R1-Pad2)`, the right corner, and every ground symbol is
 the centre.
 
-<figure class="example-figure"><img src="/examples/jee_advanced/problem_1/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/jee_advanced/problem_1/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/jee_advanced/problem_1/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is the other picture, and it answers a different
 question: it is fang's own projection, drawn by `fang view`, and it names the
@@ -19204,7 +19204,7 @@ class Bridge(System):
         "1.2 A; (C) the current through R3 is 4.8 A; (D) the current through "
         "R5 is 2.4 A",
         document="JEE (Advanced) 2022, Paper 1",
-        locator="question 1, multiple correct, four options",
+        locator="question 10, multiple correct, four options",
     )
 
     answer = Requires(
@@ -19457,7 +19457,7 @@ Summary: SBOA092B page 56, Simple Integrators (the second figure). This is the i
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/integrators/zeroed_integrator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/integrators/zeroed_integrator/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/integrators/zeroed_integrator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -19467,7 +19467,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/integrators/zeroed_integrator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/integrators/zeroed_integrator/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/integrators/zeroed_integrator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -19898,7 +19898,7 @@ When R_L << R2,   I_L / E_I = R2 / (R1 R3) = 1 mA / Volt
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/current_output/linear_current_source/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/current_output/linear_current_source/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/current_output/linear_current_source/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -19908,7 +19908,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/current_output/linear_current_source/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/current_output/linear_current_source/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/current_output/linear_current_source/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -20228,7 +20228,7 @@ Summary: SBOA092B page 89, Full Wave Rectifier: a precision half-wave rectifier 
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/additional/full_wave_rectifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/additional/full_wave_rectifier/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/additional/full_wave_rectifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -20238,7 +20238,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/additional/full_wave_rectifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/additional/full_wave_rectifier/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/additional/full_wave_rectifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -20558,7 +20558,7 @@ R3: common mode adjustment. Set for zero output when E1 = E2.
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differential_amplifiers/common_mode_rejection/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differential_amplifiers/common_mode_rejection/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differential_amplifiers/common_mode_rejection/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -20568,7 +20568,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/differential_amplifiers/common_mode_rejection/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/differential_amplifiers/common_mode_rejection/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/differential_amplifiers/common_mode_rejection/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -20972,7 +20972,7 @@ fang build examples/ti_opamp_handbook/differential_amplifiers/common_mode_reject
 URL: https://fang.copperhead.sh/examples/jee_advanced/problem_2/
 Summary: JEE (Advanced) 2015, Paper 2, question 8, written as a fang program: the ten resistors and one 6.5 V battery below, with the one current the paper asks for, I through R, claimed and checked. I = 1 A.
 
-<figure class="example-figure"><img src="/examples/jee_advanced/problem_2/question.png" alt="the question as the paper prints it" loading="lazy" decoding="async" /><figcaption>The question as the paper prints it</figcaption></figure>
+<figure class="example-figure"><a href="/examples/jee_advanced/problem_2/question.png" target="_blank" rel="noopener"><img src="/examples/jee_advanced/problem_2/question.png" alt="the question as the paper prints it" loading="lazy" decoding="async" /></a><figcaption>The question as the paper prints it</figcaption></figure>
 
 The second of the two circuit-analysis examples, and it is here for the thing
 [`problem_1/`](/examples/jee_advanced/problem_1/) does not show: a claim worth checking that
@@ -21077,7 +21077,7 @@ letters. `problem_1` beside it does offer four options, and states them.
 - [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/jee_advanced/problem_2/out/rationale.md): the question, every resistor's
   value and current, and the answer, each one an entity, not prose
 
-<figure class="example-figure"><img src="/examples/jee_advanced/problem_2/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/jee_advanced/problem_2/schematic.svg" target="_blank" rel="noopener"><img src="/examples/jee_advanced/problem_2/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -21090,7 +21090,7 @@ draws. Designators are assigned in the order the program names its parts, so
 `R1` is `r`, the 2 Ω resistor the question asks about, and the rest run `R2`
 to `R10` alphabetically by the name they have in the program.
 
-<figure class="example-figure"><img src="/examples/jee_advanced/problem_2/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/jee_advanced/problem_2/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/jee_advanced/problem_2/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view answers the other question: it is fang's own projection,
 drawn by `fang view`, and it names the parts the way the program does, so
@@ -21542,7 +21542,7 @@ f_O = 1 / (2 pi R C), 100 to 6000 Hz
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/oscillators/wien_bridge_oscillator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/oscillators/wien_bridge_oscillator/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/oscillators/wien_bridge_oscillator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -21552,7 +21552,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/oscillators/wien_bridge_oscillator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/oscillators/wien_bridge_oscillator/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/oscillators/wien_bridge_oscillator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -22045,7 +22045,7 @@ f_-3dB = 1 / (2 pi R_1 C_1) = 1.6 Hz      R_1 C_1 = R_2 C_2
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/ac_amplifiers/ac_preamplifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/ac_amplifiers/ac_preamplifier/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/ac_amplifiers/ac_preamplifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -22055,7 +22055,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/ac_amplifiers/ac_preamplifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/ac_amplifiers/ac_preamplifier/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/ac_amplifiers/ac_preamplifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -22453,7 +22453,7 @@ Z_in = R_I = 10 kΩ,   Z_out < 200 Ω
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/additional/selective_amplifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/additional/selective_amplifier/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/additional/selective_amplifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -22463,7 +22463,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/additional/selective_amplifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/additional/selective_amplifier/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/additional/selective_amplifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -22819,7 +22819,7 @@ Summary: SBOA092B page 86, Time Delay: an inverting stage built to approximate a
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/lead_lag/time_delay/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/lead_lag/time_delay/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/lead_lag/time_delay/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -22829,7 +22829,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/lead_lag/time_delay/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/lead_lag/time_delay/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/lead_lag/time_delay/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -23275,7 +23275,7 @@ than asking for a second one.
 - [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/noninverting_amp/out/rationale.md): the question, the reading, the three
   calculations and the verification
 
-<figure class="example-figure"><img src="/examples/noninverting_amp/schematic.svg" alt="the schematic, rendered by KiCad" loading="lazy" decoding="async" /><figcaption>The schematic, rendered by KiCad</figcaption></figure>
+<figure class="example-figure"><a href="/examples/noninverting_amp/schematic.svg" target="_blank" rel="noopener"><img src="/examples/noninverting_amp/schematic.svg" alt="the schematic, rendered by KiCad" loading="lazy" decoding="async" /></a><figcaption>The schematic, rendered by KiCad</figcaption></figure>
 
 The resistors and the ground marker have drawn symbols; the op amp and the
 four capacitors are boxes with their own pins on them, which is what the
@@ -23284,7 +23284,7 @@ out where an engineer expects them, `IN-` and `IN+` on the left and `OUT` on
 the right, because they are numbered 2, 3 and 6, the single-op-amp pinout, and
 the box takes the pins in the order the graph gives them.
 
-<figure class="example-figure"><img src="/examples/noninverting_amp/interconnect.svg" alt="the interconnect view" loading="lazy" decoding="async" /><figcaption>The interconnect view</figcaption></figure>
+<figure class="example-figure"><a href="/examples/noninverting_amp/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/noninverting_amp/interconnect.svg" alt="the interconnect view" loading="lazy" decoding="async" /></a><figcaption>The interconnect view</figcaption></figure>
 
 The interconnect view is fang's own projection, and it names the parts the way
 the program does, so `r_bias_upper` and `r_series` are visibly the two that
@@ -23754,7 +23754,7 @@ fang build examples/noninverting_amp/noninverting_amp.py
 URL: https://fang.copperhead.sh/examples/buck_regulator/
 Summary: 12 V to 3.3 V, with the reasoning kept beside the circuit. The converter itself is ordinary. What is not ordinary is that the argument for it sits in the same graph as the inductor.
 
-<figure class="example-figure"><img src="/examples/buck_regulator/power.svg" alt="the power view" loading="lazy" decoding="async" /><figcaption>The power view</figcaption></figure>
+<figure class="example-figure"><a href="/examples/buck_regulator/power.svg" target="_blank" rel="noopener"><img src="/examples/buck_regulator/power.svg" alt="the power view" loading="lazy" decoding="async" /></a><figcaption>The power view</figcaption></figure>
 
 ## The program
 
@@ -23797,7 +23797,7 @@ argument, projected out of the graph in identifier order:
 - [`out/buck_regulator.net`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/buck_regulator.net), [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/netlist.txt)
 - [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/checks.txt), [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/graph.txt)
 
-<figure class="example-figure"><img src="/examples/buck_regulator/system.svg" alt="the system view" loading="lazy" decoding="async" /><figcaption>The system view</figcaption></figure>
+<figure class="example-figure"><a href="/examples/buck_regulator/system.svg" target="_blank" rel="noopener"><img src="/examples/buck_regulator/system.svg" alt="the system view" loading="lazy" decoding="async" /></a><figcaption>The system view</figcaption></figure>
 
 ## Running it
 
@@ -24145,7 +24145,7 @@ E_O average = 0.9 E_I rms,   E_I = 6 mV to 6 V rms at 10 to 1000 Hz
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/additional/ac_to_dc_converter/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/additional/ac_to_dc_converter/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/additional/ac_to_dc_converter/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -24155,7 +24155,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/additional/ac_to_dc_converter/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/additional/ac_to_dc_converter/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/additional/ac_to_dc_converter/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -24534,7 +24534,7 @@ Table 1, compound: V_OS 20 µV, V_OUT ±35 V, I_OUT 10 A, SR 2.4 V/µs
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/dc_amplifiers/power_booster/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/dc_amplifiers/power_booster/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/dc_amplifiers/power_booster/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -24544,7 +24544,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/dc_amplifiers/power_booster/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/dc_amplifiers/power_booster/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/dc_amplifiers/power_booster/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -24986,7 +24986,7 @@ Delay = R_I C_O / (2 K),   K the setting of R_7, 0 < K < 1
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/additional/time_delay_relay/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/additional/time_delay_relay/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/additional/time_delay_relay/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -24996,7 +24996,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/additional/time_delay_relay/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/additional/time_delay_relay/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/additional/time_delay_relay/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -25450,7 +25450,7 @@ Meter reading = 0.9 E_I / (R4 + R5)   (E_I rms)
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/current_output/meter_amplifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/current_output/meter_amplifier/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/current_output/meter_amplifier/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -25460,7 +25460,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/current_output/meter_amplifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/current_output/meter_amplifier/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/current_output/meter_amplifier/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -25829,7 +25829,7 @@ Positive clamping level = -(-V_sup) R_b' / R_a' = +3 V
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/comparators/clamped_comparator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/comparators/clamped_comparator/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/comparators/clamped_comparator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -25839,7 +25839,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/comparators/clamped_comparator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/comparators/clamped_comparator/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/comparators/clamped_comparator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -26363,7 +26363,7 @@ Summary: SBOA092B page 57, the integrator page 56 introduces with \"Regeneration
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/integrators/regenerative_integrator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/integrators/regenerative_integrator/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/integrators/regenerative_integrator/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -26373,7 +26373,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/integrators/regenerative_integrator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/integrators/regenerative_integrator/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/integrators/regenerative_integrator/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -26864,7 +26864,7 @@ E_O = -(R_O / R_I) E_I = -E_I,   rate limit = 7.5 V/s
 
 ## The circuit
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/additional/rate_limiter/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/additional/rate_limiter/schematic.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/additional/rate_limiter/schematic.svg" alt="the schematic, drawn by copperhead from the circuit's netlist" loading="lazy" decoding="async" /></a><figcaption>The schematic, drawn by copperhead from the circuit's netlist</figcaption></figure>
 
 The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
 drafting engine from this circuit's netlist, with KiCad's own library symbols,
@@ -26874,7 +26874,7 @@ terminal is a test point named as the program names it. KiCad reads back from
 the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
-<figure class="example-figure"><img src="/examples/ti_opamp_handbook/additional/rate_limiter/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /><figcaption>The interconnect view, fang's own projection</figcaption></figure>
+<figure class="example-figure"><a href="/examples/ti_opamp_handbook/additional/rate_limiter/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/ti_opamp_handbook/additional/rate_limiter/interconnect.svg" alt="the interconnect view, fang's own projection" loading="lazy" decoding="async" /></a><figcaption>The interconnect view, fang's own projection</figcaption></figure>
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -27251,7 +27251,7 @@ fang build examples/ti_opamp_handbook/additional/rate_limiter/rate_limiter.py
 URL: https://fang.copperhead.sh/examples/usb_uart_bridge/
 Summary: USB to serial: the interface board on nearly every desk. What it adds over the other examples is part selection, the difference between what the design needs and what was bought.
 
-<figure class="example-figure"><img src="/examples/usb_uart_bridge/power.svg" alt="the power view" loading="lazy" decoding="async" /><figcaption>The power view</figcaption></figure>
+<figure class="example-figure"><a href="/examples/usb_uart_bridge/power.svg" target="_blank" rel="noopener"><img src="/examples/usb_uart_bridge/power.svg" alt="the power view" loading="lazy" decoding="async" /></a><figcaption>The power view</figcaption></figure>
 
 ## The program
 
@@ -27296,7 +27296,7 @@ on its own is the whole reason this works.
   with both rejected alternatives and the USB 2.0 citation behind the D+ pull-up
 - [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/usb_uart_bridge/out/checks.txt), [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/usb_uart_bridge/out/graph.txt)
 
-<figure class="example-figure"><img src="/examples/usb_uart_bridge/interfaces.svg" alt="the interfaces view" loading="lazy" decoding="async" /><figcaption>The interfaces view</figcaption></figure>
+<figure class="example-figure"><a href="/examples/usb_uart_bridge/interfaces.svg" target="_blank" rel="noopener"><img src="/examples/usb_uart_bridge/interfaces.svg" alt="the interfaces view" loading="lazy" decoding="async" /></a><figcaption>The interfaces view</figcaption></figure>
 
 ## Running it
 
@@ -27625,7 +27625,7 @@ fang build examples/usb_uart_bridge/usb_uart_bridge.py
 URL: https://fang.copperhead.sh/examples/servo_drive/
 Summary: Three half-bridges, CAN, an encoder and a shunt per phase: the board this toolchain was written for. It is the composition example, the largest program here built from the smallest amount of repetition.
 
-<figure class="example-figure"><img src="/examples/servo_drive/system.svg" alt="the system view" loading="lazy" decoding="async" /><figcaption>The system view</figcaption></figure>
+<figure class="example-figure"><a href="/examples/servo_drive/system.svg" target="_blank" rel="noopener"><img src="/examples/servo_drive/system.svg" alt="the system view" loading="lazy" decoding="async" /></a><figcaption>The system view</figcaption></figure>
 
 ## The program
 
@@ -27672,9 +27672,9 @@ view draws electrical connection and a block connects through the parts inside
 it. Their transistors are labelled `bridge_u.high`, `bridge_v.high` and so on.
 The path is what distinguishes three instances of one declaration.
 
-<figure class="example-figure"><img src="/examples/servo_drive/power.svg" alt="the power view" loading="lazy" decoding="async" /><figcaption>The power view</figcaption></figure>
+<figure class="example-figure"><a href="/examples/servo_drive/power.svg" target="_blank" rel="noopener"><img src="/examples/servo_drive/power.svg" alt="the power view" loading="lazy" decoding="async" /></a><figcaption>The power view</figcaption></figure>
 
-<figure class="example-figure"><img src="/examples/servo_drive/safety.svg" alt="the safety view" loading="lazy" decoding="async" /><figcaption>The safety view</figcaption></figure>
+<figure class="example-figure"><a href="/examples/servo_drive/safety.svg" target="_blank" rel="noopener"><img src="/examples/servo_drive/safety.svg" alt="the safety view" loading="lazy" decoding="async" /></a><figcaption>The safety view</figcaption></figure>
 
 ## Running it
 

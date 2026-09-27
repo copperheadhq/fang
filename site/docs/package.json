@@ -11,6 +11,7 @@
     "examples": "node scripts/generate-examples.mjs"
   },
   "dependencies": {
+    "@astrojs/markdown-remark": "^7.3.1",
     "@astrojs/starlight": "^0.41.3",
     "@copperhead/starlight-theme": "file:../../packages/starlight-theme",
     "@expressive-code/plugin-collapsible-sections": "^0.44.2",

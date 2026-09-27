@@ -131,7 +131,8 @@ function describe(body) {
 // repository and wrong on the site. A picture resolves to the copy under
 // public/; everything else — the program, the netlist, a sibling example —
 // resolves to the file on GitHub, because that is where the thing actually is.
-// A picture is a figure, its alt text written under it as the caption, and it
+// A picture is a figure, its alt text written under it as the caption and a
+// tap on it opening it whole, and it
 // loads as it scrolls into view rather than with the page: a handbook
 // circuit's schematic is a hundred kilobytes of SVG, and most readers stop
 // above it. Markdown can say neither, so an image becomes the tags it would
@@ -143,7 +144,8 @@ function figures(body) {
     const caption = alt.charAt(0).toUpperCase() + alt.slice(1);
     return (
       `<figure class="example-figure">` +
-      `<img src="${escape(src)}" alt="${escape(alt)}" loading="lazy" decoding="async" />` +
+      `<a href="${escape(src)}" target="_blank" rel="noopener">` +
+      `<img src="${escape(src)}" alt="${escape(alt)}" loading="lazy" decoding="async" /></a>` +
       `<figcaption>${escape(caption)}</figcaption></figure>`
     );
   });
