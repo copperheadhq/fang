@@ -1,15 +1,8 @@
 # problem_1: JEE (Advanced) 2022
 
-Eight 1 Ω resistors and two ideal batteries, ε₁ = 12 V and ε₂ = 6 V, arranged
-as a diamond with a centre node. It is JEE (Advanced) 2022, Paper 1, question 1,
-which asks which of four claimed currents are correct:
-
-| | Claim |
-| --- | --- |
-| (A) | the current through R1 is 7.2 A |
-| (B) | the current through R2 is 1.2 A |
-| (C) | the current through R3 is 4.8 A |
-| (D) | the current through R5 is 2.4 A |
+JEE (Advanced) 2022, Paper 1, question 1, written as a fang program: the
+diamond of eight 1 Ω resistors and two batteries below, with each of its four
+claimed currents a constraint the kernel decides.
 
 ![the question as the paper prints it](question.png)
 

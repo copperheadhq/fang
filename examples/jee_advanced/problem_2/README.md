@@ -1,8 +1,8 @@
 # problem_2: JEE (Advanced) 2015, Paper 2
 
-Ten resistors, one 6.5 V battery, and a single number. It is JEE (Advanced)
-2015, Paper 2, question 8: *"In the following circuit, the current through the resistor
-R (= 2 Ω) is I Amperes. The value of I is"*. **I = 1 A.**
+JEE (Advanced) 2015, Paper 2, question 8, written as a fang program: the ten
+resistors and one 6.5 V battery below, with the one current the paper asks
+for, I through R, claimed and checked. **I = 1 A.**
 
 ![the question as the paper prints it](question.png)
 
