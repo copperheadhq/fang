@@ -268,6 +268,38 @@ def test_a_tall_part_does_not_reach_the_part_below_it():
             assert bottom < top, f"{upper} reaches down onto {lower}"
 
 
+class NamedCell(Part):
+    """A cell whose pins are named for their polarity, not numbered."""
+
+    designator_prefix = "V"
+
+    p1 = Electrical()
+    p2 = Electrical()
+    PLUS = Pin("+", role="power", number="1")
+    MINUS = Pin("-", role="ground", number="2")
+    pinmap = PinMap({"p1.line": "+", "p2.line": "-"})
+
+
+def test_a_drawn_symbol_finds_the_nets_of_pins_the_part_names():
+    """The drawn cell numbers its pins 1 and 2 and the part calls them + and
+    -. Matched by number, both still land on their nets."""
+
+    class Powered(System):
+        cell = NamedCell(package="Battery")
+        load = Resistor(resistance=1 * kOhm, package="R_0603")
+
+        def architecture(self):
+            self.cell.p1 >> self.load.p1
+            self.cell.p2 >> self.load.p2
+
+    result = elaborate(Powered, project_id=PROJECT)
+    assert result.ok, [d.message for d in result.diagnostics]
+    netlist = compile_netlist(result.snapshot, traits=result.traits)
+    cell = next(p for p in place(result.snapshot, netlist) if p.designator == "V1")
+    nets = [terminal.net for terminal in terminals(cell, netlist)]
+    assert None not in nets and len(set(nets)) == 2
+
+
 def test_a_quote_in_the_design_stays_inside_its_string(built, tmp_path):
     """A value is the design's own text, and `1/4" jack` is an ordinary one.
     Written bare, its quote would end the string, and KiCad refuses the file."""
