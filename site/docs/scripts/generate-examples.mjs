@@ -107,6 +107,19 @@ function describe(body) {
 // repository and wrong on the site. A picture resolves to the copy under
 // public/; everything else — the program, the netlist, a sibling example —
 // resolves to the file on GitHub, because that is where the thing actually is.
+// A picture loads as it scrolls into view rather than with the page: a
+// handbook circuit's schematic is a quarter of a megabyte of SVG, and most
+// readers stop above it. Markdown has no way to say so, so an image becomes
+// the tag it would have been, with that said.
+function lazyImages(body) {
+  const escape = (text) => text.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+  return body.replace(
+    /!\[([^\]]*)\]\(([^)\s]+)\)/g,
+    (_, alt, src) =>
+      `<img src="${escape(src)}" alt="${escape(alt)}" loading="lazy" decoding="async" />`
+  );
+}
+
 function resolveLinks(body, name) {
   return body.replace(/\]\(([^)]+)\)/g, (whole, target) => {
     if (/^(https?:|\/|#)/.test(target)) return whole;
@@ -194,7 +207,7 @@ sidebar:
     data-icon: puzzle
 ---
 
-${resolveLinks(body, name)}
+${lazyImages(resolveLinks(body, name))}
 `;
 
   // A group holds examples; it is not one. Its page is its README plus the way
