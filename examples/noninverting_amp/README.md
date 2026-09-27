@@ -2,7 +2,7 @@
 
 An a.c.-coupled non-inverting amplifier, and the two numbers a textbook asks
 of it: *"What is the input impedance in Figure 4.44? What is Av?"*
-**Zin = 68.75 kΩ, Av = 16** — non-inverting, or +24 dB, over the midband.
+**Zin = 68.75 kΩ, Av = 16**: non-inverting, or +24 dB, over the midband.
 
 The third example that is not a board. The two under
 [`jee_advanced/`](../jee_advanced/) are exam questions with one right answer;
@@ -31,7 +31,7 @@ Both are midband answers, and which nodes are a.c. grounds is what decides
 them:
 
 - **The .5 µF** holds the bias node at a.c. ground, so the 220 kΩ and the
-  100 kΩ both run from the input node to ground — in parallel, 68.75 kΩ. The
+  100 kΩ both run from the input node to ground, in parallel 68.75 kΩ. The
   *lower* 220 kΩ never appears in the answer: the .5 µF is across it. The op
   amp's own + input draws nothing worth subtracting.
 - **The 1 µF** puts the bottom of the 2 kΩ at a.c. ground, which is what makes
@@ -58,7 +58,7 @@ reading = Chooses(
 
 Under the bootstrap reading the input impedance would be far higher than
 68.75 kΩ, and under the divider reading the 100 kΩ would be the whole of it.
-Same drawing, three different answers — so the reading is recorded rather than
+Same drawing, three different answers, so the reading is recorded rather than
 assumed.
 
 ## The program
@@ -78,7 +78,7 @@ require(equals(self.z_in, parallel(self.r_bias_upper.resistance, self.r_series.r
 require(equals(self.a_v, total(1 * ratio, over(self.r_feedback.resistance, self.r_gain.resistance))))
 ```
 
-and four more check what earns them — each capacitor's reactance at the bottom
+and four more check what earns them: each capacitor's reactance at the bottom
 of the claimed band, against the resistance it sits beside:
 
 ```python
@@ -87,7 +87,7 @@ require(at_most(reactance(self.c_in.capacitance, self.midband), a_tenth_of(self.
 
 `reactance` is `1 / (2πfC)`, written out as an expression tree. The reciprocal
 of a frequency times a capacitance is an ohm, and `Arithmetic` checks that
-where the expression is *constructed* — so a term with the wrong parameter in
+where the expression is *constructed*, so a term with the wrong parameter in
 it is rejected at the line that wrote it, not at the line that evaluated it.
 
 At 1 kHz the four come out 1592 Ω against 6875, 318 Ω against 22 k, 159 Ω
@@ -103,12 +103,12 @@ accident: its corner is 79.6 Hz, the highest of
 | output | 12 kΩ | .2 µF | 66.3 Hz |
 
 so `midband` is a decade above it. Move any capacitor down a decade and the
-two answers do not quietly stay true — a check fails and names which one.
+two answers do not quietly stay true: a check fails and names which one.
 
 ## Where the numbers came from
 
-Neither claim was solved in the program — the kernel decides claims, it does
-not solve circuits — and a claim about a *band* asks for a sweep rather than an
+Neither claim was solved in the program (the kernel decides claims, it does
+not solve circuits), and a claim about a *band* asks for a sweep rather than an
 operating point. [`solve.py`](solve.py) elaborates the same graph, has
 `fang.simulation` compile an a.c. plan and lower it to SPICE, and runs ngspice
 over 10 Hz to 1 MHz:
@@ -122,15 +122,15 @@ over 10 Hz to 1 MHz:
 ```
 
 Both claimed numbers are limits: 68,750 Ω and 16 are what the circuit
-approaches once every capacitor is out of the way. At 1 kHz — the bottom edge
-the program claims — the gain is 0.4% short of 16 and the impedance 0.04% over
+approaches once every capacitor is out of the way. At 1 kHz, the bottom edge
+the program claims, the gain is 0.4% short of 16 and the impedance 0.04% over
 68.75 kΩ, both from the reactance still left in the network. A decade higher
 they are the claimed numbers.
 
 Three parts carry no simulation model and are named as abstracted, which is
 what lets the plan compile and what puts each one in the plan's assumptions:
 `GND1` marks a node, `TP1` marks a terminal, and `U1` is an ideal op amp nobody
-wrote a model for. Two cards are the script's own and it says so — `V1`, the
+wrote a model for. Two cards are the script's own and it says so: `V1`, the
 source the figure implies and never draws, and `E1`, a controlled source with a
 gain of a million standing in for the abstracted op amp. The analysis is still
 the plan's: the control block runs the `.ac` line `lower_to_spice` wrote rather
@@ -154,8 +154,8 @@ than asking for a second one.
 The resistors and the ground marker have drawn symbols; the op amp and the
 four capacitors are boxes with their own pins on them, which is what the
 schematic compiler does for a part nobody has a symbol for. `U1`'s pins come
-out where an engineer expects them — `IN-` and `IN+` on the left, `OUT` on the
-right — because they are numbered 2, 3 and 6, the single-op-amp pinout, and
+out where an engineer expects them, `IN-` and `IN+` on the left and `OUT` on
+the right, because they are numbered 2, 3 and 6, the single-op-amp pinout, and
 the box takes the pins in the order the graph gives them.
 
 ![the interconnect view](out/views/interconnect.svg)

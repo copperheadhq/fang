@@ -117,7 +117,7 @@ class Bridge(System):
         "1.2 A; (C) the current through R3 is 4.8 A; (D) the current through "
         "R5 is 2.4 A",
         document="JEE (Advanced) 2022, Paper 1",
-        locator="question 1 — multiple correct, four options",
+        locator="question 1, multiple correct, four options",
     )
 
     answer = Requires(
@@ -152,8 +152,8 @@ class Bridge(System):
         "each claimed current against the branch it names",
         inputs=("r1", "r2", "r3", "r5"),
         result=(
-            "(A) r1 7.2 A — correct; (B) r2 1.2 A — correct; "
-            "(C) r3 4.8 A — correct; (D) r5 2.4 A — correct. "
+            "(A) r1 7.2 A: correct; (B) r2 1.2 A: correct; "
+            "(C) r3 4.8 A: correct; (D) r5 2.4 A: correct. "
             "All four options are right, which is what the paper's key says"
         ),
         requirements=("answer",),

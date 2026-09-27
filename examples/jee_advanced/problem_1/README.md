@@ -1,4 +1,4 @@
-# problem_1 — JEE (Advanced) 2022
+# problem_1: JEE (Advanced) 2022
 
 Eight 1 Ω resistors and two ideal batteries, ε₁ = 12 V and ε₂ = 6 V, arranged
 as a diamond with a centre node. It is JEE (Advanced) 2022, Paper 1, question 1,
@@ -13,7 +13,7 @@ which asks which of four claimed currents are correct:
 
 This is the one example that is not a board, and it is here because the
 question is the same one a board asks all day: *is this claim about my circuit
-true?* The kernel answers it the way it answers any other — the potentials are
+true?* The kernel answers it the way it answers any other: the potentials are
 a value, Kirchhoff's current law is a constraint, and each of the four claims is
 a constraint the checker decides. **All four hold.**
 
@@ -46,7 +46,7 @@ v_bottom = Parameter("V", default=1.2 * V, description="the bottom corner")
 Every current below is derived from those by Ohm's law, so there is one claim
 to check and not thirteen. Kirchhoff's current law is then written once per
 node, and the four statements the paper asks about are written beside them in
-the same form — a constraint, not a comment:
+the same form, a constraint and not a comment:
 
 ```python
 require(equals(total(into_centre, from_left_to_top, from_left_to_bottom), no_current))
@@ -66,7 +66,7 @@ fail first, which is what makes the four claims worth anything.
 
 ## Where the potentials came from
 
-They were not solved in the program — the kernel checks claims, it does not
+They were not solved in the program. The kernel checks claims; it does not
 solve linear systems. [`solve.py`](solve.py) elaborates the same graph, has
 `fang.simulation` compile a plan and lower it to SPICE, and runs ngspice on the
 deck fang wrote:
@@ -86,27 +86,27 @@ then says so in its own assumptions:
 assumption: CMP-fe129c51b056 is abstracted: it contributes no device to the netlist
 ```
 
-The operating point gives all eight branch currents — R1 7.2 A, R2 1.2 A,
-R3 4.8 A, R4 1.2 A, R5 2.4 A, R6 2.4 A, R7 3.6 A, R8 3.6 A — and the five
+The operating point gives all eight branch currents (R1 7.2 A, R2 1.2 A,
+R3 4.8 A, R4 1.2 A, R5 2.4 A, R6 2.4 A, R7 3.6 A, R8 3.6 A) and the five
 potentials go into the program, where the constraints judge them. The two paths
 are independent: ngspice solves, the kernel decides.
 
 ## The question and the answer are in the graph too
 
 A netlist says what the circuit is. It does not say what was asked of it, or
-what came back. Both are entities here — the question and its four options are
+what came back. Both are entities here. The question and its four options are
 `Cites`, the answer is `Requires`, the numbers are `Calculates`, and a
-`Verifies` closes the requirement — so [`out/rationale.md`](out/rationale.md)
+`Verifies` closes the requirement, so [`out/rationale.md`](out/rationale.md)
 carries them out of the program without anything being retyped:
 
-> **system.answer** — All four options hold: (A), (B), (C) and (D)
+> **system.answer**: All four options hold: (A), (B), (C) and (D)
 > MUST, state KNOWN, validation by analysis.
 > Verified by `system.answered`: **PASS** by analysis
 
 with each option scored against the branch it names:
 
-> (A) r1 7.2 A — correct; (B) r2 1.2 A — correct; (C) r3 4.8 A — correct;
-> (D) r5 2.4 A — correct.
+> (A) r1 7.2 A: correct; (B) r2 1.2 A: correct; (C) r3 4.8 A: correct;
+> (D) r5 2.4 A: correct.
 
 and every resistor with its value and its current beside it:
 
@@ -126,7 +126,7 @@ and every resistor with its value and its current beside it:
 - [`out/checks.txt`](out/checks.txt): nine checks, all decided
 - [`out/graph.txt`](out/graph.txt): 99 entities, by kind
 - [`out/rationale.md`](out/rationale.md): the question, its four options,
-  every resistor's value and current, and the answer — each one an entity,
+  every resistor's value and current, and the answer, each one an entity,
   not prose
 
 ![the schematic, rendered by KiCad](out/schematic.svg)
@@ -135,7 +135,7 @@ That is KiCad drawing a file `fang schematic` wrote, not a picture of a
 circuit: open [`out/problem_1.kicad_sch`](out/problem_1.kicad_sch) in
 Eeschema and it is a schematic like any other. Every terminal carries a global
 label naming the net it is on, because a net is a fact in the graph and a wire
-path is not — fang places parts and names nets, and does not route.
+path is not: fang places parts and names nets, and does not route.
 
 Read it as the netlist reads: `R1` sits between `Net-(R1-Pad1)`, which is the
 junction inside the middle row, and `Net-(R1-Pad2)`, the right corner. Four net
@@ -146,8 +146,8 @@ names are the four corners and `Net-(GND1-Pad1)` is the centre.
 The interconnect view is the other picture, and it answers a different
 question: it is fang's own projection, drawn by `fang view`, and it names the
 parts the way the program does. `r1` through `r8` are the resistors the paper
-labels R₁ through R₈, and the two junctions inside the middle row — between
-each battery and the resistor in series with it — are the two nets with only
+labels R₁ through R₈, and the two junctions inside the middle row (between
+each battery and the resistor in series with it) are the two nets with only
 two pads on them.
 
 ## Running it

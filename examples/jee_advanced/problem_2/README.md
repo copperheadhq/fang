@@ -1,13 +1,13 @@
-# problem_2 — JEE (Advanced) 2015
+# problem_2: JEE (Advanced) 2015, Paper 2
 
 Ten resistors, one 6.5 V battery, and a single number. It is JEE (Advanced)
-2015, question 13: *"In the following circuit, the current through the resistor
+2015, Paper 2, question 8: *"In the following circuit, the current through the resistor
 R (= 2 Ω) is I Amperes. The value of I is"*. **I = 1 A.**
 
 The second of the two circuit-analysis examples, and it is here for the thing
 [`problem_1/`](../problem_1/) does not show: a claim worth checking that
 the paper never asks for. Two of the ten resistors carry nothing at all, and
-that is the whole trick of the question — so the program claims that too, and
+that is the whole trick of the question, so the program claims that too, and
 the checker decides it beside the answer.
 
 ## The circuit
@@ -40,7 +40,7 @@ v_bottom_right = Parameter("V", default=3 * V,   description="the bottom right c
 
 Every current is derived from those by Ohm's law, so there is one claim to
 check and not ten. Kirchhoff's current law is written once per node, and then
-the answer — and the two facts that explain it:
+the answer, and the two facts that explain it:
 
 ```python
 require(equals(into_top_left, 1 * A))                     # I = 1 A through R
@@ -61,14 +61,14 @@ fail first, which is what makes the three claims worth anything.
 
 ## Where the potentials came from
 
-They were not solved in the program — the kernel checks claims, it does not
+They were not solved in the program. The kernel checks claims; it does not
 solve linear systems. [`solve.py`](solve.py) elaborates the same graph, has
 `fang.simulation` compile a plan and lower it to SPICE, and runs ngspice on the
 deck fang wrote. `GND1` carries no simulation model, so it is named as
 abstracted, which is what lets the plan compile and what puts the abstraction
 in the plan's own assumptions.
 
-The operating point gives every branch: **R1 1 A** — that is I — with R2 and
+The operating point gives every branch: **R1 1 A**, which is I, with R2 and
 R10, the 10 Ω and the 8 Ω, at exactly 0, and the rest 0.25 A to 0.75 A. The
 potentials go into the program, where the constraints judge them. The two paths
 are independent: ngspice solves, the kernel decides.
@@ -76,12 +76,12 @@ are independent: ngspice solves, the kernel decides.
 ## The question and the answer are in the graph too
 
 A netlist says what the circuit is. It does not say what was asked of it, or
-what came back. Both are entities here — the question is `Cites`, the answer is
+what came back. Both are entities here. The question is `Cites`, the answer is
 `Requires`, the numbers are `Calculates`, and a `Verifies` closes the
-requirement — so [`out/rationale.md`](out/rationale.md) carries them out of the
+requirement, so [`out/rationale.md`](out/rationale.md) carries them out of the
 program with nothing retyped:
 
-> **system.answer** — The current I through R (= 2 Ω) is 1 A
+> **system.answer**: The current I through R (= 2 Ω) is 1 A
 > MUST, state KNOWN, validation by analysis.
 > Verified by `system.answered`: **PASS** by analysis
 
@@ -107,7 +107,7 @@ letters. `problem_1` beside it does offer four options, and states them.
 - [`out/checks.txt`](out/checks.txt): nine checks, all decided
 - [`out/graph.txt`](out/graph.txt): 108 entities, by kind
 - [`out/rationale.md`](out/rationale.md): the question, every resistor's
-  value and current, and the answer — each one an entity, not prose
+  value and current, and the answer, each one an entity, not prose
 
 ![the schematic, rendered by KiCad](out/schematic.svg)
 
@@ -115,7 +115,7 @@ Designators are assigned in the order the program names its parts, so `R1` is
 `r`, the 2 Ω resistor the question asks about, and the rest run `R2` to `R10`
 alphabetically by the name they have in the program. Every terminal carries a
 global label naming the net it is on, because a net is a fact in the graph and
-a wire path is not — fang places parts and names nets, and does not route.
+a wire path is not: fang places parts and names nets, and does not route.
 
 ![the interconnect view](out/views/interconnect.svg)
 
