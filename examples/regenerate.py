@@ -63,16 +63,14 @@ VIEWS: dict[str, tuple[str, ...]] = {
 #: The examples that ship a schematic. A schematic is the picture an engineer
 #: recognizes, and it is KiCad that draws it, so regenerating one of these needs
 #: `kicad-cli` on the path.
-SCHEMATICS: frozenset[str] = frozenset(
-    {"jee_advanced/problem_1", "jee_advanced/problem_2", "noninverting_amp"}
-)
+SCHEMATICS: frozenset[str] = frozenset({"noninverting_amp"})
 
 #: Groups whose every example is a textbook figure, and ships the
 #: interconnect view to set beside the page it came from. Naming the folder
 #: rather than each circuit is what keeps a new one in the group from arriving
-#: without it. Their schematics are drawn by copperhead into `figure/`, by the
-#: group's own `draw.py`, since copperhead is not a dependency of fang.
-FIGURES = ("ti_opamp_handbook/",)
+#: without it. Their schematics are drawn by copperhead into `figure/`, by
+#: `draw_figures.py`, since copperhead is not a dependency of fang.
+FIGURES = ("ti_opamp_handbook/", "jee_advanced/")
 
 
 #: The parts a textbook figure's block diagram leaves out: the terminals its

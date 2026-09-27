@@ -76,11 +76,11 @@ drafting engine, not by fang, and sits in `figure/` beside `out/`:
 | `figure/<name>.kicad_sch` | The sheet copperhead drew from it |
 | `figure/schematic.svg` | KiCad's render of that sheet, shown in the circuit's README |
 
-[`draw.py`](draw.py) writes all three. It maps each kind of part to a KiCad
+[`draw_figures.py`](../draw_figures.py) writes all three. It maps each kind of part to a KiCad
 library symbol (the table is `SYMBOLS` in it), hands copperhead the result,
 and writes the sheet only if KiCad reads back from it exactly the connections
-the circuit has. Copperhead is not a dependency of fang, so `draw.py` is not
-part of `regenerate.py`; it needs a copperhead checkout (`COPPERHEAD_DIR`) and
+the circuit has. Copperhead is not a dependency of fang, so `draw_figures.py` is
+not part of `regenerate.py`; it needs a copperhead checkout (`COPPERHEAD_DIR`) and
 `kicad-cli`. The drawings here come from copperhead at `acf53d8` on
 `fix/draft-handbook-legibility`, with that branch's uncommitted edits to the
 drafting engine, which draw an inverting stage the way a textbook does.
@@ -175,6 +175,6 @@ set of values, and it is the comparator above.
 ```bash
 fang check examples/ti_opamp_handbook/summers/scaling_adder/scaling_adder.py
 python examples/regenerate.py ti_opamp_handbook/summers/scaling_adder   # needs ngspice
-python examples/ti_opamp_handbook/draw.py scaling_adder                   # needs copperhead and kicad-cli
+python examples/draw_figures.py scaling_adder                             # needs copperhead and kicad-cli
 python -m pytest tests/test_handbook.py
 ```

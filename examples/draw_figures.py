@@ -1,13 +1,15 @@
-"""Draw every handbook circuit's schematic with copperhead's drafting engine.
+"""Draw the schematics of the textbook examples with copperhead's drafting engine.
 
-    python examples/ti_opamp_handbook/draw.py [circuit ...]
+    python examples/draw_figures.py [example ...]
 
-Copperhead is not a dependency of fang, so this is not part of
+Every example in a group named in `regenerate.FIGURES` (the op amp handbook's
+and the JEE Advanced questions) has its schematic drawn here rather than by
+fang. Copperhead is not a dependency of fang, so this is not part of
 `examples/regenerate.py` and the test suite does not run it. It needs a
 copperhead checkout (`COPPERHEAD_DIR`, default `~/copperhead`) with its
 dependencies installed, `npx`, and `kicad-cli`.
 
-For each circuit it writes `figure/` beside the circuit's `out/`:
+For each example it writes `figure/` beside the example's `out/`:
 
     figure/schematic.intent.json   what copperhead was asked to draw
     figure/<name>.kicad_sch        the sheet it drew
@@ -29,12 +31,11 @@ import sys
 import tempfile
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
-EXAMPLES = HERE.parent
+EXAMPLES = Path(__file__).resolve().parent
 sys.path.insert(0, str(EXAMPLES))
 sys.path.insert(0, str(EXAMPLES.parent))
 
-from regenerate import PROJECT, _program, examples  # noqa: E402
+from regenerate import FIGURES, PROJECT, _program, examples  # noqa: E402
 
 from fang.cli import load_system  # noqa: E402
 from fang.elaborate import elaborate  # noqa: E402
@@ -53,7 +54,8 @@ SYMBOLS: dict[str, tuple[str, dict[str, str]]] = {
     "C": ("Device:C", {"1": "1", "2": "2"}),
     "L": ("Device:L", {"1": "1", "2": "2"}),
     "RV": ("Device:R_Potentiometer", {"1": "1", "2": "2", "3": "3"}),
-    "V": ("Device:Battery_Cell", {"+": "1", "-": "2"}),
+    # A cell names its terminals; a textbook battery numbers them, 1 positive.
+    "V": ("Device:Battery_Cell", {"+": "1", "-": "2", "1": "1", "2": "2"}),
     "LP": ("Device:Lamp", {"1": "1", "2": "2"}),
     "M": ("Device:Ammeter_DC", {"1": "2", "2": "1"}),
     "SW": ("Switch:SW_SPST", {"1": "1", "2": "2"}),
@@ -78,6 +80,7 @@ VALUES = {
     "SignalDiode": "1N4148",
     "Zener": "Zener",
     "Ground": "GND",
+    "GroundReference": "GND",
 }
 
 
@@ -255,7 +258,7 @@ def draw(name: str) -> str:
         work = Path(scratch)
         (work / "schematic.intent.json").write_text(json.dumps(drawn, indent=2) + "\n")
         drafted = subprocess.run(
-            ["npx", "tsx", str(HERE / "draft.mts"), str(COPPERHEAD), str(work), stem],
+            ["npx", "tsx", str(EXAMPLES / "draft_figure.mts"), str(COPPERHEAD), str(work), stem],
             cwd=COPPERHEAD, capture_output=True, text=True,
         )
         if drafted.returncode:
@@ -277,7 +280,7 @@ def draw(name: str) -> str:
 
 
 def main(argv: list[str]) -> int:
-    names = [n for n in examples() if n.startswith("ti_opamp_handbook/")]
+    names = [n for n in examples() if n.startswith(FIGURES)]
     if argv:
         names = [n for n in names if Path(n).name in argv or n in argv]
     failed = 0

@@ -205,6 +205,17 @@ for (const [index, example] of examples.entries()) {
     }
   }
 
+  // A page opens on a picture of the circuit. Where there is no schematic,
+  // the first view the README shows is that picture, so it is lifted to the
+  // top of the page instead of waiting further down it.
+  let lead = body;
+  if (!group && !pictures.some((p) => basename(p) === "schematic.svg")) {
+    const view = body.match(/^!\[[^\]]*\]\(out\/views\/[^)]+\)[ \t]*$/m);
+    if (view) {
+      lead = `${view[0].trim()}\n\n${body.replace(view[0], "").replace(/\n{3,}/g, "\n\n")}`;
+    }
+  }
+
   let page = `---
 title: ${JSON.stringify(title)}
 description: ${JSON.stringify(describe(body))}
@@ -215,7 +226,7 @@ sidebar:
     data-icon: puzzle
 ---
 
-${figures(resolveLinks(body, name))}
+${figures(resolveLinks(lead, name))}
 `;
 
   // A group holds examples; it is not one. Its page is its README plus the way
