@@ -101,23 +101,26 @@ letters. `problem_1` beside it does offer four options, and states them.
 12 parts, 7 nets, 108 entities, 9 checks, none failed and none undecided.
 
 - [`out/problem_2.net`](out/problem_2.net): the KiCad netlist
-- [`out/problem_2.kicad_sch`](out/problem_2.kicad_sch): the KiCad
-  schematic, and [`out/schematic.svg`](out/schematic.svg) is KiCad's own render
 - [`out/netlist.txt`](out/netlist.txt): the same projection as text
 - [`out/checks.txt`](out/checks.txt): nine checks, all decided
 - [`out/graph.txt`](out/graph.txt): 108 entities, by kind
 - [`out/rationale.md`](out/rationale.md): the question, every resistor's
   value and current, and the answer, each one an entity, not prose
 
-![the schematic, rendered by KiCad](out/schematic.svg)
+![the schematic, drawn by copperhead from the circuit's netlist](figure/schematic.svg)
 
-Designators are assigned in the order the program names its parts, so `R1` is
-`r`, the 2 Ω resistor the question asks about, and the rest run `R2` to `R10`
-alphabetically by the name they have in the program. Every terminal carries a
-global label naming the net it is on, because a net is a fact in the graph and
-a wire path is not: fang places parts and names nets, and does not route.
+The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
+drafting engine from this circuit's netlist, with KiCad's own library symbols,
+and it opens in KiCad as [`figure/problem_2.kicad_sch`](figure/problem_2.kicad_sch).
+KiCad reads back from the sheet exactly the connections the circuit has;
+[`draw_figures.py`](../../draw_figures.py) refuses to write one that does not.
+The engine is built for amplifier stages, and it draws this square of
+resistors as pieces joined by net labels rather than as the figure the paper
+draws. Designators are assigned in the order the program names its parts, so
+`R1` is `r`, the 2 Ω resistor the question asks about, and the rest run `R2`
+to `R10` alphabetically by the name they have in the program.
 
-![the interconnect view](out/views/interconnect.svg)
+![the interconnect view, fang's own projection](out/views/interconnect.svg)
 
 The interconnect view answers the other question: it is fang's own projection,
 drawn by `fang view`, and it names the parts the way the program does, so
@@ -129,7 +132,7 @@ drawn by `fang view`, and it names the parts the way the program does, so
 fang check     examples/jee_advanced/problem_2/problem_2.py
 fang netlist   examples/jee_advanced/problem_2/problem_2.py
 fang view      examples/jee_advanced/problem_2/problem_2.py interconnect -o interconnect.svg
-fang schematic examples/jee_advanced/problem_2/problem_2.py -o board.kicad_sch --svg board.svg
+python examples/draw_figures.py problem_2     # needs copperhead and kicad-cli
 
 python examples/jee_advanced/problem_2/solve.py     # needs ngspice on PATH
 ```

@@ -18,7 +18,7 @@ drafting engine from this circuit's netlist, with KiCad's own library symbols,
 and it opens in KiCad as [`figure/lead_lag.kicad_sch`](figure/lead_lag.kicad_sch).
 The op amp is KiCad's generic one, since the handbook's are ideal, and each
 terminal is a test point named as the program names it. KiCad reads back from
-the sheet exactly the connections the circuit has; `draw.py` refuses to write
+the sheet exactly the connections the circuit has; `draw_figures.py` refuses to write
 one that does not.
 
 ![the interconnect view, fang's own projection](out/views/interconnect.svg)

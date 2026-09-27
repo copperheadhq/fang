@@ -118,9 +118,6 @@ and every resistor with its value and its current beside it:
 11 parts, 7 nets, 99 entities, 9 checks, none failed and none undecided.
 
 - [`out/problem_1.net`](out/problem_1.net): the KiCad netlist
-- [`out/problem_1.kicad_sch`](out/problem_1.kicad_sch): the KiCad
-  schematic, and [`out/schematic.svg`](out/schematic.svg) is KiCad's own render
-  of it
 - [`out/netlist.txt`](out/netlist.txt): the same projection as text, with the
   two batteries carrying 12 V and 6 V as their values
 - [`out/checks.txt`](out/checks.txt): nine checks, all decided
@@ -129,19 +126,20 @@ and every resistor with its value and its current beside it:
   every resistor's value and current, and the answer, each one an entity,
   not prose
 
-![the schematic, rendered by KiCad](out/schematic.svg)
+![the schematic, drawn by copperhead from the circuit's netlist](figure/schematic.svg)
 
-That is KiCad drawing a file `fang schematic` wrote, not a picture of a
-circuit: open [`out/problem_1.kicad_sch`](out/problem_1.kicad_sch) in
-Eeschema and it is a schematic like any other. Every terminal carries a global
-label naming the net it is on, because a net is a fact in the graph and a wire
-path is not: fang places parts and names nets, and does not route.
+The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
+drafting engine from this circuit's netlist, with KiCad's own library symbols,
+and it opens in KiCad as [`figure/problem_1.kicad_sch`](figure/problem_1.kicad_sch).
+KiCad reads back from the sheet exactly the connections the circuit has;
+[`draw_figures.py`](../../draw_figures.py) refuses to write one that does not.
+The engine is built for amplifier stages, and it draws this diamond as pieces
+joined by net labels rather than as the square the paper draws, so read it as
+the netlist reads: `R1` sits between `Net-(R1-Pad1)`, the junction inside the
+middle row, and `Net-(R1-Pad2)`, the right corner, and every ground symbol is
+the centre.
 
-Read it as the netlist reads: `R1` sits between `Net-(R1-Pad1)`, which is the
-junction inside the middle row, and `Net-(R1-Pad2)`, the right corner. Four net
-names are the four corners and `Net-(GND1-Pad1)` is the centre.
-
-![the interconnect view](out/views/interconnect.svg)
+![the interconnect view, fang's own projection](out/views/interconnect.svg)
 
 The interconnect view is the other picture, and it answers a different
 question: it is fang's own projection, drawn by `fang view`, and it names the
@@ -156,7 +154,7 @@ two pads on them.
 fang check     examples/jee_advanced/problem_1/problem_1.py
 fang netlist   examples/jee_advanced/problem_1/problem_1.py
 fang view      examples/jee_advanced/problem_1/problem_1.py interconnect -o interconnect.svg
-fang schematic examples/jee_advanced/problem_1/problem_1.py -o board.kicad_sch --svg board.svg
+python examples/draw_figures.py problem_1     # needs copperhead and kicad-cli
 
 python examples/jee_advanced/problem_1/solve.py     # needs ngspice on PATH
 ```

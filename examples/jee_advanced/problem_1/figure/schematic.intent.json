@@ -1,0 +1,133 @@
+{
+  "version": 1,
+  "parts": [
+    {
+      "ref": "GND1",
+      "libId": "power:GND",
+      "value": "GND",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R1",
+      "libId": "Device:R",
+      "value": "1",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R2",
+      "libId": "Device:R",
+      "value": "1",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R3",
+      "libId": "Device:R",
+      "value": "1",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R4",
+      "libId": "Device:R",
+      "value": "1",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R5",
+      "libId": "Device:R",
+      "value": "1",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R6",
+      "libId": "Device:R",
+      "value": "1",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R7",
+      "libId": "Device:R",
+      "value": "1",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R8",
+      "libId": "Device:R",
+      "value": "1",
+      "group": "Circuit"
+    },
+    {
+      "ref": "V1",
+      "libId": "Device:Battery_Cell",
+      "value": "12V",
+      "group": "Circuit"
+    },
+    {
+      "ref": "V2",
+      "libId": "Device:Battery_Cell",
+      "value": "6V",
+      "group": "Circuit"
+    }
+  ],
+  "nets": [
+    {
+      "name": "GND",
+      "pins": [
+        "GND1.1",
+        "R2.2",
+        "R3.2",
+        "R4.1",
+        "V1.2"
+      ],
+      "kind": "ground"
+    },
+    {
+      "name": "Net-(R1-Pad1)",
+      "pins": [
+        "R1.1",
+        "V1.1"
+      ]
+    },
+    {
+      "name": "Net-(R1-Pad2)",
+      "pins": [
+        "R1.2",
+        "R7.2",
+        "R8.2"
+      ]
+    },
+    {
+      "name": "Net-(R2-Pad1)",
+      "pins": [
+        "R2.1",
+        "R6.2",
+        "R7.1"
+      ]
+    },
+    {
+      "name": "Net-(R3-Pad1)",
+      "pins": [
+        "R3.1",
+        "V2.1"
+      ]
+    },
+    {
+      "name": "Net-(R4-Pad2)",
+      "pins": [
+        "R4.2",
+        "R5.2",
+        "R8.1"
+      ]
+    },
+    {
+      "name": "Net-(R5-Pad1)",
+      "pins": [
+        "R5.1",
+        "R6.1",
+        "V2.2"
+      ]
+    }
+  ],
+  "hints": {
+    "date": "2026-01-01"
+  }
+}

@@ -1,4 +1,4 @@
-// Drafts one schematic with copperhead's engine, for draw.py.
+// Drafts one schematic with copperhead's engine, for draw_figures.py.
 //
 //   npx tsx draft.mts <copperhead checkout> <directory> <stem>
 //
