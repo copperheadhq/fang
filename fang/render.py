@@ -85,8 +85,12 @@ def _legend(classes: Iterable[str], x: int, y: int, width: int) -> tuple[list[st
     return parts, rows + 1 if parts else 0
 
 
-def to_svg(positioned: PositionedView, *, padding: int = 28) -> str:
-    """Render a positioned view. Deterministic for identical input."""
+def to_svg(positioned: PositionedView, *, padding: int = 28, min_width: int = 460) -> str:
+    """Render a positioned view. Deterministic for identical input.
+
+    `min_width` is the narrowest the canvas is cut: a drawing narrower than it
+    is centred on it, so pictures meant to be shown at one width share a
+    scale."""
     graph = positioned.graph
     sizes: Mapping[str, tuple[int, int]] = node_sizes(graph, positioned.direction)
     top = padding
@@ -249,9 +253,10 @@ def to_svg(positioned: PositionedView, *, padding: int = 28) -> str:
             f"{gaps} node(s) carry unknown parameters; a dashed border marks them"
         )
 
-    width = int(max(positioned.width + padding * 2, far_x + padding, 460))
+    drawn_width = int(max(positioned.width + padding * 2, far_x + padding))
+    width = max(drawn_width, min_width)
     base = int(max(top + positioned.height, far_y)) + padding
-    legend, legend_rows = _legend(classes, padding, base, width - padding * 2)
+    legend, legend_rows = _legend(classes, padding, base, drawn_width - padding * 2)
     notes_top = base + legend_rows * LEGEND_ROW + 4
     title_top = notes_top + len(footer_lines) * FOOTER_LINE + 12
     height = title_top + TITLE
@@ -264,6 +269,8 @@ def to_svg(positioned: PositionedView, *, padding: int = 28) -> str:
         '<defs><marker id="arrow" viewBox="0 0 8 8" refX="7.5" refY="4" '
         'markerWidth="6" markerHeight="6" orient="auto-start-reverse">'
         f'<path d="M0,0.8 L8,4 L0,7.2 Z" fill="{INK}"/></marker></defs>',
+        # The drawing, its key and its notes, centred on a canvas cut wider.
+        f'<g transform="translate({(width - drawn_width) // 2},0)">',
     ]
 
     # The rule over the nodes this view joins to nothing. Their being there is a
@@ -274,7 +281,7 @@ def to_svg(positioned: PositionedView, *, padding: int = 28) -> str:
     if loose and joined:
         rule = min(box(node_id)[1] for node_id in loose) - 26
         parts.append(
-            f'<line x1="{padding}" y1="{rule}" x2="{width - padding}" y2="{rule}" '
+            f'<line x1="{padding}" y1="{rule}" x2="{drawn_width - padding}" y2="{rule}" '
             f'stroke="{INK}" stroke-width="0.6" stroke-dasharray="2 4"/>'
         )
         parts.append(
@@ -313,6 +320,7 @@ def to_svg(positioned: PositionedView, *, padding: int = 28) -> str:
             f'<text x="{padding}" y="{notes_top + index * FOOTER_LINE + 10}" '
             f'font-size="9.5" fill="{INK}">{_escape(line)}</text>'
         )
+    parts.append("</g>")
     parts.append(
         f'<text x="{width / 2:.1f}" y="{title_top + 14}" text-anchor="middle" '
         f'font-size="13" font-weight="bold" letter-spacing="0.08em" fill="{INK}">'

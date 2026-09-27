@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="2300" height="453" viewBox="0 0 2300 453" font-family="Helvetica, Arial, sans-serif">
 <title>system: What blocks and parts does this design contain, and how do they nest?</title>
 <defs><marker id="arrow" viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0.8 L8,4 L0,7.2 Z" fill="#000000"/></marker></defs>
+<g transform="translate(0,0)">
 <polyline points="116.0,88.0 116.0,106.0 1801.3,106.0 1801.3,88.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-dd1fe7b3f522</title></polyline>
 <polyline points="428.6,88.0 428.6,113.0 1372.0,113.0 1372.0,88.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-7ba8574839c9</title></polyline>
 <polyline points="447.4,88.0 447.4,120.0 1388.0,120.0 1388.0,88.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-ff7cea02f9fb</title></polyline>
@@ -84,6 +85,7 @@
 <line x1="228" y1="365" x2="254" y2="365" stroke="#000000" stroke-width="2.2"/>
 <text x="260" y="368.5" font-size="9.5" fill="#000000">POWER</text>
 <text x="28" y="395" font-size="9.5" fill="#000000">5 node(s) carry unknown parameters; a dashed border marks them</text>
+</g>
 <text x="1150.0" y="425" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">SYSTEM</text>
 <text x="1150.0" y="441" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">What blocks and parts does this design contain, and how do they nest?</text>
 </svg>

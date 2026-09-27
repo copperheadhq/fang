@@ -4,6 +4,8 @@ Ten resistors, one 6.5 V battery, and a single number. It is JEE (Advanced)
 2015, Paper 2, question 8: *"In the following circuit, the current through the resistor
 R (= 2 Ω) is I Amperes. The value of I is"*. **I = 1 A.**
 
+![the question as the paper prints it](question.png)
+
 The second of the two circuit-analysis examples, and it is here for the thing
 [`problem_1/`](../problem_1/) does not show: a claim worth checking that
 the paper never asks for. Two of the ten resistors carry nothing at all, and

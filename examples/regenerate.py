@@ -73,6 +73,10 @@ SCHEMATICS: frozenset[str] = frozenset({"noninverting_amp"})
 FIGURES = ("ti_opamp_handbook/", "jee_advanced/")
 
 
+#: How wide the docs site's column is, in pixels: a view drawn narrower is
+#: centred on a canvas this wide, so it is shown at its own scale there.
+DOC_COLUMN = 720
+
 #: The parts a textbook figure's block diagram leaves out: the terminals its
 #: signals come in and go out on, and the ground they return to. They are the
 #: figure's edges, not its circuit, and drawn as blocks they crowd out the
@@ -362,8 +366,10 @@ def render(name: str, *, with_render: bool = True) -> dict[str, str]:
             graph = _circuit_only(graph, result.snapshot)
         # Laid out downwards: an example's view is read in a page's column,
         # and a diagram of many stages laid out to the right is too wide for it.
+        # And on a canvas as wide as the docs column, so every example's
+        # diagram is shown at one scale.
         files[f"views/{view_name}.svg"] = to_svg(
-            place(graph, seeds=PlacementSeeds(), direction="down")
+            place(graph, seeds=PlacementSeeds(), direction="down"), min_width=DOC_COLUMN
         )
     if schematic_of(name):
         schematic = compile_schematic(

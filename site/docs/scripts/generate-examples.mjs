@@ -128,8 +128,10 @@ function figures(body) {
 function resolveLinks(body, name) {
   return body.replace(/\]\(([^)]+)\)/g, (whole, target) => {
     if (/^(https?:|\/|#)/.test(target)) return whole;
-    const picture = target.match(/^(?:out\/(?:views\/)?|figure\/)(.+\.svg)$/);
-    if (picture) return `](/examples/${name}/${picture[1]})`;
+    const picture = target.match(
+      /^(?:out\/(?:views\/)?(.+\.svg)|figure\/(.+\.svg)|([^/]+\.(?:png|jpe?g|svg)))$/
+    );
+    if (picture) return `](/examples/${name}/${picture[1] ?? picture[2] ?? picture[3]})`;
     const segments = [];
     for (const segment of `examples/${name}/${target}`.split("/")) {
       if (segment === "..") segments.pop();
@@ -170,6 +172,13 @@ for (const { name, stem, dir, group } of await discover()) {
   const pictures = views.map((v) => join("out", "views", v));
   if (await exists(join(out, "schematic.svg"))) pictures.push(join("out", "schematic.svg"));
   if (await exists(join(dir, "figure", "schematic.svg"))) pictures.push(join("figure", "schematic.svg"));
+  // A picture kept beside the program, such as the question as a paper
+  // printed it, is published too.
+  if (!group) {
+    for (const file of (await readdir(dir)).sort()) {
+      if (/\.(png|jpe?g|svg)$/.test(file)) pictures.push(file);
+    }
+  }
 
   examples.push({
     name, stem, dir, out, title, body, program, views, pictures, group,

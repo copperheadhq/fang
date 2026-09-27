@@ -1,6 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="460" height="780" viewBox="0 0 460 780" font-family="Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="780" viewBox="0 0 720 780" font-family="Helvetica, Arial, sans-serif">
 <title>interconnect: What is connected to what?</title>
 <defs><marker id="arrow" viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0.8 L8,4 L0,7.2 Z" fill="#000000"/></marker></defs>
+<g transform="translate(256,0)">
 <polyline points="104.0,88.0 104.0,202.0 104.0,202.0 104.0,220.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-59321d691cbc</title></polyline>
 <polyline points="104.0,472.0 104.0,586.0 78.7,586.0 78.7,604.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-58788eea8844</title></polyline>
 <polyline points="82.0,280.0 82.0,298.0 24.0,298.0 24.0,579.0 129.3,579.0 129.3,604.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-4d1ca10e619c</title></polyline>
@@ -16,6 +17,7 @@
 <line x1="28" y1="692" x2="54" y2="692" stroke="#000000" stroke-width="1"/>
 <text x="60" y="695.5" font-size="9.5" fill="#000000">ELECTRICAL</text>
 <text x="28" y="722" font-size="9.5" fill="#000000">2 node(s) carry unknown parameters; a dashed border marks them</text>
-<text x="230.0" y="752" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">INTERCONNECT</text>
-<text x="230.0" y="768" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">What is connected to what?</text>
+</g>
+<text x="360.0" y="752" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">INTERCONNECT</text>
+<text x="360.0" y="768" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">What is connected to what?</text>
 </svg>
