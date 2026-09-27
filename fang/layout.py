@@ -16,8 +16,13 @@ from .views import ViewEdge, ViewGraph, ViewNode
 #: Default geometry. Presentation only; no engineering decision depends on it.
 NODE_WIDTH = 168
 NODE_HEIGHT = 60
-LAYER_GAP = 104
+LAYER_GAP = 168
 ROW_GAP = 28
+
+#: The room each wire takes on a box's side. A box is tall enough to give
+#: every wire it carries a point of its own, so two nets never meet a box at
+#: one point and read as one.
+SLOT = 12
 
 #: A box grows with its label rather than clipping it, between these bounds.
 MIN_NODE_WIDTH = 132
@@ -152,13 +157,33 @@ def box_size(label: str, detail: str = "") -> tuple[int, int]:
     return width, NODE_HEIGHT
 
 
+def node_sizes(graph: ViewGraph) -> dict[str, tuple[int, int]]:
+    """Every box's size: wide enough for its words, tall enough for its wires.
+
+    The number of edges at a box is layout information, so this is on the near
+    side of the boundary too, and the renderer asks here rather than working
+    it out again."""
+    degree = {node.id: 0 for node in graph.nodes}
+    for edge in graph.edges:
+        if edge.source != edge.target:
+            for end in (edge.source, edge.target):
+                if end in degree:
+                    degree[end] += 1
+    sizes = {}
+    for node in graph.nodes:
+        width, height = box_size(node.label, node.detail)
+        sizes[node.id] = (width, max(height, (degree[node.id] + 1) * SLOT))
+    return sizes
+
+
 def to_request(graph: ViewGraph, hints: Mapping[str, str] | None = None) -> LayoutRequest:
     """Strip a view graph down to what layout may see."""
+    sizes = node_sizes(graph)
     return LayoutRequest(
         tuple(
             LayoutNode(
                 node.id,
-                *box_size(node.label, node.detail),
+                *sizes[node.id],
                 ports=node.ports,
                 parent=node.parent,
             )

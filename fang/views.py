@@ -11,6 +11,7 @@ attractive diagram over incomplete data is worse than no diagram.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Callable, Mapping, Sequence
 
@@ -89,6 +90,7 @@ class ViewEdge:
     target: str
     edge_class: str
     annotations: tuple[str, ...] = ()
+    label: str = ""         # the ports it joins, where their names say something
 
     def as_dict(self) -> dict:
         out = {
@@ -99,6 +101,8 @@ class ViewEdge:
         }
         if self.annotations:
             out["annotations"] = list(self.annotations)
+        if self.label:
+            out["label"] = self.label
         return out
 
 
@@ -187,6 +191,28 @@ def _label(entity: Entity) -> tuple[str, str]:
     return label, "" if detail == label else detail
 
 
+#: Port and pin names that only number or name a terminal, and so say nothing
+#: about what the connection carries: `p1`, `PIN2`, `line`, a test point's `TP`.
+_ANONYMOUS_PORTS = re.compile(r"^(p|pin)?\d+$|^(line|node|probe|pin|tp|a|b)$", re.IGNORECASE)
+
+
+def _edge_label(entities: Mapping[str, Entity], *ends: str) -> str:
+    """What a connection joins, by the names of the ports at its two ends.
+
+    A wire from an amplifier's `output` to a resistor's `p1` is labelled
+    `output`: the amplifier's end says what the wire is, the resistor's end
+    only which of two leads it reached. Two ends that both say something are
+    both kept, and one that repeats the other is kept once."""
+    names: list[str] = []
+    for end in ends:
+        entity = entities.get(end)
+        path = entity.identity.path if entity is not None else None
+        leaf = str(path).rsplit(".", 1)[-1] if path else ""
+        if leaf and not _ANONYMOUS_PORTS.match(leaf) and leaf not in names:
+            names.append(leaf)
+    return " / ".join(names)
+
+
 def compile_view(snapshot, spec: ViewSpec) -> ViewGraph:
     """Project a snapshot into a view graph.
 
@@ -240,6 +266,7 @@ def compile_view(snapshot, spec: ViewSpec) -> ViewGraph:
                 target,
                 entity.connection_kind.value,
                 annotations=tuple(sorted(annotations.get(entity.id, ()))),
+                label=_edge_label(entities, entity.source, entity.target),
             )
         )
 

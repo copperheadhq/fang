@@ -1,8 +1,9 @@
 /* The pictures on the example pages, each a figure with its caption.
 
-   A schematic is a transparent SVG cut to the circuit, and a fang view brings
-   its own white ground, so neither needs a card to sit on: the picture is laid
-   on the page as it is, and its alt text is written under it as the caption. */
+   A schematic is a transparent SVG cut to the circuit, and a fang view is a
+   block diagram in black ink on a transparent page, so neither needs a card to
+   sit on: the picture is laid on the page as it is, and its alt text is
+   written under it as the caption. */
 .sl-markdown-content figure.example-figure {
   margin-block: 1.25rem;
 }
@@ -11,10 +12,10 @@
   width: 100%;
   height: auto;
 }
-/* KiCad draws in dark ink for a light page, and a fang view is a white card.
-   On the dark theme both are turned over: inverting the lightness and turning
-   the hue back round keeps a red wire red and a green one green, but draws
-   them light on the page's dark instead of dark on nothing. */
+/* KiCad and fang both draw in dark ink for a light page. On the dark theme
+   the picture is turned over: inverting the lightness and turning the hue back
+   round keeps a red wire red and a green one green, but draws them light on
+   the page's dark instead of dark on nothing. */
 :root[data-theme="dark"] .sl-markdown-content figure.example-figure img {
   filter: invert(1) hue-rotate(180deg);
 }
