@@ -247,12 +247,14 @@ fang build examples/${name}/${stem}.py
 // The sidebar's Examples section, written beside the pages it lists. A
 // directory Starlight groups on its own is labelled with its folder name,
 // `ti_opamp_handbook` or `dc_amplifiers`, so the tree is built here instead:
-// every group closed until opened, named in words, its own page first, and
-// its members in the order a reader meets them: the examples at a level,
-// then the groups. A program that cites a page
-// of its source (the handbook's all do) sorts by that page; the rest keep the
-// smallest-first order above.
-const WORDS = { ti: "TI", opamp: "op amp", dc: "DC", ac: "AC" };
+// every group closed until opened, it and every page named in words, its own
+// page first, and its members in the order a reader meets them: the examples
+// at a level, then the groups. A program that cites a page of its source (the
+// handbook's all do) sorts by that page; the rest keep the smallest-first
+// order above.
+const WORDS = {
+  ti: "TI", opamp: "op amp", dc: "DC", ac: "AC", i2c: "I2C", usb: "USB", uart: "UART",
+};
 // Where the words of a folder's name are not what its source calls it.
 const NAMES = {
   jee_advanced: "JEE Advanced",
@@ -292,7 +294,11 @@ function tree(prefix) {
   }
 
   const items = leaves.map((e) => ({
-    group: false, at: pageOf(e), size: e.size, entry: { slug: `examples/${e.name}` },
+    // In words, like the groups: a name such as
+    // inverting_buffer_adjustable_gain has no space to wrap at, and three
+    // levels in it would break in the middle of a word.
+    group: false, at: pageOf(e), size: e.size,
+    entry: { slug: `examples/${e.name}`, label: label(e.stem) },
   }));
   for (const [folder, members] of branches) {
     const name = prefix ? `${prefix}/${folder}` : folder;
