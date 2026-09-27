@@ -5,7 +5,7 @@ This folder is not itself an example; it holds them.
 
 | | Paper | Asks | Answer |
 | --- | --- | --- | --- |
-| [`problem_1/`](problem_1/) | 2022, Paper 1, question 1 | which of four claimed currents are correct | all four of (A), (B), (C), (D) |
+| [`problem_1/`](problem_1/) | 2022, Paper 1, question 10 | which of four claimed currents are correct | all four of (A), (B), (C), (D) |
 | [`problem_2/`](problem_2/) | 2015, Paper 2, question 8 | the current I through R (= 2 Ω) | I = 1 A |
 
 Neither is a board. They are here because the question a physics paper asks

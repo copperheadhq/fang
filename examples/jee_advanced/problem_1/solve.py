@@ -51,7 +51,7 @@ CONTROL = ".control\nop\nprint all\n.endc\n.end"
 
 NODE = re.compile(r"^[vV]\((\d+)\)\s*=\s*([-+0-9.eE]+)$")
 
-QUESTION = "JEE (Advanced) 2022, Paper 1, question 1: which statements are correct?"
+QUESTION = "JEE (Advanced) 2022, Paper 1, question 10: which statements are correct?"
 
 #: What the paper asks, the part in the program that answers it, and the
 #: magnitude the paper claims. Only the paper knows what it asked, so this is

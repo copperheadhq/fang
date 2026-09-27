@@ -66,4 +66,4 @@ Cited from examples/jee_advanced/problem_1/solve.py, the operating point fang.si
 
 > Which of the following statement(s) is(are) correct? (A) the current through R1 is 7.2 A; (B) the current through R2 is 1.2 A; (C) the current through R3 is 4.8 A; (D) the current through R5 is 2.4 A
 
-Cited from JEE (Advanced) 2022, Paper 1, question 1, multiple correct, four options.
+Cited from JEE (Advanced) 2022, Paper 1, question 10, multiple correct, four options.

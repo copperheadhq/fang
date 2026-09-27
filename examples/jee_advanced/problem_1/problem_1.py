@@ -117,7 +117,7 @@ class Bridge(System):
         "1.2 A; (C) the current through R3 is 4.8 A; (D) the current through "
         "R5 is 2.4 A",
         document="JEE (Advanced) 2022, Paper 1",
-        locator="question 1, multiple correct, four options",
+        locator="question 10, multiple correct, four options",
     )
 
     answer = Requires(
