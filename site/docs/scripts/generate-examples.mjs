@@ -91,16 +91,23 @@ function entityCount(graph) {
 
 // The first paragraph, flattened to one line of plain text and cut at a
 // sentence, which is what a description has to be: no markdown, no newlines.
-function describe(body) {
-  const paragraph = body.split(/\n\s*\n/).find((p) => p.trim() && !p.startsWith("#"));
-  const flat = paragraph
+function opening(body) {
+  return body.split(/\n\s*\n/).find((p) => p.trim() && !p.startsWith("#"));
+}
+
+function flatten(paragraph) {
+  return paragraph
     .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")   // links, keeping the text
     .replace(/[*_`]/g, "")
     .replace(/\s+/g, " ")
     .trim();
-  if (flat.length <= 160) return flat;
-  const cut = flat.slice(0, 160);
-  return `${cut.slice(0, Math.max(cut.lastIndexOf(". "), cut.lastIndexOf(" ")))}…`;
+}
+
+// A description is a README's whole opening paragraph, never cut short: a
+// sentence that stops at an ellipsis is a sentence the reader has to go
+// looking for the end of.
+function describe(body) {
+  return flatten(opening(body));
 }
 
 // A README's links are relative to its own folder, which is right in the
@@ -217,11 +224,14 @@ for (const [index, example] of examples.entries()) {
   // A page opens on a picture of the circuit. Where there is no schematic,
   // the first view the README shows is that picture, so it is lifted to the
   // top of the page instead of waiting further down it.
-  let lead = body;
+  // The README's opening paragraph is the page's description, which the
+  // theme prints as the lead under the title, so it is left out of the body
+  // rather than said twice.
+  let lead = body.startsWith(opening(body)) ? body.slice(opening(body).length).trimStart() : body;
   if (!group && !pictures.some((p) => basename(p) === "schematic.svg")) {
-    const view = body.match(/^!\[[^\]]*\]\(out\/views\/[^)]+\)[ \t]*$/m);
+    const view = lead.match(/^!\[[^\]]*\]\(out\/views\/[^)]+\)[ \t]*$/m);
     if (view) {
-      lead = `${view[0].trim()}\n\n${body.replace(view[0], "").replace(/\n{3,}/g, "\n\n")}`;
+      lead = `${view[0].trim()}\n\n${lead.replace(view[0], "").replace(/\n{3,}/g, "\n\n")}`;
     }
   }
 
