@@ -1,19 +1,26 @@
-/* The renders on the example pages.
+/* The pictures on the example pages, each a figure with its caption.
 
-   `fang view` draws an SVG on its own white ground: it is a figure meant to be
-   read on its own — dropped into a report, opened in a browser, attached to a
-   review — so it carries no theme and does not inherit one. Recolouring it here
-   would put the view's palette in two places and make the page's copy the one
-   that goes stale, so the page gives it a surface to sit on instead. On the
-   dark theme that reads as a figure laid on the page rather than a hole burnt
-   through it; on the light theme the border is what separates the two whites. */
-.sl-markdown-content img[src^="/examples/"] {
+   A schematic is a transparent SVG cut to the circuit, and a fang view brings
+   its own white ground, so neither needs a card to sit on: the picture is laid
+   on the page as it is, and its alt text is written under it as the caption. */
+.sl-markdown-content figure.example-figure {
+  margin-block: 1.25rem;
+}
+.sl-markdown-content figure.example-figure img {
   display: block;
   width: 100%;
   height: auto;
-  background: #ffffff;
-  border: 1px solid var(--sl-color-hairline);
-  border-radius: 0.5rem;
-  padding: 0.75rem;
-  margin-block: 1.25rem;
+}
+/* KiCad draws in dark ink for a light page, and a fang view is a white card.
+   On the dark theme both are turned over: inverting the lightness and turning
+   the hue back round keeps a red wire red and a green one green, but draws
+   them light on the page's dark instead of dark on nothing. */
+:root[data-theme="dark"] .sl-markdown-content figure.example-figure img {
+  filter: invert(1) hue-rotate(180deg);
+}
+.sl-markdown-content figure.example-figure figcaption {
+  margin-top: 0.5rem;
+  font-size: var(--sl-text-sm);
+  color: var(--sl-color-gray-3);
+  text-align: center;
 }

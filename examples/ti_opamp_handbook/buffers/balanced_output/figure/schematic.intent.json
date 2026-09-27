@@ -1,0 +1,133 @@
+{
+  "version": 1,
+  "parts": [
+    {
+      "ref": "GND1",
+      "libId": "power:GND",
+      "value": "GND",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R1",
+      "libId": "Device:R",
+      "value": "10k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R2",
+      "libId": "Device:R",
+      "value": "10k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R3",
+      "libId": "Device:R",
+      "value": "10k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R4",
+      "libId": "Device:R",
+      "value": "10k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP1",
+      "libId": "Connector:TestPoint",
+      "value": "E_IN",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP2",
+      "libId": "Connector:TestPoint",
+      "value": "E_IN_RETURN",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP3",
+      "libId": "Connector:TestPoint",
+      "value": "E_OUT_MINUS",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP4",
+      "libId": "Connector:TestPoint",
+      "value": "E_OUT_PLUS",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP5",
+      "libId": "Connector:TestPoint",
+      "value": "E_OUT_RETURN",
+      "group": "Circuit"
+    },
+    {
+      "ref": "U1",
+      "libId": "Simulation_SPICE:OPAMP",
+      "value": "OPAMP",
+      "group": "Circuit"
+    },
+    {
+      "ref": "U2",
+      "libId": "Simulation_SPICE:OPAMP",
+      "value": "OPAMP",
+      "group": "Circuit"
+    }
+  ],
+  "nets": [
+    {
+      "name": "GND",
+      "pins": [
+        "GND1.1",
+        "TP2.1",
+        "TP5.1",
+        "U1.1",
+        "U2.1"
+      ],
+      "kind": "ground"
+    },
+    {
+      "name": "E_IN",
+      "pins": [
+        "R1.1",
+        "TP1.1"
+      ]
+    },
+    {
+      "name": "Net-(R1-Pad2)",
+      "pins": [
+        "R1.2",
+        "R3.1",
+        "U1.2"
+      ]
+    },
+    {
+      "name": "E_OUT_PLUS",
+      "pins": [
+        "R2.1",
+        "R3.2",
+        "TP4.1",
+        "U1.5"
+      ]
+    },
+    {
+      "name": "Net-(R2-Pad2)",
+      "pins": [
+        "R2.2",
+        "R4.1",
+        "U2.2"
+      ]
+    },
+    {
+      "name": "E_OUT_MINUS",
+      "pins": [
+        "R4.2",
+        "TP3.1",
+        "U2.5"
+      ]
+    }
+  ],
+  "hints": {
+    "date": "2026-01-01"
+  }
+}

@@ -11,14 +11,17 @@ E_O = -E1 - E2 + E3 + E4
 
 ## The circuit
 
-![the schematic, rendered by KiCad](out/schematic.svg)
+![the schematic, drawn by copperhead from the circuit's netlist](figure/schematic.svg)
 
-The schematic is compiled from the program and drawn by KiCad, and it opens in
-KiCad as [`out/adder_subtractor.kicad_sch`](out/adder_subtractor.kicad_sch). A part with a symbol
-of its own is drawn with it; the op amp and the handbook's other parts are
-boxes carrying their own pins, and each net is a label rather than a wire.
+The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
+drafting engine from this circuit's netlist, with KiCad's own library symbols,
+and it opens in KiCad as [`figure/adder_subtractor.kicad_sch`](figure/adder_subtractor.kicad_sch).
+The op amp is KiCad's generic one, since the handbook's are ideal, and each
+terminal is a test point named as the program names it. KiCad reads back from
+the sheet exactly the connections the circuit has; `draw.py` refuses to write
+one that does not.
 
-![the interconnect view](out/views/interconnect.svg)
+![the interconnect view, fang's own projection](out/views/interconnect.svg)
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -68,5 +71,5 @@ A fifth input on either side would upset the 3 × 1/3, and the check would say s
 
 ```bash
 fang check examples/ti_opamp_handbook/differential_input/adder_subtractor/adder_subtractor.py
-python examples/regenerate.py ti_opamp_handbook/differential_input/adder_subtractor   # needs ngspice and kicad-cli
+python examples/regenerate.py ti_opamp_handbook/differential_input/adder_subtractor   # needs ngspice
 ```

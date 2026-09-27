@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "parts": [
+    {
+      "ref": "D1",
+      "libId": "Device:D_Zener",
+      "value": "Zener",
+      "group": "Circuit"
+    },
+    {
+      "ref": "GND1",
+      "libId": "power:GND",
+      "value": "GND",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R1",
+      "libId": "Device:R",
+      "value": "330",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R2",
+      "libId": "Device:R",
+      "value": "300",
+      "group": "Circuit"
+    },
+    {
+      "ref": "RV1",
+      "libId": "Device:R_Potentiometer",
+      "value": "Potentiometer",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP1",
+      "libId": "Connector:TestPoint",
+      "value": "LOAD_BOTTOM",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP2",
+      "libId": "Connector:TestPoint",
+      "value": "LOAD_TOP",
+      "group": "Circuit"
+    },
+    {
+      "ref": "U1",
+      "libId": "Simulation_SPICE:OPAMP",
+      "value": "OPAMP",
+      "group": "Circuit"
+    },
+    {
+      "ref": "V1",
+      "libId": "Device:Battery_Cell",
+      "value": "15V",
+      "group": "Circuit"
+    }
+  ],
+  "nets": [
+    {
+      "name": "GND",
+      "pins": [
+        "D1.2",
+        "GND1.1",
+        "U1.1",
+        "V1.2"
+      ],
+      "kind": "ground"
+    },
+    {
+      "name": "Net-(D1-PadK)",
+      "pins": [
+        "D1.1",
+        "R1.2",
+        "R2.1"
+      ]
+    },
+    {
+      "name": "Net-(R1-Pad1)",
+      "pins": [
+        "R1.1",
+        "V1.1"
+      ]
+    },
+    {
+      "name": "Net-(R2-Pad2)",
+      "pins": [
+        "R2.2",
+        "RV1.1",
+        "U1.2"
+      ]
+    },
+    {
+      "name": "LOAD_BOTTOM",
+      "pins": [
+        "RV1.2",
+        "RV1.3",
+        "TP1.1",
+        "TP2.1",
+        "U1.5"
+      ]
+    }
+  ],
+  "hints": {
+    "date": "2026-01-01"
+  }
+}

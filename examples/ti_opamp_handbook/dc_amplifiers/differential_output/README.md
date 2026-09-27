@@ -11,14 +11,17 @@ E_O = R_O / R_I x E_I = 10 E_I      "For driving floating load."
 
 ## The circuit
 
-![the schematic, rendered by KiCad](out/schematic.svg)
+![the schematic, drawn by copperhead from the circuit's netlist](figure/schematic.svg)
 
-The schematic is compiled from the program and drawn by KiCad, and it opens in
-KiCad as [`out/differential_output.kicad_sch`](out/differential_output.kicad_sch). A part with a symbol
-of its own is drawn with it; the op amp and the handbook's other parts are
-boxes carrying their own pins, and each net is a label rather than a wire.
+The schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
+drafting engine from this circuit's netlist, with KiCad's own library symbols,
+and it opens in KiCad as [`figure/differential_output.kicad_sch`](figure/differential_output.kicad_sch).
+The op amp is KiCad's generic one, since the handbook's are ideal, and each
+terminal is a test point named as the program names it. KiCad reads back from
+the sheet exactly the connections the circuit has; `draw.py` refuses to write
+one that does not.
 
-![the interconnect view](out/views/interconnect.svg)
+![the interconnect view, fang's own projection](out/views/interconnect.svg)
 
 The interconnect view is fang's own projection. It names the parts as the
 program does, so it reads against the code below.
@@ -59,5 +62,5 @@ taken positive at the terminal that feeds the + input.
 
 ```bash
 fang check examples/ti_opamp_handbook/dc_amplifiers/differential_output/differential_output.py
-python examples/regenerate.py ti_opamp_handbook/dc_amplifiers/differential_output   # needs ngspice and kicad-cli
+python examples/regenerate.py ti_opamp_handbook/dc_amplifiers/differential_output   # needs ngspice
 ```
