@@ -49,8 +49,6 @@ What each circuit's `out/` adds to the usual files:
 
 | File | What it is |
 | --- | --- |
-| `<name>.kicad_sch` | The schematic, compiled from the program |
-| `schematic.svg` | KiCad's render of it, shown in the circuit's README |
 | `views/interconnect.svg` | fang's interconnect view, with the parts named as the program names them |
 | `spice/<run>.cir` | The deck ngspice ran: fang's lowering, then the bench's cards |
 | `simulation.txt` | Each measurement against its claim, and what the plan abstracted |
@@ -66,6 +64,28 @@ part's numbers and records where they came from.
 `simulation.txt` reports a claim that does not hold.
 [`tests/test_examples.py`](../../tests/test_examples.py) rebuilds every
 `out/` and compares it, so a committed result cannot drift from its program.
+
+## How it is drawn
+
+Each circuit's schematic is drawn by [copperhead](https://github.com/copperheadhq/copperhead)'s
+drafting engine, not by fang, and sits in `figure/` beside `out/`:
+
+| File | What it is |
+| --- | --- |
+| `figure/schematic.intent.json` | The circuit's netlist, with each part given the KiCad symbol that draws it |
+| `figure/<name>.kicad_sch` | The sheet copperhead drew from it |
+| `figure/schematic.svg` | KiCad's render of that sheet, shown in the circuit's README |
+
+[`draw.py`](draw.py) writes all three. It maps each kind of part to a KiCad
+library symbol (the table is `SYMBOLS` in it), hands copperhead the result,
+and writes the sheet only if KiCad reads back from it exactly the connections
+the circuit has. Copperhead is not a dependency of fang, so `draw.py` is not
+part of `regenerate.py`; it needs a copperhead checkout (`COPPERHEAD_DIR`) and
+`kicad-cli`. The drawings here come from copperhead at `acf53d8` on
+`fix/draft-handbook-legibility`, with that branch's uncommitted edits to the
+drafting engine, which draw an inverting stage the way a textbook does.
+[`tests/test_handbook.py`](../../tests/test_handbook.py) fails if a circuit's
+program no longer matches the intent its drawing was made from.
 
 ## The circuits
 
@@ -154,6 +174,7 @@ set of values, and it is the comparator above.
 
 ```bash
 fang check examples/ti_opamp_handbook/summers/scaling_adder/scaling_adder.py
-python examples/regenerate.py ti_opamp_handbook/summers/scaling_adder   # needs ngspice and kicad-cli
+python examples/regenerate.py ti_opamp_handbook/summers/scaling_adder   # needs ngspice
+python examples/ti_opamp_handbook/draw.py scaling_adder                   # needs copperhead and kicad-cli
 python -m pytest tests/test_handbook.py
 ```

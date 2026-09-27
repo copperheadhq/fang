@@ -65,10 +65,11 @@ SCHEMATICS: frozenset[str] = frozenset(
     {"jee_advanced/problem_1", "jee_advanced/problem_2", "noninverting_amp"}
 )
 
-#: Groups whose every example is a textbook figure, and ships what the three
-#: above do: the schematic and the interconnect view, the two pictures to set
-#: beside the page it came from. Naming the folder rather than each circuit is
-#: what keeps a new one in the group from arriving without them.
+#: Groups whose every example is a textbook figure, and ships the
+#: interconnect view to set beside the page it came from. Naming the folder
+#: rather than each circuit is what keeps a new one in the group from arriving
+#: without it. Their schematics are drawn by copperhead into `figure/`, by the
+#: group's own `draw.py`, since copperhead is not a dependency of fang.
 FIGURES = ("ti_opamp_handbook/",)
 
 
@@ -81,7 +82,7 @@ def views_of(name: str) -> tuple[str, ...]:
 
 def schematic_of(name: str) -> bool:
     """Whether an example ships a schematic and KiCad's render of it."""
-    return name in SCHEMATICS or name.startswith(FIGURES)
+    return name in SCHEMATICS
 
 #: The entity kinds that carry reasoning rather than circuit. An example with
 #: none of them gets no rationale document, because it would have nothing in it.
@@ -91,7 +92,7 @@ RATIONALE_KINDS = ("requirement", "decision", "evidence", "calculation", "verifi
 #: Folders a search never descends into: an example's own outputs, and Python's
 #: leavings. Everything else under examples/ is either an example or a folder
 #: that groups them.
-_SKIP = frozenset({"out", "views", "__pycache__"})
+_SKIP = frozenset({"out", "views", "figure", "__pycache__"})
 
 
 def _find(folder: Path) -> list[str]:

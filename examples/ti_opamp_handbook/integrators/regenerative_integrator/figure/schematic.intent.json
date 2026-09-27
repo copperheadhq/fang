@@ -1,0 +1,213 @@
+{
+  "version": 1,
+  "parts": [
+    {
+      "ref": "C1",
+      "libId": "Device:C",
+      "value": "1uF",
+      "group": "Circuit"
+    },
+    {
+      "ref": "GND1",
+      "libId": "power:GND",
+      "value": "GND",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R1",
+      "libId": "Device:R",
+      "value": "100k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R2",
+      "libId": "Device:R",
+      "value": "10k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R3",
+      "libId": "Device:R",
+      "value": "100k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R4",
+      "libId": "Device:R",
+      "value": "10M",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R5",
+      "libId": "Device:R",
+      "value": "1k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R6",
+      "libId": "Device:R",
+      "value": "1M",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R7",
+      "libId": "Device:R",
+      "value": "1M",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R8",
+      "libId": "Device:R",
+      "value": "10k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "RV1",
+      "libId": "Device:R_Potentiometer",
+      "value": "Potentiometer",
+      "group": "Circuit"
+    },
+    {
+      "ref": "RV2",
+      "libId": "Device:R_Potentiometer",
+      "value": "Potentiometer",
+      "group": "Circuit"
+    },
+    {
+      "ref": "SW1",
+      "libId": "Switch:SW_SPST",
+      "value": "Switch",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP1",
+      "libId": "Connector:TestPoint",
+      "value": "E_IN",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP2",
+      "libId": "Connector:TestPoint",
+      "value": "E_OUT",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP3",
+      "libId": "Connector:TestPoint",
+      "value": "RAIL_MINUS",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP4",
+      "libId": "Connector:TestPoint",
+      "value": "RAIL_PLUS",
+      "group": "Circuit"
+    },
+    {
+      "ref": "U1",
+      "libId": "Simulation_SPICE:OPAMP",
+      "value": "OPAMP",
+      "group": "Circuit"
+    }
+  ],
+  "nets": [
+    {
+      "name": "Net-(C1-Pad1)",
+      "pins": [
+        "C1.1",
+        "R1.2",
+        "R6.2",
+        "SW1.1",
+        "U1.2"
+      ]
+    },
+    {
+      "name": "E_OUT",
+      "pins": [
+        "C1.2",
+        "R4.2",
+        "SW1.2",
+        "TP2.1",
+        "U1.5"
+      ]
+    },
+    {
+      "name": "GND",
+      "pins": [
+        "GND1.1",
+        "RV1.2",
+        "RV1.3"
+      ],
+      "kind": "ground"
+    },
+    {
+      "name": "E_IN",
+      "pins": [
+        "R1.1",
+        "TP1.1"
+      ]
+    },
+    {
+      "name": "RAIL_MINUS",
+      "pins": [
+        "R2.1",
+        "TP3.1"
+      ]
+    },
+    {
+      "name": "Net-(R2-Pad2)",
+      "pins": [
+        "R2.2",
+        "RV2.3"
+      ]
+    },
+    {
+      "name": "Net-(R3-Pad1)",
+      "pins": [
+        "R3.1",
+        "R7.2",
+        "U1.1"
+      ]
+    },
+    {
+      "name": "Net-(R3-Pad2)",
+      "pins": [
+        "R3.2",
+        "R4.1",
+        "R5.1"
+      ]
+    },
+    {
+      "name": "Net-(R5-Pad2)",
+      "pins": [
+        "R5.2",
+        "RV1.1"
+      ]
+    },
+    {
+      "name": "Net-(R6-Pad1)",
+      "pins": [
+        "R6.1",
+        "R7.1",
+        "RV2.2"
+      ]
+    },
+    {
+      "name": "RAIL_PLUS",
+      "pins": [
+        "R8.1",
+        "TP4.1"
+      ]
+    },
+    {
+      "name": "Net-(R8-Pad2)",
+      "pins": [
+        "R8.2",
+        "RV2.1"
+      ]
+    }
+  ],
+  "hints": {
+    "date": "2026-01-01"
+  }
+}

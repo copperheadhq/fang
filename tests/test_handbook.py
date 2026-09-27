@@ -82,3 +82,29 @@ def test_a_setting_its_part_never_reads_is_refused():
     result = elaborate(system, project_id=PROJECT)
     with pytest.raises(ValueError, match="setings"):
         replace(bench, runs=[typo]).render(result, system, Path(name).name)
+
+
+# -- the drawings -------------------------------------------------------------
+
+import json  # noqa: E402
+import importlib.util  # noqa: E402
+
+_spec = importlib.util.spec_from_file_location(
+    "handbook_draw", ROOT / "ti_opamp_handbook" / "draw.py"
+)
+draw = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(draw)
+
+
+@pytest.mark.parametrize("name", HANDBOOK, ids=HANDBOOK)
+def test_a_circuit_is_drawn_from_the_program_it_ships_beside(name):
+    """copperhead draws the schematic outside the suite, so nothing else
+    notices when a program changes and its drawing does not. The intent a
+    drawing was made from has to be the one the program gives today; when it
+    is not, `python examples/ti_opamp_handbook/draw.py` redraws it."""
+    figure = ROOT / name / "figure"
+    stem = Path(name).name
+    for file in ("schematic.intent.json", f"{stem}.kicad_sch", "schematic.svg"):
+        assert (figure / file).is_file(), f"{name} has no figure/{file}"
+    drawn = json.loads((figure / "schematic.intent.json").read_text(encoding="utf-8"))
+    assert drawn == draw.intent(name)

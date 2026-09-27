@@ -1,0 +1,148 @@
+{
+  "version": 1,
+  "parts": [
+    {
+      "ref": "C1",
+      "libId": "Device:C",
+      "value": "8nF",
+      "group": "Circuit"
+    },
+    {
+      "ref": "C2",
+      "libId": "Device:C",
+      "value": "8nF",
+      "group": "Circuit"
+    },
+    {
+      "ref": "C3",
+      "libId": "Device:C",
+      "value": "36nF",
+      "group": "Circuit"
+    },
+    {
+      "ref": "C4",
+      "libId": "Device:C",
+      "value": "36nF",
+      "group": "Circuit"
+    },
+    {
+      "ref": "GND1",
+      "libId": "power:GND",
+      "value": "GND",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R1",
+      "libId": "Device:R",
+      "value": "60k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R2",
+      "libId": "Device:R",
+      "value": "10k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R3",
+      "libId": "Device:R",
+      "value": "40k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R4",
+      "libId": "Device:R",
+      "value": "10k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R5",
+      "libId": "Device:R",
+      "value": "15k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP1",
+      "libId": "Connector:TestPoint",
+      "value": "E_IN",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP2",
+      "libId": "Connector:TestPoint",
+      "value": "E_OUT",
+      "group": "Circuit"
+    },
+    {
+      "ref": "U1",
+      "libId": "Simulation_SPICE:OPAMP",
+      "value": "OPAMP",
+      "group": "Circuit"
+    }
+  ],
+  "nets": [
+    {
+      "name": "Net-(C1-Pad1)",
+      "pins": [
+        "C1.1",
+        "R1.1",
+        "R4.2",
+        "U1.2"
+      ]
+    },
+    {
+      "name": "Net-(C1-Pad2)",
+      "pins": [
+        "C1.2",
+        "C2.1",
+        "R5.1"
+      ]
+    },
+    {
+      "name": "E_OUT",
+      "pins": [
+        "C2.2",
+        "R1.2",
+        "TP2.1",
+        "U1.5"
+      ]
+    },
+    {
+      "name": "Net-(C3-Pad1)",
+      "pins": [
+        "C3.1",
+        "R2.2",
+        "R3.1"
+      ]
+    },
+    {
+      "name": "GND",
+      "pins": [
+        "C3.2",
+        "C4.2",
+        "GND1.1",
+        "R5.2",
+        "U1.1"
+      ],
+      "kind": "ground"
+    },
+    {
+      "name": "Net-(C4-Pad1)",
+      "pins": [
+        "C4.1",
+        "R3.2",
+        "R4.1"
+      ]
+    },
+    {
+      "name": "E_IN",
+      "pins": [
+        "R2.1",
+        "TP1.1"
+      ]
+    }
+  ],
+  "hints": {
+    "date": "2026-01-01"
+  }
+}

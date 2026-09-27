@@ -169,8 +169,7 @@ views worth looking at, and a `rationale.md` for the examples that record any
 reasoning. `python examples/regenerate.py` rewrites them all;
 [tests/test_examples.py](tests/test_examples.py) rebuilds them and compares, so
 a committed output cannot drift from the program beside it. An example named in
-`regenerate.SCHEMATICS`, or in a group named in `regenerate.FIGURES` (the
-handbook's), also ships a `.kicad_sch` and KiCad's render of it, so
+`regenerate.SCHEMATICS` also ships a `.kicad_sch` and KiCad's render of it, so
 regenerating that one needs `kicad-cli` on the path; without it the tests
 still check every one of its outputs but the render. A program that
 declares a module-level `BENCH` (the circuits under `examples/ti_opamp_handbook/`

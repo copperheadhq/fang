@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "parts": [
+    {
+      "ref": "D1",
+      "libId": "Device:D",
+      "value": "1N4148",
+      "group": "Circuit"
+    },
+    {
+      "ref": "D2",
+      "libId": "Device:D",
+      "value": "1N4148",
+      "group": "Circuit"
+    },
+    {
+      "ref": "GND1",
+      "libId": "power:GND",
+      "value": "GND",
+      "group": "Circuit"
+    },
+    {
+      "ref": "M1",
+      "libId": "Device:Ammeter_DC",
+      "value": "Meter",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R1",
+      "libId": "Device:R",
+      "value": "4.7k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R2",
+      "libId": "Device:R",
+      "value": "10k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R3",
+      "libId": "Device:R",
+      "value": "4.7k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R4",
+      "libId": "Device:R",
+      "value": "4.7k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP1",
+      "libId": "Connector:TestPoint",
+      "value": "E_IN",
+      "group": "Circuit"
+    },
+    {
+      "ref": "U1",
+      "libId": "Simulation_SPICE:OPAMP",
+      "value": "OPAMP",
+      "group": "Circuit"
+    }
+  ],
+  "nets": [
+    {
+      "name": "Net-(D1-PadA)",
+      "pins": [
+        "D1.2",
+        "D2.1",
+        "R2.2",
+        "U1.2"
+      ]
+    },
+    {
+      "name": "Net-(D1-PadK)",
+      "pins": [
+        "D1.1",
+        "R1.1",
+        "R3.1"
+      ]
+    },
+    {
+      "name": "Net-(D2-PadA)",
+      "pins": [
+        "D2.2",
+        "M1.1",
+        "R4.1"
+      ]
+    },
+    {
+      "name": "GND",
+      "pins": [
+        "GND1.1",
+        "U1.1"
+      ],
+      "kind": "ground"
+    },
+    {
+      "name": "Net-(M1-Pad1)",
+      "pins": [
+        "M1.2",
+        "R3.2"
+      ]
+    },
+    {
+      "name": "Net-(R1-Pad2)",
+      "pins": [
+        "R1.2",
+        "R4.2",
+        "U1.5"
+      ]
+    },
+    {
+      "name": "E_IN",
+      "pins": [
+        "R2.1",
+        "TP1.1"
+      ]
+    }
+  ],
+  "hints": {
+    "date": "2026-01-01"
+  }
+}
