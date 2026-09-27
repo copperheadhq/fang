@@ -1,6 +1,6 @@
 # problem_1: JEE (Advanced) 2022
 
-JEE (Advanced) 2022, Paper 1, question 1, written as a fang program: the
+JEE (Advanced) 2022, Paper 1, question 10, written as a fang program: the
 diamond of eight 1 Ω resistors and two batteries below, with each of its four
 claimed currents a constraint the kernel decides.
 
