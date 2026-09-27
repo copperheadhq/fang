@@ -3,7 +3,8 @@
  * Sidebar list renderer.
  *
  * Differences from Starlight's default:
- * - group labels are small uppercase headings; the collapse caret only shows on hover
+ * - group labels are small uppercase headings, with the collapse caret always shown so a
+ *   closed group reads as one
  * - links are pill-shaped rows with an optional leading icon, set per link in the
  *   sidebar config via `attrs: { 'data-icon': '<starlight icon name>' }`
  * - the active page is highlighted with a tinted pill instead of a solid block
@@ -149,15 +150,14 @@ function anchorAttrs(entry: SidebarLink): Record<string, unknown> {
 
 	.caret {
 		flex-shrink: 0;
-		opacity: 0;
 		color: var(--sl-color-gray-3);
 		transition:
-			opacity 0.15s,
+			color 0.15s,
 			transform 0.2s ease-in-out;
 	}
 	summary:hover .caret,
 	summary:focus-visible .caret {
-		opacity: 1;
+		color: var(--sl-color-white);
 	}
 	:global([dir='rtl']) .caret {
 		transform: rotateZ(180deg);
