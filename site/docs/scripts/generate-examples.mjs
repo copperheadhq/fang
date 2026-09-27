@@ -62,6 +62,23 @@ const SKIP = new Set(["out", "views", "figure", "__pycache__"]);
 // otherwise the one document that says why the group exists would be the only
 // one on disk with nowhere to read it, and /examples/jee_advanced/ would be a
 // hole between two pages that do exist.
+const WORDS = {
+  ti: "TI", opamp: "op amp", dc: "DC", ac: "AC", i2c: "I2C", usb: "USB", uart: "UART",
+};
+// Where the words of a folder's name are not what its source calls it.
+const NAMES = {
+  jee_advanced: "JEE Advanced",
+  lead_lag: "Lead and lag",
+  additional: "Additional circuits",
+};
+
+function label(stem) {
+  if (NAMES[stem]) return NAMES[stem];
+  const words = stem.split("_").map((w) => WORDS[w] ?? w);
+  const text = words.join(" ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 async function discover(dir = EXAMPLES, prefix = "") {
   const found = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
@@ -162,7 +179,12 @@ for (const { name, stem, dir, group } of await discover()) {
 
   // The H1 is the page title, which Starlight renders from the frontmatter, so
   // it is lifted out rather than left to be rendered a second time.
-  const title = readme.match(/^#\s+(.+)$/m)?.[1].trim() ?? name;
+  // A README's heading may lead with the folder's name, `problem_1` or
+  // `inverting_buffer_adjustable_gain`, which is right in the repository and
+  // reads as code on a page: there it is written in words, as the sidebar
+  // writes it.
+  const heading = readme.match(/^#\s+(.+)$/m)?.[1].trim() ?? stem;
+  const title = heading.replace(/^([a-z0-9]+(?:_[a-z0-9]+)+|[a-z][a-z0-9]*)(?=$|:)/, (s) => label(s));
   const body = readme.replace(/^#\s+.+$/m, "").trim();
 
   let views = [];
@@ -303,23 +325,6 @@ fang build examples/${name}/${stem}.py
 // at a level, then the groups. A program that cites a page of its source (the
 // handbook's all do) sorts by that page; the rest keep the smallest-first
 // order above.
-const WORDS = {
-  ti: "TI", opamp: "op amp", dc: "DC", ac: "AC", i2c: "I2C", usb: "USB", uart: "UART",
-};
-// Where the words of a folder's name are not what its source calls it.
-const NAMES = {
-  jee_advanced: "JEE Advanced",
-  lead_lag: "Lead and lag",
-  additional: "Additional circuits",
-};
-
-function label(stem) {
-  if (NAMES[stem]) return NAMES[stem];
-  const words = stem.split("_").map((w) => WORDS[w] ?? w);
-  const text = words.join(" ");
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
 function pageOf(example) {
   const page = example.program.match(/locator="pages? (\d+)/);
   return page ? Number(page[1]) : Infinity;
