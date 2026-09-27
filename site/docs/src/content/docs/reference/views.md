@@ -47,17 +47,24 @@ connection in the snapshot between the nodes they include.
 
 ## How a diagram reads
 
-A box carries the name the part has in the program, such as `fb_top`, or
-`bridge_u.high` where one block declaration was instantiated three times. Its
-class goes underneath, because four boxes all saying `Resistor` tell you nothing
-about which one is which. Its colour follows the entity kind, and its tooltip is
-the identifier.
+A view is drawn as a block diagram, the way a datasheet or a paper draws one:
+black ink on a transparent page, square boxes, and straight wires that turn
+square. A box carries the name the part has in the program in capitals, such as
+`FB_TOP`, or `BRIDGE_U.HIGH` where one block declaration was instantiated three
+times. Its class goes underneath in brackets, because four boxes all saying
+`Resistor` tell you nothing about which one is which. Its tooltip is the
+identifier. A box is tall enough to give every wire it carries a point of its
+own.
 
-An edge leaves the side of the box it is heading for and curves to the box it
-arrives at, rather than crossing whatever lies between. Its colour follows the
-connection kind, and the key under the drawing lists the kinds actually present.
-Several connections between the same two parts are fanned apart, so three gate
-drives read as three.
+A wire leaves the side of the box it is heading for and ends in an arrow at the
+box it reaches. It turns in a lane of its own, and where its straight run would
+cross another box it drops into the clear channel between two rows instead. It
+is labelled with the ports it joins, where their names say something (`OUTPUT`,
+`FB`, `VIN`) rather than only numbering a pin. With no colour to tell the
+connection kinds apart, a line's weight and dash do it, and the key under the
+drawing lists the kinds actually present. Several connections between the same
+two parts are drawn as several wires, so three gate drives read as three. The
+view's name and its question sit under the drawing as its title.
 
 Nodes are laid out in layers, ordered within a layer to reduce crossings. A node
 that the view connects to nothing is packed into a grid below a rule that says

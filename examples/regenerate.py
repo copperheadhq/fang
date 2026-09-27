@@ -20,6 +20,7 @@ ones this namespace gives and not the ones a local `fang build` would.
 from __future__ import annotations
 
 import contextlib
+import dataclasses
 import io
 import re
 import sys
@@ -37,6 +38,7 @@ from fang.elaborate import elaborate
 from fang.layout import PlacementSeeds, place
 from fang.render import to_svg
 from fang.schematic import KicadRenderer, compile_schematic
+from fang.entities import Pin
 from fang.views import view
 
 PROJECT = "PRJ-EXAMPLES"
@@ -71,6 +73,44 @@ SCHEMATICS: frozenset[str] = frozenset(
 #: without it. Their schematics are drawn by copperhead into `figure/`, by the
 #: group's own `draw.py`, since copperhead is not a dependency of fang.
 FIGURES = ("ti_opamp_handbook/",)
+
+
+#: The parts a textbook figure's block diagram leaves out: the terminals its
+#: signals come in and go out on, and the ground they return to. They are the
+#: figure's edges, not its circuit, and drawn as blocks they crowd out the
+#: amplifier the figure is about.
+FIGURE_FURNITURE = frozenset({"TP", "GND"})
+
+
+def _circuit_only(graph, snapshot):
+    """The view with only the circuit in it: no terminals, no ground, and not
+    the block that holds the whole figure, nor any wire that reaches them."""
+    kept = {
+        node.id
+        for node in graph.nodes
+        if node.kind != "block"
+        and snapshot.entities[node.id].extensions.get("designator_prefix")
+        not in FIGURE_FURNITURE
+    }
+    edges = [edge for edge in graph.edges if edge.source in kept and edge.target in kept]
+
+    # A link is drawn once. The graph records it twice, between two ports and
+    # again between the pins they lower to, and a block diagram is about the
+    # ports: a pin-level wire is kept only where no port-level one joins the
+    # same two parts.
+    def pin_level(edge) -> bool:
+        return isinstance(snapshot.entities[snapshot.entities[edge.id].source], Pin)
+
+    joined = {frozenset((e.source, e.target)) for e in edges if not pin_level(e)}
+    edges = [
+        e for e in edges
+        if not pin_level(e) or frozenset((e.source, e.target)) not in joined
+    ]
+    return dataclasses.replace(
+        graph,
+        nodes=tuple(node for node in graph.nodes if node.id in kept),
+        edges=tuple(edges),
+    )
 
 
 def views_of(name: str) -> tuple[str, ...]:
@@ -320,6 +360,8 @@ def render(name: str, *, with_render: bool = True) -> dict[str, str]:
     }
     for view_name in views_of(name):
         graph = view(result.snapshot, view_name)
+        if name.startswith(FIGURES):
+            graph = _circuit_only(graph, result.snapshot)
         files[f"views/{view_name}.svg"] = to_svg(place(graph, seeds=PlacementSeeds()))
     if schematic_of(name):
         schematic = compile_schematic(
