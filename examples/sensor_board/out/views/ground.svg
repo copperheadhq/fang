@@ -1,6 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="508" height="622" viewBox="0 0 508 622" font-family="Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="622" viewBox="0 0 720 622" font-family="Helvetica, Arial, sans-serif">
 <title>ground: How do returns get home, and is the intended topology held?</title>
 <defs><marker id="arrow" viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0.8 L8,4 L0,7.2 Z" fill="#000000"/></marker></defs>
+<g transform="translate(106,0)">
 <line x1="28" y1="318" x2="480" y2="318" stroke="#000000" stroke-width="0.6" stroke-dasharray="2 4"/>
 <text x="28" y="311" font-size="9" fill="#000000">NOTHING IN THIS VIEW CONNECTS TO THESE</text>
 <polyline points="72.0,88.0 72.0,202.0 72.0,202.0 72.0,220.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>ground: NET-4411ae54eb05</title></polyline>
@@ -18,6 +19,7 @@
 <text x="60" y="523.5" font-size="9.5" fill="#000000">GROUND</text>
 <text x="28" y="550" font-size="9.5" fill="#000000">no topology intent is recorded for this design</text>
 <text x="28" y="564" font-size="9.5" fill="#000000">4 node(s) carry unknown parameters; a dashed border marks them</text>
-<text x="254.0" y="594" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">GROUND</text>
-<text x="254.0" y="610" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">How do returns get home, and is the intended topology held?</text>
+</g>
+<text x="360.0" y="594" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">GROUND</text>
+<text x="360.0" y="610" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">How do returns get home, and is the intended topology held?</text>
 </svg>

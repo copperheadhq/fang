@@ -11,6 +11,8 @@ which asks which of four claimed currents are correct:
 | (C) | the current through R3 is 4.8 A |
 | (D) | the current through R5 is 2.4 A |
 
+![the question as the paper prints it](question.png)
+
 This is the one example that is not a board, and it is here because the
 question is the same one a board asks all day: *is this claim about my circuit
 true?* The kernel answers it the way it answers any other: the potentials are

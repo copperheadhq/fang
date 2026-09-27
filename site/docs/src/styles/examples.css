@@ -7,21 +7,14 @@
 .sl-markdown-content figure.example-figure {
   margin-block: 1.25rem;
 }
-/* Drawn at its own size, and centred: a small diagram stretched to the
-   column's width would print its words twice as big as a large one's. Only a
-   picture wider than the column is shrunk to fit it. */
+/* Every picture spans the column, so pictures are one standard size on every
+   page. A block diagram is drawn on a canvas as wide as the column (see
+   examples/regenerate.py), so it spans it at its own scale and its words
+   come out the same size on every page. */
 .sl-markdown-content figure.example-figure img {
   display: block;
-  max-width: 100%;
-  width: auto;
-  height: auto;
-  margin-inline: auto;
-}
-
-/* A KiCad render is sized in millimetres, true to the sheet, which puts its
-   1.27 mm text at a few pixels: a schematic fills the column instead. */
-.sl-markdown-content figure.example-figure img[src$="/schematic.svg"] {
   width: 100%;
+  height: auto;
 }
 /* KiCad and fang both draw in dark ink for a light page. On the dark theme
    the picture is turned over: inverting the lightness and turning the hue back

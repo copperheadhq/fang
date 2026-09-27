@@ -1,6 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="460" height="972" viewBox="0 0 460 972" font-family="Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="972" viewBox="0 0 720 972" font-family="Helvetica, Arial, sans-serif">
 <title>interconnect: What is connected to what?</title>
 <defs><marker id="arrow" viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0.8 L8,4 L0,7.2 Z" fill="#000000"/></marker></defs>
+<g transform="translate(180,0)">
 <polyline points="180.0,88.0 180.0,394.0 166.8,394.0 166.8,412.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-59321d691cbc</title></polyline>
 <polyline points="213.0,796.0 213.0,778.0 202.0,778.0 202.0,664.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-a060544611fc</title></polyline>
 <polyline points="72.0,280.0 72.0,771.0 147.0,771.0 147.0,796.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-76e0d034f372</title></polyline>
@@ -24,6 +25,7 @@
 <line x1="28" y1="884" x2="54" y2="884" stroke="#000000" stroke-width="1"/>
 <text x="60" y="887.5" font-size="9.5" fill="#000000">ELECTRICAL</text>
 <text x="28" y="914" font-size="9.5" fill="#000000">4 node(s) carry unknown parameters; a dashed border marks them</text>
-<text x="230.0" y="944" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">INTERCONNECT</text>
-<text x="230.0" y="960" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">What is connected to what?</text>
+</g>
+<text x="360.0" y="944" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">INTERCONNECT</text>
+<text x="360.0" y="960" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">What is connected to what?</text>
 </svg>

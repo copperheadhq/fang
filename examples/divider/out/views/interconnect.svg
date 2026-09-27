@@ -1,7 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="460" height="712" viewBox="0 0 460 712" font-family="Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="712" viewBox="0 0 720 712" font-family="Helvetica, Arial, sans-serif">
 <title>interconnect: What is connected to what?</title>
 <defs><marker id="arrow" viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0.8 L8,4 L0,7.2 Z" fill="#000000"/></marker></defs>
-<line x1="28" y1="510" x2="432" y2="510" stroke="#000000" stroke-width="0.6" stroke-dasharray="2 4"/>
+<g transform="translate(266,0)">
+<line x1="28" y1="510" x2="160" y2="510" stroke="#000000" stroke-width="0.6" stroke-dasharray="2 4"/>
 <text x="28" y="503" font-size="9" fill="#000000">NOTHING IN THIS VIEW CONNECTS TO THESE</text>
 <polyline points="54.4,280.0 54.4,394.0 54.4,394.0 54.4,412.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-0d0c279fcba8</title></polyline>
 <polyline points="80.8,280.0 80.8,387.0 80.8,387.0 80.8,412.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-4519b17f8f99</title></polyline>
@@ -16,6 +17,7 @@
 <line x1="28" y1="624" x2="54" y2="624" stroke="#000000" stroke-width="1"/>
 <text x="60" y="627.5" font-size="9.5" fill="#000000">ELECTRICAL</text>
 <text x="28" y="654" font-size="9.5" fill="#000000">3 node(s) carry unknown parameters; a dashed border marks them</text>
-<text x="230.0" y="684" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">INTERCONNECT</text>
-<text x="230.0" y="700" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">What is connected to what?</text>
+</g>
+<text x="360.0" y="684" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">INTERCONNECT</text>
+<text x="360.0" y="700" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">What is connected to what?</text>
 </svg>

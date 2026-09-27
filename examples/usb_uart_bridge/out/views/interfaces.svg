@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="908" height="872" viewBox="0 0 908 872" font-family="Helvetica, Arial, sans-serif">
 <title>interfaces: Which typed interfaces exist and what do they join?</title>
 <defs><marker id="arrow" viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0.8 L8,4 L0,7.2 Z" fill="#000000"/></marker></defs>
+<g transform="translate(0,0)">
 <line x1="28" y1="318" x2="880" y2="318" stroke="#000000" stroke-width="0.6" stroke-dasharray="2 4"/>
 <text x="28" y="311" font-size="9" fill="#000000">NOTHING IN THIS VIEW CONNECTS TO THESE</text>
 <polyline points="54.4,88.0 54.4,202.0 54.4,202.0 54.4,220.0" fill="none" stroke="#000000" stroke-width="1.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>signal: NET-0ca3378aee6b</title></polyline>
@@ -37,6 +38,7 @@
 <line x1="28" y1="784" x2="54" y2="784" stroke="#000000" stroke-width="1.2"/>
 <text x="60" y="787.5" font-size="9.5" fill="#000000">SIGNAL</text>
 <text x="28" y="814" font-size="9.5" fill="#000000">11 node(s) carry unknown parameters; a dashed border marks them</text>
+</g>
 <text x="454.0" y="844" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">INTERFACES</text>
 <text x="454.0" y="860" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">Which typed interfaces exist and what do they join?</text>
 </svg>
