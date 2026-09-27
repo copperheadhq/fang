@@ -1,58 +1,58 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="828" height="540" viewBox="0 0 828 540" font-family="Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="552" height="800" viewBox="0 0 552 800" font-family="Helvetica, Arial, sans-serif">
 <title>interconnect: What is connected to what?</title>
 <defs><marker id="arrow" viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0.8 L8,4 L0,7.2 Z" fill="#000000"/></marker></defs>
-<line x1="28" y1="338" x2="800" y2="338" stroke="#000000" stroke-width="0.6" stroke-dasharray="2 4"/>
-<text x="28" y="331" font-size="9" fill="#000000">NOTHING IN THIS VIEW CONNECTS TO THESE</text>
-<polyline points="180.0,212.0 198.0,212.0 198.0,164.0 630.0,164.0 630.0,252.0 648.0,252.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>ground: NET-4519b17f8f99</title></polyline>
-<polyline points="180.0,224.0 205.0,224.0 205.0,276.0 623.0,276.0 623.0,264.0 648.0,264.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>ground: NET-6f5eaa673e33</title></polyline>
-<polyline points="180.0,104.0 212.0,104.0 212.0,52.0 640.0,52.0 640.0,64.0 658.0,64.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>ground: NET-4d1ca10e619c</title></polyline>
-<polyline points="180.0,116.0 219.0,116.0 219.0,164.0 633.0,164.0 633.0,76.0 658.0,76.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>ground: NET-5f99949bd7a1</title></polyline>
-<polyline points="180.0,128.0 330.0,128.0 330.0,94.0 348.0,94.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-58788eea8844</title></polyline>
-<polyline points="180.0,140.0 323.0,140.0 323.0,122.0 348.0,122.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-eed55cf677d3</title></polyline>
-<polyline points="180.0,188.0 316.0,188.0 316.0,206.0 348.0,206.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-59321d691cbc</title></polyline>
-<polyline points="180.0,200.0 309.0,200.0 309.0,234.0 348.0,234.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-6602c9ac8517</title></polyline>
-<polyline points="180.0,152.0 226.0,152.0 226.0,164.0 626.0,164.0 626.0,152.0 658.0,152.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-5344bd79c615</title></polyline>
-<polyline points="180.0,164.0 619.0,164.0 619.0,164.0 658.0,164.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-a8586fb5514d</title></polyline>
-<polyline points="180.0,176.0 233.0,176.0 233.0,164.0 612.0,164.0 612.0,176.0 658.0,176.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-dd1fe7b3f522</title></polyline>
-<polyline points="480.0,82.8 605.0,82.8 605.0,40.0 658.0,40.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-01b7014be933</title></polyline>
-<polyline points="480.0,99.6 598.0,99.6 598.0,52.0 658.0,52.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-80ce03b06ade</title></polyline>
-<polyline points="480.0,116.4 591.0,116.4 591.0,128.0 658.0,128.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-76e0d034f372</title></polyline>
-<polyline points="480.0,133.2 584.0,133.2 584.0,140.0 658.0,140.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-e79ddc2abd42</title></polyline>
-<polyline points="480.0,228.4 616.0,228.4 616.0,276.0 648.0,276.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-a060544611fc</title></polyline>
-<polyline points="480.0,245.2 609.0,245.2 609.0,288.0 648.0,288.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-b178a16233db</title></polyline>
-<polyline points="480.0,194.8 577.0,194.8 577.0,188.0 658.0,188.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-4411ae54eb05</title></polyline>
-<polyline points="480.0,211.6 570.0,211.6 570.0,200.0 658.0,200.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-ed0c09a43ef3</title></polyline>
-<g><rect x="28" y="364" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="94" y="393.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">MEASUREDRAIL</text><text x="94" y="406.0" text-anchor="middle" font-size="9" fill="#000000">(BLOCK)</text><title>BLK-42978eb8675a</title></g>
-<g><rect x="224" y="364" width="168" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="308" y="393.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">FEEDBACK</text><text x="308" y="406.0" text-anchor="middle" font-size="9" fill="#000000">(FEEDBACKDIVIDER)</text><title>BLK-6796ce9eec20</title></g>
-<g><rect x="420" y="364" width="144" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="492" y="393.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">SENSE</text><text x="492" y="406.0" text-anchor="middle" font-size="9" fill="#000000">(SENSEDIVIDER)</text><title>BLK-c2261d236e0f</title></g>
-<g><rect x="28" y="92" width="152" height="144" fill="none" stroke="#000000" stroke-width="1.2"/><text x="104" y="163.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">TERMINALS</text><text x="104" y="176.0" text-anchor="middle" font-size="9" fill="#000000">(TERMINALBLOCK)</text><title>CMP-06df4b26f468</title></g>
-<g><rect x="648" y="240" width="152" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="724" y="269.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">FEEDBACK.BOTTOM</text><text x="724" y="282.0" text-anchor="middle" font-size="9" fill="#000000">(RESISTOR)</text><title>CMP-1d4b5fe0e6f9, unknown: tolerance_pct</title></g>
-<g><rect x="658" y="28" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="724" y="57.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">SENSE.BOTTOM</text><text x="724" y="70.0" text-anchor="middle" font-size="9" fill="#000000">(RESISTOR)</text><title>CMP-3d20013e6afc, unknown: tolerance_pct</title></g>
-<g><rect x="348" y="66" width="132" height="84" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="414" y="107.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">SENSE.TOP</text><text x="414" y="120.0" text-anchor="middle" font-size="9" fill="#000000">(RESISTOR)</text><title>CMP-714dc871bb0d, unknown: tolerance_pct</title></g>
-<g><rect x="348" y="178" width="132" height="84" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="414" y="219.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">FEEDBACK.TOP</text><text x="414" y="232.0" text-anchor="middle" font-size="9" fill="#000000">(RESISTOR)</text><title>CMP-be11135b7285, unknown: tolerance_pct</title></g>
-<g><rect x="658" y="116" width="132" height="96" fill="none" stroke="#000000" stroke-width="1.2"/><text x="724" y="163.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">ADC</text><text x="724" y="176.0" text-anchor="middle" font-size="9" fill="#000000">(ADC)</text><title>CMP-ea02c0cebe19</title></g>
-<text x="185.0" y="209.5" text-anchor="start" font-size="8" fill="#000000">RAIL_A</text>
-<text x="185.0" y="221.5" text-anchor="start" font-size="8" fill="#000000">GND</text>
-<text x="185.0" y="101.5" text-anchor="start" font-size="8" fill="#000000">RAIL_B</text>
-<text x="185.0" y="113.5" text-anchor="start" font-size="8" fill="#000000">GND</text>
-<text x="185.0" y="125.5" text-anchor="start" font-size="8" fill="#000000">RAIL_B</text>
-<text x="185.0" y="137.5" text-anchor="start" font-size="8" fill="#000000">V24</text>
-<text x="185.0" y="185.5" text-anchor="start" font-size="8" fill="#000000">RAIL_A</text>
-<text x="185.0" y="197.5" text-anchor="start" font-size="8" fill="#000000">V12</text>
-<text x="185.0" y="149.5" text-anchor="start" font-size="8" fill="#000000">GND</text>
-<text x="185.0" y="161.5" text-anchor="start" font-size="8" fill="#000000">V3V3 / VDD</text>
-<text x="185.0" y="173.5" text-anchor="start" font-size="8" fill="#000000">LOGIC / POWER</text>
-<text x="485.0" y="113.9" text-anchor="start" font-size="8" fill="#000000">CHANNEL_B</text>
-<text x="485.0" y="130.7" text-anchor="start" font-size="8" fill="#000000">AIN1</text>
-<text x="485.0" y="192.3" text-anchor="start" font-size="8" fill="#000000">CHANNEL_A</text>
-<text x="485.0" y="209.1" text-anchor="start" font-size="8" fill="#000000">AIN0</text>
-<line x1="28" y1="452" x2="54" y2="452" stroke="#000000" stroke-width="1"/>
-<text x="60" y="455.5" font-size="9.5" fill="#000000">ELECTRICAL</text>
-<line x1="140" y1="452" x2="166" y2="452" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3"/>
-<text x="172" y="455.5" font-size="9.5" fill="#000000">GROUND</text>
-<line x1="228" y1="452" x2="254" y2="452" stroke="#000000" stroke-width="2.2"/>
-<text x="260" y="455.5" font-size="9.5" fill="#000000">POWER</text>
-<text x="28" y="482" font-size="9.5" fill="#000000">4 node(s) carry unknown parameters; a dashed border marks them</text>
-<text x="414.0" y="512" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">INTERCONNECT</text>
-<text x="414.0" y="528" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">What is connected to what?</text>
+<line x1="28" y1="510" x2="524" y2="510" stroke="#000000" stroke-width="0.6" stroke-dasharray="2 4"/>
+<text x="28" y="503" font-size="9" fill="#000000">NOTHING IN THIS VIEW CONNECTS TO THESE</text>
+<polyline points="340.0,88.0 340.0,106.0 282.0,106.0 282.0,394.0 402.4,394.0 402.4,412.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>ground: NET-4519b17f8f99</title></polyline>
+<polyline points="356.0,88.0 356.0,113.0 282.0,113.0 282.0,387.0 432.8,387.0 432.8,412.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>ground: NET-6f5eaa673e33</title></polyline>
+<polyline points="196.0,88.0 196.0,120.0 270.0,120.0 270.0,380.0 107.2,380.0 107.2,412.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>ground: NET-4d1ca10e619c</title></polyline>
+<polyline points="212.0,88.0 212.0,127.0 270.0,127.0 270.0,373.0 133.6,373.0 133.6,412.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>ground: NET-5f99949bd7a1</title></polyline>
+<polyline points="228.0,88.0 228.0,202.0 168.0,202.0 168.0,220.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-58788eea8844</title></polyline>
+<polyline points="244.0,88.0 244.0,195.0 212.0,195.0 212.0,220.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-eed55cf677d3</title></polyline>
+<polyline points="308.0,88.0 308.0,188.0 340.0,188.0 340.0,220.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-59321d691cbc</title></polyline>
+<polyline points="324.0,88.0 324.0,181.0 384.0,181.0 384.0,220.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-6602c9ac8517</title></polyline>
+<polyline points="260.0,88.0 260.0,366.0 249.5,366.0 249.5,412.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-5344bd79c615</title></polyline>
+<polyline points="276.0,88.0 276.0,359.0 266.0,359.0 266.0,412.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-a8586fb5514d</title></polyline>
+<polyline points="292.0,88.0 292.0,352.0 282.5,352.0 282.5,412.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-dd1fe7b3f522</title></polyline>
+<polyline points="150.4,280.0 150.4,345.0 54.4,345.0 54.4,412.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-01b7014be933</title></polyline>
+<polyline points="176.8,280.0 176.8,338.0 80.8,338.0 80.8,412.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-80ce03b06ade</title></polyline>
+<polyline points="203.2,280.0 203.2,331.0 216.5,331.0 216.5,412.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-76e0d034f372</title></polyline>
+<polyline points="229.6,280.0 229.6,324.0 233.0,324.0 233.0,412.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-e79ddc2abd42</title></polyline>
+<polyline points="375.2,280.0 375.2,317.0 463.2,317.0 463.2,412.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-a060544611fc</title></polyline>
+<polyline points="401.6,280.0 401.6,310.0 493.6,310.0 493.6,412.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-b178a16233db</title></polyline>
+<polyline points="322.4,280.0 322.4,303.0 299.0,303.0 299.0,412.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-4411ae54eb05</title></polyline>
+<polyline points="348.8,280.0 348.8,296.0 315.5,296.0 315.5,412.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-ed0c09a43ef3</title></polyline>
+<g><rect x="28" y="536" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="94" y="565.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">MEASUREDRAIL</text><text x="94" y="578.0" text-anchor="middle" font-size="9" fill="#000000">(BLOCK)</text><title>BLK-42978eb8675a</title></g>
+<g><rect x="224" y="536" width="168" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="308" y="565.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">FEEDBACK</text><text x="308" y="578.0" text-anchor="middle" font-size="9" fill="#000000">(FEEDBACKDIVIDER)</text><title>BLK-6796ce9eec20</title></g>
+<g><rect x="28" y="624" width="144" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="100" y="653.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">SENSE</text><text x="100" y="666.0" text-anchor="middle" font-size="9" fill="#000000">(SENSEDIVIDER)</text><title>BLK-c2261d236e0f</title></g>
+<g><rect x="180" y="28" width="192" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="276" y="57.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">TERMINALS</text><text x="276" y="70.0" text-anchor="middle" font-size="9" fill="#000000">(TERMINALBLOCK)</text><title>CMP-06df4b26f468</title></g>
+<g><rect x="372" y="412" width="152" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="448" y="441.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">FEEDBACK.BOTTOM</text><text x="448" y="454.0" text-anchor="middle" font-size="9" fill="#000000">(RESISTOR)</text><title>CMP-1d4b5fe0e6f9, unknown: tolerance_pct</title></g>
+<g><rect x="28" y="412" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="94" y="441.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">SENSE.BOTTOM</text><text x="94" y="454.0" text-anchor="middle" font-size="9" fill="#000000">(RESISTOR)</text><title>CMP-3d20013e6afc, unknown: tolerance_pct</title></g>
+<g><rect x="124" y="220" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="190" y="249.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">SENSE.TOP</text><text x="190" y="262.0" text-anchor="middle" font-size="9" fill="#000000">(RESISTOR)</text><title>CMP-714dc871bb0d, unknown: tolerance_pct</title></g>
+<g><rect x="296" y="220" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="362" y="249.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">FEEDBACK.TOP</text><text x="362" y="262.0" text-anchor="middle" font-size="9" fill="#000000">(RESISTOR)</text><title>CMP-be11135b7285, unknown: tolerance_pct</title></g>
+<g><rect x="200" y="412" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="266" y="441.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">ADC</text><text x="266" y="454.0" text-anchor="middle" font-size="9" fill="#000000">(ADC)</text><title>CMP-ea02c0cebe19</title></g>
+<text x="343.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">RAIL_A</text>
+<text x="359.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">GND</text>
+<text x="199.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">RAIL_B</text>
+<text x="215.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">GND</text>
+<text x="231.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">RAIL_B</text>
+<text x="247.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">V24</text>
+<text x="311.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">RAIL_A</text>
+<text x="327.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">V12</text>
+<text x="263.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">GND</text>
+<text x="279.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">V3V3 / VDD</text>
+<text x="295.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">LOGIC / POWER</text>
+<text x="206.2" y="289.0" text-anchor="start" font-size="8" fill="#000000">CHANNEL_B</text>
+<text x="232.6" y="289.0" text-anchor="start" font-size="8" fill="#000000">AIN1</text>
+<text x="325.4" y="289.0" text-anchor="start" font-size="8" fill="#000000">CHANNEL_A</text>
+<text x="351.8" y="289.0" text-anchor="start" font-size="8" fill="#000000">AIN0</text>
+<line x1="28" y1="712" x2="54" y2="712" stroke="#000000" stroke-width="1"/>
+<text x="60" y="715.5" font-size="9.5" fill="#000000">ELECTRICAL</text>
+<line x1="140" y1="712" x2="166" y2="712" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3"/>
+<text x="172" y="715.5" font-size="9.5" fill="#000000">GROUND</text>
+<line x1="228" y1="712" x2="254" y2="712" stroke="#000000" stroke-width="2.2"/>
+<text x="260" y="715.5" font-size="9.5" fill="#000000">POWER</text>
+<text x="28" y="742" font-size="9.5" fill="#000000">4 node(s) carry unknown parameters; a dashed border marks them</text>
+<text x="276.0" y="772" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">INTERCONNECT</text>
+<text x="276.0" y="788" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">What is connected to what?</text>
 </svg>

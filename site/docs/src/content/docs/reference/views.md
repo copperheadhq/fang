@@ -66,6 +66,12 @@ drawing lists the kinds actually present. Several connections between the same
 two parts are drawn as several wires, so three gate drives read as three. The
 view's name and its question sit under the drawing as its title.
 
+Layers run left to right by default. `place(graph, direction="down")` runs them
+top to bottom instead, with a layer's boxes side by side and wires leaving and
+entering boxes at the top and bottom, which keeps a diagram of many stages
+narrow enough for a page's column. The examples on this site are laid out that
+way.
+
 Nodes are laid out in layers, ordered within a layer to reduce crossings. A node
 that the view connects to nothing is packed into a grid below a rule that says
 so, rather than lengthening the first column. It is still a fact about the

@@ -1,23 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="508" height="430" viewBox="0 0 508 430" font-family="Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="508" height="622" viewBox="0 0 508 622" font-family="Helvetica, Arial, sans-serif">
 <title>ground: How do returns get home, and is the intended topology held?</title>
 <defs><marker id="arrow" viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0.8 L8,4 L0,7.2 Z" fill="#000000"/></marker></defs>
-<line x1="28" y1="126" x2="480" y2="126" stroke="#000000" stroke-width="0.6" stroke-dasharray="2 4"/>
-<text x="28" y="119" font-size="9" fill="#000000">NOTHING IN THIS VIEW CONNECTS TO THESE</text>
-<polyline points="160.0,48.0 310.0,48.0 310.0,48.0 328.0,48.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>ground: NET-4411ae54eb05</title></polyline>
-<polyline points="160.0,68.0 303.0,68.0 303.0,68.0 328.0,68.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>ground: NET-d7030896fbaf</title></polyline>
-<g><rect x="28" y="152" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="94" y="181.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">SENSORBOARD</text><text x="94" y="194.0" text-anchor="middle" font-size="9" fill="#000000">(BLOCK)</text><title>BLK-42978eb8675a</title></g>
-<g><rect x="188" y="152" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="254" y="181.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">SDA_PULLUP</text><text x="254" y="194.0" text-anchor="middle" font-size="9" fill="#000000">(RESISTOR)</text><title>CMP-15a8e71b5d6a, unknown: power_rating, tolerance_pct</title></g>
-<g><rect x="348" y="152" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="414" y="181.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">IMU</text><text x="414" y="194.0" text-anchor="middle" font-size="9" fill="#000000">(IMU)</text><title>CMP-29c84a01a643</title></g>
-<g><rect x="28" y="240" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="94" y="269.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">SCL_PULLUP</text><text x="94" y="282.0" text-anchor="middle" font-size="9" fill="#000000">(RESISTOR)</text><title>CMP-4b5fffcf96f7, unknown: power_rating, tolerance_pct</title></g>
-<g><rect x="188" y="240" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="254" y="269.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">MCU</text><text x="254" y="282.0" text-anchor="middle" font-size="9" fill="#000000">(MCU)</text><title>CMP-91431a8f1d4e</title></g>
-<g><rect x="328" y="28" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="394" y="57.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">BULK</text><text x="394" y="70.0" text-anchor="middle" font-size="9" fill="#000000">(CAPACITOR)</text><title>CMP-e61380669445, unknown: tolerance_pct</title></g>
+<line x1="28" y1="318" x2="480" y2="318" stroke="#000000" stroke-width="0.6" stroke-dasharray="2 4"/>
+<text x="28" y="311" font-size="9" fill="#000000">NOTHING IN THIS VIEW CONNECTS TO THESE</text>
+<polyline points="72.0,88.0 72.0,202.0 72.0,202.0 72.0,220.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>ground: NET-4411ae54eb05</title></polyline>
+<polyline points="116.0,88.0 116.0,195.0 116.0,195.0 116.0,220.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>ground: NET-d7030896fbaf</title></polyline>
+<g><rect x="28" y="344" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="94" y="373.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">SENSORBOARD</text><text x="94" y="386.0" text-anchor="middle" font-size="9" fill="#000000">(BLOCK)</text><title>BLK-42978eb8675a</title></g>
+<g><rect x="188" y="344" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="254" y="373.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">SDA_PULLUP</text><text x="254" y="386.0" text-anchor="middle" font-size="9" fill="#000000">(RESISTOR)</text><title>CMP-15a8e71b5d6a, unknown: power_rating, tolerance_pct</title></g>
+<g><rect x="348" y="344" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="414" y="373.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">IMU</text><text x="414" y="386.0" text-anchor="middle" font-size="9" fill="#000000">(IMU)</text><title>CMP-29c84a01a643</title></g>
+<g><rect x="28" y="432" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="94" y="461.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">SCL_PULLUP</text><text x="94" y="474.0" text-anchor="middle" font-size="9" fill="#000000">(RESISTOR)</text><title>CMP-4b5fffcf96f7, unknown: power_rating, tolerance_pct</title></g>
+<g><rect x="188" y="432" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="254" y="461.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">MCU</text><text x="254" y="474.0" text-anchor="middle" font-size="9" fill="#000000">(MCU)</text><title>CMP-91431a8f1d4e</title></g>
+<g><rect x="28" y="220" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="94" y="249.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">BULK</text><text x="94" y="262.0" text-anchor="middle" font-size="9" fill="#000000">(CAPACITOR)</text><title>CMP-e61380669445, unknown: tolerance_pct</title></g>
 <g><rect x="28" y="28" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="94" y="57.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">REGULATOR</text><text x="94" y="70.0" text-anchor="middle" font-size="9" fill="#000000">(REGULATOR)</text><title>CMP-fdee25982831, unknown: dropout_voltage, quiescent_current</title></g>
-<text x="165.0" y="45.5" text-anchor="start" font-size="8" fill="#000000">VOUT</text>
-<text x="165.0" y="65.5" text-anchor="start" font-size="8" fill="#000000">GND</text>
-<line x1="28" y1="328" x2="54" y2="328" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3"/>
-<text x="60" y="331.5" font-size="9.5" fill="#000000">GROUND</text>
-<text x="28" y="358" font-size="9.5" fill="#000000">no topology intent is recorded for this design</text>
-<text x="28" y="372" font-size="9.5" fill="#000000">4 node(s) carry unknown parameters; a dashed border marks them</text>
-<text x="254.0" y="402" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">GROUND</text>
-<text x="254.0" y="418" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">How do returns get home, and is the intended topology held?</text>
+<text x="75.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">VOUT</text>
+<text x="119.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">GND</text>
+<line x1="28" y1="520" x2="54" y2="520" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3"/>
+<text x="60" y="523.5" font-size="9.5" fill="#000000">GROUND</text>
+<text x="28" y="550" font-size="9.5" fill="#000000">no topology intent is recorded for this design</text>
+<text x="28" y="564" font-size="9.5" fill="#000000">4 node(s) carry unknown parameters; a dashed border marks them</text>
+<text x="254.0" y="594" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">GROUND</text>
+<text x="254.0" y="610" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">How do returns get home, and is the intended topology held?</text>
 </svg>
