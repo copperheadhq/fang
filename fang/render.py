@@ -88,7 +88,7 @@ def _legend(classes: Iterable[str], x: int, y: int, width: int) -> tuple[list[st
 def to_svg(positioned: PositionedView, *, padding: int = 28) -> str:
     """Render a positioned view. Deterministic for identical input."""
     graph = positioned.graph
-    sizes: Mapping[str, tuple[int, int]] = node_sizes(graph)
+    sizes: Mapping[str, tuple[int, int]] = node_sizes(graph, positioned.direction)
     top = padding
 
     def box(node_id: str) -> tuple[int, int, int, int]:
@@ -104,21 +104,37 @@ def to_svg(positioned: PositionedView, *, padding: int = 28) -> str:
         and edge.target in positioned.positions
     ]
 
-    # Which side of each box every wire meets. A wire going right leaves its
-    # source on the right and reaches its target on the left; going left, the
-    # other way round; between two boxes in one column it goes round the
-    # outside, on the right of both.
+    # Wires are routed along the flow and across it, and turned back into the
+    # page's x and y only when they are written, so one routing serves a view
+    # laid out to the right and one laid out downwards. Along the flow is u,
+    # across it is v; laid out to the right they are x and y.
+    down = positioned.direction == "down"
+
+    def flow(b: tuple[int, int, int, int]) -> tuple[int, int, int, int]:
+        x, y, w, h = b
+        return (y, x, h, w) if down else (x, y, w, h)
+
+    def page(u: float, v: float) -> tuple[float, float]:
+        return (v, u) if down else (u, v)
+
+    def fbox(node_id: str) -> tuple[int, int, int, int]:
+        return flow(box(node_id))
+
+    # Which side of each box every wire meets. A wire going along the flow
+    # leaves its source at the far side and reaches its target at the near
+    # one; going against it, the other way round; between two boxes in one
+    # layer it goes round the outside, beyond both.
     def sides(edge) -> tuple[str, str]:
-        sx, _, sw, _ = box(edge.source)
-        tx, _, tw, _ = box(edge.target)
-        if tx >= sx + sw:
-            return "right", "left"
-        if sx >= tx + tw:
-            return "left", "right"
-        return "right", "right"
+        su, _, sd, _ = fbox(edge.source)
+        tu, _, td, _ = fbox(edge.target)
+        if tu >= su + sd:
+            return "far", "near"
+        if su >= tu + td:
+            return "near", "far"
+        return "far", "far"
 
     # Each wire gets a point of its own on each side it meets, spread evenly
-    # down that side in the order of where the wire is going, so neighbours on
+    # along that side in the order of where the wire is going, so neighbours on
     # a side do not have to cross to get there.
     meeting: dict[tuple[str, str], list[tuple[float, str, str]]] = {}
     for edge in drawn:
@@ -127,95 +143,101 @@ def to_svg(positioned: PositionedView, *, padding: int = 28) -> str:
             (edge.source, source_side, edge.target),
             (edge.target, target_side, edge.source),
         ):
-            _, oy, _, oh = box(other)
-            meeting.setdefault((end, side), []).append((oy + oh / 2, other, edge.id))
+            _, ov, _, od = fbox(other)
+            meeting.setdefault((end, side), []).append((ov + od / 2, other, edge.id))
     slot: dict[tuple[str, str, str], float] = {}
     for (node_id, side), wires in meeting.items():
-        _, y, _, height = box(node_id)
+        _, v, _, depth = fbox(node_id)
         wires.sort()
         for index, (_, _, edge_id) in enumerate(wires):
-            slot[(node_id, side, edge_id)] = y + height * (index + 1) / (len(wires) + 1)
+            slot[(node_id, side, edge_id)] = v + depth * (index + 1) / (len(wires) + 1)
 
     # Each wire turns in a lane of its own, in the gap beside the box it turns
-    # towards, so two wires never share a vertical run.
+    # towards, so two wires never share a run across the flow.
     lanes: dict[tuple[str, int], int] = {}
 
     def lane(key: tuple[str, int]) -> int:
         lanes[key] = lanes.get(key, -1) + 1
         return lanes[key]
 
-    placed = [box(node_id) for node_id in positioned.positions]
+    placed = [fbox(node_id) for node_id in positioned.positions]
 
-    def blocked(y: float, left: float, right: float, ends: tuple) -> bool:
-        """Whether a horizontal run at `y` between two xs would cross a box."""
+    def blocked(v: float, first: float, last: float, ends: tuple) -> bool:
+        """Whether a run along the flow at `v`, from `first` to `last`, would
+        cross a box."""
         for b in placed:
             if b in ends:
                 continue
-            bx, by, bw, bh = b
-            if bx < right and bx + bw > left and by - 3 <= y <= by + bh + 3:
+            bu, bv, bd, bw = b
+            if bu < last and bu + bd > first and bv - 3 <= v <= bv + bw + 3:
                 return True
         return False
 
-    def channel(y: float, left: float, right: float, ends: tuple) -> float:
-        """The clear height nearest `y` to run a wire across, between boxes."""
-        if not blocked(y, left, right, ends):
-            return y
+    def channel(v: float, first: float, last: float, ends: tuple) -> float:
+        """The clear line nearest `v` to run a wire along, between boxes."""
+        if not blocked(v, first, last, ends):
+            return v
         candidates = []
-        for bx, by, bw, bh in placed:
-            if bx < right and bx + bw > left:
-                candidates += [by - ROW_CLEAR, by + bh + ROW_CLEAR]
-        clear = [c for c in candidates if not blocked(c, left, right, ends)]
-        return min(clear, key=lambda c: (abs(c - y), c)) if clear else y
+        for bu, bv, bd, bw in placed:
+            if bu < last and bu + bd > first:
+                candidates += [bv - ROW_CLEAR, bv + bw + ROW_CLEAR]
+        clear = [c for c in candidates if not blocked(c, first, last, ends)]
+        return min(clear, key=lambda c: (abs(c - v), c)) if clear else v
 
     wires_svg: list[str] = []
     labels: list[str] = []
-    reach = 0.0
+    far_x = far_y = 0.0
     for edge in drawn:
-        sx, sy, sw, sh = box(edge.source)
-        tx, ty, tw, th = box(edge.target)
+        su, sv, sd, sw = fbox(edge.source)
+        tu, tv, td, tw = fbox(edge.target)
         source_side, target_side = sides(edge)
-        y1 = slot[(edge.source, source_side, edge.id)]
-        y2 = slot[(edge.target, target_side, edge.id)]
-        detour: tuple[float, float, float] | None = None
-        if source_side == "right" and target_side == "left":
-            x1, x2 = sx + sw, tx
-            turn = x2 - LANE_START - lane(("before", tx)) * LANE_STEP
-            label_x, anchor = x1 + 5, "start"
+        v1 = slot[(edge.source, source_side, edge.id)]
+        v2 = slot[(edge.target, target_side, edge.id)]
+        if source_side == "far" and target_side == "near":
+            u1, u2 = su + sd, tu
+            turn = u2 - LANE_START - lane(("before", tu)) * LANE_STEP
+            route = [(u1, v1), (turn, v1), (turn, v2), (u2, v2)]
             # A wire that would run through a box on its way crosses in the
-            # nearest clear channel instead: out of its source, down or up
-            # into the channel, across, and up or down again before its target.
-            ends = (box(edge.source), box(edge.target))
-            if blocked(y1, x1 + LANE_START, turn, ends):
-                out = x1 + LANE_START + lane(("after", sx + sw)) * LANE_STEP
-                detour = (out, channel(y1, out, turn, ends), turn)
-        elif source_side == "left":
-            x1, x2 = sx, tx + tw
-            turn = x1 - LANE_START - lane(("before", sx)) * LANE_STEP
-            label_x, anchor = x1 - 5, "end"
+            # nearest clear channel instead: out of its source, over into the
+            # channel, along it, and over again before its target.
+            ends = (fbox(edge.source), fbox(edge.target))
+            if blocked(v1, u1 + LANE_START, turn, ends):
+                out = u1 + LANE_START + lane(("after", su + sd)) * LANE_STEP
+                across = channel(v1, out, turn, ends)
+                route = [(u1, v1), (out, v1), (out, across), (turn, across), (turn, v2), (u2, v2)]
+            forward = True
+        elif source_side == "near":
+            u1, u2 = su, tu + td
+            turn = u1 - LANE_START - lane(("before", su)) * LANE_STEP
+            route = [(u1, v1), (turn, v1), (turn, v2), (u2, v2)]
+            forward = False
         else:
-            x1, x2 = sx + sw, tx + tw
-            turn = max(x1, x2) + LANE_START + lane(("after", max(x1, x2))) * LANE_STEP
-            label_x, anchor = x1 + 5, "start"
-        reach = max(reach, x1, x2, turn)
+            u1, u2 = su + sd, tu + td
+            turn = max(u1, u2) + LANE_START + lane(("after", max(u1, u2))) * LANE_STEP
+            route = [(u1, v1), (turn, v1), (turn, v2), (u2, v2)]
+            forward = True
 
+        points = [page(u, v) for u, v in route]
+        far_x = max(far_x, *(x for x, _ in points))
+        far_y = max(far_y, *(y for _, y in points))
         stroke, dash = EDGE_STYLE.get(edge.edge_class, DEFAULT_EDGE)
         dashed = f' stroke-dasharray="{dash}"' if dash else ""
-        if detour is not None:
-            out, across, turn = detour
-            points = (
-                f"{x1:.1f},{y1:.1f} {out:.1f},{y1:.1f} {out:.1f},{across:.1f} "
-                f"{turn:.1f},{across:.1f} {turn:.1f},{y2:.1f} {x2:.1f},{y2:.1f}"
-            )
-        else:
-            points = f"{x1:.1f},{y1:.1f} {turn:.1f},{y1:.1f} {turn:.1f},{y2:.1f} {x2:.1f},{y2:.1f}"
+        written = " ".join(f"{x:.1f},{y:.1f}" for x, y in points)
         wires_svg.append(
-            f'<polyline points="{points}" fill="none" stroke="{INK}" '
+            f'<polyline points="{written}" fill="none" stroke="{INK}" '
             f'stroke-width="{stroke}"{dashed} marker-start="url(#arrow)" marker-end="url(#arrow)">'
             f"<title>{_escape(edge.edge_class)}: {_escape(edge.id)}</title></polyline>"
         )
         if edge.label:
+            # The label sits by the wire where it leaves its source: above
+            # the run when the flow is to the right, beside it going down.
+            x, y = page(u1, v1)
+            if down:
+                x, y, anchor = x + 3, y + (9 if forward else -4), "start"
+            else:
+                x, y, anchor = x + (5 if forward else -5), y - 2.5, "start" if forward else "end"
             labels.append(
-                f'<text x="{label_x:.1f}" y="{y1 - 2.5:.1f}" text-anchor="{anchor}" '
+                f'<text x="{x:.1f}" y="{y:.1f}" text-anchor="{anchor}" '
                 f'font-size="8" fill="{INK}">{_escape(edge.label.upper())}</text>'
             )
 
@@ -227,8 +249,8 @@ def to_svg(positioned: PositionedView, *, padding: int = 28) -> str:
             f"{gaps} node(s) carry unknown parameters; a dashed border marks them"
         )
 
-    width = int(max(positioned.width + padding * 2, reach + padding, 460))
-    base = top + positioned.height + padding
+    width = int(max(positioned.width + padding * 2, far_x + padding, 460))
+    base = int(max(top + positioned.height, far_y)) + padding
     legend, legend_rows = _legend(classes, padding, base, width - padding * 2)
     notes_top = base + legend_rows * LEGEND_ROW + 4
     title_top = notes_top + len(footer_lines) * FOOTER_LINE + 12

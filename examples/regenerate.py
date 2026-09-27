@@ -360,7 +360,11 @@ def render(name: str, *, with_render: bool = True) -> dict[str, str]:
         graph = view(result.snapshot, view_name)
         if name.startswith(FIGURES):
             graph = _circuit_only(graph, result.snapshot)
-        files[f"views/{view_name}.svg"] = to_svg(place(graph, seeds=PlacementSeeds()))
+        # Laid out downwards: an example's view is read in a page's column,
+        # and a diagram of many stages laid out to the right is too wide for it.
+        files[f"views/{view_name}.svg"] = to_svg(
+            place(graph, seeds=PlacementSeeds(), direction="down")
+        )
     if schematic_of(name):
         schematic = compile_schematic(
             result.snapshot, traits=result.traits, title=stem

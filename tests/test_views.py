@@ -217,3 +217,22 @@ def test_the_diagram_shows_its_own_gaps(snapshot):
     svg = to_svg(place(view(snapshot, "system")))
     assert "stroke-dasharray" in svg
     assert "unknown parameters" in svg
+
+
+def test_a_view_laid_out_downwards_runs_its_layers_top_to_bottom(snapshot):
+    """Laid out downwards, every wire that runs with the flow runs down it,
+    and the drawing is narrower than the same view laid out to the right."""
+    graph = view(snapshot, "interconnect")
+    right, down = place(graph), place(graph, direction="down")
+    assert down.direction == "down"
+    for edge in graph.edges:
+        source, target = down.positions.get(edge.source), down.positions.get(edge.target)
+        if source is not None and target is not None and source.y != target.y:
+            assert (source.y < target.y) == (right.positions[edge.source].x < right.positions[edge.target].x)
+    assert down.width <= right.width
+    assert to_svg(down).startswith("<svg")
+
+
+def test_a_direction_the_layout_does_not_have_is_refused(snapshot):
+    with pytest.raises(ValueError, match="direction"):
+        place(view(snapshot, "interconnect"), direction="left")
