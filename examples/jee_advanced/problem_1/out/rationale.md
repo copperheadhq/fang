@@ -22,7 +22,7 @@ MUST, state KNOWN, validation by analysis.
 
 `each claimed current against the branch it names`
 
-Result: (A) r1 7.2 A — correct; (B) r2 1.2 A — correct; (C) r3 4.8 A — correct; (D) r5 2.4 A — correct. All four options are right, which is what the paper's key says
+Result: (A) r1 7.2 A: correct; (B) r2 1.2 A: correct; (C) r3 4.8 A: correct; (D) r5 2.4 A: correct. All four options are right, which is what the paper's key says
 
 - Over `system.r2` (Resistor, `CMP-1749a5a18a37`)
 - Over `system.r1` (Resistor, `CMP-390a79be1fe2`)
@@ -66,4 +66,4 @@ Cited from examples/jee_advanced/problem_1/solve.py, the operating point fang.si
 
 > Which of the following statement(s) is(are) correct? (A) the current through R1 is 7.2 A; (B) the current through R2 is 1.2 A; (C) the current through R3 is 4.8 A; (D) the current through R5 is 2.4 A
 
-Cited from JEE (Advanced) 2022, Paper 1, question 1 — multiple correct, four options.
+Cited from JEE (Advanced) 2022, Paper 1, question 1, multiple correct, four options.

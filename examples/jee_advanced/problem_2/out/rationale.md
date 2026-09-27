@@ -22,7 +22,7 @@ MUST, state KNOWN, validation by analysis.
 
 `a branch between two nodes at equal potential carries no current`
 
-Result: r_bottom (10 ohm) bridges 3 V to 3 V and r_top_right_spoke (8 ohm) bridges 4 V to 4 V, so both carry 0 A and what is left is series-parallel — which is why I is a whole ampere
+Result: r_bottom (10 ohm) bridges 3 V to 3 V and r_top_right_spoke (8 ohm) bridges 4 V to 4 V, so both carry 0 A and what is left is series-parallel, which is why I is a whole ampere
 
 - Over `system.r_top_right_spoke` (Resistor, `CMP-81a8d38b564a`)
 - Over `system.r_bottom` (Resistor, `CMP-aa1b7e8d99e4`)
@@ -65,4 +65,4 @@ Cited from examples/jee_advanced/problem_2/solve.py, the operating point fang.si
 
 > In the following circuit, the current through the resistor R (= 2 ohm) is I Amperes. The value of I is
 
-Cited from JEE (Advanced) 2015, question 13 — an integer answer, no options offered.
+Cited from JEE (Advanced) 2015, Paper 2, question 8, an integer answer, no options offered.

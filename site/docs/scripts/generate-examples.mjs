@@ -56,7 +56,7 @@ async function exists(path) {
 // holds one problem per subfolder -- so the search descends instead of stopping.
 // An example's name is then its path below examples/, which is what keeps two of
 // them distinct, and its stem is the leaf, which is what its files are named for.
-const SKIP = new Set(["out", "views", "__pycache__"]);
+const SKIP = new Set(["out", "views", "figure", "__pycache__"]);
 
 // A grouping folder gets a page of its own when it carries a README, because
 // otherwise the one document that says why the group exists would be the only
@@ -123,7 +123,7 @@ function lazyImages(body) {
 function resolveLinks(body, name) {
   return body.replace(/\]\(([^)]+)\)/g, (whole, target) => {
     if (/^(https?:|\/|#)/.test(target)) return whole;
-    const picture = target.match(/^out\/(?:views\/)?(.+\.svg)$/);
+    const picture = target.match(/^(?:out\/(?:views\/)?|figure\/)(.+\.svg)$/);
     if (picture) return `](/examples/${name}/${picture[1]})`;
     const segments = [];
     for (const segment of `examples/${name}/${target}`.split("/")) {
@@ -160,8 +160,11 @@ for (const { name, stem, dir, group } of await discover()) {
 
   // The KiCad schematic's render sits beside the views rather than among them:
   // a view answers one engineering question and a schematic is the circuit.
-  const pictures = views.map((v) => join("views", v));
-  if (await exists(join(out, "schematic.svg"))) pictures.push("schematic.svg");
+  // A handbook circuit's is drawn by copperhead into figure/ instead of out/.
+  // Each is a path below the example's folder.
+  const pictures = views.map((v) => join("out", "views", v));
+  if (await exists(join(out, "schematic.svg"))) pictures.push(join("out", "schematic.svg"));
+  if (await exists(join(dir, "figure", "schematic.svg"))) pictures.push(join("figure", "schematic.svg"));
 
   examples.push({
     name, stem, dir, out, title, body, program, views, pictures, group,
@@ -188,12 +191,12 @@ await rm(PUBLIC, { recursive: true, force: true });
 await mkdir(CONTENT, { recursive: true });
 
 for (const [index, example] of examples.entries()) {
-  const { name, stem, out, title, body, program, pictures, group } = example;
+  const { name, stem, dir, out, title, body, program, pictures, group } = example;
 
   if (pictures.length) {
     await mkdir(join(PUBLIC, name), { recursive: true });
     for (const picture of pictures) {
-      await copyFile(join(out, picture), join(PUBLIC, name, basename(picture)));
+      await copyFile(join(dir, picture), join(PUBLIC, name, basename(picture)));
     }
   }
 
@@ -216,7 +219,7 @@ ${lazyImages(resolveLinks(body, name))}
     const members = examples.filter((e) => !e.group && e.name.startsWith(`${name}/`));
     page += `\n## In this folder\n\n`;
     for (const member of members) {
-      page += `- [\`${member.stem}\`](/examples/${member.name}/) — ${describe(member.body)}\n`;
+      page += `- [\`${member.stem}\`](/examples/${member.name}/): ${describe(member.body)}\n`;
     }
     await mkdir(join(CONTENT, name), { recursive: true });
     await writeFile(join(CONTENT, name, "index.md"), page, "utf8");
