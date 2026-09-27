@@ -8,6 +8,20 @@ the adjustable lag's input network moved into the feedback path.
 E_O = -[(D - D²) R C P] E_I          (as printed)
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/adjustable_lead.kicad_sch`](out/adjustable_lead.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The feedback is a T whose transfer impedance is R [1 + (D - D²) R C P], so the
@@ -43,5 +57,5 @@ form would give 1.
 
 ```bash
 fang check examples/ti_opamp_handbook/lead_lag/adjustable_lead/adjustable_lead.py
-python examples/regenerate.py ti_opamp_handbook/lead_lag/adjustable_lead   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/lead_lag/adjustable_lead   # needs ngspice and kicad-cli
 ```

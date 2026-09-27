@@ -7,6 +7,20 @@ with its 0.1 µF C_I, and 100 kΩ R_O from the output back to the summing point.
 E_O / E_I = -j 2π f R_O C_I / (1 + j 2π f R_I C_I)
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/differentiator_with_stop.kicad_sch`](out/differentiator_with_stop.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 Below `f_high = 1/(2π R_I C_I)` the circuit differentiates, its gain passing
@@ -57,5 +71,5 @@ the op amp's roll-off.
 
 ```bash
 fang check examples/ti_opamp_handbook/differentiators/differentiator_with_stop/differentiator_with_stop.py
-python examples/regenerate.py ti_opamp_handbook/differentiators/differentiator_with_stop   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/differentiators/differentiator_with_stop   # needs ngspice and kicad-cli
 ```

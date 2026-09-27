@@ -9,6 +9,20 @@ stability".
 E_O = -(R_O / R_I) E_I = -100 E_I
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/chopper_stabilized.kicad_sch`](out/chopper_stabilized.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 In a DC amplifier, drift shows up as the input offset voltage multiplied by
@@ -41,5 +55,5 @@ The general-purpose part's error is 2000 times the chopper's, and at a gain of
 
 ```bash
 fang check examples/ti_opamp_handbook/dc_amplifiers/chopper_stabilized/chopper_stabilized.py
-python examples/regenerate.py ti_opamp_handbook/dc_amplifiers/chopper_stabilized   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/dc_amplifiers/chopper_stabilized   # needs ngspice and kicad-cli
 ```

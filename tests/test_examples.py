@@ -20,7 +20,7 @@ import pytest
 
 from examples.regenerate import (
     PROJECT,
-    SCHEMATICS,
+    schematic_of,
     examples as example_names,
     render,
     simulated,
@@ -83,7 +83,7 @@ def renderable(name):
     be checked without `ngspice`."""
     if simulated(name) and not NgspiceBackend().available():
         pytest.skip("ngspice is not installed here")
-    return name not in SCHEMATICS or KicadRenderer().available()
+    return not schematic_of(name) or KicadRenderer().available()
 
 
 @pytest.fixture

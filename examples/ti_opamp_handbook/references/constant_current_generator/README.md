@@ -10,6 +10,20 @@ R_1 = (15 - V_Z) / I_Z = 9 / 25 = 360 Ω
 R_L min = Saturation Voltage / I = 13.5 V / 20 mA = 675 Ω
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/constant_current_generator.kicad_sch`](out/constant_current_generator.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The loop holds the summing point at ground, so R_2 carries V_Z / R_2 into it
@@ -60,5 +74,5 @@ is why that claim is held to 1%; a real 6 V zener is a 5% part.
 
 ```bash
 fang check examples/ti_opamp_handbook/references/constant_current_generator/constant_current_generator.py
-python examples/regenerate.py ti_opamp_handbook/references/constant_current_generator   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/references/constant_current_generator   # needs ngspice and kicad-cli
 ```

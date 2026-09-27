@@ -12,6 +12,20 @@ G = +21
 Table 1, compound: V_OS 20 µV, V_OUT ±35 V, I_OUT 10 A, SR 2.4 V/µs
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/power_booster.kicad_sch`](out/power_booster.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 `models` gives each op amp its column of Table 1: the OPA277 swings ±13 V
@@ -54,5 +68,5 @@ a real OPA512's extra poles and its slew rate are not in them.
 
 ```bash
 fang check examples/ti_opamp_handbook/dc_amplifiers/power_booster/power_booster.py
-python examples/regenerate.py ti_opamp_handbook/dc_amplifiers/power_booster   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/dc_amplifiers/power_booster   # needs ngspice and kicad-cli
 ```

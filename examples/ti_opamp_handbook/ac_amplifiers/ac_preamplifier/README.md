@@ -11,6 +11,20 @@ E_O / E_I = (R_0 + R_1) / R_1 = 500      R4 - Fine gain adjust
 f_-3dB = 1 / (2 pi R_1 C_1) = 1.6 Hz      R_1 C_1 = R_2 C_2
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/ac_preamplifier.kicad_sch`](out/ac_preamplifier.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 In the midband the - input sees R_1 in parallel with R_3 + R_4, so the gain
@@ -54,5 +68,5 @@ The bootstrap works: R_2 carries so little signal that E_I sees 33 MΩ, the
 
 ```bash
 fang check examples/ti_opamp_handbook/ac_amplifiers/ac_preamplifier/ac_preamplifier.py
-python examples/regenerate.py ti_opamp_handbook/ac_amplifiers/ac_preamplifier   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/ac_amplifiers/ac_preamplifier   # needs ngspice and kicad-cli
 ```

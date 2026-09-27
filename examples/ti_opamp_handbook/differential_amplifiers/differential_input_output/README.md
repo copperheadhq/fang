@@ -10,6 +10,20 @@ floating loads. Input may be floating source." The gain is page 69's:
 E_O = (R_O / R_I)(E2 - E1) = 10 (E2 - E1)
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/differential_input_output.kicad_sch`](out/differential_input_output.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The resistors are the figure's. The program cites page 69 for the gain
@@ -41,5 +55,5 @@ and the model holds it at ground; the bottom output is reported, not claimed.
 
 ```bash
 fang check examples/ti_opamp_handbook/differential_amplifiers/differential_input_output/differential_input_output.py
-python examples/regenerate.py ti_opamp_handbook/differential_amplifiers/differential_input_output   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/differential_amplifiers/differential_input_output   # needs ngspice and kicad-cli
 ```

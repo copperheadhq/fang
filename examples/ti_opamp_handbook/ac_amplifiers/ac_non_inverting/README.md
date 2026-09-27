@@ -9,6 +9,20 @@ E_O = (R_O + R_I) / R_I x E_I = 10 E_I
 f_-3dB = 1 / (2 pi R_I C_I) = 0.16 Hz
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/ac_non_inverting.kicad_sch`](out/ac_non_inverting.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The gain is 1 + 90k/10k = 10 (`a_v`). There are two low-frequency corners.
@@ -46,5 +60,5 @@ circuit's corner, C_2 would need to be 10 µF or R_2 1 MΩ.
 
 ```bash
 fang check examples/ti_opamp_handbook/ac_amplifiers/ac_non_inverting/ac_non_inverting.py
-python examples/regenerate.py ti_opamp_handbook/ac_amplifiers/ac_non_inverting   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/ac_amplifiers/ac_non_inverting   # needs ngspice and kicad-cli
 ```

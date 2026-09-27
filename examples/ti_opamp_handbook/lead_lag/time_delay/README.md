@@ -6,6 +6,20 @@ the feedback is R beside a T of 0.8C, 0.8C with R/4 to ground. The page prints
 no formula, only "Unity gain phase or time shift" and a sketch: the step comes
 out inverted after RC and completes its edge over 1.1 RC.
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/time_delay.kicad_sch`](out/time_delay.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The figure gives only symbols, so the program chooses R = 60 kΩ and C = 10 nF
@@ -35,5 +49,5 @@ already 10% of the way at 0.46 RC, centered on RC, and it overshoots by 2%.
 
 ```bash
 fang check examples/ti_opamp_handbook/lead_lag/time_delay/time_delay.py
-python examples/regenerate.py ti_opamp_handbook/lead_lag/time_delay   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/lead_lag/time_delay   # needs ngspice and kicad-cli
 ```

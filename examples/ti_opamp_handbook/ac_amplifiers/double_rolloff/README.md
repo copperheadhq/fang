@@ -9,6 +9,20 @@ input to the same junction, so that R_2 is bootstrapped.
 "Similar to above."   C_1 R_1 = C_2 R_2
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/double_rolloff.kicad_sch`](out/double_rolloff.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 `topology` records the reading of the wiring: R_2 returns to the C_1 R_1
@@ -51,5 +65,5 @@ the Q falls to 0.91 and the peak to 0.8 dB.
 
 ```bash
 fang check examples/ti_opamp_handbook/ac_amplifiers/double_rolloff/double_rolloff.py
-python examples/regenerate.py ti_opamp_handbook/ac_amplifiers/double_rolloff   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/ac_amplifiers/double_rolloff   # needs ngspice and kicad-cli
 ```

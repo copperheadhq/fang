@@ -7,6 +7,20 @@ The figure draws R_I = 1 MΩ, R_O = 10 kΩ and C_O = 10 µF.
 E_O = -(R_O / R_I) E_I / (1 + R_O C_O P) = -10 E_I / (10 + P)
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/lag_element.kicad_sch`](out/lag_element.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The claims are two parameters held to the parts: the DC gain
@@ -36,5 +50,5 @@ form true. Swapping R_I and R_O does not: that gives -100/(1 + 10 P).
 
 ```bash
 fang check examples/ti_opamp_handbook/lead_lag/lag_element/lag_element.py
-python examples/regenerate.py ti_opamp_handbook/lead_lag/lag_element   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/lead_lag/lag_element   # needs ngspice and kicad-cli
 ```

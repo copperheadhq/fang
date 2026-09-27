@@ -9,6 +9,20 @@ output into the load.
 When R_L << R2,   I_L / E_I = R2 / (R1 R3) = 1 mA / Volt
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/linear_current_source.kicad_sch`](out/linear_current_source.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The second output is R2 E_I / R1 + V_L, so the current R3 delivers is
@@ -34,5 +48,5 @@ Every row is low by R_L / R2, the current the upper R2 takes back.
 
 ```bash
 fang check examples/ti_opamp_handbook/current_output/linear_current_source/linear_current_source.py
-python examples/regenerate.py ti_opamp_handbook/current_output/linear_current_source   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/current_output/linear_current_source   # needs ngspice and kicad-cli
 ```
