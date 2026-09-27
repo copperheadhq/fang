@@ -12,6 +12,20 @@ Negative clamping level = -(+V_sup) R_b / R_a = -10 V
 Positive clamping level = -(-V_sup) R_b' / R_a' = +3 V
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/clamped_comparator.kicad_sch`](out/clamped_comparator.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The printed numbers are parameters tied to the drawn parts: `threshold`
@@ -62,5 +76,5 @@ gives both numbers. The figure's own trace sits near +3.7 V and -10.7 V.
 
 ```bash
 fang check examples/ti_opamp_handbook/comparators/clamped_comparator/clamped_comparator.py
-python examples/regenerate.py ti_opamp_handbook/comparators/clamped_comparator   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/comparators/clamped_comparator   # needs ngspice and kicad-cli
 ```

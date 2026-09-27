@@ -8,6 +8,20 @@ by R_I over R_O onto the non-inverting input.
 E_O = -(R_O / R_I)(E1 - E2) = 100 (E2 - E1)
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/difference_amplifier.kicad_sch`](out/difference_amplifier.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The figure gives every value, so nothing is chosen. The two legs' ratios are
@@ -32,5 +46,5 @@ common mode, and the output carries only the difference.
 
 ```bash
 fang check examples/ti_opamp_handbook/differential_amplifiers/difference_amplifier/difference_amplifier.py
-python examples/regenerate.py ti_opamp_handbook/differential_amplifiers/difference_amplifier   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/differential_amplifiers/difference_amplifier   # needs ngspice and kicad-cli
 ```

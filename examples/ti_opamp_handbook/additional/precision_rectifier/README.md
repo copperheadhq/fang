@@ -8,6 +8,20 @@ taken from the upper path, between its R_O and its diode.
 E_O peak = -(R_O / R_I) E_I peak = -5 E_I peak
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/precision_rectifier.kicad_sch`](out/precision_rectifier.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The diodes are the circuit, so the program records its reading of them
@@ -44,5 +58,5 @@ upper diode recovers.
 
 ```bash
 fang check examples/ti_opamp_handbook/additional/precision_rectifier/precision_rectifier.py
-python examples/regenerate.py ti_opamp_handbook/additional/precision_rectifier   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/additional/precision_rectifier   # needs ngspice and kicad-cli
 ```

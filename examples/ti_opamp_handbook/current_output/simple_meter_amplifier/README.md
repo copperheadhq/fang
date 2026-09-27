@@ -9,6 +9,20 @@ series with a third R_O across the middle.
 I_meter = E_I / (3 R_I) = E_I / 30 mA
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/simple_meter_amplifier.kicad_sch`](out/simple_meter_amplifier.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 Whichever way the input current flows, one diode carries it and the meter
@@ -44,5 +58,5 @@ The meter reads the full-wave average of the input: 2/π of 1 V peak over
 
 ```bash
 fang check examples/ti_opamp_handbook/current_output/simple_meter_amplifier/simple_meter_amplifier.py
-python examples/regenerate.py ti_opamp_handbook/current_output/simple_meter_amplifier   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/current_output/simple_meter_amplifier   # needs ngspice and kicad-cli
 ```

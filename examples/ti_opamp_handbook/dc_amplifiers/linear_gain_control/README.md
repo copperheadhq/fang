@@ -9,6 +9,20 @@ E_O = 0 to -10 E_I
 Z_in = R_I = 10 kΩ
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/linear_gain_control.kicad_sch`](out/linear_gain_control.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The rheostat puts the setting times 100 kΩ in the loop, so the gain is -10
@@ -43,5 +57,5 @@ of the range only the model's 1 mΩ wiper contact is in the loop.
 
 ```bash
 fang check examples/ti_opamp_handbook/dc_amplifiers/linear_gain_control/linear_gain_control.py
-python examples/regenerate.py ti_opamp_handbook/dc_amplifiers/linear_gain_control   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/dc_amplifiers/linear_gain_control   # needs ngspice and kicad-cli
 ```

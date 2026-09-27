@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="660" height="400" viewBox="0 0 660 400" font-family="system-ui, sans-serif">
+<title>interconnect: What is connected to what?</title>
+<rect width="660" height="400" fill="#ffffff"/>
+<text x="28" y="26" font-size="15" font-weight="600" fill="#1b1b1f">interconnect</text>
+<text x="28" y="43" font-size="11.5" fill="#5f6368">What is connected to what?</text>
+<line x1="28" y1="240" x2="632" y2="240" stroke="#c4c7cc" stroke-width="1" stroke-dasharray="3 4"/>
+<text x="28" y="232" font-size="11" fill="#5f6368">nothing in this view connects to these</text>
+<path d="M160.0,73.5 C206.8,73.5 217.2,117.5 264.0,117.5" fill="none" stroke="#5f6368" stroke-width="1.5" stroke-linecap="round" opacity="0.85"><title>electrical: NET-0d0c279fcba8</title></path>
+<path d="M160.0,80.5 C206.8,80.5 217.2,124.5 264.0,124.5" fill="none" stroke="#5f6368" stroke-width="1.5" stroke-linecap="round" opacity="0.85"><title>electrical: NET-59321d691cbc</title></path>
+<path d="M160.0,87.5 C206.8,87.5 217.2,131.5 264.0,131.5" fill="none" stroke="#5f6368" stroke-width="1.5" stroke-linecap="round" opacity="0.85"><title>electrical: NET-601435c64e5a</title></path>
+<path d="M160.0,94.5 C206.8,94.5 217.2,138.5 264.0,138.5" fill="none" stroke="#5f6368" stroke-width="1.5" stroke-linecap="round" opacity="0.85"><title>electrical: NET-dd1fe7b3f522</title></path>
+<path d="M160.0,168.5 C313.0,168.5 347.0,80.5 500.0,80.5" fill="none" stroke="#5f6368" stroke-width="1.5" stroke-linecap="round" opacity="0.85"><title>electrical: NET-4d1ca10e619c</title></path>
+<path d="M160.0,175.5 C313.0,175.5 347.0,87.5 500.0,87.5" fill="none" stroke="#5f6368" stroke-width="1.5" stroke-linecap="round" opacity="0.85"><title>electrical: NET-4f78a784eb7e</title></path>
+<path d="M396.0,124.5 C442.8,124.5 453.2,80.5 500.0,80.5" fill="none" stroke="#5f6368" stroke-width="1.5" stroke-linecap="round" opacity="0.85"><title>electrical: NET-58788eea8844</title></path>
+<path d="M396.0,131.5 C442.8,131.5 453.2,87.5 500.0,87.5" fill="none" stroke="#5f6368" stroke-width="1.5" stroke-linecap="round" opacity="0.85"><title>electrical: NET-b6046db85658</title></path>
+<path d="M396.0,124.5 C442.8,124.5 453.2,168.5 500.0,168.5" fill="none" stroke="#5f6368" stroke-width="1.5" stroke-linecap="round" opacity="0.85"><title>electrical: NET-4519b17f8f99</title></path>
+<path d="M396.0,131.5 C442.8,131.5 453.2,175.5 500.0,175.5" fill="none" stroke="#5f6368" stroke-width="1.5" stroke-linecap="round" opacity="0.85"><title>electrical: NET-542450c0631a</title></path>
+<g><rect x="28" y="266" width="152" height="60" rx="8" fill="#f1f3f4" stroke="#c4c7cc" stroke-width="1"/><text x="104" y="292" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">BufferVariation</text><text x="104" y="309" text-anchor="middle" font-size="10.5" fill="#5f6368">block</text><title>BLK-42978eb8675a</title></g>
+<g><rect x="500" y="54" width="132" height="60" rx="8" fill="#ffffff" stroke="#c4c7cc" stroke-width="1"/><text x="566" y="80" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">ground</text><text x="566" y="97" text-anchor="middle" font-size="10.5" fill="#5f6368">Ground</text><title>CMP-2a934da363ec</title></g>
+<g><rect x="28" y="54" width="132" height="60" rx="8" fill="#ffffff" stroke="#c4c7cc" stroke-width="1"/><text x="94" y="80" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">e_ref</text><text x="94" y="97" text-anchor="middle" font-size="10.5" fill="#5f6368">Cell</text><title>CMP-90e203cf744d</title></g>
+<g><rect x="28" y="142" width="132" height="60" rx="8" fill="#ffffff" stroke="#c4c7cc" stroke-width="1"/><text x="94" y="168" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">out_return</text><text x="94" y="185" text-anchor="middle" font-size="10.5" fill="#5f6368">Terminal</text><title>CMP-9827d20d168d</title></g>
+<g><rect x="264" y="98" width="132" height="60" rx="8" fill="#ffffff" stroke="#c4c7cc" stroke-width="1"/><text x="330" y="124" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">amp</text><text x="330" y="141" text-anchor="middle" font-size="10.5" fill="#5f6368">OpAmp</text><title>CMP-ed601b553153</title></g>
+<g><rect x="500" y="142" width="132" height="60" rx="8" fill="#ffffff" stroke="#c4c7cc" stroke-width="1"/><text x="566" y="168" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">out</text><text x="566" y="185" text-anchor="middle" font-size="10.5" fill="#5f6368">Terminal</text><title>CMP-f9b59c6bbccf</title></g>
+<line x1="28" y1="354" x2="48" y2="354" stroke="#5f6368" stroke-width="1.5" stroke-linecap="round"/>
+<text x="54" y="358" font-size="11" fill="#5f6368">electrical</text>
+</svg>

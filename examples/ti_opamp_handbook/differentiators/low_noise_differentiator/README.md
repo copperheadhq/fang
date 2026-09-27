@@ -8,6 +8,20 @@ E_O / E_I = -j 2π f R_O C_I / ((1 + j 2π f R_I C_I)(1 + j 2π f R_O C_O))
 R_I C_I = R_O C_O
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/low_noise_differentiator.kicad_sch`](out/low_noise_differentiator.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The page's rule is a constraint, and the figure's parts meet it exactly, both
@@ -47,5 +61,5 @@ says. A decade above it the op amp's loop gain is only about 60 and takes
 
 ```bash
 fang check examples/ti_opamp_handbook/differentiators/low_noise_differentiator/low_noise_differentiator.py
-python examples/regenerate.py ti_opamp_handbook/differentiators/low_noise_differentiator   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/differentiators/low_noise_differentiator   # needs ngspice and kicad-cli
 ```

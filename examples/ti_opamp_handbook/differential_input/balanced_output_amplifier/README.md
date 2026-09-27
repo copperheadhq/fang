@@ -10,6 +10,20 @@ E_O + E_P, so E_O is the difference between the two.
 E_O = (R_O / R_I)(E2 - E1)
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/balanced_output_amplifier.kicad_sch`](out/balanced_output_amplifier.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The figure gives no values, so the program chooses them (`values`): R_I =
@@ -42,5 +56,5 @@ The `floating` run is the page's "ground reference is not critical": the same
 
 ```bash
 fang check examples/ti_opamp_handbook/differential_input/balanced_output_amplifier/balanced_output_amplifier.py
-python examples/regenerate.py ti_opamp_handbook/differential_input/balanced_output_amplifier   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/differential_input/balanced_output_amplifier   # needs ngspice and kicad-cli
 ```

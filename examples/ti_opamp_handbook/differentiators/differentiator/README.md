@@ -8,6 +8,20 @@ non-inverting input on ground.
 E_O = -R_O C_I dE_I/dt
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/differentiator.kicad_sch`](out/differentiator.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The figure names C_I and R_O and gives them no values, so the program chooses
@@ -54,5 +68,5 @@ what the page means by "susceptible to high frequency noise".
 
 ```bash
 fang check examples/ti_opamp_handbook/differentiators/differentiator/differentiator.py
-python examples/regenerate.py ti_opamp_handbook/differentiators/differentiator   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/differentiators/differentiator   # needs ngspice and kicad-cli
 ```

@@ -7,6 +7,20 @@ the output to the - input and R_I 10 kΩ from there to ground.
 E_O = (R_O + R_I) / R_I x E_I = 10 E_I
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/simple_non_inverting.kicad_sch`](out/simple_non_inverting.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The figure gives both values, so nothing is chosen. The claim is a parameter,
@@ -37,5 +51,5 @@ does have: the output stops at its ±13.5 V swing once E_I passes 1.35 V.
 
 ```bash
 fang check examples/ti_opamp_handbook/dc_amplifiers/simple_non_inverting/simple_non_inverting.py
-python examples/regenerate.py ti_opamp_handbook/dc_amplifiers/simple_non_inverting   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/dc_amplifiers/simple_non_inverting   # needs ngspice and kicad-cli
 ```

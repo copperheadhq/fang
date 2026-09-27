@@ -4,6 +4,20 @@ SBOA092B page 76, *Single Supply*: the simple a.c. amplifier above it, with
 the + input held at half the supply by R_2 10 kΩ and R_2' 10 kΩ and bypassed
 by C_2 100 µF. "Equivalent to above, with the supply 'floated' above ground."
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/single_supply.kicad_sch`](out/single_supply.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The page gives no supply voltage, so `supply` chooses 15 V and an op amp
@@ -35,5 +49,5 @@ about 56 mV high.
 
 ```bash
 fang check examples/ti_opamp_handbook/ac_amplifiers/single_supply/single_supply.py
-python examples/regenerate.py ti_opamp_handbook/ac_amplifiers/single_supply   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/ac_amplifiers/single_supply   # needs ngspice and kicad-cli
 ```

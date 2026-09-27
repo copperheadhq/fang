@@ -11,6 +11,20 @@ The handbook prints no formula. The drawing's:
 -E_O = -(R_0 / R_1) Eref = -10 Eref,   +E_O = +10 Eref
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/reference_voltage_supply.kicad_sch`](out/reference_voltage_supply.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 R_4 is the point of the figure. It carries (10 Eref - Eref) / 90 kΩ =
@@ -38,5 +52,5 @@ the op amps' ppm-level loop-gain error, and R_4's current with them. It is
 
 ```bash
 fang check examples/ti_opamp_handbook/references/reference_voltage_supply/reference_voltage_supply.py
-python examples/regenerate.py ti_opamp_handbook/references/reference_voltage_supply   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/references/reference_voltage_supply   # needs ngspice and kicad-cli
 ```

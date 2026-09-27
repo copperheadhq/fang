@@ -8,6 +8,20 @@ the supply and, when it runs out, drops its output onto a clamp and pulls in a
 Delay = R_I C_O / (2 K),   K the setting of R_7, 0 < K < 1
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/time_delay_relay.kicad_sch`](out/time_delay_relay.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 This is the least clean figure in the handbook, and the reading is recorded in
@@ -64,5 +78,5 @@ it is closest, with a 7% tolerance that says why.
 
 ```bash
 fang check examples/ti_opamp_handbook/additional/time_delay_relay/time_delay_relay.py
-python examples/regenerate.py ti_opamp_handbook/additional/time_delay_relay   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/additional/time_delay_relay   # needs ngspice and kicad-cli
 ```

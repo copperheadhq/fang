@@ -49,6 +49,9 @@ What each circuit's `out/` adds to the usual files:
 
 | File | What it is |
 | --- | --- |
+| `<name>.kicad_sch` | The schematic, compiled from the program |
+| `schematic.svg` | KiCad's render of it, shown in the circuit's README |
+| `views/interconnect.svg` | fang's interconnect view, with the parts named as the program names them |
 | `spice/<run>.cir` | The deck ngspice ran: fang's lowering, then the bench's cards |
 | `simulation.txt` | Each measurement against its claim, and what the plan abstracted |
 
@@ -151,6 +154,6 @@ set of values, and it is the comparator above.
 
 ```bash
 fang check examples/ti_opamp_handbook/summers/scaling_adder/scaling_adder.py
-python examples/regenerate.py ti_opamp_handbook/summers/scaling_adder   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/summers/scaling_adder   # needs ngspice and kicad-cli
 python -m pytest tests/test_handbook.py
 ```

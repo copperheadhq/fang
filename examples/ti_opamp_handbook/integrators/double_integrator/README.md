@@ -9,6 +9,20 @@ from their junction to ground.
 E_O = -4/(R_I C_I)² ∬ E_I dt = -4 ∬ E_I dt,   where C_O = C_I/2, R_O = R_I/2
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/double_integrator.kicad_sch`](out/double_integrator.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 Working the two tees as transfer admittances gives
@@ -56,5 +70,5 @@ R_O = 500 kΩ.
 
 ```bash
 fang check examples/ti_opamp_handbook/integrators/double_integrator/double_integrator.py
-python examples/regenerate.py ti_opamp_handbook/integrators/double_integrator   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/integrators/double_integrator   # needs ngspice and kicad-cli
 ```

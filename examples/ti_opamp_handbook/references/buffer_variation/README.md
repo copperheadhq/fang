@@ -8,6 +8,20 @@ ground. The op amp is a TLC265x, a chopper-stabilized part.
 E_O = Eref
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/buffer_variation.kicad_sch`](out/buffer_variation.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The loop holds the inverting input at ground, so the output stands one cell
@@ -36,5 +50,5 @@ of Eref. The chopper's 1 µV is 1 ppm.
 
 ```bash
 fang check examples/ti_opamp_handbook/references/buffer_variation/buffer_variation.py
-python examples/regenerate.py ti_opamp_handbook/references/buffer_variation   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/references/buffer_variation   # needs ngspice and kicad-cli
 ```

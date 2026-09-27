@@ -8,6 +8,20 @@ by side from E_I to the inverting input, 100 kΩ R_O back from the output, and
 E_O = -R_O E_I / R_I - R_O C_I dE_I/dt = -E_I - (1/100) dE_I/dt
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/augmented_differentiator.kicad_sch`](out/augmented_differentiator.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 R_I makes an inverting amplifier of gain `a_dc = -R_O/R_I = -1`, C_I a
@@ -49,5 +63,5 @@ version would need the same stop as the circuits above it.
 
 ```bash
 fang check examples/ti_opamp_handbook/differentiators/augmented_differentiator/augmented_differentiator.py
-python examples/regenerate.py ti_opamp_handbook/differentiators/augmented_differentiator   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/differentiators/augmented_differentiator   # needs ngspice and kicad-cli
 ```

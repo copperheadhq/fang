@@ -9,6 +9,20 @@ an integrator (R_5 100 kΩ, C_0 10 µF) whose output is E_O and closes the loop.
 E_O = -(R_O / R_I) E_I = -E_I,   rate limit = 7.5 V/s
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/rate_limiter.kicad_sch`](out/rate_limiter.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The reading (`reading`) puts R_0 on the first op amp's + input, where the
@@ -47,5 +61,5 @@ number with a 5% tolerance and says why.
 
 ```bash
 fang check examples/ti_opamp_handbook/additional/rate_limiter/rate_limiter.py
-python examples/regenerate.py ti_opamp_handbook/additional/rate_limiter   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/additional/rate_limiter   # needs ngspice and kicad-cli
 ```

@@ -8,6 +8,20 @@ with R/2 to ground between them. The op amp runs open loop through them.
 f = 1 / (2 pi R C)
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/simple_oscillator.kicad_sch`](out/simple_oscillator.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The two T's are a twin-T notch. At d.c. the R-R path feeds the output back to
@@ -44,5 +58,5 @@ oscillation takes much longer to build.
 
 ```bash
 fang check examples/ti_opamp_handbook/oscillators/simple_oscillator/simple_oscillator.py
-python examples/regenerate.py ti_opamp_handbook/oscillators/simple_oscillator   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/oscillators/simple_oscillator   # needs ngspice and kicad-cli
 ```

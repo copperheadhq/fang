@@ -7,6 +7,20 @@ point, R_O from the output back to it, and the non-inverting input on ground.
 E_O / E_I = -R_O / R_I
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/inverting_amplifier.kicad_sch`](out/inverting_amplifier.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The figure names the two resistors and gives them no values, so the program
@@ -40,5 +54,5 @@ noise gain. That corner is the op amp's, not a claim of the handbook.
 
 ```bash
 fang check examples/ti_opamp_handbook/basic_amplifiers/inverting_amplifier/inverting_amplifier.py
-python examples/regenerate.py ti_opamp_handbook/basic_amplifiers/inverting_amplifier   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/basic_amplifiers/inverting_amplifier   # needs ngspice and kicad-cli
 ```

@@ -65,6 +65,24 @@ SCHEMATICS: frozenset[str] = frozenset(
     {"jee_advanced/problem_1", "jee_advanced/problem_2", "noninverting_amp"}
 )
 
+#: Groups whose every example is a textbook figure, and ships what the three
+#: above do: the schematic and the interconnect view, the two pictures to set
+#: beside the page it came from. Naming the folder rather than each circuit is
+#: what keeps a new one in the group from arriving without them.
+FIGURES = ("ti_opamp_handbook/",)
+
+
+def views_of(name: str) -> tuple[str, ...]:
+    """The views an example ships."""
+    if name.startswith(FIGURES):
+        return ("interconnect",)
+    return VIEWS.get(name, ())
+
+
+def schematic_of(name: str) -> bool:
+    """Whether an example ships a schematic and KiCad's render of it."""
+    return name in SCHEMATICS or name.startswith(FIGURES)
+
 #: The entity kinds that carry reasoning rather than circuit. An example with
 #: none of them gets no rationale document, because it would have nothing in it.
 RATIONALE_KINDS = ("requirement", "decision", "evidence", "calculation", "verification")
@@ -299,15 +317,15 @@ def render(name: str, *, with_render: bool = True) -> dict[str, str]:
         "checks.txt": _run(cmd_check, name),
         "graph.txt": _run(cmd_graph, name),
     }
-    for view_name in VIEWS.get(name, ()):
+    for view_name in views_of(name):
         graph = view(result.snapshot, view_name)
         files[f"views/{view_name}.svg"] = to_svg(place(graph, seeds=PlacementSeeds()))
-    if name in SCHEMATICS:
+    if schematic_of(name):
         schematic = compile_schematic(
             result.snapshot, traits=result.traits, title=stem
         )
         files[f"{stem}.kicad_sch"] = schematic
-    if name in SCHEMATICS and with_render:
+    if schematic_of(name) and with_render:
         with TemporaryDirectory() as scratch:
             files["schematic.svg"] = KicadRenderer().to_svg(
                 schematic, workspace=Path(scratch), name=stem

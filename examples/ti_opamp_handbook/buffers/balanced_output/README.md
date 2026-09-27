@@ -8,6 +8,20 @@ second one's is E_O-.
 E_O+ = -E_I,   E_O- = +E_I,   E_O+ - E_O- = -2 E_I
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/balanced_output.kicad_sch`](out/balanced_output.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 Every value is drawn, so nothing is chosen. The parameters are the two gains
@@ -46,5 +60,5 @@ holds: at 10 V peak the difference spans 40 V p-p while each output stays at
 
 ```bash
 fang check examples/ti_opamp_handbook/buffers/balanced_output/balanced_output.py
-python examples/regenerate.py ti_opamp_handbook/buffers/balanced_output   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/buffers/balanced_output   # needs ngspice and kicad-cli
 ```

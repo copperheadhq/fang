@@ -9,6 +9,20 @@ current from it.
 E_O = Eref, and the cell supplies no current
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/isolated_standard_cell.kicad_sch`](out/isolated_standard_cell.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The figure gives the cell no value and draws no meter, so the program
@@ -36,5 +50,5 @@ draws picoamps, which is why the claim is held to 1 nA.
 
 ```bash
 fang check examples/ti_opamp_handbook/references/isolated_standard_cell/isolated_standard_cell.py
-python examples/regenerate.py ti_opamp_handbook/references/isolated_standard_cell   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/references/isolated_standard_cell   # needs ngspice and kicad-cli
 ```

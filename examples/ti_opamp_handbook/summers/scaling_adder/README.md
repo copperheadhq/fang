@@ -8,6 +8,20 @@ E_O = -(R0/R1 E1 + R0/R2 E2 + R0/R3 E3) = -(100 E1 + 10 E2 + E3)
 Z_in = 1 kΩ for E1, 10 kΩ for E2, 100 kΩ for E3
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/scaling_adder.kicad_sch`](out/scaling_adder.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 Each weight is a parameter held to the parts, `a_1 = -R0/R1 = -100`,
@@ -41,5 +55,5 @@ The printed formula would ask for -300 V from the last run. The gains land
 
 ```bash
 fang check examples/ti_opamp_handbook/summers/scaling_adder/scaling_adder.py
-python examples/regenerate.py ti_opamp_handbook/summers/scaling_adder   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/summers/scaling_adder   # needs ngspice and kicad-cli
 ```

@@ -7,6 +7,20 @@ amp, a follower for +E_I and an inverter for -E_I.
 E_O = |E_I|
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/absolute_value.kicad_sch`](out/absolute_value.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 With R in and R across, the output is 2 V+ - E_I. Both diodes have their
@@ -52,5 +66,5 @@ have, would move that node by more than the leakage does.
 
 ```bash
 fang check examples/ti_opamp_handbook/additional/absolute_value/absolute_value.py
-python examples/regenerate.py ti_opamp_handbook/additional/absolute_value   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/additional/absolute_value   # needs ngspice and kicad-cli
 ```

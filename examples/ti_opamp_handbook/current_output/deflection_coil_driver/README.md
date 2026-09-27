@@ -8,6 +8,20 @@ floating load between the output and R3.
 I / E_I = -R0 / (R1 R3) = -100 mA / Volt
 ```
 
+## The circuit
+
+![the schematic, rendered by KiCad](out/schematic.svg)
+
+The schematic is compiled from the program and drawn by KiCad, and it opens in
+KiCad as [`out/deflection_coil_driver.kicad_sch`](out/deflection_coil_driver.kicad_sch). A part with a symbol
+of its own is drawn with it; the op amp and the handbook's other parts are
+boxes carrying their own pins, and each net is a label rather than a wire.
+
+![the interconnect view](out/views/interconnect.svg)
+
+The interconnect view is fang's own projection. It names the parts as the
+program does, so it reads against the code below.
+
 ## What the program says
 
 The loop holds the top of R3 at -E_I R0 / R1, so R3 carries -E_I R0 /
@@ -41,5 +55,5 @@ E_I / R1, 0.1 mA per volt more, so the load current is -100.1 mA / Volt.
 
 ```bash
 fang check examples/ti_opamp_handbook/current_output/deflection_coil_driver/deflection_coil_driver.py
-python examples/regenerate.py ti_opamp_handbook/current_output/deflection_coil_driver   # needs ngspice
+python examples/regenerate.py ti_opamp_handbook/current_output/deflection_coil_driver   # needs ngspice and kicad-cli
 ```
