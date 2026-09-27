@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="800" viewBox="0 0 720 800" font-family="Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="552" height="800" viewBox="0 0 552 800" font-family="Helvetica, Arial, sans-serif">
 <title>interconnect: What is connected to what?</title>
 <defs><marker id="arrow" viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0.8 L8,4 L0,7.2 Z" fill="#000000"/></marker></defs>
-<g transform="translate(84,0)">
+<g transform="translate(0,0)">
 <line x1="28" y1="510" x2="524" y2="510" stroke="#000000" stroke-width="0.6" stroke-dasharray="2 4"/>
 <text x="28" y="503" font-size="9" fill="#000000">NOTHING IN THIS VIEW CONNECTS TO THESE</text>
 <polyline points="340.0,88.0 340.0,106.0 282.0,106.0 282.0,394.0 402.4,394.0 402.4,412.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>ground: NET-4519b17f8f99</title></polyline>
@@ -55,6 +55,6 @@
 <text x="260" y="715.5" font-size="9.5" fill="#000000">POWER</text>
 <text x="28" y="742" font-size="9.5" fill="#000000">4 node(s) carry unknown parameters; a dashed border marks them</text>
 </g>
-<text x="360.0" y="772" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">INTERCONNECT</text>
-<text x="360.0" y="788" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">What is connected to what?</text>
+<text x="276.0" y="772" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">INTERCONNECT</text>
+<text x="276.0" y="788" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">What is connected to what?</text>
 </svg>

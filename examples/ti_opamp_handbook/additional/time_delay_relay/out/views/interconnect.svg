@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="997" viewBox="0 0 720 997" font-family="Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="712" height="997" viewBox="0 0 712 997" font-family="Helvetica, Arial, sans-serif">
 <title>interconnect: What is connected to what?</title>
 <defs><marker id="arrow" viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0.8 L8,4 L0,7.2 Z" fill="#000000"/></marker></defs>
-<g transform="translate(4,0)">
+<g transform="translate(0,0)">
 <polyline points="184.0,280.0 184.0,394.0 334.0,394.0 334.0,412.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-e7d7f6ebf770</title></polyline>
 <polyline points="530.0,280.0 530.0,778.0 455.2,778.0 455.2,796.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-4d1ca10e619c</title></polyline>
 <polyline points="76.0,856.0 76.0,874.0 270.0,874.0 270.0,856.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-a060544611fc</title></polyline>
@@ -44,6 +44,6 @@
 <text x="60" y="912.5" font-size="9.5" fill="#000000">ELECTRICAL</text>
 <text x="28" y="939" font-size="9.5" fill="#000000">9 node(s) carry unknown parameters; a dashed border marks them</text>
 </g>
-<text x="360.0" y="969" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">INTERCONNECT</text>
-<text x="360.0" y="985" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">What is connected to what?</text>
+<text x="356.0" y="969" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">INTERCONNECT</text>
+<text x="356.0" y="985" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">What is connected to what?</text>
 </svg>

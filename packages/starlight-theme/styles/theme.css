@@ -426,10 +426,20 @@ mobile-starlight-toc .toggle {
 	.sl-markdown-content td:first-child code:not(:where(.not-content *)) {
 		white-space: normal;
 	}
+	/* A labelled cell is one line of the card, its label on the left and its
+	 * value beside it, so a row of short values makes a short card. A long
+	 * value wraps in its own column rather than under the label. */
+	.sl-markdown-content td[data-label]:not(:where(.not-content *)) {
+		position: relative;
+		padding: 0.45rem 0 0.45rem 38%;
+		text-align: start !important;
+	}
 	.sl-markdown-content td[data-label]:not(:where(.not-content *))::before {
 		content: attr(data-label);
-		display: block;
-		margin-bottom: 0.2rem;
+		position: absolute;
+		left: 0;
+		top: 0.6rem;
+		width: 35%;
 		font-size: 0.6875rem;
 		font-weight: 700;
 		letter-spacing: 0.06em;

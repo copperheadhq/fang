@@ -3,6 +3,7 @@ import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 import copperheadTheme from "@copperhead/starlight-theme";
 import { existsSync, readFileSync } from "node:fs";
+import rehypeTableLabels from "./src/plugins/rehype-table-labels.mjs";
 
 const REPO = "https://github.com/copperheadhq/fang";
 
@@ -20,6 +21,10 @@ const exampleItems = existsSync(EXAMPLES_SIDEBAR)
 // links, and its pages.
 export default defineConfig({
   site: "https://fang.copperhead.sh",
+  // Labels every table cell with its column's header, which the theme shows
+  // when a narrow column turns each row into a card. A rehype plugin needs
+  // @astrojs/markdown-remark installed; Astro 7 no longer ships it.
+  markdown: { rehypePlugins: [rehypeTableLabels] },
   integrations: [
     starlight({
       title: "fang",
