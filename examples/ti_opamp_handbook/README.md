@@ -1,11 +1,13 @@
-# ti_opamp_handbook
+# Texas Instruments: Handbook of Operational Amplifier Applications
 
-Every circuit in TI's [SBOA092B, *Handbook of Operational Amplifier
-Applications*](https://www.ti.com/lit/an/sboa092b/sboa092b.pdf) (Carter and
-Brown, revised 2016), written in fang and simulated in ngspice through
-`fang.simulation`. That is 72 circuits from the handbook's circuit collection
-(pages 49 to 91) plus the fully clamped comparator of Figure 54. Each one is an
-example folder of its own. This folder groups them and is not itself an example.
+Every circuit in Texas Instruments' *Handbook of Operational Amplifier
+Applications* (SBOA092B, Carter and Brown, revised 2016), written in fang and
+simulated in ngspice through `fang.simulation`.
+
+The handbook is [SBOA092B on ti.com](https://www.ti.com/lit/an/sboa092b/sboa092b.pdf).
+That is 72 circuits from its circuit collection (pages 49 to 91) plus the fully
+clamped comparator of Figure 54. Each one is an example folder of its own; this
+folder groups them and is not itself an example.
 
 **73 circuits, 339 claims, every one holding in simulation.** About a third of
 the pages print something the drawn circuit does not do, and each of those is
