@@ -313,9 +313,18 @@ def _pins_of(snapshot, component_id: str) -> tuple[tuple[str, str], ...]:
 def _symbol_for(snapshot, component: Component, designator: str) -> Symbol:
     prefix = "".join(c for c in designator if not c.isdigit())
     drawn = SYMBOL_OF_PREFIX.get(prefix)
-    if drawn is not None:
-        return drawn
-    return _box(designator, _pins_of(snapshot, component.id))
+    if drawn is None:
+        return _box(designator, _pins_of(snapshot, component.id))
+    # A drawn symbol numbers its pins, and the netlist names a pin by the name
+    # the part gives it: a cell's are `+` and `-`, not 1 and 2. Looked up by
+    # number, such a pin would find no net and be drawn with nothing on it.
+    named = dict(_pins_of(snapshot, component.id))
+    return replace(
+        drawn,
+        pins=tuple(
+            replace(pin, node=named.get(pin.number, pin.node)) for pin in drawn.pins
+        ),
+    )
 
 
 def place(snapshot, netlist: Netlist) -> tuple[Placement, ...]:
