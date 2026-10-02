@@ -4,6 +4,24 @@ Every line below is an entity in the elaborated graph, projected by
 `python examples/regenerate.py`. Nothing here is prose kept beside the
 design; it is the design.
 
+## Requirements
+
+### system.survives_missing_sensor — `REQ-a2382492c60d`
+
+> With the HS3001 missing the firmware keeps running and blinks the status LED fast, and makes no read
+
+MUST, state KNOWN, validation by emulation.
+
+- Verified by `system.sensor_missing` (`VER-607ca20f775b`): **UNKNOWN** by emulation
+
+### system.sensor_ready — `REQ-c59ecf950435`
+
+> Within 200 ms of reset the firmware reads the HS3001, reports the temperature it read on the console, and blinks the status LED slowly while readings succeed
+
+MUST, state KNOWN, validation by emulation.
+
+- Verified by `system.startup` (`VER-eda715fc0af6`): **UNKNOWN** by emulation
+
 ## Decisions
 
 ### connection.0004.line.right — `DEC-022639c73f2d`

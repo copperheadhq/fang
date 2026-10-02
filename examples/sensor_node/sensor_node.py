@@ -12,26 +12,45 @@ NRST and BOOT0 are left out, so this is a board for the checks and for running
 firmware against, not one to send to fabrication.
 """
 
+from fang.emulation import (
+    Absent,
+    At,
+    Count,
+    EmulationModel,
+    Emulates,
+    Firmware,
+    FirstAt,
+    I2CRead,
+    PinConfig,
+    Rises,
+    UartValue,
+)
 from fang.interfaces import AF, I2CPort, Pin, PinMap, PowerIn, PowerOut, UARTPort
 from fang.lang import (
     Electrical,
     Ground,
     Ohm,
+    Parameter,
     Part,
     Signal,
     System,
     UnitLiteral,
     V,
+    degC,
     kHz,
     kOhm,
+    ms,
     nF,
     require,
+    s,
 )
 from fang.parts import LED, DecouplingCapacitor, Resistor
-from fang.rationale import Cites
+from fang.rationale import Cites, Requires
 
 #: Dimensionless, for a bus address: a count, not a measure.
 addr = UnitLiteral("1")
+#: Dimensionless, for events counted in an emulated run.
+count = UnitLiteral("1")
 
 #: The two datasheets every number below was read from.
 ST = "SRC-DS-STM32F401"            # ST DS10086, STM32F401xD/xE, Rev 5
@@ -237,7 +256,59 @@ class ConsoleHeader(Part):
 
 
 class SensorNode(System):
-    """A sensor on I2C1, a console on USART2 and a status LED on PA5."""
+    """A sensor on I2C1, a console on USART2 and a status LED on PA5.
+
+    The firmware in `firmware/` is run against this board in Renode, and two
+    questions are asked of it: whether it reads the sensor, reports what it
+    read and shows a good reading on the LED, and whether it keeps running
+    and shows the fault when the sensor is missing. Each is a requirement the
+    board is verified against, by emulation, through the commit gate.
+    """
+
+    sensor_ready = Requires(
+        "Within 200 ms of reset the firmware reads the HS3001, reports the "
+        "temperature it read on the console, and blinks the status LED slowly "
+        "while readings succeed",
+        validation="emulation",
+    )
+    survives_missing_sensor = Requires(
+        "With the HS3001 missing the firmware keeps running and blinks the "
+        "status LED fast, and makes no read",
+        validation="emulation",
+    )
+
+    first_read = Parameter("s", description="when the firmware first reads the sensor")
+    reported = Parameter("degC", description="the temperature the firmware prints")
+    slow_blinks = Parameter("", description="status LED rises between 1 s and 2 s, sensor present")
+    mux_mismatches = Parameter("", description="I2C1 pins configured otherwise than the board requires")
+    fast_blinks = Parameter("", description="status LED rises between 1 s and 2 s, sensor missing")
+    missing_reads = Parameter("", description="reads of the sensor while it is missing")
+
+    # The sensor is at 25 degC from reset. The pull-ups, the LED's resistor and
+    # the console header share nets with the pins the question touches and
+    # carry no emulation model, so they are named as abstracted.
+    startup = Emulates(
+        "sensor_ready",
+        run_until=2 * s,
+        stimuli=[At(0 * ms, "env.temperature", 25 * degC)],
+        measures={
+            "first_read": FirstAt(I2CRead("env")),
+            "reported": UartValue("mcu.usart2", prefix="temp=", unit=degC),
+            "slow_blinks": Count(Rises("mcu.status"), within=(1 * s, 2 * s)),
+            "mux_mismatches": PinConfig("mcu.i2c1"),
+        },
+        abstracted=("scl_pullup", "sda_pullup", "series", "console"),
+    )
+    sensor_missing = Emulates(
+        "survives_missing_sensor",
+        run_until=2 * s,
+        faults=[Absent("env")],
+        measures={
+            "fast_blinks": Count(Rises("mcu.status"), within=(1 * s, 2 * s)),
+            "missing_reads": Count(I2CRead("env")),
+        },
+        abstracted=("scl_pullup", "sda_pullup", "series"),
+    )
 
     decoupling = Cites(
         "Each VDD/VSS pair is decoupled with ceramic capacitors close to the "
@@ -269,6 +340,11 @@ class SensorNode(System):
         # The selection lands on the instance, not the class template.
         self.mcu.select("STMicroelectronics", "STM32F401RET6", datasheet=ST)
         self.env.select("Renesas", "HS3001", datasheet=RENESAS)
+        # What the emulator runs: fang's F401 platform model, the firmware
+        # beside this program, and Renode's own HS3001 model.
+        self.mcu.add_trait(EmulationModel(source="fang:stm32f401re"))
+        self.mcu.add_trait(Firmware("firmware/elf/sensor_node.elf", target="stm32f401re"))
+        self.env.add_trait(EmulationModel(source="renode:Sensors.HS3001"))
 
     def architecture(self):
         self.header.dc >> self.mcu.power
@@ -301,3 +377,13 @@ class SensorNode(System):
         # 3.3 V / 8 mA: whatever the LED drops, PA5 never sources more than the
         # current its output levels are specified at.
         require(self.series.resistance >= 412.5 * Ohm)
+
+        # What the firmware has to do, decided by emulation. 0.05 degC allows
+        # the sensor's 14-bit quantization: 25 degC reads back as 25.01.
+        require(self.first_read <= 200 * ms)
+        require(self.reported >= 24.95 * degC)
+        require(self.reported <= 25.05 * degC)
+        require(self.slow_blinks == 1 * count)
+        require(self.mux_mismatches == 0 * count)
+        require(self.fast_blinks >= 4 * count)
+        require(self.missing_reads == 0 * count)

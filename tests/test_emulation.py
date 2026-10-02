@@ -463,3 +463,14 @@ def test_a_plan_compiled_from_the_board_runs_and_measures():
     assert m["reported"].quantity.value == Decimal("25.01")
     assert m["slow_blinks"].quantity.value == 1
     assert m["mux_mismatches"].quantity.value == 0
+
+
+# -- the lowering against the spike's hand-written files -----------------------
+
+
+def test_the_lowering_reproduces_the_spikes_hand_written_files():
+    """The spike wrote the platform description and the script by hand and ran
+    them against Renode 1.17.0; the lowering reproduces both byte for byte."""
+    golden = ROOT / "tests" / "fixtures" / "renode" / "golden"
+    assert platform_description(plan()) == (golden / "platform.repl").read_text()
+    assert script(plan()) == (golden / "run.resc").read_text()

@@ -198,6 +198,24 @@ SIM_OUTSIDE_MODEL_RANGE = _allocate("SIM-0007", "a frequency outside a model's r
 SIM_EXCLUSION_WITHOUT_REASON = _allocate(
     "SIM-0008", "a rule-check exclusion gives no reason"
 )
+SIM_EMULATION_MODEL = _allocate(
+    "SIM-0009", "an emulation model names a descriptor the toolchain does not ship"
+)
+SIM_EMULATION_SCOPE = _allocate(
+    "SIM-0010", "a component in an emulation's scope has neither a model nor an abstraction"
+)
+SIM_EMULATION_FAULT = _allocate("SIM-0011", "a fault its emulation model does not support")
+SIM_EMULATION_STIMULUS = _allocate(
+    "SIM-0012", "a stimulus names an input its model lacks, or a quantity of the wrong dimension"
+)
+SIM_EMULATION_PIN = _allocate("SIM-0013", "a pin the platform emulation model does not map")
+SIM_EMULATION_DURATION = _allocate("SIM-0014", "an emulation question names no run duration")
+SIM_EMULATION_FIRMWARE = _allocate(
+    "SIM-0015", "no firmware is bound, or it was built for a target the platform does not describe"
+)
+SIM_EMULATION_BUS = _allocate(
+    "SIM-0016", "an emulated bus device's controller or address cannot be resolved"
+)
 
 # Import conditions.
 IMPORT_LOSSY = _allocate("IMPORT-0001", "adapter could not represent a construct")

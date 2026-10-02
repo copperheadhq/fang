@@ -621,6 +621,9 @@ def test_method_routing_is_extended_by_registering_a_method(monkeypatch):
 
     snapshot = build().snapshot
     question = replace(questions(snapshot)[0], method="emulation")
+    # fang.emulation registers this method when it is imported; take it out for
+    # the length of the test, so the answer does not depend on test order.
+    monkeypatch.delitem(METHOD_LEVELS, "emulation", raising=False)
     assert "no verification level" in route(snapshot, question).reason
 
     monkeypatch.setitem(METHOD_LEVELS, "emulation", Level.BEHAVIOURAL)

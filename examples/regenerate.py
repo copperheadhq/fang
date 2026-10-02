@@ -74,6 +74,12 @@ SCHEMATICS: frozenset[str] = frozenset(
 #: the two resistor meshes its labels still land on symbol bodies.
 DRAFTED: frozenset[str] = frozenset({"noninverting_amp"})
 
+#: The examples whose firmware runs in Renode. For each emulation question the
+#: plan, the platform description and the script are written under
+#: out/renode/<question>/, here and on every machine: lowering a plan needs no
+#: emulator, so these are compared like any other output.
+EMULATED: frozenset[str] = frozenset({"sensor_node"})
+
 #: The entity kinds that carry reasoning rather than circuit. An example with
 #: none of them gets no rationale document, because it would have nothing in it.
 RATIONALE_KINDS = ("requirement", "decision", "evidence", "calculation", "verification")
@@ -290,6 +296,23 @@ def _rationale(name: str, snapshot) -> str | None:
 # --------------------------------------------------------------------------
 
 
+def _emulation_bundles(result) -> dict[str, str]:
+    """Each emulation question's plan, platform description and script."""
+    from fang.emulation import RENODE
+    from fang.verification import questions
+
+    files = {}
+    for question in questions(result.snapshot):
+        if question.method != "emulation":
+            continue
+        job = RENODE.prepare(result.snapshot, question, traits=result.traits)
+        folder = f"renode/{question.label.rsplit('.', 1)[-1]}"
+        for file in ("plan.json", "platform.repl", "run.resc"):
+            content = job.files[file]
+            files[f"{folder}/{file}"] = content.decode("utf-8") if isinstance(content, bytes) else content
+    return files
+
+
 def render(name: str) -> dict[str, str]:
     """Every output file for one example, as relative path to text.
 
@@ -328,6 +351,8 @@ def render(name: str) -> dict[str, str]:
             files["copperhead/schematic.svg"] = KicadRenderer().to_svg(
                 drafted, workspace=Path(scratch) / "render", name=stem
             )
+    if name in EMULATED:
+        files.update(_emulation_bundles(result))
     rationale = _rationale(stem, result.snapshot)
     if rationale is not None:
         files["rationale.md"] = rationale

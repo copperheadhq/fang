@@ -441,23 +441,6 @@ def UartLine(uart: str, contains: str | None = None) -> Match:
     return Match("uart.line", uart, {"contains": contains} if contains is not None else {})
 
 
-@dataclass(frozen=True)
-class MeasureSpec:
-    """One measure over events, declared by surface and resolved by the plan."""
-
-    kind: str                         # first_at, count, latency, uart_value, pin_config
-    matches: tuple[Match, ...] = ()
-    options: Mapping[str, Any] = field(default_factory=dict)
-
-    def surfaces(self) -> tuple[str, ...]:
-        named = [m.surface for m in self.matches]
-        if "port" in self.options:
-            named.append(self.options["port"])
-        if "uart" in self.options:
-            named.append(self.options["uart"])
-        return tuple(named)
-
-
 def _window_ns(within: Sequence[Quantity] | None) -> tuple[int, int] | None:
     if within is None:
         return None
@@ -470,27 +453,6 @@ def _to_ns(quantity: Quantity) -> int:
     if low != high:
         raise EmulationError(f"a window bound is a single time, not {quantity}")
     return int((Decimal(low) * _NS).to_integral_value())
-
-
-def FirstAt(match: Match) -> MeasureSpec:
-    return MeasureSpec("first_at", (match,))
-
-
-def Count(match: Match, *, within: Sequence[Quantity] | None = None) -> MeasureSpec:
-    window = _window_ns(within)
-    return MeasureSpec("count", (match,), {"within_ns": list(window)} if window else {})
-
-
-def Latency(from_: Match, to: Match) -> MeasureSpec:
-    return MeasureSpec("latency", (from_, to))
-
-
-def UartValue(uart: str, *, prefix: str, unit: Any) -> MeasureSpec:
-    return MeasureSpec("uart_value", (), {"uart": uart, "prefix": prefix, "unit": str(unit)})
-
-
-def PinConfig(port: str) -> MeasureSpec:
-    return MeasureSpec("pin_config", (), {"port": port})
 
 
 # --------------------------------------------------------------------------
@@ -1144,3 +1106,538 @@ def _model_record(component: str, model: Descriptor) -> dict:
         "qualification": model.qualification,
         "provenance": dict(model.provenance),
     }
+
+
+# --------------------------------------------------------------------------
+# Declaring an emulation question
+# --------------------------------------------------------------------------
+
+from .diagnostics import (  # noqa: E402 - the question layer sits on the plan above
+    SIM_EMULATION_BUS,
+    SIM_EMULATION_DURATION,
+    SIM_EMULATION_FAULT,
+    SIM_EMULATION_FIRMWARE,
+    SIM_EMULATION_MODEL,
+    SIM_EMULATION_PIN,
+    SIM_EMULATION_SCOPE,
+    SIM_EMULATION_STIMULUS,
+    SIM_UNRESOLVED_SURFACE,
+    UNIT_DIMENSION_MISMATCH,
+    error,
+)
+from .runtime import Status  # noqa: E402
+from .simulation import Level  # noqa: E402
+from .units import Unit  # noqa: E402
+from .verification import (  # noqa: E402
+    _NO_RESULT,
+    MODEL_CONFIDENCE,
+    Job,
+    Measure,
+    Measurement,
+    NotRunnable,
+    QuestionDeclaration,
+    RawRun,
+    ToolUnavailable,
+    _walk,
+    register_method,
+    register_tool,
+)
+
+_TIME = Unit.parse("s").dimension
+_DIMENSIONLESS = Unit.parse("1").dimension
+
+#: The plan's refusal reasons, as the diagnostic code each is reported under.
+_CODES = {
+    "model": SIM_EMULATION_MODEL,
+    "scope": SIM_EMULATION_SCOPE,
+    "fault": SIM_EMULATION_FAULT,
+    "stimulus": SIM_EMULATION_STIMULUS,
+    "pin": SIM_EMULATION_PIN,
+    "duration": SIM_EMULATION_DURATION,
+    "firmware": SIM_EMULATION_FIRMWARE,
+    "target": SIM_EMULATION_FIRMWARE,
+    "bus": SIM_EMULATION_BUS,
+    "address": SIM_EMULATION_BUS,
+    "surface": SIM_UNRESOLVED_SURFACE,
+    "measure": SIM_UNRESOLVED_SURFACE,
+    "quantity": UNIT_DIMENSION_MISMATCH,
+}
+
+
+def _match_from(payload: Mapping[str, Any]) -> Match:
+    return Match(payload["kind"], payload["surface"], dict(payload.get("detail", {})))
+
+
+@dataclass(frozen=True)
+class FirstAtMeasure(Measure):
+    """The virtual time of the first matching event."""
+
+    kind = "emulation.first_at"
+    match: Match | None = None
+
+    def surfaces(self) -> tuple[str, ...]:
+        return (self.match.surface,)
+
+    def produces(self, analysis: str | None):
+        return _TIME
+
+    def fields(self) -> dict:
+        return {"match": self.match.as_dict()}
+
+    @classmethod
+    def read(cls, payload: Mapping) -> "Measure":
+        return cls(payload["surface"], _match_from(payload["match"]))
+
+
+@dataclass(frozen=True)
+class CountMeasure(Measure):
+    """Matching events in a window of virtual time, or over the whole run."""
+
+    kind = "emulation.count"
+    match: Match | None = None
+    within_ns: tuple[int, int] | None = None
+
+    def surfaces(self) -> tuple[str, ...]:
+        return (self.match.surface,)
+
+    def produces(self, analysis: str | None):
+        return _DIMENSIONLESS
+
+    def fields(self) -> dict:
+        out = {"match": self.match.as_dict()}
+        if self.within_ns is not None:
+            out["within_ns"] = list(self.within_ns)
+        return out
+
+    @classmethod
+    def read(cls, payload: Mapping) -> "Measure":
+        within = payload.get("within_ns")
+        return cls(payload["surface"], _match_from(payload["match"]), tuple(within) if within else None)
+
+
+@dataclass(frozen=True)
+class LatencyMeasure(Measure):
+    """The time from the first `from_` event to the first `to` event after it."""
+
+    kind = "emulation.latency"
+    from_: Match | None = None
+    to: Match | None = None
+
+    def surfaces(self) -> tuple[str, ...]:
+        return (self.from_.surface, self.to.surface)
+
+    def produces(self, analysis: str | None):
+        return _TIME
+
+    def fields(self) -> dict:
+        return {"from": self.from_.as_dict(), "to": self.to.as_dict()}
+
+    @classmethod
+    def read(cls, payload: Mapping) -> "Measure":
+        return cls(payload["surface"], _match_from(payload["from"]), _match_from(payload["to"]))
+
+
+@dataclass(frozen=True)
+class UartValueMeasure(Measure):
+    """The number after `prefix` on the first line a UART carried: the
+    firmware's report of a value, recorded as such."""
+
+    kind = "emulation.uart_value"
+    prefix: str = ""
+    unit: str = "1"
+
+    def produces(self, analysis: str | None):
+        return Unit.parse(self.unit).dimension
+
+    def fields(self) -> dict:
+        return {"prefix": self.prefix, "unit": self.unit}
+
+    @classmethod
+    def read(cls, payload: Mapping) -> "Measure":
+        return cls(payload["surface"], payload["prefix"], payload["unit"])
+
+
+@dataclass(frozen=True)
+class PinConfigMeasure(Measure):
+    """How many of a bus's pins the firmware configured otherwise than the
+    board requires."""
+
+    kind = "emulation.pin_config"
+
+    def produces(self, analysis: str | None):
+        return _DIMENSIONLESS
+
+    @classmethod
+    def read(cls, payload: Mapping) -> "Measure":
+        return cls(payload["surface"])
+
+
+def FirstAt(match: Match) -> FirstAtMeasure:
+    return FirstAtMeasure(match.surface, match)
+
+
+def Count(match: Match, *, within: Sequence[Quantity] | None = None) -> CountMeasure:
+    window = _window_ns(within)
+    return CountMeasure(match.surface, match, window)
+
+
+def Latency(from_: Match, to: Match) -> LatencyMeasure:
+    return LatencyMeasure(from_.surface, from_, to)
+
+
+def UartValue(uart: str, *, prefix: str, unit: Any) -> UartValueMeasure:
+    """`unit` is a unit literal, `degC`, or its symbol."""
+    symbol = unit.unit.symbol if hasattr(unit, "unit") else getattr(unit, "symbol", unit)
+    return UartValueMeasure(uart, prefix, str(symbol))
+
+
+def PinConfig(port: str) -> PinConfigMeasure:
+    return PinConfigMeasure(port)
+
+
+@dataclass(frozen=True)
+class At:
+    """A stimulus: one of a model's inputs set at a virtual time."""
+
+    time: Quantity
+    target: str                       # "<device surface>.<input>"
+    value: Quantity
+
+    @property
+    def surface(self) -> str:
+        return self.target.rsplit(".", 1)[0]
+
+    @property
+    def input(self) -> str:
+        return self.target.rsplit(".", 1)[1]
+
+
+@dataclass(frozen=True)
+class Absent:
+    """A fault: the device is not on its bus, so its address goes unanswered."""
+
+    surface: str
+    kind: str = "absent"
+
+
+class Emulates(QuestionDeclaration):
+    """A question answered by running the board's firmware in an emulator.
+
+    Declared beside the requirement it serves, like `Simulates`: the run's
+    virtual duration, its stimuli, its faults by mechanism, the parts it
+    abstracts, and its measures over what the emulator's probes observe, each
+    named by part surface. It elaborates to a verification with method
+    `emulation`, routed at the behavioural level, and cannot state its result.
+    """
+
+    fixed_method = "emulation"
+
+    def __init__(
+        self,
+        verifies: str,
+        *,
+        measures: Mapping[str, Measure],
+        run_until: Quantity | None = None,
+        stimuli: Sequence[At] = (),
+        faults: Sequence[Absent] = (),
+        firmware: str | None = None,
+        seed: int = 0,
+        abstracted: Sequence[str] = (),
+        tool: str | None = None,
+        result: object = _NO_RESULT,
+    ) -> None:
+        super().__init__(verifies, measures=measures, abstracted=abstracted, tool=tool, result=result)
+        if run_until is not None and run_until.dimension != _TIME:
+            raise error(
+                UNIT_DIMENSION_MISMATCH,
+                f"run_until is {run_until}; a run lasts a time",
+                location=self._source,
+            )
+        for stimulus in stimuli:
+            if stimulus.time.dimension != _TIME:
+                raise error(
+                    UNIT_DIMENSION_MISMATCH,
+                    f"the stimulus on {stimulus.target} is at {stimulus.time}; it happens at a time",
+                    location=self._source,
+                )
+        self.run_until = run_until
+        self.stimuli = tuple(stimuli)
+        self.faults = tuple(faults)
+        self.firmware = firmware
+        self.seed = int(seed)
+
+    def named_surfaces(self) -> tuple[str, ...]:
+        return (
+            super().named_surfaces()
+            + tuple(s.surface for s in self.stimuli)
+            + tuple(f.surface for f in self.faults)
+        )
+
+    def resolve_surface(self, module, name: str) -> dict:
+        """A part names a device; a part's surface names a port or a signal.
+
+        Both are recorded as the entities they are. Which pins they land on is
+        read from the graph when the plan is compiled, so nothing about a pin
+        is decided here.
+        """
+        owner, consumed, rest = _walk(module, name)
+        if not rest:
+            if not consumed or owner.entity_kind != "component":
+                raise error(
+                    SIM_UNRESOLVED_SURFACE,
+                    f"{name!r} names no part of {type(module).__name__}",
+                    location=self._source,
+                )
+            return {"kind": "part", "component": owner._entity_id}
+        surface = owner.surfaces().get(rest[0]) if len(rest) == 1 else None
+        if surface is None:
+            raise error(
+                SIM_UNRESOLVED_SURFACE,
+                f"{name!r} names no surface of {type(owner).__name__}",
+                location=self._source,
+            )
+        return {"kind": "surface", "component": owner._entity_id, "port": surface._entity_id}
+
+    def measured_dimension(self, measure: Measure):
+        return measure.produces(None)
+
+    def question_fields(self, module) -> dict:
+        scenario: dict = {
+            "seed": self.seed,
+            "stimuli": [
+                {
+                    "at": s.time.as_dict(),
+                    "surface": s.surface,
+                    "input": s.input,
+                    "quantity": s.value.as_dict(),
+                }
+                for s in self.stimuli
+            ],
+            "faults": [{"kind": f.kind, "surface": f.surface} for f in self.faults],
+        }
+        if self.run_until is not None:
+            scenario["run_until"] = self.run_until.as_dict()
+        if self.firmware is not None:
+            scenario["firmware"] = self.firmware
+        return {"scenario": scenario}
+
+
+# --------------------------------------------------------------------------
+# The renode tool
+# --------------------------------------------------------------------------
+
+#: A model's qualification, as the confidence a run resting on it can claim:
+#: a model only tested in emulation is an inference, never an assertion.
+QUALIFICATION_CONFIDENCE: Mapping[str, Decimal] = {
+    "experimental": MODEL_CONFIDENCE[next(c for c in MODEL_CONFIDENCE if c.value == "unverified")],
+    "tested in emulation": MODEL_CONFIDENCE[next(c for c in MODEL_CONFIDENCE if c.value == "inferred")],
+    "hardware-correlated": MODEL_CONFIDENCE[next(c for c in MODEL_CONFIDENCE if c.value == "asserted")],
+}
+
+
+def plan_from_dict(payload: Mapping[str, Any]) -> EmulationPlan:
+    """A plan read back from its canonical form, as a bundle carries it."""
+
+    def pin(p):
+        return PlanPin(p["pin"], p["vendor"], p["signal"], p.get("selector"), p["open_drain"],
+                       p["emulator"]["port"], int(p["emulator"]["index"]))
+
+    def device(d):
+        return PlanDevice(d["component"], d["probe"], d["model"], d["renode_type"], int(d["address"]), d["absent"])
+
+    return EmulationPlan(
+        question=payload["question"],
+        requirement=payload["requirement"],
+        snapshot=payload.get("snapshot", ""),
+        machine=payload["machine"],
+        platform=payload["platform"]["model"],
+        platform_file=payload["platform"]["file"],
+        recorder_port=payload["platform"]["recorder_port"],
+        target=payload["target"]["component"],
+        firmware_path=payload["target"]["firmware"]["path"],
+        firmware_target=payload["target"]["firmware"]["target"],
+        core_clock_hz=int(payload["platform"]["core_clock_hz"]),
+        seed=int(payload["seed"]),
+        run_until_ns=int(payload["run_until_ns"]),
+        buses=tuple(
+            PlanBus(b["port"], b["instance"], b["emulator"], tuple(pin(p) for p in b["pins"]),
+                    tuple(device(d) for d in b["devices"]))
+            for b in payload["buses"]
+        ),
+        observations=tuple(
+            PlanObservation(o["probe"], o["kind"], o["entity"], o["surface"], o["emulator"], o.get("index"))
+            for o in payload["observations"]
+        ),
+        watched=tuple(PlanWatch(w["probe"], w["emulator"], w["entity"]) for w in payload["watched"]),
+        registers=tuple(
+            PlanRegister(r["source"], r["peripheral"], r["register"], int(r["address"], 16),
+                         int(r["reset"], 16), r["stored"])
+            for r in payload["registers"]
+        ),
+        stimuli=tuple(
+            PlanStimulus(int(s["at_ns"]), s["component"], s["probe"], s["input"], s["property"], s["value"], s["unit"])
+            for s in payload["stimuli"]
+        ),
+        faults=tuple(dict(f) for f in payload["faults"]),
+        measures={name: dict(m) for name, m in payload["measures"].items()},
+        models=tuple(dict(m) for m in payload["models"]),
+        abstracted=tuple(payload["abstracted"]),
+        assumptions=tuple(payload["assumptions"]),
+        coverage_gaps=tuple(payload["coverage_gaps"]),
+        expected_warnings=tuple(dict(w) for w in payload["expected_warnings"]),
+    )
+
+
+def _firmware_location(snapshot, question, plan: EmulationPlan):
+    """Where the firmware is on this machine: relative to the program that
+    names it, the question's own if it names one, else the target's."""
+    from pathlib import Path
+
+    written = Path(plan.firmware_path)
+    if written.is_absolute():
+        return written
+    named_by_question = bool(question.data.get("scenario", {}).get("firmware"))
+    origin = question.source_location if named_by_question else snapshot.entities[plan.target].source_location
+    if origin is None:
+        return Path.cwd() / written
+    return Path(origin.file).parent / written
+
+
+@dataclass
+class RenodeTool:
+    """Renode answering emulation questions, at the behavioural level."""
+
+    name: str = "renode"
+    level: Level = Level.BEHAVIOURAL
+    backend: Any = None
+    timeout: float = 300
+
+    def __post_init__(self) -> None:
+        if self.backend is None:
+            from .renode import RenodeBackend
+
+            self.backend = RenodeBackend()
+
+    def covers(self, question) -> bool:
+        return question.method == "emulation"
+
+    def available(self) -> bool:
+        from .renode import RenodeUnavailable
+
+        if not self.backend.available():
+            return False
+        try:
+            self.backend.check()
+        except RenodeUnavailable:
+            return False
+        return True
+
+    def version(self) -> str:
+        from .renode import RenodeUnavailable
+
+        try:
+            version, build = self.backend.check()
+        except RenodeUnavailable as exc:
+            raise ToolUnavailable(str(exc)) from None
+        return f"{version} (build {build})" if build else version
+
+    def prepare(self, snapshot, question, *, traits=None) -> Job:
+        import hashlib
+
+        from .renode import LoweringError, bundle
+        from .traits import TraitRegistry
+
+        try:
+            plan = compile_plan(snapshot, question, traits=traits or TraitRegistry())
+        except EmulationError as exc:
+            raise NotRunnable(f"{question.label}: {exc}", code=_CODES.get(exc.code or "")) from None
+        location = _firmware_location(snapshot, question, plan)
+        if not location.is_file():
+            raise NotRunnable(
+                f"{question.label}: the firmware {plan.firmware_path} is not a file at {location}",
+                code=SIM_EMULATION_FIRMWARE,
+            )
+        firmware = location.read_bytes()
+        digest = "sha256:" + hashlib.sha256(firmware).hexdigest()
+        try:
+            files = bundle(plan, firmware)
+        except LoweringError as exc:
+            raise NotRunnable(f"{question.label}: {exc}", code=SIM_UNRESOLVED_SURFACE) from None
+        reports = sorted(name for name, m in plan.measures.items() if m["kind"] == "uart_value")
+        extra = {
+            "plan": plan.hash,
+            "seed": str(plan.seed),
+            "firmware": f"{plan.firmware_path} {digest}",
+            "platform": plan.platform,
+            "ran": "local",
+        }
+        if reports:
+            extra["firmware_reports"] = ", ".join(reports)
+        confidence = min(
+            (QUALIFICATION_CONFIDENCE.get(m["qualification"], Decimal("0.5")) for m in plan.models),
+            default=Decimal(1),
+        )
+        return Job(
+            self.name,
+            question,
+            snapshot.hash,
+            files,
+            assumptions=plan.assumptions,
+            coverage_gaps=plan.coverage_gaps,
+            inputs={plan.firmware_path: digest},
+            extra=extra,
+            confidence=confidence,
+        )
+
+    def run(self, job: Job, *, workspace) -> RawRun:
+        from .renode import RenodeUnavailable
+
+        files = {name: (c.encode("utf-8") if isinstance(c, str) else c) for name, c in job.files.items()}
+        try:
+            run = self.backend.run(files, timeout=self.timeout)
+        except RenodeUnavailable as exc:
+            raise ToolUnavailable(str(exc)) from None
+        version = f"{run.version} (build {run.build})" if run.build else run.version
+        succeeded = run.outcome == "completed"
+        return RawRun(
+            self.name,
+            version,
+            run.exit_status if run.exit_status is not None else -1,
+            stdout=run.log,
+            outputs={"events.jsonl": run.events, "outcome": run.outcome},
+            status=Status.SUCCEEDED if succeeded else Status.FAILED,
+            message="" if succeeded else f"the run ended: {run.outcome}",
+        )
+
+    def read(self, job: Job, raw: RawRun) -> tuple[Measurement, ...]:
+        plan = plan_from_dict(json.loads(job.files["plan.json"]))
+        outcome = raw.outputs.get("outcome", "completed" if raw.status is Status.SUCCEEDED else "crashed")
+        if isinstance(outcome, bytes):
+            outcome = outcome.decode()
+        events = raw.outputs.get("events.jsonl", b"")
+        if isinstance(events, str):
+            events = events.encode("utf-8")
+        found = {m.name: m for m in measure(plan, run_record(events, outcome))}
+        out = []
+        for entry in job.question.measures:
+            value = found.get(entry.name)
+            quantity, reason = None, None
+            if value is None:
+                reason = "the plan carries no such measure"
+            elif value.quantity is None:
+                reason = value.reason
+            elif value.quantity.unit.symbol in ("1", "") and entry.unit in ("1", ""):
+                quantity = value.quantity
+            else:
+                quantity, _ = value.quantity.converted_to(entry.unit)
+            out.append(
+                Measurement(entry.name, entry.parameter, quantity, self.name, raw.version,
+                            job.hash, job.confidence, reason)
+            )
+        return tuple(out)
+
+
+#: Renode, registered after the tools already there, at the behavioural level.
+RENODE = RenodeTool()
+register_method("emulation", Level.BEHAVIOURAL)
+register_tool(RENODE)

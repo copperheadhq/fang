@@ -34,7 +34,7 @@ and recorded files the later tests read — each reviewed again as it lands.
       and that `"100ms"` is read as 100 s; record each result.
 - [x] 1.8 Run each defective build and the absent-sensor case; verify which
       events differ from the startup run, as design.md's demo expects.
-- [ ] 1.9 Write the capability matrix — confirmed, refuted, not modelled — into
+- [x] 1.9 Write the capability matrix — confirmed, refuted, not modelled — into
       design.md, revising any fact the spike refuted (and RFC 12 where it
       reaches the normative text); commit the hand-written `platform.repl` and
       `run.resc` under `tests/fixtures/renode/` as golden files and the recorded

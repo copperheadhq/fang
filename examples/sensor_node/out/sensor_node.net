@@ -3,7 +3,7 @@
   (design
     (source "sensor_node.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:f32e7497d62056ed67643f6cef4deba150ba936c1426d65865d65b8a0f6a258e")
+    (snapshot "sha256:d9e5d95fd62a578d6eab5ca4efdae36a223fbce9b8e5a6457ff8cc0a09fcda5b")
     (project "PRJ-EXAMPLES")
   )
   (components
