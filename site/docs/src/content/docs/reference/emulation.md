@@ -148,7 +148,11 @@ it names. A plan that cannot be resolved is refused, naming what is missing.
 | `SIM-0016` | A bus device's controller or address cannot be resolved, its address is a range or no whole number, or `PinConfig` names a port that is no bus |
 
 The plan is canonical JSON, identified by the hash of its own canonical form,
-so two machines preparing the same question produce the same plan.
+so two machines preparing the same question produce the same plan. It names no
+snapshot: the snapshot's hash moves with every entity and with the checkout's
+path, so a plan carrying it would make an unrelated edit look like a new run.
+The job names its snapshot beside its hash instead, and a measurement stays
+current until something the run reads changes.
 
 ## The run
 

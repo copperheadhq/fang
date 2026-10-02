@@ -221,7 +221,11 @@ the duration. It is written as canonical JSON, `fang.emulation/v1`, through
 `fang.serialization`: mappings sorted, quantities as `Decimal` strings, times as
 integer nanoseconds. Its identity is its own content hash; the snapshot hash is
 recorded beside it but is not its identity, because the snapshot hash covers
-provenance and so the checkout's absolute path.
+provenance and so the checkout's absolute path. Nor is it in the plan's
+canonical form: `plan.json` is a file of the bundle the job hashes, so a plan
+that carried the snapshot hash would move the job with every unrelated edit and
+run Renode again for nothing. The job names its snapshot as `Job.snapshot`,
+outside its hash.
 
 A measure that would read the same whatever the firmware did is refused when
 the plan compiles, never measured: `PinConfig` over a port that is no I2C bus

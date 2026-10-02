@@ -225,3 +225,8 @@ and recorded files the later tests read — each reviewed again as it lands.
       from its temporary copy; verify `verify --commit` keeps both questions'
       runs under `.copperhead/simulations/`, `verify` alone keeps none, and a
       run that cannot be made keeps nothing.
+- [x] 11.16 Write `plan.json` without the snapshot hash, so no file of the
+      bundle, and so not the job's hash, moves with a change the run does not
+      read (RFC 12 1.3 section 12.8); verify an unrelated entity and another
+      checkout give the same job hash and a rebuilt firmware another, and
+      regenerate `sensor_node`'s plans.

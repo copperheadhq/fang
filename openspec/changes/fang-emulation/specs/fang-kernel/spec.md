@@ -374,7 +374,11 @@ byte-identical event records; a run that cannot SHALL report the difference
 rather than choose one record. A run SHALL leave its bundle, its event record,
 the emulator's log and its outcome in the workspace it is given, whatever
 directory the emulator itself ran from, so that a run whose evidence is
-committed keeps them beside it.
+committed keeps them beside it. No file of a run's bundle, and nothing else
+its job's hash covers, SHALL carry the hash of the snapshot the job was
+prepared against: the job names that snapshot beside its identity, so a change
+to anything the run does not read leaves the job, and a measurement of it
+current, as it was.
 
 #### Scenario: Ten runs give one record
 
@@ -386,6 +390,16 @@ committed keeps them beside it.
 - **WHEN** a run's evidence is read
 - **THEN** it names the emulator version and build, the firmware digest, the
   plan hash, the seed and the digest of every bundle file
+
+#### Scenario: An unrelated change leaves the job as it was
+
+- **WHEN** the demo's startup question is prepared against two snapshots that
+  differ only in an entity the run does not read, or only in the checkout the
+  program sits in
+- **THEN** the two jobs have the same hash, and the plan in each bundle names
+  no snapshot
+- **AND WHEN** the firmware is rebuilt and the question prepared again
+- **THEN** the job's hash differs
 
 #### Scenario: A committed run keeps its files
 
