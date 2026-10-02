@@ -46,6 +46,15 @@ context: |
   architecture, and project root as front matter before its requirements.
   There is no other standards document in this repository.
 
+  Upstream standard: copperhead RFC 12 (the hardware kernel and Fang language)
+  and RFC 3 (the EIR) in copperheadhq/copperhead-rfcs are the one normative
+  home for a requirement. A new kernel capability is proposed there as a
+  revision first; a change here cites it by RFC number, version, and section,
+  and may proceed while the revision's pull request is open. The living spec
+  may be more specific than the RFC and never contradicts it. Surveys, spike
+  findings, and verified facts go in the change's design.md, which is
+  informative.
+
   Governing rule: there is exactly one canonical model (the EIR).
   The kernel graph is its live realization; everything else is a lowering,
   a projection, or an interchange encoding. Never introduce a second

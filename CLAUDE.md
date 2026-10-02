@@ -154,6 +154,15 @@ acceptance tests. There is no other standards document in this repository — th
 contract. Read the relevant requirement before changing kernel behaviour. Module docstrings quote
 the requirement they implement by name (e.g. `Spec: "The Commit Gate"`) — keep that link intact.
 
+Upstream of the spec sits copperhead RFC 12, *The Copperhead Hardware Kernel and Fang Language
+Standard*, with RFC 3 for the EIR, in `copperheadhq/copperhead-rfcs`. That series is the one
+normative home for a requirement: a new kernel capability is proposed there as a revision first,
+and an OpenSpec change here cites it by RFC number, version, and section (the RFC repository's
+README, "From standard to code", has the flow and the rules). The spec may be more specific than
+the RFC, as a mapping must be, and never contradicts it. Surveys, spike findings, and the facts a
+design was checked against go in the change's `design.md`, which is informative; this repository
+keeps no separate RFC or design-note directory.
+
 [tests/test_acceptance.py](tests/test_acceptance.py) holds exactly one test per acceptance
 criterion, AT-R1..AT-R13 and AT-K1..AT-K10, and all 23 pass. The only skips in the suite are for
 optional binaries that may not be installed (NetworkX, ngspice, kicad-cli, copperhead); each names what is missing. If a
