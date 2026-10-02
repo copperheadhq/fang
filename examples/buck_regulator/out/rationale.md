@@ -48,6 +48,12 @@ Result: 3.3 V from a 0.8 V reference at 3.125
 
 ## Evidence
 
+### system.enable_input (`EVD-add0373bb741`)
+
+> EN must be set externally High or Low; High starts the converter, Low shuts it down
+
+Cited from SRC-DS-TPS62130, section 8.3.1, enable / shutdown (EN), page 9.
+
 ### system.ripple_current (`EVD-b4e90b2ab592`)
 
 > Recommended inductor ripple is 20 to 40% of the maximum output current

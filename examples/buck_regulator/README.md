@@ -27,6 +27,12 @@ The output voltage is deliberately not a parameter of the controller. The
 feedback divider on the board sets it, which is why the divider carries the
 constraint that produces it.
 
+The controller's EN pin is tied to the input, because the rail is always on and
+the datasheet says EN must be set high or low rather than left open: an
+`enable_input` citation records where (section 8.3.1, page 9), and the
+datasheet's typical application ties EN to VIN the same way. KiCad's rules
+check reported the pin unconnected while it floated.
+
 ## The question
 
 The requirement used to be closed by a `Verifies(..., result="PASS")` whose
@@ -54,7 +60,7 @@ and the constraints over them are decided by the gate's own constraint check.
 
 ## What comes out
 
-11 parts, 9 nets, 121 entities, 18 checks. None failed and four undecided:
+11 parts, 9 nets, 124 entities, 18 checks. None failed and four undecided:
 three are the rail's own numbers, until `fang verify` measures them.
 
 [`out/rationale.md`](out/rationale.md) is the file to read. It is the whole

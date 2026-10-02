@@ -6,11 +6,11 @@
 <text x="28" y="887" font-size="9" fill="#000000">NOTHING IN THIS VIEW CONNECTS TO THESE</text>
 <polyline points="94.0,472.0 94.0,586.0 352.0,586.0 352.0,604.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-dd1fe7b3f522</title></polyline>
 <polyline points="208.0,280.0 208.0,394.0 94.0,394.0 94.0,412.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-59321d691cbc</title></polyline>
-<polyline points="230.0,280.0 230.0,387.0 244.0,387.0 244.0,412.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-35174e538315</title></polyline>
-<polyline points="252.0,280.0 252.0,380.0 288.0,380.0 288.0,412.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-c42280bad0a5</title></polyline>
-<polyline points="274.0,280.0 274.0,373.0 416.0,373.0 416.0,412.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-c00204747f6c</title></polyline>
-<polyline points="296.0,280.0 296.0,366.0 460.0,366.0 460.0,412.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-ee479f5e7ac3</title></polyline>
-<polyline points="266.0,88.0 266.0,202.0 252.0,202.0 252.0,220.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-c0b547af3300</title></polyline>
+<polyline points="230.0,280.0 230.0,387.0 244.0,387.0 244.0,412.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-72de10325681</title></polyline>
+<polyline points="252.0,280.0 252.0,380.0 288.0,380.0 288.0,412.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-7ba8574839c9</title></polyline>
+<polyline points="274.0,280.0 274.0,373.0 416.0,373.0 416.0,412.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-2a8ba4ef04ef</title></polyline>
+<polyline points="296.0,280.0 296.0,366.0 460.0,366.0 460.0,412.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-e232704813b9</title></polyline>
+<polyline points="266.0,88.0 266.0,202.0 252.0,202.0 252.0,220.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-ee479f5e7ac3</title></polyline>
 <polyline points="411.3,280.0 411.3,359.0 588.0,359.0 588.0,412.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-76e0d034f372</title></polyline>
 <polyline points="464.7,280.0 464.7,352.0 632.0,352.0 632.0,412.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-c0584ff24c2a</title></polyline>
 <polyline points="438.0,88.0 438.0,195.0 438.0,195.0 438.0,220.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-4d1ca10e619c</title></polyline>
@@ -32,8 +32,8 @@
 <text x="211.0" y="289.0" text-anchor="start" font-size="8" fill="#000000">DC / RAIL</text>
 <text x="233.0" y="289.0" text-anchor="start" font-size="8" fill="#000000">VCC</text>
 <text x="255.0" y="289.0" text-anchor="start" font-size="8" fill="#000000">DC</text>
-<text x="277.0" y="289.0" text-anchor="start" font-size="8" fill="#000000">VCC</text>
-<text x="299.0" y="289.0" text-anchor="start" font-size="8" fill="#000000">DC</text>
+<text x="277.0" y="289.0" text-anchor="start" font-size="8" fill="#000000">DC</text>
+<text x="299.0" y="289.0" text-anchor="start" font-size="8" fill="#000000">VCC</text>
 <text x="269.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">DC</text>
 <text x="414.3" y="289.0" text-anchor="start" font-size="8" fill="#000000">VIN</text>
 <text x="467.7" y="289.0" text-anchor="start" font-size="8" fill="#000000">VIN</text>

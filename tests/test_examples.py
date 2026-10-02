@@ -220,6 +220,27 @@ def test_the_sensor_node_names_its_controllers_routes_its_pins_and_decides_its_a
     assert ports["system.mcu.i2c1"].id not in addressing[0].message
 
 
+def test_the_buck_controllers_enable_is_driven_as_its_datasheet_says():
+    """EN must be set high or low, never left open (TPS62130 section 8.3.1):
+    the always-on rail ties it to the controller's input, as the datasheet's
+    typical application does, with the claim cited in the graph."""
+    from fang.entities import Evidence
+
+    result = build(ROOT / "buck_regulator" / "buck_regulator.py")
+    netlist = compile_netlist(result.snapshot, traits=result.traits)
+    nets = {
+        (node.designator, node.pin): {(n.designator, n.pin) for n in net.nodes}
+        for net in netlist.nets
+        for node in net.nodes
+    }
+    assert ("U1", "VIN") in nets[("U1", "EN")]
+    cited = [
+        e for e in result.snapshot.entities.values()
+        if isinstance(e, Evidence) and str(e.identity.path) == "system.enable_input"
+    ]
+    assert len(cited) == 1 and cited[0].locator.startswith("section 8.3.1")
+
+
 #: The examples that declare a verification question, and so ship a listing.
 QUESTIONED = [name for name, path in zip(NAMES, EXAMPLES) if questions(build(path).snapshot)]
 
