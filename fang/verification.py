@@ -1750,13 +1750,18 @@ def register_tool(tool: Tool, *, before: str | None = None, registry: ToolRegist
 # --------------------------------------------------------------------------
 
 #: The fields a measurement record defines. A tool's `extra` fields sit beside
-#: them in the record and may not take one of their names.
+#: them in the record and may not take one of their names, save `ran`, which a
+#: tool may state through its job and the record then carries as its own.
 RECORD_FIELDS = frozenset(
     {
-        "tool", "level", "job", "status", "exit_status", "confidence", "measures",
-        "assumptions", "coverage_gaps", "inputs", "message",
+        "tool", "level", "job", "status", "ran", "exit_status", "confidence",
+        "measures", "assumptions", "coverage_gaps", "inputs", "message",
     }
 )
+
+#: Where a run happened, as RFC 3's record names it: here, or on a hosted
+#: runner whose isolation is stronger. Every record says which.
+RAN = ("local", "hosted")
 
 
 def evidence_identity(snapshot, question: Question, job: Job, version: str, *, attempt: int = 0):
@@ -1796,13 +1801,19 @@ def measurement_record(
 ) -> dict:
     """The measurement record a run's evidence carries.
 
-    The tool and its version, the level, the job's hash, each measure with its
-    quantity or the reason it has none, the assumptions, the coverage gaps,
-    and the digest of every input the snapshot does not hold -- with the
-    tool's own fields beside them.
+    The tool and its version, the level, the job's hash, the run's terminal
+    status, where it ran, its confidence, each measure with its quantity or
+    the reason it has none, the assumptions, the coverage gaps, and the
+    digest of every input the snapshot does not hold -- with the tool's own
+    fields beside them. A run is local unless its tool's job says it was
+    hosted; the record carries that once, as its own field.
     """
+    extra = dict(job.extra)
+    ran = extra.pop("ran", "local")
+    if ran not in RAN:
+        raise ValueError(f"{job.tool} says it ran {ran!r}; a run is one of {', '.join(RAN)}")
     judged = dict(verdict.record) if verdict is not None else {}
-    clashes = sorted((RECORD_FIELDS & (set(job.extra) | set(judged))) | (set(job.extra) & set(judged)))
+    clashes = sorted((RECORD_FIELDS & (set(extra) | set(judged))) | (set(extra) & set(judged)))
     if clashes:
         raise ValueError(
             f"{job.tool}'s record fields {', '.join(clashes)} would overwrite "
@@ -1813,6 +1824,7 @@ def measurement_record(
         "level": level.label,
         "job": job.hash,
         "status": raw.status.value,
+        "ran": ran,
         "exit_status": raw.exit_status,
         "confidence": job.confidence,
         "measures": [measurement.as_record() for measurement in measurements],
@@ -1822,7 +1834,7 @@ def measurement_record(
     }
     if raw.message:
         record["message"] = raw.message
-    record.update(job.extra)
+    record.update(extra)
     record.update(judged)
     return canonical(record)
 

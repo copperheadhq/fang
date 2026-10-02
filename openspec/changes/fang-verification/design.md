@@ -442,10 +442,12 @@ run that did not complete is tried again when asked, each attempt recorded as
 evidence of its own (`run_<digest>_retryN`), so a crash does not stand in for
 an answer. A tool that turns out to be missing only when it is run is reported
 unsupported, like one missing before. The
-measurement record follows RFC 3 Section 14 and adds the run's terminal status,
-exit status, confidence and message; a measure with no value appears in
-`measures` with its `reason` in place of a value, and a tool's `extra` fields
-sit beside the record's own, refusing their names.
+measurement record follows RFC 3 Section 14, carrying the run's terminal status,
+where it ran (`ran`, `local` unless a tool's job says `hosted`, set once as the
+record's own field for every tool) and its confidence, and adds the exit status
+and message; a measure with no value appears in `measures` with its `reason` in
+place of a value, and a tool's `extra` fields sit beside the record's own,
+refusing their names.
 
 **The constraint check reads what a constraint reads.** Its scope was each
 constraint and its targets; it now includes every entity the expression

@@ -1194,6 +1194,8 @@ def test_the_evidence_carries_the_whole_measurement_record(tmp_path, follower):
     assert record["tool"] == {"name": "ngspice", "version": "ngspice-45.2"}
     assert record["level"] == "circuit"
     assert record["job"] == outcome.job.hash
+    assert (record["status"], record["ran"]) == ("succeeded", "local")
+    assert record["confidence"] == "0.5"
     assert record["measures"] == [
         {"name": "corner", "parameter": f"{SYSTEM}.corner", "unit": "Hz", "value": "1591.612"}
     ]
@@ -1201,6 +1203,29 @@ def test_the_evidence_carries_the_whole_measurement_record(tmp_path, follower):
     assert "system.inlet is abstracted, not modelled" in record["coverage_gaps"]
     digest = "sha256:" + hashlib.sha256(FOLLOWER.encode()).hexdigest()
     assert record["inputs"] == [{"path": "models/follower.sub", "hash": digest}]
+
+
+def test_every_record_says_where_its_run_happened(tmp_path):
+    """RFC 3's record carries `ran` for every tool: local unless the tool's
+    job says it was hosted, once, as the record's own field, and nothing
+    else."""
+    from fang.verification import measurement_record
+
+    result = build()
+    question = questions(result.snapshot)[0]
+    raw = RawRun("spy", "spy-1", 0)
+
+    def record(**extra):
+        job = Job.single("spy", question, result.snapshot.hash, "input.txt", "spy", extra=extra)
+        return measurement_record(job, raw, (), Level.CIRCUIT)
+
+    assert record()["ran"] == "local"
+    hosted = record(ran="hosted", seed="7")
+    assert (hosted["ran"], hosted["seed"]) == ("hosted", "7")
+    with pytest.raises(ValueError, match="ran"):
+        record(ran="somewhere")
+    with pytest.raises(ValueError, match="status"):
+        record(status="PASS")
 
 
 def test_the_verification_keeps_its_identity_and_names_its_answer(tmp_path):

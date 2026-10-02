@@ -200,7 +200,9 @@ its question afresh gives the job its evidence records.
 
 - **WHEN** a run's evidence is read
 - **THEN** it names the tool and its version, the level, a hash of the native
-  input, each measure with its quantity, the assumptions, and the coverage gaps
+  input, the run's terminal status, whether it ran locally or on a hosted
+  runner, the run's confidence, each measure with its quantity or the reason it
+  has none, the assumptions, and the coverage gaps
 - **AND** it names the digest of every input file the run read that the
   snapshot does not hold, such as a model file
 
