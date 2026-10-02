@@ -31,7 +31,7 @@ for one demo board before any second part is supported.
   the target it was built for. Its digest is recorded on each run's evidence,
   never in the snapshot, and a verification whose evidence names a different
   digest from the file's current one is reported stale.
-- Emulation models: `Simulatable` traits with `backends=("renode",)` naming a
+- Emulation models: `EmulationModel` traits naming a
   descriptor fang ships — a platform model for the STM32F401RE derived from
   Renode's F4 platform, and a peripheral model for the HS3001 over Renode's own
   sensor model. A descriptor states the inputs, faults and observable events
@@ -85,7 +85,7 @@ None. The project holds one capability and this change extends it.
   plan, the measures and the `renode` tool) and the `fang/renode/` package (the
   lowering, the backend, and as package data the platform description, the
   probes and the model descriptors).
-- `fang/traits.py` gains the `Firmware` trait; `fang/cli.py` gains `emulate`;
+- `fang/emulation.py` also holds the `EmulationModel` and `Firmware` traits; `fang/cli.py` gains `emulate`;
   `fang/diagnostics.py` gains codes in the `SIM` area; `pyproject.toml` and
   `MANIFEST.in` ship the package data and the example's firmware.
 - `examples/regenerate.py` and `tests/test_examples.py` learn the example's

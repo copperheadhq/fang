@@ -153,13 +153,19 @@ Descriptors are data in the fang package until a catalogue exists; then each
 becomes a reference into it, pinned by digest, and the fang copy is retired
 rather than kept beside it.
 
-### Bindings reuse what exists
+### Bindings: a trait for the model, a trait for the firmware
 
-Models are `Simulatable` traits, as SPICE models are, with
-`model_kind="renode_platform"` or `"renode_peripheral"`, `backends=("renode",)`
-and `source` naming a descriptor (`"fang:stm32f401re"`,
-`"renode:Sensors.HS3001"`). `Firmware(path, target=)` is a new trait on the
-component that runs it, and carries no digest.
+An emulation model is an `EmulationModel` trait whose `source` names a
+descriptor (`"fang:stm32f401re"`, `"renode:Sensors.HS3001"`); the descriptor
+says whether it is a platform or a peripheral model. `Firmware(path, target=)`
+is a trait on the component that runs it, and carries no digest. Both live in
+`fang/emulation.py`.
+
+*Alternative considered, and first planned:* `Simulatable` traits with
+`model_kind="renode_platform"`. The trait registry holds one trait per protocol
+for an entity, so a part could not carry a SPICE model and an emulation model
+at once, and the SPICE plan, which walks every `simulatable` entity, would read
+an emulation model as one it cannot use and reject its plan.
 
 Fang holds traits in the elaboration result, beside the snapshot, not in it:
 `compile_plan` takes `traits=` for exactly this reason, and RFC 12's
@@ -170,10 +176,8 @@ traits, as the SPICE plan is; when traits are persisted, the binding moves into
 the snapshot with every other trait and nothing here changes shape.
 
 ```python
-self.mcu.add_trait(Simulatable(model_kind="renode_platform",
-                               backends=("renode",), source="fang:stm32f401re"))
-self.env.add_trait(Simulatable(model_kind="renode_peripheral",
-                               backends=("renode",), source="renode:Sensors.HS3001"))
+self.mcu.add_trait(EmulationModel(source="fang:stm32f401re"))
+self.env.add_trait(EmulationModel(source="renode:Sensors.HS3001"))
 self.mcu.add_trait(Firmware("firmware/elf/sensor_node.elf", target="stm32f401re"))
 ```
 

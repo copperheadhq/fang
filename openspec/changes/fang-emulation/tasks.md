@@ -42,8 +42,9 @@ and recorded files the later tests read — each reviewed again as it lands.
 
 ## 2. Bindings and descriptors
 
-- [ ] 2.1 Add the `Firmware` trait (path, target) to `fang/traits.py`; verify it
-      registers and enumerates like `Simulatable`, carries no digest, and that
+- [ ] 2.1 Add the `EmulationModel` (source) and `Firmware` (path, target) traits
+      in `fang/emulation.py`; verify they register and enumerate like
+      `Simulatable`, that `Firmware` carries no digest, and that
       rebuilding the bound file leaves the snapshot byte-identical.
 - [ ] 2.2 Add the descriptor schema and registry in `fang/emulation.py`, loading
       `fang/renode/models/*.json` as package data; verify a `source` with no
