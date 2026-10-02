@@ -93,6 +93,7 @@ class RenodeBackend:
 
     def run(self, files: Mapping[str, bytes], *, timeout: float = 120) -> RenodeRun:
         version, build = self.check()
+        _check_scratch(tempfile.gettempdir())
         with tempfile.TemporaryDirectory(prefix="fang-renode-") as scratch:
             workspace = Path(scratch)
             for name, content in files.items():
@@ -130,6 +131,22 @@ class RenodeBackend:
                 log=log_path.read_text(encoding="utf-8", errors="replace"),
                 arguments=arguments,
             )
+
+
+def _check_scratch(root: str) -> None:
+    """Refuse a temporary directory Renode cannot run from.
+
+    Renode's launcher includes the script as `i $CWD/run.resc`, and its
+    monitor splits a path at whitespace, so from a directory whose path has a
+    space in it the include fails and the run ends with no events. That is
+    reported by name before anything starts, rather than as a crash.
+    """
+    if any(c.isspace() for c in root):
+        raise RenodeUnavailable(
+            f"renode cannot run from the temporary directory {root!r}: its monitor "
+            "splits a path at a space, so the run's script cannot be included; set "
+            "TMPDIR (TEMP on Windows) to a directory whose path has no space"
+        )
 
 
 def _new_group() -> dict:

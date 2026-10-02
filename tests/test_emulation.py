@@ -1107,3 +1107,52 @@ def test_emulate_reports_an_unchecked_version_and_runs_nothing(monkeypatch, caps
     assert _cli("emulate", str(ROOT / "examples" / "sensor_node" / "sensor_node.py")) == 0
     printed = capsys.readouterr().out
     assert "unsupported: Renode 1.18.0 is installed" in printed
+
+
+def _spaced_tmpdir(monkeypatch, tmp_path):
+    """TMPDIR set to a path with a space in it, as tempfile reads it afresh."""
+    import tempfile
+
+    spaced = tmp_path / "with space"
+    spaced.mkdir()
+    monkeypatch.setenv("TMPDIR", str(spaced))
+    monkeypatch.setattr(tempfile, "tempdir", None)
+    return spaced
+
+
+def test_a_scratch_path_with_a_space_is_reported_before_anything_runs(monkeypatch, tmp_path):
+    # Renode's monitor splits `i $CWD/run.resc` at the space and the run
+    # crashed with no events; it is now refused by name before Renode starts.
+    from fang.renode import RenodeUnavailable
+
+    class Checked(RenodeBackend):
+        def available(self):
+            return True
+
+        def identify(self):
+            return "1.17.0", "1.17.0+stand-in"
+
+    def never(*args, **kwargs):
+        raise AssertionError("Renode was started")
+
+    _spaced_tmpdir(monkeypatch, tmp_path)
+    monkeypatch.setattr(subprocess, "Popen", never)
+    with pytest.raises(RenodeUnavailable, match="renode.*space"):
+        Checked().run(bundle(plan(), b"\0"), timeout=5)
+
+
+def test_a_scratch_path_with_a_space_is_reported_unsupported_through_verify(monkeypatch, tmp_path):
+    class Checked(RenodeBackend):
+        def available(self):
+            return True
+
+        def identify(self):
+            return "1.17.0", "1.17.0+stand-in"
+
+    result = _elaborate(SENSOR_NODE.SensorNode)
+    graph = KernelGraph(result.snapshot, checks=DEFAULT_CHECKS)
+    _spaced_tmpdir(monkeypatch, tmp_path)
+    outcome = answer(graph, _question(graph.head, "startup"), traits=result.traits,
+                     tools=_stand_in_tools(Checked()), workspace=tmp_path / "runs")
+    assert outcome.status == "unsupported" and "space" in outcome.message
+    assert graph.head.hash == result.snapshot.hash
