@@ -1170,6 +1170,10 @@ class XyceBackend:
                 f"{self.executable} is not installed; the run reports unsupported "
                 "rather than producing a substitute result"
             )
+        # Absolute, for the reason ngspice's is: Xyce runs from inside the
+        # workspace and is handed the deck's path, and writes its measure
+        # files beside that path.
+        workspace = Path(workspace).resolve()
         workspace.mkdir(parents=True, exist_ok=True)
         deck = workspace / "deck.cir"
         deck.write_text(netlist)
