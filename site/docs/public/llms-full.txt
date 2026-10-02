@@ -907,7 +907,9 @@ coverage gaps. First-spin measurement remains the physical evidence.
 The program declares a measured parameter without a value, so elaborating it
 again says nothing about the value and does not withdraw it. An unchanged
 program rebuilt after a commit is the committed snapshot, byte for byte; a
-changed question is answered afresh.
+changed question is answered afresh. A measurement that a constraint tightened
+since now breaks does not come back as a value: the rebuild records the failure
+instead, as the gate would have had the run met that constraint.
 
 The [verification reference](/reference/verification/) lists the declarations,
 the measures, the tools and the command.
