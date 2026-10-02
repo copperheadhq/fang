@@ -752,10 +752,23 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
     scenario = data.get("scenario", {})
     surfaces = data.get("surfaces", {})
 
+    def model_of(component: str) -> Descriptor:
+        """The descriptor a part's model names, or a refusal naming the part."""
+        source = traits.get(component, "emulation_model").source
+        try:
+            return descriptor(source)
+        except EmulationError:
+            raise _refuse(
+                f"the emulation model of {_path(entities, component)} names {source!r}, a "
+                "descriptor fang does not ship; a part with no descriptor is refused rather "
+                "than given a generic model",
+                "model",
+            ) from None
+
     # -- the target --------------------------------------------------------
     platforms = []
-    for entity_id in traits.entities_with("emulation_model"):
-        model = descriptor(traits.get(entity_id, "emulation_model").source)
+    for entity_id in sorted(traits.entities_with("emulation_model")):
+        model = model_of(entity_id)
         if model.kind == "renode_platform":
             platforms.append(entity_id)
     bound = set(traits.entities_with("firmware"))
@@ -769,7 +782,7 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
             "target",
         )
     target = candidates[0]
-    platform = descriptor(traits.get(target, "emulation_model").source)
+    platform = model_of(target)
     binding = traits.get(target, "firmware")
     firmware_path = scenario.get("firmware") or (binding.path if binding else None)
     if not firmware_path:
@@ -966,7 +979,7 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
                     "model and is not listed as abstracted",
                     "scope",
                 )
-            model = descriptor(trait.source)
+            model = model_of(component)
             device_descriptors[component] = model
             address = resolve_address(snapshot, other)
             if address is None or not address.known or address.quantity is None:

@@ -1218,3 +1218,29 @@ def test_a_stimulus_outside_the_run_is_refused_as_a_stimulus(at):
     with pytest.raises(NotRunnable) as refused:
         RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
     assert refused.value.code == "SIM-0012" and "env.temperature" in str(refused.value)
+
+
+@pytest.mark.parametrize("part", ["system.env", "system.mcu"])
+def test_a_model_naming_no_shipped_descriptor_refuses_the_plan_naming_the_part(part):
+    from fang.emulation import EmulationError, EmulationModel, compile_plan
+
+    result, paths = _board()
+    result.traits.attach(paths[part], EmulationModel(source="renode:Sensors.Generic"))
+    with pytest.raises(EmulationError) as refused:
+        compile_plan(result.snapshot, _Question(_startup_data(paths)), traits=result.traits)
+    assert refused.value.code == "model"
+    assert part in str(refused.value) and "renode:Sensors.Generic" in str(refused.value)
+
+
+def test_a_model_naming_no_shipped_descriptor_is_sim_0009_through_prepare():
+    from fang.emulation import RENODE, EmulationModel
+
+    class Generic(SENSOR_NODE.SensorNode):
+        def __init__(self, **overrides):
+            super().__init__(**overrides)
+            self.env.add_trait(EmulationModel(source="renode:Sensors.Generic"))
+
+    result = _elaborate(Generic)
+    with pytest.raises(NotRunnable) as refused:
+        RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
+    assert refused.value.code == "SIM-0009" and "system.env" in str(refused.value)
