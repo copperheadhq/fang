@@ -245,7 +245,12 @@ the workspace is left as it was. `--commit` persists the new head into an
 existing workspace, keeping each run's files under `.copperhead/simulations/`.
 `fang build`, `fang diff` and `fang verify` keep what earlier runs measured: a
 program declares a measured parameter without a value, so elaborating it again
-does not withdraw the measurement.
+does not withdraw the measurement. A measurement that a constraint tightened
+since breaks is kept as the failure it now is: the verification reads `FAIL`
+with the run's evidence and the parameter has no value, exactly as if the run
+had met the tightened constraint when it re-entered, so `fang build` persists
+the edit and reports the failure instead of refusing the design. Relax the
+constraint and the recorded run re-enters and passes, with nothing run again.
 
 `--commit` persists measurements and nothing else. If the program has changed
 since its design was built, a part retuned or a constraint tightened, it

@@ -2654,12 +2654,26 @@ def carry_measurements(
     measured parameter a value of its own (elaboration refuses one), so the
     value carried is always the measurement's.
 
+    A measured value that a constraint the program now states fails, one
+    tightened since the run, is not carried: under RFC 12 section 12.9 such a
+    value never reaches the head, and the failure is recorded instead. The
+    verification is carried with result FAIL and its evidence, and the
+    parameter left without a value, which is the state the failure-recording
+    transaction gives (`failure_transaction`), so a rebuild records that the
+    design fails its verification rather than refusing the design. The
+    constraints are judged as the gate's constraint check judges them, in
+    identifier order with what is carried before, as `verify` answers them.
+
     `current` says whether one run's evidence is still current, and is
     `Currency` over the elaboration unless given. One that keeps every run
     asks only whether the program has changed: carried that way, an
     unchanged program gives back the design its measurements were committed
     to, whatever has happened since to the files it reads.
     """
+    from dataclasses import replace
+
+    from .values import Value
+
     entities = dict(elaborated.entities)
     current = current or Currency(elaborated, traits=traits, tools=tools)
     for verification_id, answered in sorted(facts.verifications.items()):
@@ -2672,16 +2686,30 @@ def carry_measurements(
             continue
         if not all(current(facts.evidence[ref]) for ref in answered.evidence if ref in facts.evidence):
             continue
+        question = Question.of(answered)
+        values = {}
+        for entity_id, attr in question.parameters:
+            value = facts.values.get((entity_id, attr))
+            if value is None or entity_id not in entities or value.source not in answered.evidence:
+                continue
+            values[(entity_id, attr)] = value
+
+        def resolve(entity_id: str, attr: str, values=values):
+            if (entity_id, attr) in values:
+                return values[(entity_id, attr)]
+            entity = entities.get(entity_id)
+            value = entity.parameters.get(attr) if entity is not None else None
+            return value if isinstance(value, Value) else None
+
+        statuses = constraint_statuses(elaborated, question, resolve) if values else {}
+        if any(status is CheckStatus.FAIL for status in statuses.values()):
+            answered, values = replace(answered, result="FAIL"), {}
         entities[verification_id] = answered
         for ref in answered.evidence:
             if ref in facts.evidence:
                 entities.setdefault(ref, facts.evidence[ref])
-        for entity_id, attr in Question.of(answered).parameters:
-            value = facts.values.get((entity_id, attr))
-            target = entities.get(entity_id)
-            if value is None or target is None or value.source not in answered.evidence:
-                continue
-            entities[entity_id] = target.with_parameter(attr, value)
+        for (entity_id, attr), value in values.items():
+            entities[entity_id] = entities[entity_id].with_parameter(attr, value)
     return elaborated.with_entities(entities, elaborated.revision_id)
 
 

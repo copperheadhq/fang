@@ -1500,6 +1500,35 @@ def test_a_recorded_failure_re_enters_when_its_constraint_is_relaxed(tmp_path):
     assert verification.provenance.records[-1].activity == "verification_reentry"
 
 
+def test_a_carried_pass_a_tightened_constraint_breaks_is_carried_as_the_failure(tmp_path):
+    """Rebuilt under a constraint tightened since, a current measurement that
+    breaks it is not carried into the design: its verification is carried
+    as FAIL with its evidence, and the parameter without a value, which is
+    exactly what the failure-recording transaction leaves when the same run
+    meets the tightened constraint at re-entry. The design passes the gate."""
+    graph, passed = answered(tmp_path)
+    assert passed.result == "PASS"
+
+    tightened = carry_measurements(build(Tightened).snapshot, MeasuredFacts.of(graph.head))
+    verification = verification_of(tightened)
+    assert verification.result == "FAIL" and verification.evidence == (passed.evidence,)
+    assert passed.evidence in tightened.entities
+    assert not tightened.entities[SYSTEM].parameters["corner"].known
+    assert KernelGraph(tightened, checks=DEFAULT_CHECKS).propose(
+        Transaction(tightened.hash, ())
+    ).accepted
+
+    recorded, failed = answered(tmp_path / "again", Tightened)
+    assert failed.status == FAILED
+    assert canonical_dumps(verification.as_dict()) == canonical_dumps(
+        recorded.head.entities[failed.question.id].as_dict()
+    )
+
+    # Unchanged, the program carries its PASS and its value as before.
+    kept = carry_measurements(build().snapshot, MeasuredFacts.of(graph.head))
+    assert verification_of(kept).result == "PASS" and kept.entities[SYSTEM].parameters["corner"].known
+
+
 class Coupled(Filter):
     """The filter, its corner now also held below a limit nobody has set."""
 
@@ -2042,26 +2071,56 @@ def test_verify_commit_refuses_a_program_changed_since_its_build(tmp_path, ngspi
     assert "22k" in ngspice.runs[-1] or "22000" in ngspice.runs[-1]
 
 
-def test_a_tightened_constraint_is_for_build_to_gate(tmp_path, ngspice, capsys):
+def test_a_constraint_tightened_since_a_pass_is_recorded_as_its_failure(tmp_path, ngspice, capsys):
     """A PASS committed at 1.59 kHz under a 2 kHz limit, and the limit then
     tightened to 1.2 kHz. The tightening is an edit, so verify --commit
-    refuses it and writes nothing; build is what persists an edit, and its
-    gate rejects this one, since the measurement is still current and breaks
-    the new limit."""
+    refuses it and writes nothing, and build persists it. The measurement is
+    still current and breaks the new limit, so it does not reach the design
+    (RFC 12 section 12.9): build records the verification as FAIL with its
+    evidence and the corner without a value, as the failure-recording
+    transaction does, rather than refusing the design and leaving the
+    workspace stuck. Nothing runs again, and relaxing the limit gives the
+    recorded run's PASS back."""
     source = program(tmp_path)
     workspace = Workspace(tmp_path)
     assert main(["build", source, "-C", str(tmp_path)]) == EXIT_OK
     assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_OK
     committed = snapshot_of(workspace.dir)
+    runs = len(ngspice.runs)
     capsys.readouterr()
 
+    def persisted():
+        records = workspace.read_records()
+        verification = next(r for r in records if r["kind"] == "verification" and "question" in r.get("extensions", {}))
+        corner = next(r for r in records if r["id"] == LOCAL_SYSTEM)["parameters"]["corner"]
+        return verification, corner
+
+    passed, _ = persisted()
     program(tmp_path, upper="1.2")
     assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_FAILED
     assert "run 'fang build' first" in capsys.readouterr().err
     assert snapshot_of(workspace.dir) == committed
-    assert main(["build", source, "-C", str(tmp_path)]) == EXIT_FAILED
-    assert "TXN-0002" in capsys.readouterr().err
-    assert snapshot_of(workspace.dir) == committed
+
+    assert main(["build", source, "-C", str(tmp_path)]) == EXIT_OK
+    verification, corner = persisted()
+    assert verification["result"] == "FAIL"
+    assert verification["evidence"] == passed["evidence"]
+    assert corner["status"] == "unknown"
+    capsys.readouterr()
+
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_FAILED
+    output = capsys.readouterr().out
+    assert "current: this run is already recorded" in output
+    assert output.rstrip().splitlines()[-2:] == ["  FAIL", "nothing new to commit"]
+    assert len(ngspice.runs) == runs
+    assert persisted()[0]["result"] == "FAIL"
+
+    program(tmp_path, upper="2")
+    assert main(["build", source, "-C", str(tmp_path)]) == EXIT_OK
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_OK
+    verification, corner = persisted()
+    assert verification["result"] == "PASS" and corner["status"] == "inferred"
+    assert len(ngspice.runs) == runs
 
 
 def test_verify_commits_only_what_the_gate_accepts(tmp_path, ngspice, capsys, monkeypatch):

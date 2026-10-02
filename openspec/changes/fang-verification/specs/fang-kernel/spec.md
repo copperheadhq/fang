@@ -296,7 +296,11 @@ WHEN the measurement transaction is rejected because a hard constraint over a
 measured value failed, the head SHALL NOT move, the rejection SHALL be returned
 with its diagnostics, and the runner SHALL record the evidence and the
 verification with a failed result in a transaction that sets no parameter. A
-rejection for any other reason SHALL record nothing.
+rejection for any other reason SHALL record nothing. A committed measurement
+carried across re-elaboration that a hard constraint the program now states
+fails SHALL NOT be carried into the design: its verification SHALL be carried
+with a failed result and its evidence, and the measured parameter without a
+value, as the transaction recording the failure leaves them.
 
 #### Scenario: A value that breaks a hard constraint never reaches the head
 
@@ -309,6 +313,16 @@ rejection for any other reason SHALL record nothing.
 - **WHEN** a measured value violates a hard constraint
 - **THEN** the head holds the run's evidence and the verification with a failed
   result naming that evidence
+
+#### Scenario: A constraint tightened past a committed measurement records its failure
+
+- **WHEN** a measurement committed as a pass is still current, and the program
+  is rebuilt with a hard constraint over it tightened past the measured value
+- **THEN** the rebuilt design is persisted, holding the run's evidence and the
+  verification with a failed result naming that evidence
+- **AND** the measured parameter is unknown in it, and nothing runs again
+- **AND** with the constraint relaxed again, the recorded run re-enters and the
+  verification passes
 
 #### Scenario: An unrelated rejection records nothing
 

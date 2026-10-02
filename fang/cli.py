@@ -130,7 +130,9 @@ def _with_measurements(snapshot: Snapshot, workspace: Workspace, traits=None) ->
     it again must not withdraw a measurement a run committed. Nor may it keep
     one the design no longer gives: a measurement whose question, prepared
     afresh with the program's traits, is not the job that ran is dropped, and
-    the question is answered again.
+    the question is answered again. One a constraint tightened since now fails
+    is kept as that failure, the verification FAIL and the value withheld, so
+    the design still passes the gate and the failure is what is reported.
     """
     facts = _measured_facts(workspace)
     if facts is None:
