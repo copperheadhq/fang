@@ -45,6 +45,7 @@ from fang.copperhead import (  # noqa: E402
     compile_intent,
     drawn_connections,
     intended_connections,
+    powered_names,
 )
 from fang.elaborate import elaborate  # noqa: E402
 
@@ -174,7 +175,7 @@ def draw(name: str) -> str:
             ["kicad-cli", "sch", "export", "netlist", "-o", str(work / "back.net"), str(sheet)],
             capture_output=True, check=True,
         )
-        back = drawn_connections((work / "back.net").read_text())
+        back = drawn_connections((work / "back.net").read_text(), powered_names(drawn))
         if back != intended_connections(drawn):
             return f"{name}: the drawing does not have the circuit's connections; not written"
         render = _render(sheet, work)
