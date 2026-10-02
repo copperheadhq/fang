@@ -1502,3 +1502,75 @@ def test_two_probes_of_one_name_are_refused_by_the_lowering():
     clash = PlanObservation("i2c1Warnings", "gpio", "mcu.status", "mcu.status", "gpioPortA", 5)
     with pytest.raises(LoweringError, match="i2c1Warnings"):
         platform_description(EmulationPlan(**{**p.__dict__, "observations": (clash,)}))
+
+
+def test_a_uart_value_is_read_whole_with_its_exponent():
+    """`temp=1.2e3` is 1200, not 1.2; and a number with something numeric
+    run on after it is no number fang reads, rather than a prefix of one."""
+    import dataclasses
+
+    from fang.units import Quantity
+
+    def reported(text: str):
+        events = tuple(
+            dataclasses.replace(e, payload={"text": text})
+            if e.type == "uart.line" and e.payload.get("text", "").startswith("temp=") else e
+            for e in recorded("startup").events
+        )
+        return measured(plan(), RunRecord(events, "completed"))["reported"]
+
+    assert reported("temp=1.2e3").quantity == Quantity.scalar(Decimal("1.2e3"), "degC")
+    assert reported("temp=25.01").quantity == Quantity.scalar(Decimal("25.01"), "degC")
+    assert reported("temp=25.01 C").quantity == Quantity.scalar(Decimal("25.01"), "degC")
+    for runon in ("temp=25.0.1", "temp=25x", "temp=1.2e"):
+        unread = reported(runon)
+        assert unread.quantity is None and "reads whole" in unread.reason, runon
+
+
+def test_a_negative_address_refuses_the_plan():
+    from fang.emulation import RENODE
+    from fang.interfaces import I2CPort
+    from fang.lang import V, kHz, kOhm
+
+    class Negative(SENSOR_NODE.HS3001):
+        i2c = I2CPort(address=-1 * SENSOR_NODE.addr, voltage=3.3 * V, bit_rate=400 * kHz,
+                      pull_up_resistance=2.2 * kOhm, pull_up_supply=3.3 * V)
+
+    class Board(SENSOR_NODE.SensorNode):
+        env = Negative(package="LGA-6")
+
+    result = _elaborate(Board)
+    with pytest.raises(NotRunnable) as refused:
+        RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
+    assert refused.value.code == "SIM-0016"
+    assert "not negative" in str(refused.value)
+
+
+def test_a_circuit_measure_on_a_surface_of_several_signals_names_its_signal():
+    """An I2C port carries SCL and SDA: measuring `env.i2c` without naming
+    one would probe whichever was declared first."""
+    from fang import diagnostics
+    from fang.elaborate import elaborate
+    from fang.lang import Parameter, ms
+    from fang.verification import Average, Simulates
+
+    class Probed(SENSOR_NODE.SensorNode):
+        bus_voltage = Parameter("V")
+        probe = Simulates(
+            "sensor_ready",
+            measures={"bus_voltage": Average("env.i2c", after=0 * ms, until=1 * ms)},
+        )
+
+    result = elaborate(Probed, project_id="PRJ-EXAMPLES")
+    assert not result.ok
+    assert result.diagnostics[0].code == diagnostics.SIM_UNRESOLVED_SURFACE
+    assert "several signals" in result.diagnostics[0].message
+
+    class Named(SENSOR_NODE.SensorNode):
+        bus_voltage = Parameter("V")
+        probe = Simulates(
+            "sensor_ready",
+            measures={"bus_voltage": Average("env.i2c.sda", after=0 * ms, until=1 * ms)},
+        )
+
+    assert elaborate(Named, project_id="PRJ-EXAMPLES").ok

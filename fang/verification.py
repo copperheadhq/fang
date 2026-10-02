@@ -389,6 +389,13 @@ def resolve_surface(module, name: str, *, location: SourceLocation | None = None
     else:
         live = [s for s in signals if _signal_role(surface, s) != "ground"]
         grounds = [s for s in signals if _signal_role(surface, s) == "ground"]
+        # A surface with several live signals names no one net: probing the
+        # first declared would measure a net the author may not have meant.
+        if len(live) > 1:
+            raise refuse(
+                f"{rest[0]} carries several signals ({', '.join(live)}); name the one "
+                f"measured, as {rest[0]}.<signal>"
+            )
         positive = live[0] if live else signals[0]
         returning = grounds[0] if live and grounds else None
 

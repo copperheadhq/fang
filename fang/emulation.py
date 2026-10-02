@@ -603,9 +603,16 @@ def _measure_one(name: str, spec: Mapping[str, Any], plan: EmulationPlan, record
                 continue
             text = event.payload.get("text", "")
             if text.startswith(prefix):
-                number = re.match(r"-?\d+(\.\d+)?", text[len(prefix):])
+                # The whole token or nothing: `1.2e3` read as `1.2` would be a
+                # wrong value, not a missing one, so a number is read with its
+                # exponent and anything numeric left after it refuses the line.
+                number = re.match(r"[-+]?\d+(\.\d+)?([eE][-+]?\d+)?(?![\w.])", text[len(prefix):])
                 if number is None:
-                    return Measured(name, None, f"the line {text!r} carries no number after {prefix!r}", True)
+                    return Measured(
+                        name, None,
+                        f"the line {text!r} carries no number fang reads whole after {prefix!r}",
+                        True,
+                    )
                 return Measured(name, Quantity.scalar(Decimal(number.group(0)), spec["unit"]), None, True)
         return Measured(name, None, f"no line beginning {prefix!r} was printed before the run's end", True)
     if kind == "pin_config":
@@ -1037,6 +1044,12 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
             low, high = address.quantity.interval()
             if low != high:
                 raise _refuse(f"the address of {_path(entities, component)} is a range", "address")
+            if Decimal(low) < 0:
+                raise _refuse(
+                    f"the address of {_path(entities, component)} is "
+                    f"{format(Decimal(low).normalize(), 'f')}; a bus address is not negative",
+                    "address",
+                )
             if Decimal(low) != Decimal(low).to_integral_value():
                 # Made whole, the emulator would put the device at an
                 # address the graph does not hold.
