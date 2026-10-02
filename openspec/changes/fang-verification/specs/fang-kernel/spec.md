@@ -9,7 +9,9 @@ requirement it serves: the parameters it measures into, the measures that
 produce them, the method, and for a circuit question the bench. The question
 SHALL elaborate to a verification entity whose result is unknown, carrying its
 source location. A program SHALL NOT be able to declare a computed result for a
-question; a result is produced only by a run.
+question; a result is produced only by a run. A parameter a question measures
+into SHALL be declared without a value, and a program that gives it one, by a
+default or an assignment, SHALL fail elaboration.
 
 #### Scenario: A declared question becomes an unanswered verification
 
@@ -27,6 +29,12 @@ question; a result is produced only by a run.
 
 - **WHEN** a question measures into a name that is not a declared parameter of
   the module declaring it
+- **THEN** elaboration fails with a diagnostic naming the parameter
+
+#### Scenario: A measured parameter is declared without a value
+
+- **WHEN** a program gives a value to a parameter one of its questions measures
+  into
 - **THEN** elaboration fails with a diagnostic naming the parameter
 
 #### Scenario: A verification by inspection is still declarable

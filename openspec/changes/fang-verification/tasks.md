@@ -29,8 +29,9 @@ change.
       verify the entity names the requirement, method, measured parameters and
       bench, and that two elaborations are byte-identical.
 - [x] 2.3 Fail elaboration with a `SIM` diagnostic when a measure names an
-      undeclared parameter or a surface with no pins; verify each names what is
-      wrong.
+      undeclared parameter or a surface with no pins, or a parameter the
+      program gives a value (SIM-0002, as for a stated result); verify each
+      names what is wrong.
 - [x] 2.4 Verify a plain `Verifies(..., method="inspection", result="PASS")`
       elaborates exactly as before and is never routed.
 

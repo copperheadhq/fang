@@ -448,8 +448,9 @@ class QuestionDeclaration(Verifies):
     """A verification whose result a run produces, never the program.
 
     The common base of every declared question. It fixes the method, refuses a
-    result, checks that every measure writes a parameter its module declares,
-    resolves every surface while the module tree is still in hand, and builds
+    result, checks that every measure writes a parameter its module declares
+    and gives no value, resolves every surface while the module tree is still
+    in hand, and builds
     the canonical question dictionary that `elaborate` stores in the
     verification's `extensions["question"]`.
 
@@ -520,6 +521,20 @@ class QuestionDeclaration(Verifies):
                     SIM_UNDECLARED_PARAMETER,
                     f"{self.attribute} measures into {name!r}, which "
                     f"{type(module).__name__} does not declare as a parameter",
+                    entities=(module._entity_id,),
+                    location=self._source,
+                )
+            stated = module.value_of(name)
+            if stated.known:
+                # A value the program gives would be the question's answer,
+                # stated rather than produced, and would let the evaluator
+                # answer the question with nothing run.
+                raise error(
+                    SIM_QUESTION_RESULT,
+                    f"{self.attribute} measures into {name}, which "
+                    f"{type(module).__name__} gives the value {stated.quantity}; a "
+                    "measured parameter is declared without a value, and only a "
+                    "run gives it one",
                     entities=(module._entity_id,),
                     location=self._source,
                 )
@@ -2407,11 +2422,10 @@ def carry_measurements(elaborated, facts: MeasuredFacts):
     elaborating it again says nothing about the value and must not withdraw
     it. An answered verification is kept, with its evidence and the values
     that evidence is the source of, wherever the program still declares the
-    same question; a question the program has changed is answered afresh,
-    and a value the program now states itself is the program's.
+    same question; a question the program has changed is answered afresh. A
+    program cannot give a measured parameter a value of its own (elaboration
+    refuses one), so the value carried is always the measurement's.
     """
-    from .values import Value
-
     entities = dict(elaborated.entities)
     for verification_id, answered in sorted(facts.verifications.items()):
         declared = entities.get(verification_id)
@@ -2429,9 +2443,6 @@ def carry_measurements(elaborated, facts: MeasuredFacts):
             value = facts.values.get((entity_id, attr))
             target = entities.get(entity_id)
             if value is None or target is None or value.source not in answered.evidence:
-                continue
-            current = target.parameters.get(attr)
-            if isinstance(current, Value) and current.known:
                 continue
             entities[entity_id] = target.with_parameter(attr, value)
     return elaborated.with_entities(entities, elaborated.revision_id)

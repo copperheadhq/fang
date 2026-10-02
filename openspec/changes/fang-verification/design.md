@@ -476,7 +476,10 @@ writes, into `.copperhead/simulations` and the record stream.
 **Re-elaboration keeps a measurement.** `carry_measurements` keeps an answered
 verification, its evidence and the values that evidence is the source of,
 wherever the fresh elaboration declares the same question; a changed question is
-answered afresh, and a value the program now states is the program's.
+answered afresh. A program cannot state a measured value: a default or an
+assignment on a measured parameter fails elaboration with SIM-0002, the code a
+stated result gets, since the value would be the question's answer and would let
+the evaluator answer it with nothing run.
 `reelaboration(head, elaborated)` is the transaction, empty for an unchanged
 program. `build`, `diff` and `verify` rebuild the head around the facts read
 back from the workspace's record stream (`MeasuredFacts.from_records`, with

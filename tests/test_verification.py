@@ -311,6 +311,28 @@ def test_a_measure_naming_an_undeclared_parameter_fails_elaboration():
     assert diagnostic.location is not None
 
 
+def test_a_program_cannot_give_a_measured_parameter_a_value():
+    """A value written in the program would be the question's answer stated
+    rather than produced, and would let the evaluator answer it with nothing
+    run: a default and an assignment are both refused, naming the parameter."""
+
+    class Defaulted(Filter):
+        corner = Parameter("Hz", default=1.6 * kHz)
+
+    class Assigned(Filter):
+        def architecture(self):
+            super().architecture()
+            self.corner = 1.6 * kHz
+
+    for system in (Defaulted, Assigned):
+        result = elaborate(system, project_id=PROJECT)
+        assert not result.ok
+        (diagnostic,) = result.diagnostics
+        assert diagnostic.code == diagnostics.SIM_QUESTION_RESULT
+        assert "measures into corner" in diagnostic.message
+        assert "1.6 kHz" in diagnostic.message
+
+
 def test_a_surface_with_no_pins_fails_elaboration_naming_it():
     class Probed(Filter):
         board_in = Electrical()
