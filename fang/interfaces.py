@@ -1,7 +1,8 @@
 """Typed interfaces, the shipped catalogue, and the pin model.
 
 Spec: "Typed Interfaces, Ports, Buses, and Domains", "The Shipped Interface
-Catalogue", "The Pin Model", and "A Port May Be One Peripheral Instance".
+Catalogue", "The Pin Model", "A Port May Be One Peripheral Instance", and "An
+Addressed Bus Device Carries Its Address".
 
 System-level authoring operates on interfaces. Pin assignment is a lowering
 result, which is what makes late assignment, part substitution, and honest
@@ -9,7 +10,7 @@ compatibility checking tractable.
 
 A port may name the peripheral instance it is, and a candidate pin may carry the
 selector that routes the port's signal to it, cited from the part's own
-evidence.
+evidence. An addressed bus device's port carries its address, fixed or strapped.
 """
 
 from __future__ import annotations
@@ -20,7 +21,7 @@ from typing import Iterable, Mapping, Sequence
 from .diagnostics import ELAB_UNTYPED_CONNECTION, error
 from .entities import ConnectionKind
 from .lang import Declared, Surface
-from .units import Unit
+from .units import Quantity, Unit
 
 #: Canonical electrical roles a signal or a pin carries.
 ROLES = (
@@ -175,12 +176,16 @@ class InterfaceCatalogue:
 # The shipped catalogue
 # --------------------------------------------------------------------------
 
-I2C = _digital(
+I2C = InterfaceType(
     "i2c",
     (
         SignalSpec("scl", "clock", "bidirectional", open_drain=True),
         SignalSpec("sda", "data", "bidirectional", open_drain=True),
     ),
+    ConnectionKind.SIGNAL,
+    # A device's bus address is a count, not a measure, so it is dimensionless;
+    # declaring it makes a bare number a refused parameter like any other.
+    {**DIGITAL_PARAMETERS, "address": "1"},
     multi_drop=True,
     requires_pull_up=True,
     protocol="i2c",
@@ -365,6 +370,8 @@ class InterfacePort(Surface):
     whose I2C is available on two controllers declares two ports, so that one
     connection cannot land on both. It is consumed here, before the parameter
     catch-all, because it is a fact about the port and not an electrical value.
+    An `address` given as a `Strap` is held apart from the parameters for the
+    same reason: the address it selects depends on the board.
     """
 
     def __init__(
@@ -385,6 +392,9 @@ class InterfacePort(Surface):
         self.interface = interface
         self.role = role
         self.peripheral = peripheral
+        self.address_strap: Strap | None = None
+        if isinstance(parameters.get("address"), Strap):
+            self.address_strap = parameters.pop("address")
         self.parameter_values = dict(parameters)
 
     @property
@@ -548,6 +558,28 @@ def AF(number: int) -> Selector:
             f"an alternate function is a non-negative integer, not {number!r}"
         )
     return Selector(f"AF{number}")
+
+
+class Strap:
+    """An address selected by where one of the device's own pins is tied.
+
+    `Strap("ADDR", {"GND": 0x48 * addr, "VDD": 0x49 * addr})` reads as the
+    datasheet does: tie ADDR to the device's GND pin and it answers on 0x48.
+    Keying the addresses by the device's own pins needs nothing inferred about
+    which net is ground or supply; the board's nets say which pin the strap
+    shares a net with, and that pin selects the address.
+    """
+
+    def __init__(self, pin: str, by_pin: Mapping[str, Quantity]) -> None:
+        if not isinstance(pin, str) or not pin:
+            raise ValueError(f"a strap names its pin by vendor name, not {pin!r}")
+        if not by_pin:
+            raise ValueError(f"the strap on {pin} selects no address")
+        self.pin = pin
+        self.by_pin = dict(by_pin)
+
+    def __repr__(self) -> str:
+        return f"<Strap {self.pin} {sorted(self.by_pin)}>"
 
 
 class PinMap(Declared):

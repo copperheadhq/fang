@@ -1,7 +1,7 @@
 """Interface compatibility checking.
 
-Spec: "Interface Compatibility Checks" and "Interface Compatibility
-Evaluation".
+Spec: "Interface Compatibility Checks", "Interface Compatibility
+Evaluation", and "An Addressed Bus Device Carries Its Address".
 
 A check whose inputs are unknown returns undecided and names the missing input.
 It never passes by default, because a check that passes on absent data is worse
@@ -18,6 +18,10 @@ Two rules decide what a link is, and both exist to keep that promise honest:
   so a connector and the device behind two series resistors are the two ends of
   one link and are compared with each other. Without that, the only thing the
   check has to say about the pair is what the resistors think of it.
+
+Addressing is read from the board, not from firmware. A device's port carries
+its address, fixed or strapped, and `resolve_address` is the one function that
+reads it, so the check and anything else that needs an address cannot disagree.
 """
 
 from __future__ import annotations
@@ -28,7 +32,7 @@ from typing import Iterable, Mapping, Sequence
 
 from .constraints import CheckStatus
 from .diagnostics import Severity
-from .entities import Connection, Entity, Interface, Port
+from .entities import Connection, Entity, Evidence, Interface, Pin, Port
 from .interfaces import CATALOGUE, InterfaceType
 from .units import Quantity
 from .values import Value, ValueStatus
@@ -309,7 +313,9 @@ def check_link(
         results.extend(_check_domains(link, parties, subject, undecided))
     if {"pull_up_resistance", "pull_up_supply"} & shared:
         results.extend(_check_pull_up(link, parties, subject, undecided))
-    results.extend(_check_protocol(link, parties, subject, undecided, shared))
+    results.extend(
+        _check_protocol(link, parties, subject, undecided, shared, entities=entities)
+    )
     return results
 
 
@@ -530,7 +536,9 @@ def _check_pull_up(link, ports, subject, undecided):
     return results
 
 
-def _check_protocol(link, ports, subject, undecided, shared=frozenset({"bit_rate"})):
+def _check_protocol(
+    link, ports, subject, undecided, shared=frozenset({"bit_rate"}), *, entities=None
+):
     """Protocol, rate, and addressing must agree."""
     from .graph import CheckResult
 
@@ -559,25 +567,162 @@ def _check_protocol(link, ports, subject, undecided, shared=frozenset({"bit_rate
             )
 
     if link.multi_drop:
-        addresses: dict[str, list[str]] = {}
-        for port in ports:
-            value = port.parameters.get("address")
-            if isinstance(value, Value) and value.known and value.quantity is not None:
-                addresses.setdefault(str(value.quantity), []).append(port.id)
-        for address, holders in sorted(addresses.items()):
-            if len(holders) > 1:
-                results.append(
-                    CheckResult(
-                        "interface_compatibility",
-                        CheckStatus.FAIL,
-                        subject,
-                        message=(
-                            f"address {address} is claimed by more than one "
-                            f"participant: {', '.join(sorted(holders))}"
-                        ),
-                    )
-                )
+        results.extend(_check_addresses(link, ports, subject, undecided, entities or {}))
     return results
+
+
+def _check_addresses(link, ports, subject, undecided, entities):
+    """No two devices on one bus answer to one address.
+
+    Every participant's address is read through `resolve_address`. A port that
+    declares none, such as the controller's, is not addressed and is not
+    reported; one whose strap resolves to nothing is undecided, naming the pin.
+    """
+    from .graph import CheckResult
+
+    results = []
+    nets: dict[str, frozenset[str]] | None = None
+    addresses: dict[tuple[Decimal, Decimal], list[tuple[str, Value]]] = {}
+    unresolved = False
+    for port in sorted(ports, key=lambda p: p.id):
+        if port.address_strap is not None and nets is None:
+            nets = _nets_by_pin(entities)
+        value = _resolve_address(entities, port, nets or {})
+        if value is None:
+            continue
+        interval = _interval(value)
+        if interval is None:
+            unresolved = True
+            reason = f": {value.rationale}" if value.rationale else ""
+            results.append(undecided("addressing", ["address"], f"on {port.id}{reason}"))
+            continue
+        addresses.setdefault(interval, []).append((port.id, value))
+
+    clashes = False
+    for interval, holders in sorted(addresses.items()):
+        if len(holders) > 1:
+            clashes = True
+            results.append(
+                CheckResult(
+                    "interface_compatibility",
+                    CheckStatus.FAIL,
+                    subject,
+                    message=(
+                        f"address {_address_text(interval)} is claimed by more than "
+                        f"one participant: {', '.join(sorted(p for p, _ in holders))}"
+                    ),
+                    evidence=_cited(entities, (v for _, v in holders)),
+                )
+            )
+    if addresses and not clashes and not unresolved:
+        held = ", ".join(
+            f"{_address_text(interval)} ({holders[0][0]})"
+            for interval, holders in sorted(addresses.items())
+        )
+        results.append(
+            CheckResult(
+                "interface_compatibility",
+                CheckStatus.PASS,
+                subject,
+                message=f"addresses on {link.interface.name} are distinct: {held}",
+                evidence=_cited(
+                    entities, (v for holders in addresses.values() for _, v in holders)
+                ),
+            )
+        )
+    return results
+
+
+def _cited(entities: Mapping[str, Entity], values) -> tuple[str, ...]:
+    """The evidence entities behind some addresses. A strap-resolved address
+    names the pin that selected it as its source, which is not evidence."""
+    return tuple(
+        source
+        for source in _evidence(*values)
+        if isinstance(entities.get(source), Evidence)
+    )
+
+
+def _address_text(interval: tuple[Decimal, Decimal]) -> str:
+    """An address as a datasheet writes it: 0x44, not 68."""
+    low, high = interval
+    if low == high and low == low.to_integral_value() and low >= 0:
+        return f"0x{int(low):02X}"
+    return f"{low}..{high}" if low != high else str(low)
+
+
+def _nets_by_pin(entities: Mapping[str, Entity]) -> dict[str, frozenset[str]]:
+    """Each pin's net, as the set of pins sharing it, from the inferred netlist."""
+    from .netlist import infer_nets
+
+    nets: dict[str, frozenset[str]] = {}
+    for members in infer_nets(entities):
+        net = frozenset(members)
+        for pin in members:
+            nets[pin] = net
+    return nets
+
+
+def _pin_label(entities: Mapping[str, Entity], pin_id: str) -> str:
+    pin = entities.get(pin_id)
+    name = pin.vendor_name if isinstance(pin, Pin) and pin.vendor_name else "?"
+    return f"{name} ({pin_id})"
+
+
+def resolve_address(snapshot, port: Port) -> Value | None:
+    """The address a bus device's port answers on, read from the board.
+
+    A fixed `address` parameter is returned as it is recorded. A strap is
+    resolved from the inferred nets: the one pin of its strap map that shares
+    the strap pin's net selects the address, returned as an inferred value whose
+    source is that pin. A strap pin on no net, on a net no pin of its map
+    shares, or on a net two of them share, gives an unknown value whose reason
+    names the strap pin, and both pins when two share it. A port with neither a
+    fixed address nor a strap is not addressed, and gives None.
+
+    `snapshot` is a snapshot or its entity mapping.
+    """
+    entities = getattr(snapshot, "entities", snapshot)
+    nets = _nets_by_pin(entities) if port.address_strap is not None else {}
+    return _resolve_address(entities, port, nets)
+
+
+def _resolve_address(
+    entities: Mapping[str, Entity], port: Port, nets: Mapping[str, frozenset[str]]
+) -> Value | None:
+    fixed = port.parameters.get("address")
+    if isinstance(fixed, Value):
+        return fixed
+    strap = port.address_strap
+    if strap is None:
+        return None
+
+    pin = strap["pin"]
+    by_pin = strap["by_pin"]
+    net = nets.get(pin, frozenset({pin}))
+    label = _pin_label(entities, pin)
+    if len(net) < 2:
+        return Value.unknown(f"the address strap pin {label} is on no net")
+    sharing = sorted(
+        candidate for candidate in by_pin if candidate in net and candidate != pin
+    )
+    if not sharing:
+        return Value.unknown(
+            f"the address strap pin {label} shares a net with none of "
+            + ", ".join(_pin_label(entities, candidate) for candidate in sorted(by_pin))
+        )
+    if len(sharing) > 1:
+        return Value.unknown(
+            f"the address strap pin {label} shares a net with "
+            + " and ".join(_pin_label(entities, candidate) for candidate in sharing)
+            + ", so it selects no one address"
+        )
+    # Read off the graph rather than stated, so inferred; nothing about the
+    # reading is uncertain once the nets are known, so its confidence is whole.
+    selected = sharing[0]
+    return Value.inferred(
+        Quantity.scalar(by_pin[selected], "1"), source=selected, confidence="1"
+    )
 
 
 def compatibility_check(snapshot):

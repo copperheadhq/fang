@@ -1,7 +1,8 @@
 """Elaboration: a Fang program becomes a graph snapshot and a tool plan.
 
-Spec: "Deterministic Sandboxed Elaboration", "The Elaboration Result", and "A
-Port May Be One Peripheral Instance".
+Spec: "Deterministic Sandboxed Elaboration", "The Elaboration Result", "A Port
+May Be One Peripheral Instance", and "An Addressed Bus Device Carries Its
+Address".
 
 Elaboration builds a graph. It never mutates geometry and never calls a tool.
 Its output is data: the Python object graph is not reachable from the snapshot
@@ -19,6 +20,8 @@ from .constraints import Constraint, ConstraintClass, Enforcement, Node
 from .diagnostics import (
     ELAB_UNTYPED_CONNECTION,
     IFACE_SELECTOR_WITHOUT_EVIDENCE,
+    IFACE_STRAP_UNKNOWN_PIN,
+    UNIT_DIMENSION_MISMATCH,
     Diagnostic,
     FangError,
     Severity,
@@ -43,7 +46,7 @@ from .entities import (
 )
 from .graph import Snapshot
 from .identity import Identity, Origin, Path, derive, transliterate_siblings
-from .interfaces import InterfacePort
+from .interfaces import InterfacePort, Strap
 from .lowering import emit as emit_lowering, lower
 from .lang import ElaborationContext, Module, Surface, System, class_location
 from .provenance import Actor, ActorKind, Input, Provenance, ProvenanceOrigin, ProvenanceRecord
@@ -51,6 +54,7 @@ from .sandbox import Inputs, Sandbox, SandboxViolation
 from .toolplan import ToolPlan
 from .traits import TraitRegistry
 from .validation import ValidationReport, validate
+from .units import DIMENSIONLESS, Quantity, Unit, _decimal_str
 from .values import Value
 
 #: The default build time. Fixed rather than wall-clock, so reproducibility is
@@ -308,6 +312,13 @@ def _build_entities(
         # anything is lowered onto the pins it routes.
         _check_selector_evidence(module)
 
+        # Pins by the name the part's datasheet gives them, which is how a strap
+        # names them; the identifiers are the ones the pin entities get below.
+        pins_by_name = {
+            pin.name: derive(project_id, "pin", f"{path}.{name}").id
+            for name, pin in sorted(module.pins().items(), key=lambda kv: kv[1]._order)
+        }
+
         # One interface entity per surface type in use; a port instance per
         # declared surface. Stage 3 replaces these with the full catalogue.
         for name, surface in sorted(module.surfaces().items(), key=lambda kv: kv[1]._order):
@@ -342,6 +353,7 @@ def _build_entities(
                 source_location=surface._source,
                 direction=surface.direction,
                 peripheral=getattr(surface, "peripheral", None),
+                address_strap=_address_strap(surface, module, pins_by_name),
             )
             entities[port.id] = port
 
@@ -457,7 +469,11 @@ def _signal_specs(surface: Surface) -> tuple[SignalSpec, ...]:
 
 
 def _port_parameters(surface: Surface) -> dict[str, Value]:
-    """The electrical parameters a port declares, validated against its type."""
+    """The electrical parameters a port declares, validated against its type.
+
+    A bare number is refused naming the parameter, as `Parameter` refuses one:
+    `address=0x44` says nothing about what 0x44 counts, and `0x44 * addr` does.
+    """
     if not isinstance(surface, InterfacePort):
         return {}
     declared = surface.interface.parameters
@@ -467,18 +483,25 @@ def _port_parameters(surface: Surface) -> dict[str, Value]:
             parameters[name] = quantity
             continue
         expected = declared.get(name)
+        if not isinstance(quantity, Quantity):
+            dimensionless = (
+                expected is not None and Unit.parse(expected).dimension == DIMENSIONLESS
+            )
+            raise error(
+                UNIT_DIMENSION_MISMATCH,
+                f"{surface.interface.name}.{name} takes a quantity with an explicit "
+                f"unit, not {quantity!r}; a bare number is not a parameter"
+                + (' (a dimensionless one is written n * UnitLiteral("1"))'
+                   if dimensionless else ""),
+                location=surface._source,
+            )
         if expected is not None:
-            from .units import Unit
-
             if quantity.dimension != Unit.parse(expected).dimension:
-                raise FangError(
-                    Diagnostic(
-                        "UNIT-0001",
-                        Severity.ERROR,
-                        f"{surface.interface.name}.{name} is declared in {expected} "
-                        f"but was given {quantity.unit}",
-                        location=surface._source,
-                    )
+                raise error(
+                    UNIT_DIMENSION_MISMATCH,
+                    f"{surface.interface.name}.{name} is declared in {expected} "
+                    f"but was given {quantity.unit}",
+                    location=surface._source,
                 )
         parameters[name] = Value.explicit(quantity)
     return parameters
@@ -523,6 +546,47 @@ def _check_selector_evidence(module: Module) -> None:
             entities=[module._entity_id],
             location=pin_map._source,
         )
+
+
+def _address_strap(
+    surface: Surface, module: Module, pins_by_name: Mapping[str, str]
+) -> dict | None:
+    """A port's address strap with its pin names resolved to pin identifiers.
+
+    The addresses are kept as decimal strings, and the address the strap selects
+    is not resolved here: elaboration does not infer nets, and the strap is the
+    one place the fact lives.
+    """
+    strap = getattr(surface, "address_strap", None)
+    if not isinstance(strap, Strap):
+        return None
+    part = type(module).__name__
+    for name in (strap.pin, *strap.by_pin):
+        if name not in pins_by_name:
+            raise error(
+                IFACE_STRAP_UNKNOWN_PIN,
+                f"the address strap on {part}.{surface.attribute} ({module._path}) "
+                f"names pin {name!r}, which {part} does not have; a strap names the "
+                "part's own pins by their vendor names",
+                entities=[module._entity_id],
+                location=surface._source,
+            )
+    by_pin: dict[str, str] = {}
+    for name, address in strap.by_pin.items():
+        if (
+            not isinstance(address, Quantity)
+            or address.dimension != DIMENSIONLESS
+            or address.kind != "scalar"
+        ):
+            raise error(
+                UNIT_DIMENSION_MISMATCH,
+                f"{surface.interface.name}.address strapped to {name} takes one "
+                f"dimensionless quantity, not {address!r}; a bare number is not a "
+                'parameter (an address is written n * UnitLiteral("1"))',
+                location=surface._source,
+            )
+        by_pin[pins_by_name[name]] = _decimal_str(address.interval()[0])
+    return {"pin": pins_by_name[strap.pin], "by_pin": by_pin}
 
 
 def _build_lowerings(

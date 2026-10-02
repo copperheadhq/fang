@@ -37,18 +37,18 @@ version 1.5, Section 9.3
 
 ## 3. Addresses
 
-- [ ] 3.1 Declare `address` with unit `1` on the I2C interface, and refuse a
+- [x] 3.1 Declare `address` with unit `1` on the I2C interface, and refuse a
       bare integer for it with `UNIT_DIMENSION_MISMATCH` naming the parameter;
       verify `0x44 * addr` elaborates to an explicit value and `0x44` is
       refused.
-- [ ] 3.2 Add `Strap(pin, {device pin: address})`, resolve its pin names to pin
+- [x] 3.2 Add `Strap(pin, {device pin: address})`, resolve its pin names to pin
       identifiers at elaboration and store it as `address_strap`, refusing a
       name the part does not have; verify the stored strap and the refusal.
-- [ ] 3.3 Add `resolve_address(snapshot, port)` over the inferred netlist,
+- [x] 3.3 Add `resolve_address(snapshot, port)` over the inferred netlist,
       returning a known address, or an unknown one whose reason names the
       strap pin (and both pins when two share its net); verify ground, supply,
       bus-signal, floating and ambiguous straps.
-- [ ] 3.4 Make the addressing rule in `_check_protocol` read
+- [x] 3.4 Make the addressing rule in `_check_protocol` read
       `resolve_address` for every participant, fail duplicates naming both
       ports, return undecided naming the strap pin for an unresolved one, and
       skip ports with no address; verify each scenario of the delta spec's

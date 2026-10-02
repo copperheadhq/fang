@@ -1,5 +1,5 @@
 """Spec: The Shipped Interface Catalogue; The Pin Model; A Port May Be One
-Peripheral Instance."""
+Peripheral Instance; An Addressed Bus Device Carries Its Address."""
 
 import pytest
 
@@ -19,9 +19,10 @@ from fang.interfaces import (
     PinMap,
     Selector,
     SignalSpec,
+    Strap,
     default_catalogue,
 )
-from fang.lang import Part, V, kOhm
+from fang.lang import Part, UnitLiteral, V, kOhm
 
 #: Every interface the spec requires the catalogue to cover.
 REQUIRED = (
@@ -201,3 +202,17 @@ def test_a_candidate_in_the_mapping_form_may_carry_no_selector():
     mapping = PinMap({"i2c1.scl": {"PB8": AF(4), "PB6": None}}, evidence="af_table")
     assert mapping.candidates("i2c1", "scl") == ("PB8", "PB6")
     assert mapping.selector("i2c1", "scl", "PB6") is None
+
+
+def test_a_strapped_address_is_held_apart_from_the_parameters():
+    addr = UnitLiteral("1")
+    strap = Strap("ADDR", {"GND": 0x48 * addr, "VDD": 0x49 * addr})
+    port = I2CPort(address=strap, voltage=3.3 * V)
+    assert port.address_strap is strap
+    assert "address" not in port.parameter_values
+    with pytest.raises(ValueError):
+        Strap("ADDR", {})
+
+
+def test_the_i2c_interface_declares_a_dimensionless_address():
+    assert I2C.parameters["address"] == "1"
