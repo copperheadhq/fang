@@ -83,3 +83,28 @@ version 1.5, Section 9.3
 - [x] 5.2 Quote the requirement names in each touched module's docstring;
       verify `openspec validate fang-mcu-parts --strict` and the whole suite
       pass.
+
+## 6. Review fixes
+
+- [x] 6.1 Widen `compatibility_scope` to the strap pin, the pins of its map, and
+      every pin, conductive connection and stated net on the strap pin's net,
+      and take every check class's scope over the head as well as the
+      candidate in `KernelGraph.propose`; verify that re-tying a strap onto a
+      taken address is rejected by the gate, that removing the strap's
+      connection runs the addressing rule, and that a removal requires the
+      checks whose scope held what it removed.
+- [x] 6.2 Refuse a fixed address that is a range or a tolerance with
+      `UNIT_DIMENSION_MISMATCH`; resolve a conflicting address to its chosen
+      value, or to an unknown value naming the candidates; compare addresses by
+      overlap, failing equal scalars, leaving overlapping intervals undecided,
+      and passing only when every address is known and none overlap; verify
+      each in `tests/test_compatibility.py`.
+- [x] 6.3 Carry the schema version in the delta as a MODIFIED "Schema
+      Versioning and Compatibility", and record in design.md why fang's 1.2 is
+      not RFC 3's numbering; verify `openspec validate fang-mcu-parts --strict`.
+
+## 7. Archive
+
+- [ ] 7.1 When archiving, change the main spec's Project Root block to
+      `schema_version: 1.2` by hand: the block is outside every requirement,
+      so the MODIFIED requirement cannot carry it.

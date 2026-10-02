@@ -146,9 +146,11 @@ and a power header.
 New codes, allocated with `_allocate` at the bottom of the `IFACE` block: a
 selector with no evidence, and a strap naming a pin the part does not have. An
 address given as a bare number reuses `UNIT_DIMENSION_MISMATCH`, the code
-`Parameter` already raises for one. An unresolved strap is not an elaboration
-error; it is an undecided check result, because the board is legal and its
-answer is unknown.
+`Parameter` already raises for one, and so does a fixed address that is a range
+or a tolerance, as a strap's non-scalar address already was: a device answers on
+one address, and one the board selects is a strap. An unresolved strap is not an
+elaboration error; it is an undecided check result, because the board is legal
+and its answer is unknown.
 
 ### The schema version moves to 1.2
 
@@ -157,6 +159,25 @@ additive change that increments the minor version. `Port.peripheral`,
 `Port.address_strap` and `Connection.selectors` are omitted from `as_dict()`
 when absent, so no committed output changes except the snapshot hash the suite
 already normalizes.
+
+The delta carries the move as a MODIFIED "Schema Versioning and Compatibility",
+which now names the version the specification defines. The `schema_version: 1.1`
+line of the main spec's Project Root block sits in the preamble, outside every
+requirement, so neither a delta nor `openspec archive` can reach it; archiving
+this change edits that one line by hand, to agree with the requirement.
+
+The number is fang's own, and it diverges from RFC 3's. RFC 3 version 1.5
+numbers schema 1.2 as the import schema of its version 1.4 and schema 1.3 as
+the one adding these port elements, the firmware binding and the verification
+record. Fang cannot claim 1.3, because a 1.3 record is a 1.2 record, and two of
+schema 1.2's additions are mandatory and fang does not write them: a trait MUST
+be serialized inside the record of its entity, under a `traits` key (RFC 3
+Section 5), and fang keeps traits in a registry beside the root; and a
+provenance record that changes an existing entity MUST carry a `fields` list
+(Section 14), and fang's records have none, though verification re-entry
+appends one to the verification it answers. Fang's 1.2 is therefore 1.1 with
+these port keys, which is neither RFC 3's 1.2 nor its 1.3. It moves to RFC 3's
+numbering in the change that writes traits and the fields list.
 
 ## Implementation notes
 
@@ -169,9 +190,26 @@ changes a decision.
   `rationale`, which `Value.unknown(reason)` now accepts. It takes a snapshot
   or an entity mapping.
 - The addressing rule also passes, naming each address and its port, when every
-  addressed participant's address is known and no two collide, so a bus with
+  addressed participant's address is known and no two overlap, so a bus with
   one addressed device shows the rule decided. It still says nothing on a bus
   where no participant is addressed.
+- Addresses are compared by overlap, not by equality, because a transaction can
+  still set a range where elaboration refuses one. Two equal scalars fail; two
+  overlapping intervals that are not one scalar, a range beside an address
+  inside it or two equal ranges, are undecided, naming both ports, since which
+  address each answers on is not known. A range is written as a datasheet
+  writes it, 0x48..0x4B.
+- A conflicting address is an address not yet known, never no address:
+  `resolve_address` gives the resolution's chosen value, or an unknown value
+  whose reason names the candidates' sources, so the rule is undecided rather
+  than passing over the port. `fang-emulation`'s plan refuses an unknown
+  address with that reason as it refuses any other.
+- The compatibility check's scope holds, for each participant with a strap, the
+  strap pin, the pins of its map, and every pin, conductive connection and
+  stated net on the strap pin's net, since re-tying that pin changes an address
+  without touching a port. The gate takes every check class's scope over the
+  head as well as the candidate, since a removed entity is in only the head's;
+  removing the strap's connection therefore runs the rule, which is undecided.
 - The bare-number refusal covers every interface parameter, not only
   `address`; a bare number was never a valid value for any of them.
 - `Connection.references()` includes the evidence its selectors cite, and

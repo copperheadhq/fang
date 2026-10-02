@@ -91,3 +91,42 @@ addressed.
 - **WHEN** a port is given an address as a plain integer rather than a
   dimensionless quantity or a strap
 - **THEN** elaboration fails with a diagnostic naming the parameter
+
+## MODIFIED Requirements
+
+### Requirement: Schema Versioning and Compatibility
+
+Every machine-readable artifact SHALL carry a `schema_version`. Breaking schema
+changes require a major version increment; additive changes, such as a new
+optional key or a new entity collection, increment the minor version. The
+schema version names the data schema and not the specification document; the
+two version lines SHALL NOT be conflated.
+
+The data schema this specification defines is version 1.2, and a
+machine-generated root SHALL carry it as `schema_version: 1.2` in the shape
+The Project Root gives. Version 1.2 adds, to version 1.1, a port's optional
+peripheral instance and address strap and a connection's optional selectors.
+
+The kernel SHALL record, with every snapshot, the schema version, the compiler
+version, the dependency lock identity, and the identifiers of any extracted
+upstream code in use.
+
+#### Scenario: An unimplemented major version is rejected
+
+- **WHEN** a reader encounters an artifact whose major schema version it does
+  not implement
+- **THEN** the reader rejects the artifact
+- **AND** it does not silently downgrade it
+
+#### Scenario: Unknown fields are preserved
+
+- **WHEN** a reader encounters fields it does not know
+- **THEN** it SHOULD preserve them, so that newer producers interoperate with
+  older tooling without destructive rewriting
+
+#### Scenario: A snapshot carries the schema version this specification defines
+
+- **WHEN** the kernel serializes a snapshot's logical root
+- **THEN** its `schema_version` is 1.2
+- **AND** a port or connection that holds none of the keys version 1.2 added
+  serializes exactly as it did under version 1.1
