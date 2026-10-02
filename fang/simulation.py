@@ -713,6 +713,7 @@ def subcircuit_instance(
     model: ModelFile,
     pin_map: Mapping[str, str],
     node_of_pin: Mapping[str, str],
+    net_of_pin: Mapping[str, str] | None = None,
 ) -> str:
     """An `X` device instantiating a part's model.
 
@@ -720,6 +721,14 @@ def subcircuit_instance(
     the part's pin map lands on that port. A port no pin reaches is refused by
     name, as is a pin mapped onto a port the model does not declare: either
     would be a deck whose wiring nobody chose.
+
+    Several pins may land on one port, as a part's ground pins do, and the
+    instance reaches the port through one node. That is the circuit only
+    while those pins share a node, so pins on different nodes are refused,
+    naming the port and the nets; a deck through one of them would leave the
+    others out unseen. `net_of_pin` names the net each connected pin is on.
+    A pin on no net carries nothing and takes no part: the port is reached
+    through a pin on a net where the part has one.
     """
     from .diagnostics import SIM_MODEL_PORT_UNREACHED
 
@@ -741,7 +750,25 @@ def subcircuit_instance(
             f"{model.subcircuit.name} does not declare",
             code=SIM_MODEL_PORT_UNREACHED,
         )
-    nodes = [node_of_pin[pins_of[port][0]] for port in model.subcircuit.ports]
+    nodes = []
+    for port in model.subcircuit.ports:
+        pins = pins_of[port]
+        if net_of_pin is not None:
+            pins = [pin for pin in pins if pin in net_of_pin] or pins
+        reached = {node_of_pin[pin] for pin in pins}
+        if len(reached) > 1:
+            where = ", ".join(
+                f"{pin} on {(net_of_pin or {}).get(pin, 'node ' + node_of_pin[pin])}"
+                for pin in pins
+            )
+            raise SimulationError(
+                f"{designator}'s pin map lands {', '.join(pins)} on port {port} of "
+                f"{model.subcircuit.name}, but they are on different nets ({where}); "
+                "an instance reaches a port through one node, so all but one would "
+                "be left out",
+                code=SIM_MODEL_PORT_UNREACHED,
+            )
+        nodes.append(node_of_pin[pins[0]])
     return f"X{designator} {' '.join(nodes)} {model.subcircuit.name}"
 
 

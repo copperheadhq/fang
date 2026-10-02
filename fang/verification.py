@@ -1567,6 +1567,9 @@ class SpiceTool:
         for entity in snapshot.entities.values():
             if entity.kind == "pin":
                 pins_of.setdefault(entity.owner, []).append(entity.vendor_name)
+        net_of = {
+            (node.designator, node.pin): net.name for net in netlist.nets for node in net.nodes
+        }
         lines = []
         for component in netlist.components:
             if component.entity_id not in scope or component.entity_id in abstracted:
@@ -1579,7 +1582,10 @@ class SpiceTool:
             model = models.get(entity.id)
             if model is not None:
                 trait = traits.get(entity.id, "simulatable")
-                lines.append(subcircuit_instance(designator, model, trait.pin_map, pins))
+                nets = {
+                    pin: net_of[(designator, pin)] for pin in pins if (designator, pin) in net_of
+                }
+                lines.append(subcircuit_instance(designator, model, trait.pin_map, pins, nets))
                 continue
             if not _is_primitive(entity):
                 raise SimulationError(

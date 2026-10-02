@@ -872,6 +872,61 @@ def test_a_model_port_no_pin_reaches_is_refused_by_name(tmp_path):
     assert "vcc" in str(raised.value)
 
 
+class Sensed(Follower):
+    """The buffer with a second pin, AUX, that its model also takes as gnd."""
+
+    aux = AnalogIn()
+    AUX = Pin("AUX", role="analog", number="4")
+    auxmap = PinMap({"aux.signal": "AUX", "aux.ref": "GND"})
+
+
+def sensed(model: Path, aux: str | None):
+    """The buffered filter with AUX wired to the ground or to the output, or
+    left on no net."""
+
+    class Wired(buffered(model, pin_map={"IN": "in", "OUT": "out", "GND": "gnd", "AUX": "gnd"})):
+        buffer = Sensed()
+        by_simulation = corner_question()
+
+        def architecture(self):
+            super().architecture()
+            if aux == "ground":
+                self.buffer.aux.signal >> self.buffer.signal_in.ref
+            elif aux == "output":
+                self.buffer.aux.signal >> self.c.p1
+
+    return Wired
+
+
+def test_pins_on_different_nets_landing_on_one_model_port_are_refused(follower):
+    """GND and AUX both land on gnd. With AUX on the output net, an instance
+    through GND alone simulated a circuit without AUX's connection; it is
+    refused, naming the part, the port and the nets."""
+    result = build(sensed(follower, "output"))
+    with pytest.raises(NotRunnable) as raised:
+        NGSPICE.prepare(result.snapshot, questions(result.snapshot)[0], traits=result.traits)
+    assert raised.value.code == diagnostics.SIM_MODEL_PORT_UNREACHED
+    message = str(raised.value)
+    assert "U1's pin map lands AUX, GND on port gnd of follower" in message
+    assert "different nets" in message
+    from fang.netlist import compile_netlist
+
+    netlist = compile_netlist(result.snapshot, traits=result.traits)
+    nets = {(n.designator, n.pin): net.name for net in netlist.nets for n in net.nodes}
+    assert f"AUX on {nets[('U1', 'AUX')]}" in message and f"GND on {nets[('U1', 'GND')]}" in message
+
+
+def test_pins_on_one_node_landing_on_one_model_port_are_one_terminal(follower):
+    """On the ground net with GND, AUX is the same node, and the instance is
+    written through it; on no net, AUX carries nothing, and the port is
+    reached through GND although AUX sorts first."""
+    for aux in ("ground", None):
+        result = build(sensed(follower, aux))
+        deck = NGSPICE.prepare(result.snapshot, questions(result.snapshot)[0], traits=result.traits).input
+        instance = next(line for line in deck.splitlines() if line.startswith("XU"))
+        assert instance.split()[3] == "0", (aux, instance)
+
+
 def declared_in(folder: Path, part: type) -> Part:
     """An instance of a part declared by a program in another folder, as a
     module of that folder's would declare it: its model's relative path is
