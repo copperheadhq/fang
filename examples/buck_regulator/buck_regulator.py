@@ -2,15 +2,17 @@
 
 The circuit is ordinary. What is not ordinary is that the requirement, the part
 decision, the datasheet numbers behind it, the two calculations, and the
-verification that closes the requirement are all entities in the same graph as
+question that verifies the requirement are all entities in the same graph as
 the inductor — so `fang` can answer "why is this 4.7 uH?" without anyone having
-written a design document.
+written a design document, and `fang verify` can find out whether the rail
+holds under load rather than take a hand-written PASS for it.
 """
 
 from fang.interfaces import AnalogIn, Pin, PinMap, PowerIn, PowerOut
 from fang.lang import (
     A,
     Electrical,
+    Ohm,
     Parameter,
     Part,
     Signal,
@@ -23,13 +25,17 @@ from fang.lang import (
     mOhm,
     mV,
     mW,
+    ms,
     nF,
     require,
     uF,
     uH,
 )
 from fang.parts import Capacitor, Diode, Fuse, Inductor, Resistor
-from fang.rationale import Calculates, Chooses, Cites, Requires, Verifies
+from fang.rationale import Calculates, Chooses, Cites, Requires
+from fang.simulation import Transient
+from fang.traits import Simulatable
+from fang.verification import Average, PeakToPeak, Simulates, assumed_provenance
 
 #: Dimensionless, for the divider ratio.
 ratio = UnitLiteral("1")
@@ -159,6 +165,12 @@ class Rail3V3(System):
     divider_min = Parameter("", default=3.03 * ratio)
     divider_max = Parameter("", default=3.22 * ratio)
 
+    # What the rail does under load. Declared without values: nothing on this
+    # page knows them, and a number written here would be a claim, not a
+    # measurement. `fang verify` measures them.
+    ripple = Parameter("mV", description="peak-to-peak on the rail at full load")
+    output = Parameter("V", description="the rail's average at full load")
+
     dc_in = InputTerminal(package="TerminalBlock_1x02_P5.08mm")
     rail_out = RailHeader(package="PinHeader_1x02_P2.54mm")
 
@@ -192,12 +204,22 @@ class Rail3V3(System):
     fb_top = Resistor(resistance=200 * kOhm, power_rating=63 * mW, package="R_0402")
     fb_bottom = Resistor(resistance=64 * kOhm, power_rating=63 * mW, package="R_0402")
 
-    # -- and what closes the requirement -------------------------------------
-    load_regulation = Verifies(
+    # -- and the question that verifies the requirement -----------------------
+    # Full load at the 12 V nominal input: 2.2 Ohm draws 1.5 A at 3.3 V. The
+    # window starts a millisecond in, once the output filter has settled from
+    # power-up. The input connector, the fuse and the reverse diode are left
+    # out deliberately, so the supply lands on the controller's input; the
+    # rail header is only where the load is applied.
+    under_load = Simulates(
         "rail_tolerance",
-        method="analysis",
-        evidence=("absolute_maximum", "ripple_current"),
-        result="PASS",
+        measures={
+            "ripple": PeakToPeak("rail_out.dc", after=1 * ms, until=1.2 * ms),
+            "output": Average("rail_out.dc", after=1 * ms, until=1.2 * ms),
+        },
+        supplies={"controller.vin": 12 * V},
+        loads={"rail_out.dc": 2.2 * Ohm},
+        analysis=Transient(stop="1.2ms", step="10ns"),
+        abstracted=("dc_in", "protection", "reverse", "rail_out"),
     )
 
     def __init__(self, **overrides):
@@ -207,6 +229,27 @@ class Rail3V3(System):
             "TPS62130RGTR",
             distributor_ids={"lcsc": "C77378"},
             datasheet="SRC-DS-TPS62130",
+        )
+        # The power stage the question runs is an ideal one, and says so: its
+        # provenance is an assumption, which lowers the confidence of every
+        # number measured over it, and what it leaves out is recorded as a
+        # coverage gap on every run.
+        self.controller.add_trait(
+            Simulatable(
+                backends=("ngspice",),
+                source="ideal_buck.sub",
+                pin_map={
+                    "VIN": "vin", "GND": "gnd", "SW": "sw",
+                    "BOOT": "boot", "FB": "fb", "EN": "en",
+                },
+                provenance=assumed_provenance(
+                    "an ideal switch pair at a fixed duty, standing in for the TPS62130"
+                ),
+                not_modelled=(
+                    "the control loop is not modelled; duty is fixed at 0.275",
+                    "no soft start, current limit or switching loss",
+                ),
+            )
         )
 
     def architecture(self):
@@ -258,3 +301,9 @@ class Rail3V3(System):
         # The input capacitor sees the input, and a hot-plugged supply rings.
         require(self.input_bulk.voltage_rating >= 25 * V)
         require(self.output_bulk.voltage_rating >= 10 * V)
+
+        # The rail's 3% at full load, and a ripple the loads can live with.
+        # Undecided until `fang verify` measures them.
+        require(self.ripple <= 30 * mV)
+        require(self.output >= 3.2 * V)
+        require(self.output <= 3.4 * V)

@@ -1,0 +1,25 @@
+On the elaborated program:
+
+system.under_load (VER-a3e2d0467631)
+  circuit level, ngspice
+  output = 3.29 V
+  ripple = 1.90 mV
+  assumption: a 12 V supply at controller.vin
+  assumption: a 2.2 Ohm load across rail_out.dc
+  assumption: transient analysis: tran 10ns 1.2ms
+  assumption: solver options abstol=1e-12 method=gear reltol=1e-3 vntol=1e-6
+  coverage gap: system.controller's model: no soft start, current limit or switching loss
+  coverage gap: system.controller's model: the control loop is not modelled; duty is fixed at 0.275
+  coverage gap: system.dc_in is abstracted, not modelled
+  coverage gap: system.protection is abstracted, not modelled
+  coverage gap: system.rail_out is abstracted, not modelled
+  coverage gap: system.reverse is abstracted, not modelled
+  confidence 0.5
+  PASS
+
+Again, on the head that run committed:
+
+system.under_load (VER-a3e2d0467631)
+  equation level, by the constraint evaluator; nothing runs
+  current: already answered at the circuit level by ngspice
+  PASS

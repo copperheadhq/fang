@@ -1,0 +1,57 @@
+On the elaborated program:
+
+system.sensor_missing (VER-607ca20f775b)
+  behavioural level, renode
+  fast_blinks = 5
+  missing_reads = 0
+  assumption: the core runs at 16000000 Hz, as the platform model assumes
+  coverage gap: I2C DMA
+  coverage gap: I2C acknowledgement bits beyond an absent target
+  coverage gap: I2C bus timing (CCR, TRISE)
+  coverage gap: I2C status flags other than SB, ADDR, BTF, RXNE, TXE and AF
+  coverage gap: SPI4
+  coverage gap: after an address NACK the I2C controller keeps STOP set, where silicon clears it; firmware that sets START by read-modify-write of CR1 has its next transaction swallowed
+  coverage gap: conversion time: a read returns the present value at once, with no measurement delay
+  coverage gap: scl_pullup is abstracted, not modelled
+  coverage gap: sda_pullup is abstracted, not modelled
+  coverage gap: series is abstracted, not modelled
+  coverage gap: the GPIO output-type register is not stored; it is judged by the firmware's writes
+  coverage gap: the clock tree: the core is taken to run at the 16 MHz HSI, and firmware clock configuration is not checked
+  coverage gap: the sleep, heater and alert behaviour of the HS300x family
+  confidence 0.8
+  PASS
+system.startup (VER-eda715fc0af6)
+  behavioural level, renode
+  first_read = 0.0400 s
+  mux_mismatches = 0
+  reported = 25.0 degC
+  slow_blinks = 1
+  assumption: the core runs at 16000000 Hz, as the platform model assumes
+  assumption: env.temperature is 25 degC from 0 ms
+  coverage gap: I2C DMA
+  coverage gap: I2C acknowledgement bits beyond an absent target
+  coverage gap: I2C bus timing (CCR, TRISE)
+  coverage gap: I2C status flags other than SB, ADDR, BTF, RXNE, TXE and AF
+  coverage gap: SPI4
+  coverage gap: after an address NACK the I2C controller keeps STOP set, where silicon clears it; firmware that sets START by read-modify-write of CR1 has its next transaction swallowed
+  coverage gap: console is abstracted, not modelled
+  coverage gap: conversion time: a read returns the present value at once, with no measurement delay
+  coverage gap: scl_pullup is abstracted, not modelled
+  coverage gap: sda_pullup is abstracted, not modelled
+  coverage gap: series is abstracted, not modelled
+  coverage gap: the GPIO output-type register is not stored; it is judged by the firmware's writes
+  coverage gap: the clock tree: the core is taken to run at the 16 MHz HSI, and firmware clock configuration is not checked
+  coverage gap: the sleep, heater and alert behaviour of the HS300x family
+  confidence 0.8
+  PASS
+
+Again, on the head that run committed:
+
+system.sensor_missing (VER-607ca20f775b)
+  equation level, by the constraint evaluator; nothing runs
+  current: already answered at the behavioural level by renode
+  PASS
+system.startup (VER-eda715fc0af6)
+  equation level, by the constraint evaluator; nothing runs
+  current: already answered at the behavioural level by renode
+  PASS

@@ -11,6 +11,11 @@ it.
     python examples/regenerate.py           # rewrite every example's out/
     python examples/regenerate.py divider   # just one
 
+An example that declares a verification question also ships
+`verification.txt`, what `fang verify` finds; writing it runs the tool the
+question routes to, so regenerating that example needs the tool -- ngspice --
+on the path, and the suite compares the file only where the tool is installed.
+
 Everything here is written by calling the same functions the CLI calls, on a
 program elaborated in the ``PRJ-EXAMPLES`` project. The project namespace is
 part of every derived identifier, so the identifiers in these files are the
@@ -32,12 +37,15 @@ ROOT = Path(__file__).resolve().parent
 if __name__ == "__main__" and str(ROOT.parent) not in sys.path:
     sys.path.insert(0, str(ROOT.parent))
 
+from fang.checks import DEFAULT_CHECKS
 from fang.cli import cmd_check, cmd_export, cmd_graph, cmd_netlist, load_system
 from fang.copperhead import CopperheadDrafter, compile_intent
-from fang.elaborate import elaborate
+from fang.elaborate import EPOCH, elaborate
+from fang.graph import KernelGraph
 from fang.layout import PlacementSeeds, place
 from fang.render import to_svg
 from fang.schematic import KicadRenderer, compile_schematic
+from fang.verification import questions, report, route, verify
 from fang.views import view
 
 PROJECT = "PRJ-EXAMPLES"
@@ -58,6 +66,7 @@ VIEWS: dict[str, tuple[str, ...]] = {
     "jee_advanced/problem_1": ("interconnect",),
     "jee_advanced/problem_2": ("interconnect",),
     "noninverting_amp": ("interconnect",),
+    "rc_filter": ("interconnect",),
 }
 
 #: The examples that ship a schematic. A schematic is the picture an engineer
@@ -292,6 +301,44 @@ def _rationale(name: str, snapshot) -> str | None:
 
 
 # --------------------------------------------------------------------------
+# The verification listing
+# --------------------------------------------------------------------------
+
+
+def verification_tools(result) -> set[str]:
+    """The tools an example's questions route to, so a reader of the suite
+    can say which binary an example's verification.txt needs."""
+    return {
+        routed.tool
+        for question in questions(result.snapshot)
+        for routed in (route(result.snapshot, question),)
+        if routed.routed and not routed.decided
+    }
+
+
+def _verification(result) -> str | None:
+    """What `fang verify` finds, run twice: on the elaborated program, and on
+    the head the first run's measurements were committed to.
+
+    Numbers are at three significant figures and no tool version appears, so
+    a simulator release that moves a number in its fourth figure moves nothing
+    here; the evidence keeps every figure and the version. An example with no
+    question gets no listing.
+    """
+    if not questions(result.snapshot):
+        return None
+    graph = KernelGraph(result.snapshot, checks=DEFAULT_CHECKS)
+    with TemporaryDirectory() as scratch:
+        first = verify(graph, traits=result.traits, workspace=Path(scratch), record_time=EPOCH)
+        out = ["On the elaborated program:", ""] + report(first, versions=False)
+        if graph.head.hash != result.snapshot.hash:
+            again = verify(graph, traits=result.traits, workspace=Path(scratch), record_time=EPOCH)
+            out += ["", "Again, on the head that run committed:", ""]
+            out += report(again, versions=False)
+    return "\n".join(out) + "\n"
+
+
+# --------------------------------------------------------------------------
 # The output set
 # --------------------------------------------------------------------------
 
@@ -356,14 +403,39 @@ def render(name: str) -> dict[str, str]:
     rationale = _rationale(stem, result.snapshot)
     if rationale is not None:
         files["rationale.md"] = rationale
+    verification = _verification(result)
+    if verification is not None:
+        files["verification.txt"] = verification
     return files
 
 
+def _missing_tools(name: str) -> list[str]:
+    """The tools an example's questions route to that are not installed."""
+    from fang.verification import TOOLS
+
+    result = elaborate(load_system(_program(name)), project_id=PROJECT)
+    return sorted(
+        tool for tool in verification_tools(result) if not TOOLS.get(tool).available()
+    )
+
+
 def write(name: str) -> list[Path]:
-    """Write one example's outputs, replacing whatever is there."""
+    """Write one example's outputs, replacing whatever is there.
+
+    A verification listing is not rewritten where its tool is missing: it
+    would record only that the tool is absent, over the answer it gave.
+    """
     out = ROOT / name / "out"
     written = []
+    missing = _missing_tools(name)
     for relative, text in sorted(render(name).items()):
+        if relative == "verification.txt" and missing:
+            print(
+                f"regenerate: {', '.join(missing)} is not installed; "
+                f"{name}/out/{relative} is left as it is",
+                file=sys.stderr,
+            )
+            continue
         path = out / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")

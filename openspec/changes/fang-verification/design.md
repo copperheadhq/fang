@@ -387,6 +387,107 @@ on the machine's installed tool, so a version that moves a number in its
 fourth significant figure moves nothing in the listing, and one that moves it
 further shows up as a diff a person reads.
 
+### Settled while building the spine
+
+Groups 1 to 7 are built. None of the decisions above had to change; these are
+the details they left open, settled the smallest way that works, and the two
+places the shipped examples differ from the sketches above.
+
+**The extension points** `fang-emulation` codes against, all in
+`fang/verification.py`. `QuestionDeclaration(Verifies)` owns the fixed method
+(`fixed_method`), the refusal of a `result` (SIM-0002), the check that every
+measure writes a declared parameter, and the canonical
+`extensions["question"]` built by `elaborate_question(module, project_id=)`,
+which `elaborate` calls on any verification declaration that has it; a kind of
+question overrides `named_surfaces()`, `resolve_surface(module, name)`,
+`measured_dimension(measure)` and `question_fields(module)`. A measure kind
+subclasses `Measure` and registers by its `kind`. `METHOD_LEVELS` and
+`register_method(method, level)` map a method to a level; `route()` reads
+them and holds no closed set. `Tool` is a runtime-checkable `Protocol`;
+`register_tool(tool, before=None)` appends to `TOOLS` in routing order,
+ngspice first. A `Job` is a bundle: `files` (relative path to text or bytes),
+`assumptions`, `coverage_gaps`, `inputs` (path to digest), `extra` (the tool's
+own record fields), `confidence`, and, outside its hash, `snapshot` and
+`sources` (where each input is read from on this machine); `Job.single` and
+`Job.input` keep the one-file case short. `RawRun` carries the version, the
+exit status, stdout, stderr, output files and a terminal `Status`.
+`Measurement` carries a `Quantity` or, with no value, a `reason`, which the
+evidence records; only a measurement with a value sets a parameter.
+
+**Equation-level answers.** The tool recorded is `evaluator`. An unanswered
+question whose constraints are already decided is answered by replacing its
+verification with the evaluator's result, its evidence being whatever entity
+the measured values name as their source. A question already answered with the
+same result is reported `current` and nothing changes, so asking again on a
+head where ngspice answered it leaves the circuit-level record in place. This
+is how `rc_filter` shows one question at two levels: answered by ngspice on
+the elaborated program, then, on the head that run committed, routed to the
+equation level with nothing run. The listing shows both passes.
+
+**A run's result** is FAIL when any constraint over a measured parameter
+fails, UNKNOWN when a measure has no value or no constraint reads the measured
+parameters, and PASS when every one passes. It is predicted with the gate's own
+evaluator so the verification can carry it, and the proposal is rebuilt on the
+rare disagreement with the gate's check results, which decide.
+
+**Evidence identity** is derived from the verification's path and a digest of
+the job's hash, the tool and its version: the same run is the same evidence, so
+asking again with the same job and version is `current` rather than a duplicate,
+and a tightened constraint fails on the same evidence the passing run had. The
+measurement record follows RFC 3 Section 14 and adds the run's terminal status,
+exit status, confidence and message; a measure with no value appears in
+`measures` with its `reason` in place of a value, and a tool's `extra` fields
+sit beside the record's own, refusing their names.
+
+**The constraint check reads what a constraint reads.** Its scope was each
+constraint and its targets; it now includes every entity the expression
+references. Without that, a measured parameter on one module constrained by
+another module would be set with the constraint never evaluated, and the
+decision would not be the gate's.
+
+**Models and confidence.** `Simulatable` gains `not_modelled`, whose items
+become coverage gaps on every run over the model. A model's confidence is read
+from its latest provenance record -- asserted 1, inferred 0.8, unverified 0.5
+-- and a model with no provenance counts as unverified, as an uncited claim is
+an assumption; `assumed_provenance(reason)` states it. A model's relative path
+resolves against the declaring program's folder, the deck includes it by that
+same relative path (an absolute or escaping path becomes `models/<name>`), and
+the run copies it beside the deck. A primitive is written from the value the
+graph holds, in SI decimals; one with no value is refused, never written as 1.
+
+**The bench under AC.** Each supply is also the AC stimulus, at its own
+magnitude, and the job records that as an assumption. A question with no
+analysis is not runnable under SIM-0004, as one with no supply is.
+
+**The command's exit.** Failed is non-zero, as the spec requires; so is a
+question the program left unrunnable or a measurement the gate refused for
+another reason, since the work the command names did not happen. Unsupported
+and unroutable are zero. Runs go to a scratch directory, and only `--commit`
+writes, into `.copperhead/simulations` and the record stream.
+
+**Re-elaboration keeps a measurement.** `carry_measurements` keeps an answered
+verification, its evidence and the values that evidence is the source of,
+wherever the fresh elaboration declares the same question; a changed question is
+answered afresh, and a value the program now states is the program's.
+`reelaboration(head, elaborated)` is the transaction, empty for an unchanged
+program. `build`, `diff` and `verify` rebuild the head around the facts read
+back from the workspace's record stream (`MeasuredFacts.from_records`, with
+`from_dict` readers on `Quantity`, `Value`, `Identity`, `SourceLocation` and
+provenance), in the revision they were committed in, so an unchanged program
+rebuilt after a commit is the committed snapshot byte for byte.
+
+**The buck example's bench** differs from the sketch under "The authoring
+surface": full load is 2.2 Ohm, not 1.5 A, because a resistor damps the output
+filter's ring-up well inside the 1 ms the window waits and a current sink does
+not -- with only the switches' resistance the ring outlasts the run and the
+peak-to-peak would measure it rather than the ripple. The rail header is
+abstracted beside the input parts, because a connector has no SPICE device and
+the load is applied at its surface. `ripple` is declared in mV.
+
+**Infinity.** A quantity bound may be infinite; it serializes as `Infinity`,
+which `Decimal` reads back, and compares under interval semantics. A NaN is
+refused.
+
 ## Risks / Trade-offs
 
 - [A simulator update moves a committed number] → three significant figures in

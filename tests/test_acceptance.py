@@ -1,7 +1,8 @@
 """The acceptance criteria of the combined spec.
 
 One test per acceptance criterion. AT-R1 to AT-R13 are the representation tests;
-AT-K1 to AT-K10 are the kernel tests. A criterion whose subject is not built yet
+AT-K1 to AT-K10 are the kernel tests; AT-V1 is the verification test, which
+needs ngspice and is skipped, naming it, where ngspice is not installed. A criterion whose subject is not built yet
 is skipped with the delivery phase that owns it named, so the suite reports what
 is actually demonstrated rather than implying more.
 """
@@ -546,3 +547,76 @@ def test_at_k10_a_simulation_result_names_its_plan_backend_models_and_gaps():
     assert isinstance(rendered["coverage_gaps"], list)
     # And the pass is a finding, never a proof.
     assert "not proof of physical correctness" in rendered["finding"]["caveat"]
+
+
+# ==========================================================================
+# Verification acceptance test
+# ==========================================================================
+
+
+def _ngspice_installed() -> bool:
+    from fang.verification import NGSPICE
+
+    return NGSPICE.available()
+
+
+@pytest.mark.skipif(not _ngspice_installed(), reason="ngspice is not installed here")
+def test_at_v1_an_undecided_constraint_is_decided_by_a_run_that_entered_through_the_gate(
+    tmp_path,
+):
+    """AT-V1: a parameter with no value, a hard constraint over it, and a
+    circuit question measuring into it with an explicit bench. The run's
+    measurement enters through the gate and decides the constraint on the
+    committed head; tightened past the measured value, the measurement never
+    reaches the head and the verification reads failed, with the same
+    evidence."""
+    from fang.checks import DEFAULT_CHECKS
+    from fang.cli import load_system
+    from fang.elaborate import elaborate
+    from fang.lang import kHz, require
+    from fang.values import ValueStatus
+    from fang.verification import NGSPICE, constraint_statuses, questions, verify
+
+    program = load_system(EXAMPLES / "rc_filter" / "rc_filter.py")
+    result = elaborate(program, project_id="PRJ-AT-V1")
+    graph = KernelGraph(result.snapshot, checks=DEFAULT_CHECKS)
+    question = questions(graph.head)[0]
+    entity, attr = question.parameters[0]
+    assert not graph.head.entities[entity].parameters[attr].known
+    assert set(constraint_statuses(graph.head, question).values()) == {CheckStatus.UNKNOWN}
+
+    (answered,) = verify(graph, traits=result.traits, workspace=tmp_path / "pass")
+
+    # The constraint that was undecided is decided on the committed head.
+    head = graph.head
+    assert set(constraint_statuses(head, question).values()) == {CheckStatus.PASS}
+    # The parameter's value is inferred, with the run's evidence as its source.
+    value = head.entities[entity].parameters[attr]
+    assert value.status is ValueStatus.INFERRED
+    assert value.source == answered.evidence
+    # The verification names its level and tool; the evidence names the version.
+    verification = head.entities[question.id]
+    assert (verification.result, verification.level, verification.tool) == (
+        "PASS", "circuit", "ngspice",
+    )
+    record = head.entities[answered.evidence].extensions["measurement"]
+    assert record["tool"] == {"name": "ngspice", "version": NGSPICE.version()}
+
+    class Tightened(program):
+        def constraints(self):
+            require(self.corner >= 1 * kHz)
+            require(self.corner <= 1.2 * kHz)
+
+    tightened = elaborate(Tightened, project_id="PRJ-AT-V1")
+    graph = KernelGraph(tightened.snapshot, checks=DEFAULT_CHECKS)
+    before = graph.head
+    (failed,) = verify(graph, traits=tightened.traits, workspace=tmp_path / "fail")
+
+    # The measurement transaction was refused, and the head never held the value.
+    assert failed.proposal.rejected
+    assert not graph.head.entities[entity].parameters[attr].known
+    assert graph.head.entities[entity].as_dict() == before.entities[entity].as_dict()
+    # The verification reads failed, with the same evidence the passing run had.
+    verification = graph.head.entities[question.id]
+    assert verification.result == "FAIL"
+    assert verification.evidence == (failed.evidence,) == (answered.evidence,)

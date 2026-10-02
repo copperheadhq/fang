@@ -2198,13 +2198,19 @@ def significant(value: Decimal, figures: int = 3) -> str:
 
 
 def _quantity_text(quantity: Quantity, figures: int) -> str:
+    # A dimensionless whole number is a count: exact, and written without the
+    # unit "1" that only the record needs.
+    unit = "" if str(quantity.unit) in ("1", "") else f" {quantity.unit}"
+
+    def number(value: Decimal) -> str:
+        if not unit and value.is_finite() and value == value.to_integral_value():
+            return str(int(value))
+        return significant(value, figures)
+
     if quantity.kind == "scalar":
-        return f"{significant(quantity.value, figures)} {quantity.unit}"
+        return f"{number(quantity.value)}{unit}"
     if quantity.kind == "range":
-        return (
-            f"{significant(quantity.minimum, figures)} to "
-            f"{significant(quantity.maximum, figures)} {quantity.unit}"
-        )
+        return f"{number(quantity.minimum)} to {number(quantity.maximum)}{unit}"
     return str(quantity)
 
 

@@ -1,0 +1,21 @@
+* ideal_buck.sub -- an ideal synchronous buck power stage at a fixed duty.
+*
+* This is not a model of the TPS62130, and its provenance in the program says
+* so: it is an assumption standing in for one. Two switches alternate at
+* 1.25 MHz, the high side closed for 0.275 of each period, which is 3.3 V from
+* 12 V. There is no control loop, so the duty never moves with the load or the
+* input; no soft start, no current limit, no dead time, and no loss beyond the
+* switches' on-resistance. BOOT, FB and EN are high-impedance: the bootstrap
+* and the feedback divider are drawn on the board and draw nothing here.
+*
+* Ports, in the order an instance lists them: vin gnd sw boot fb en
+.subckt ideal_buck vin gnd sw boot fb en
+Vhigh hctl gnd PULSE(0 1 0 2n 2n 218n 800n)
+Vlow lctl gnd PULSE(1 0 0 2n 2n 218n 800n)
+Shigh vin sw hctl gnd switch
+Slow sw gnd lctl gnd switch
+.model switch SW(Ron=0.01 Roff=1e6 Vt=0.5 Vh=0.1)
+Rboot boot sw 1e6
+Rfb fb gnd 1e9
+Ren en gnd 1e6
+.ends ideal_buck
