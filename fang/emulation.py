@@ -816,15 +816,17 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
         return where["port"], int(where["index"])
 
     def lowered_target_pins(port_id: str) -> list[tuple[str, str]]:
-        found = []
+        """The target's pins a port's links lower onto, each once: a signal
+        with two loads is two links onto the same pin."""
+        found: dict[str, str] = {}
         for link in port_links:
             if port_id not in (link.source, link.target):
                 continue
             for connection in lowered.get(link.id, ()):
                 pin = target_pin(connection)
                 if pin is not None:
-                    found.append((pin, str(connection.identity.path).rsplit(".", 1)[-1]))
-        return found
+                    found.setdefault(pin, str(connection.identity.path).rsplit(".", 1)[-1])
+        return list(found.items())
 
     abstracted = {entry["component"]: entry["name"] for entry in data.get("abstracted", ())}
 

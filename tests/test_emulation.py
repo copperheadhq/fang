@@ -995,3 +995,32 @@ def test_staleness_resolves_the_firmware_where_the_run_does(tmp_path):
     ((label, path, recorded, current),) = stale(graph.head)
     assert label.endswith("startup") and path == "firmware/elf/sensor_node.elf"
     assert current.startswith("sha256:") and current != recorded
+
+
+def test_a_signal_with_two_loads_is_observed_on_its_one_pin():
+    # Each port link listed PA5 again, so the plan refused the status signal
+    # as landing on 2 pins of the target.
+    from fang.emulation import RENODE, Emulates
+    from fang.lang import kOhm
+    from fang.parts import Resistor
+
+    original = SENSOR_NODE.SensorNode.startup
+
+    class TwoLoads(SENSOR_NODE.SensorNode):
+        probe_load = Resistor(resistance=10 * kOhm, package="R_0402")
+        startup = Emulates(
+            "sensor_ready", run_until=original.run_until, stimuli=original.stimuli,
+            measures=original.measures, abstracted=(*original.abstracted, "probe_load"),
+        )
+
+        def architecture(self):
+            super().architecture()
+            self.mcu.status >> self.probe_load.p1
+            self.probe_load.p2 >> self.header.dc.gnd
+
+    result = _elaborate(TwoLoads)
+    job = RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
+    import json as _json
+
+    (gpio,) = [o for o in _json.loads(job.files["plan.json"])["observations"] if o["kind"] == "gpio"]
+    assert (gpio["emulator"], gpio["index"]) == ("gpioPortA", 5)
