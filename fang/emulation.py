@@ -291,7 +291,7 @@ class EmulationPlan:
     def identity(self) -> dict:
         """The plan without the snapshot hash: what its identity covers."""
         return {
-            "schema": "fang.emulation/v1",
+            "schema": PLAN_SCHEMA,
             "question": self.question,
             "requirement": self.requirement,
             "machine": self.machine,
@@ -1678,8 +1678,27 @@ QUALIFICATION_CONFIDENCE: Mapping[str, Decimal] = {
 }
 
 
+#: The schema a plan is written in. v2 dropped the snapshot from the plan
+#: (it changed with every unrelated design change, and the plan is hashed into
+#: the job); a consumer of v1 refuses a v2 plan by this label instead of failing
+#: on the missing field.
+PLAN_SCHEMA = "fang.emulation/v2"
+READABLE_PLAN_SCHEMAS = frozenset({"fang.emulation/v1", PLAN_SCHEMA})
+
+
 def plan_from_dict(payload: Mapping[str, Any]) -> EmulationPlan:
-    """A plan read back from its canonical form, as a bundle carries it."""
+    """A plan read back from its canonical form, as a bundle carries it.
+
+    v2 is v1 without the snapshot, which stopped being part of the plan so an
+    unrelated design change would leave the job current; a v1 plan still reads.
+    A plan of any other schema is refused by its label, not misread.
+    """
+    schema = payload.get("schema")
+    if schema not in READABLE_PLAN_SCHEMAS:
+        raise ValueError(
+            f"a plan of schema {schema!r} is not one fang reads "
+            f"({', '.join(sorted(READABLE_PLAN_SCHEMAS))})"
+        )
 
     def pin(p):
         return PlanPin(p["pin"], p["vendor"], p["signal"], p.get("selector"), p["open_drain"],
