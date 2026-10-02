@@ -127,7 +127,10 @@ available, and its version; SHALL prepare its native input deterministically
 from the snapshot and the question; SHALL run across a process boundary or read
 a declared model file; and SHALL read its output into decimal measurements
 containing nothing the output did not. A tool that is not installed SHALL report
-unsupported by name and SHALL NOT be substituted.
+unsupported by name and SHALL NOT be substituted. Every file a run reads beside
+its native input SHALL be named in the run's bundle by a name that holds no
+machine-specific path and that no other file of the run shares; the same file
+read twice SHALL be one entry.
 
 #### Scenario: Preparation is deterministic
 
@@ -140,6 +143,22 @@ unsupported by name and SHALL NOT be substituted.
 - **THEN** the native input instantiates that subcircuit with the part's pins
   mapped onto the model's ports in the model's declared order
 - **AND** the model is referenced rather than inlined
+
+#### Scenario: Two model files at one relative path stay two files
+
+- **WHEN** two parts declared in different folders name different model files
+  by the same relative path
+- **THEN** the run's bundle names each file apart, from its content
+- **AND** each part is instantiated from its own file
+- **AND** two different files declaring one subcircuit are refused, naming the
+  parts, since a deck holds one definition of a subcircuit
+
+#### Scenario: Pins on different nets landing on one model port are refused
+
+- **WHEN** a part's pin map lands several pins on one model port and those
+  pins are on different nets
+- **THEN** the question is not runnable, naming the part, the port and the nets
+- **AND** pins landing on one port that share a node are one terminal
 
 #### Scenario: A measure lowers to a measurement directive
 
@@ -309,7 +328,10 @@ A rule-check question SHALL run the external checker over the artifact the
 kernel lowers, SHALL record every violation the checker reports with its rule,
 severity, and the items it names, and SHALL record each excluded rule with its
 declared reason. A violation of error severity SHALL make the verification
-fail; a warning SHALL NOT.
+fail; a warning SHALL NOT. A report of a schema the reader is not written for,
+or one lacking a field the reader reads, SHALL fail the run with the reason and
+leave the verification unknown; it SHALL NOT be read as a report of no
+violations.
 
 #### Scenario: A violation is recorded with its rule and items
 
@@ -333,17 +355,28 @@ fail; a warning SHALL NOT.
 - **THEN** the verification passes and the warnings are recorded
 - **AND** one violation of error severity makes it fail
 
+#### Scenario: A report the reader is not written for is not a pass
+
+- **WHEN** the checker writes a report of another schema, or one without its
+  sheets
+- **THEN** the run fails with the reason and no verdict is drawn
+- **AND** the verification stays unknown
+
 ### Requirement: A Touchstone Model Is Data
 
 A part MAY carry a Touchstone model as a trait with its provenance. An RF
 question over it SHALL be answered by reading the file and composing the named
 matching parts in closed form, at the equation level, and the measurement's
-confidence SHALL be bounded by the model's provenance. A frequency outside the
-file's range SHALL be refused rather than extrapolated, and the file's
-frequencies SHALL be scaled and compared exactly, so that a frequency the file
-names is inside its range. A return loss is in decibels, and SHALL be measured
-only into a parameter declared in decibels; a decibel SHALL NOT convert to, or
-be compared or combined with, any other dimensionless unit.
+confidence SHALL be bounded by the model's provenance. The named parts SHALL
+form, in the order named, the ladder the graph connects from the port to the
+model, each series part joining one node to the next and each shunt part
+joining its node to ground, and a part that does not SHALL be refused by name.
+A frequency outside the file's range SHALL be refused rather than
+extrapolated, and the file's frequencies SHALL be scaled and compared exactly,
+so that a frequency the file names is inside its range. A return loss is in
+decibels, and SHALL be measured only into a parameter declared in decibels; a
+decibel SHALL NOT convert to, or be compared or combined with, any other
+dimensionless unit.
 
 #### Scenario: A one-port file answers a return-loss question
 
@@ -357,6 +390,13 @@ be compared or combined with, any other dimensionless unit.
 - **WHEN** the question names a series and a shunt part between the port and the
   model
 - **THEN** the measurement accounts for both, using the values the graph holds
+
+#### Scenario: Matching parts out of their ladder are refused
+
+- **WHEN** the question names its matching parts in an order the graph does not
+  connect them in, or names a part off the chain between the port and the model
+- **THEN** the question is refused, naming the part that breaks the chain
+- **AND** nothing is composed
 
 #### Scenario: A matching part with an unknown value leaves the question unanswered
 
@@ -394,10 +434,15 @@ be compared or combined with, any other dimensionless unit.
 The `verify` command SHALL route and run every declared question, print each
 question's level, tool, measurements, and result or the reason it did not run,
 exit non-zero when any verification failed, and persist measurements only when
-asked to commit into an existing workspace. What it persists SHALL first pass
-the commit gate whole, as what `build` persists does; a design the gate rejects
-SHALL NOT be written, and the command SHALL report the gate's diagnostics and
-exit non-zero.
+asked to commit into an existing workspace. It SHALL persist measurements and
+nothing else: where the program's design differs from the one persisted, the
+commit SHALL be refused before anything runs, saying to run `build` first, and
+nothing SHALL be written. A measurement made stale by a file the program reads
+but does not hold, a model or a firmware image, is not a change to the design:
+its question SHALL run again and its answer SHALL be committed. What it persists
+SHALL first pass the commit gate whole, as what `build` persists does; a design
+the gate rejects SHALL NOT be written, and the command SHALL report the gate's
+diagnostics and exit non-zero.
 
 #### Scenario: Verify reports each question
 
@@ -421,10 +466,23 @@ exit non-zero.
 - **WHEN** `verify` runs without being asked to commit
 - **THEN** the workspace is unchanged
 
+#### Scenario: A program changed since its build is not committed
+
+- **WHEN** `verify` is asked to commit, and the program has changed since its
+  design was persisted, such as a part retuned or a constraint tightened
+- **THEN** the command refuses, saying to run `build` first, and exits non-zero
+- **AND** nothing runs and nothing is written to the workspace
+
+#### Scenario: A measurement made stale outside the program is committed
+
+- **WHEN** `verify` is asked to commit, the program is unchanged, and a model
+  file a committed measurement rests on has changed
+- **THEN** the question runs again
+- **AND** its answer is committed
+
 #### Scenario: A commit the gate rejects writes nothing
 
-- **WHEN** `verify` is asked to commit a design the commit gate rejects, such as
-  one holding a committed measurement that breaks a constraint tightened since
+- **WHEN** `verify` is asked to commit a design the commit gate rejects
 - **THEN** nothing is written to the workspace
 - **AND** the command reports the gate's diagnostics and exits non-zero
 

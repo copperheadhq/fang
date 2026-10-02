@@ -339,3 +339,92 @@ def test_preparation_is_deterministic_and_records_the_model_digest(tmp_path):
     again = TOUCHSTONE.prepare(result.snapshot, question, traits=result.traits)
     assert first.input == again.input and first.hash == again.hash
     assert '"kind":"shunt"' in first.input and '"kind":"series"' in first.input
+
+
+def test_two_antennas_naming_one_model_path_each_read_their_own_file(tmp_path):
+    """Two antennas declared in different folders name their files by one
+    relative path, and the files differ. Named by the path alone they shared
+    one bundle entry, so both measures read one file; each is now named
+    under its own digest."""
+    import importlib.util
+
+    def declared_in(folder: Path):
+        folder.mkdir(parents=True, exist_ok=True)
+        stage = folder / "stage.py"
+        stage.write_text("def instance(part):\n    return part()\n")
+        spec = importlib.util.spec_from_file_location(f"stage_{folder.name}", stage)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module.instance(Antenna)
+
+    class Pair(System):
+        match_spec = Requires("At least 6 dB of return loss at 2.44 GHz at either antenna")
+        near_loss = Parameter("dB")
+        far_loss = Parameter("dB")
+
+        near_feed = Feed()
+        far_feed = Feed()
+        near = declared_in(tmp_path / "a")
+        far = declared_in(tmp_path / "b")
+
+        rl = Evaluates(
+            "match_spec",
+            measures={
+                "near_loss": ReturnLoss("near.rf", at=2.44 * GHz),
+                "far_loss": ReturnLoss("far.rf", at=2.44 * GHz),
+            },
+        )
+
+        def __init__(self, **overrides):
+            super().__init__(**overrides)
+            for antenna in (self.near, self.far):
+                antenna.add_trait(Touchstone(source="antenna.s1p", ports=("FEED",)))
+
+        def architecture(self):
+            for feed, antenna in ((self.near_feed, self.near), (self.far_feed, self.far)):
+                feed.rf.signal >> antenna.rf.signal
+                feed.rf.ref >> antenna.rf.ref
+
+    write_model(tmp_path / "a" / "antenna.s1p", complex(100, 0))   # a third: 9.54243 dB
+    write_model(tmp_path / "b" / "antenna.s1p", complex(150, 0))   # a half: 6.0206 dB
+    graph, outcome = evaluate(tmp_path / "runs", Pair)
+    measured = {m.name: m.quantity for m in outcome.measurements}
+    assert measured == {
+        "near_loss": Quantity.scalar("9.54243", "dB"),
+        "far_loss": Quantity.scalar("6.0206", "dB"),
+    }
+    assert len(outcome.job.inputs) == 2
+    assert all(path.endswith("/antenna.s1p") and len(path) == 12 + len("/antenna.s1p")
+               for path in outcome.job.inputs)
+
+
+def test_matching_parts_out_of_their_ladder_are_refused_by_name(tmp_path):
+    """The parts are named from the port toward the model, and each is taken
+    as series or shunt by whether it touches ground. Named in the wrong
+    order, or a part named twice, the composition gave a plausible number
+    for a circuit nobody drew; the part that breaks the chain is refused."""
+    model = write_model(tmp_path / "antenna.s1p", LOAD)
+
+    def refusal(through) -> str:
+        result = elaborate(matched(model, through=through), project_id=PROJECT)
+        with pytest.raises(NotRunnable) as raised:
+            TOUCHSTONE.prepare(result.snapshot, questions(result.snapshot)[0], traits=result.traits)
+        assert raised.value.code == diagnostics.SIM_UNRESOLVED_SURFACE
+        return str(raised.value)
+
+    swapped = refusal(("series_l", "shunt_c"))
+    assert "system.shunt_c does not continue the matching chain into system.antenna's model" in swapped
+    assert "the model's port 1 is on Net-(AE1-PadFEED)" in swapped
+    assert "system.shunt_c joins Net-(C1-Pad1) and ground" in swapped
+
+    alone = refusal(("shunt_c",))
+    assert "system.shunt_c does not continue" in alone
+
+    twice = refusal(("series_l", "series_l"))
+    assert "system.series_l does not continue" in twice
+    assert "the parts named after it reach Net-(C1-Pad1)" in twice
+
+    # The ladder the graph connects, whole or in part, is composed.
+    for through in (("shunt_c", "series_l"), ("series_l",), ()):
+        result = elaborate(matched(model, through=through), project_id=PROJECT)
+        TOUCHSTONE.prepare(result.snapshot, questions(result.snapshot)[0], traits=result.traits)

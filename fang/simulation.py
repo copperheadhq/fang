@@ -630,6 +630,68 @@ def model_path(component: Component, source: str) -> tuple[str, Path]:
     return relative.as_posix(), location
 
 
+def bundle_paths(files: Iterable[tuple[str, str]]) -> dict[tuple[str, str], str]:
+    """How a run's bundle names each file it reads, by (path, digest).
+
+    A file keeps the path `model_path` gives it, relative to the program that
+    declared it, which is the same on every machine. Two different files
+    declared at one relative path, by parts in different folders, would share
+    that name, and one part would be given the other's file: each is then
+    named under a folder of its own digest's first twelve hex digits, which
+    is as machine-independent and differs exactly when the files do. The same
+    file named twice is one entry.
+    """
+    from pathlib import PurePosixPath
+
+    digests: dict[str, set[str]] = {}
+    for path, digest in files:
+        digests.setdefault(path, set()).add(digest)
+    named: dict[tuple[str, str], str] = {}
+    for path, found in digests.items():
+        for digest in found:
+            named[(path, digest)] = path if len(found) == 1 else (
+                PurePosixPath(digest.partition(":")[2][:12]) / path
+            ).as_posix()
+    return named
+
+
+def bundle_models(
+    models: Mapping[str, ModelFile], names: Mapping[str, str] | None = None
+) -> dict[str, ModelFile]:
+    """The models one deck includes, by component, each under a name of its own.
+
+    Named by `bundle_paths`, so two different files never share an include.
+    Two different files declaring one subcircuit are refused, naming the
+    parts: a deck includes both, and SPICE keeps one definition for every
+    instance (ngspice warns of the redefinition and ignores it), so one part
+    would run the other's model. `names` gives each component's designator
+    for the refusal.
+    """
+    from dataclasses import replace
+
+    named = bundle_paths((model.path, model.digest) for model in models.values())
+    out = {
+        component: replace(model, path=named[(model.path, model.digest)])
+        for component, model in models.items()
+    }
+    declared: dict[str, dict[str, list[str]]] = {}
+    for component, model in sorted(out.items()):
+        declared.setdefault(model.subcircuit.name.lower(), {}).setdefault(model.path, []).append(
+            (names or {}).get(component, component)
+        )
+    for subcircuit, files in sorted(declared.items()):
+        if len(files) > 1:
+            which = "; ".join(
+                f"{', '.join(parts)} from {path}" for path, parts in sorted(files.items())
+            )
+            raise SimulationError(
+                f"two different model files declare subcircuit {subcircuit} ({which}); "
+                "a deck holds one definition of a subcircuit, so one part would run "
+                "the other's model"
+            )
+    return out
+
+
 def load_model(component: Component, trait: Simulatable) -> ModelFile:
     """Find, digest and read the subcircuit model a part's trait names."""
     import hashlib
@@ -651,6 +713,7 @@ def subcircuit_instance(
     model: ModelFile,
     pin_map: Mapping[str, str],
     node_of_pin: Mapping[str, str],
+    net_of_pin: Mapping[str, str] | None = None,
 ) -> str:
     """An `X` device instantiating a part's model.
 
@@ -658,6 +721,14 @@ def subcircuit_instance(
     the part's pin map lands on that port. A port no pin reaches is refused by
     name, as is a pin mapped onto a port the model does not declare: either
     would be a deck whose wiring nobody chose.
+
+    Several pins may land on one port, as a part's ground pins do, and the
+    instance reaches the port through one node. That is the circuit only
+    while those pins share a node, so pins on different nodes are refused,
+    naming the port and the nets; a deck through one of them would leave the
+    others out unseen. `net_of_pin` names the net each connected pin is on.
+    A pin on no net carries nothing and takes no part: the port is reached
+    through a pin on a net where the part has one.
     """
     from .diagnostics import SIM_MODEL_PORT_UNREACHED
 
@@ -679,7 +750,25 @@ def subcircuit_instance(
             f"{model.subcircuit.name} does not declare",
             code=SIM_MODEL_PORT_UNREACHED,
         )
-    nodes = [node_of_pin[pins_of[port][0]] for port in model.subcircuit.ports]
+    nodes = []
+    for port in model.subcircuit.ports:
+        pins = pins_of[port]
+        if net_of_pin is not None:
+            pins = [pin for pin in pins if pin in net_of_pin] or pins
+        reached = {node_of_pin[pin] for pin in pins}
+        if len(reached) > 1:
+            where = ", ".join(
+                f"{pin} on {(net_of_pin or {}).get(pin, 'node ' + node_of_pin[pin])}"
+                for pin in pins
+            )
+            raise SimulationError(
+                f"{designator}'s pin map lands {', '.join(pins)} on port {port} of "
+                f"{model.subcircuit.name}, but they are on different nets ({where}); "
+                "an instance reaches a port through one node, so all but one would "
+                "be left out",
+                code=SIM_MODEL_PORT_UNREACHED,
+            )
+        nodes.append(node_of_pin[pins[0]])
     return f"X{designator} {' '.join(nodes)} {model.subcircuit.name}"
 
 

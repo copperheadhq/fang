@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import replace
 from pathlib import Path
 
@@ -159,6 +160,80 @@ def test_the_report_kicad_cli_writes_is_read_into_violations():
     assert violations[0].items == ("Symbol U1 Pin 6 [EN, Passive, Line]",)
     with pytest.raises(ValueError, match="not JSON"):
         parse_erc("Found 3 violations")
+
+
+def edited(change) -> str:
+    """The captured report with one change made to it."""
+    report = json.loads(CAPTURED)
+    change(report)
+    return json.dumps(report)
+
+
+def test_a_report_the_reader_is_not_written_for_is_refused_not_read_as_empty():
+    """Read leniently, a report of a changed schema, or one with no sheets,
+    was a report of no violations, and passed."""
+    refused = {
+        "schema is 'https://schemas.kicad.org/erc.v2.json'": edited(
+            lambda r: r.update({"$schema": "https://schemas.kicad.org/erc.v2.json"})
+        ),
+        "schema is None": edited(lambda r: r.pop("$schema")),
+        "no list of sheets": edited(lambda r: r.pop("sheets")),
+        "no list of violations": edited(lambda r: r["sheets"][0].pop("violations")),
+        "gives no severity": edited(lambda r: r["sheets"][0]["violations"][0].pop("severity")),
+        "of severity 'critical'": edited(
+            lambda r: r["sheets"][0]["violations"][0].update({"severity": "critical"})
+        ),
+        "does not list the items": edited(lambda r: r["sheets"][0]["violations"][0].pop("items")),
+        "not a JSON object": "[]",
+    }
+    for reason, text in refused.items():
+        with pytest.raises(ValueError, match=re.escape(reason)):
+            parse_erc(text)
+    assert parse_erc(edited(lambda r: r["sheets"][0].update({"violations": []}))) == ()
+
+
+def fake_kicad_cli(tmp_path, report: str) -> str:
+    """An executable that answers as kicad-cli does, writing the report given."""
+    import stat
+    import sys
+
+    script = tmp_path / "kicad-cli"
+    (tmp_path / "report.json").write_text(report)
+    script.write_text(
+        f"#!{sys.executable}\n"
+        "import shutil, sys\n"
+        "if sys.argv[1] == 'version':\n"
+        "    print('10.0.6')\n"
+        "else:\n"
+        "    out = sys.argv[sys.argv.index('-o') + 1]\n"
+        f"    shutil.copyfile({str(tmp_path / 'report.json')!r}, out)\n"
+    )
+    script.chmod(script.stat().st_mode | stat.S_IEXEC)
+    return str(script)
+
+
+def test_an_unread_report_fails_the_run_and_leaves_the_result_unknown(tmp_path):
+    """A report with no sheets is a run that did not complete, with the
+    reason; no verdict is drawn from it."""
+    hollow = json.dumps({"$schema": "https://schemas.kicad.org/erc.v1.json"})
+    tool = KicadErcTool(executable=fake_kicad_cli(tmp_path, hollow))
+    graph, outcome = answered(tmp_path / "runs", tool)
+    assert outcome.status == ANSWERED and outcome.result == "UNKNOWN"
+    record = graph.head.entities[outcome.evidence].extensions["measurement"]
+    assert record["status"] == "failed"
+    assert "wrote a report fang does not read: the ERC report holds no list of sheets" in record["message"]
+    assert "errors" not in record
+    assert "did not complete" in outcome.verdict.summary[0]
+
+    # The captured report through the same executable is read as it was.
+    tool = KicadErcTool(executable=fake_kicad_cli(tmp_path, CAPTURED))
+    graph, outcome = answered(tmp_path / "again", tool)
+    assert outcome.result == "FAIL"
+
+    # A recorded run's report is judged by the same reader.
+    graph, outcome = answered(tmp_path / "canned", Canned(edited(lambda r: r.pop("$schema"))))
+    assert outcome.result == "UNKNOWN"
+    assert "the reader is written for" in outcome.verdict.summary[0]
 
 
 def test_errors_fail_and_warnings_do_not():

@@ -11,7 +11,9 @@ how many violations it set aside. A violation of error severity fails the
 verification, and a warning does not.
 
 The report is read as `kicad-cli sch erc --format json` writes it in KiCad
-10.0.6, schema `erc.v1`. On a sheet fang draws, two rules fire on every symbol
+10.0.6, schema `erc.v1`, and a report of any other schema, or one missing a
+field the reader reads, fails the run with the reason: read as empty, it
+would pass. On a sheet fang draws, two rules fire on every symbol
 -- `endpoint_off_grid`, because fang draws on its own grid, and
 `lib_symbol_issues`, because its symbols are its own -- which is why a question
 names exclusions, each with a reason, rather than the tool hiding anything.
@@ -33,6 +35,11 @@ from .verification import Job, Question, RawRun, ToolUnavailable, Verdict
 #: The sheet a job carries, and the report a run writes beside it.
 SHEET = "board.kicad_sch"
 REPORT = "erc.json"
+
+#: The report schema the reader is written for, as kicad-cli 10.0.6 names it,
+#: and the severities a report of it gives a violation.
+SCHEMA = "https://schemas.kicad.org/erc.v1.json"
+SEVERITIES = ("error", "warning", "exclusion")
 
 
 @dataclass(frozen=True)
@@ -57,20 +64,58 @@ class Violation:
 
 
 def parse_erc(text: str) -> tuple[Violation, ...]:
-    """Read kicad-cli's JSON report into violations, and nothing else."""
+    """Read kicad-cli's JSON report into violations, and nothing else.
+
+    The report must be of the schema the reader is written for and hold
+    every field it reads, each of the kind it reads: a report of another
+    schema, or one without its sheets, is refused with the reason rather
+    than read as a report of no violations, which would pass.
+    """
     try:
         report = json.loads(text)
     except json.JSONDecodeError as exc:
         raise ValueError(f"the ERC report is not JSON: {exc}") from None
+    if not isinstance(report, dict):
+        raise ValueError("the ERC report is not a JSON object")
+    schema = report.get("$schema")
+    if schema != SCHEMA:
+        raise ValueError(
+            f"the ERC report's schema is {schema!r}, and the reader is written for {SCHEMA}"
+        )
+    sheets = report.get("sheets")
+    if not isinstance(sheets, list):
+        raise ValueError("the ERC report holds no list of sheets")
     found: list[Violation] = []
-    for sheet in report.get("sheets", ()):
-        for violation in sheet.get("violations", ()):
+    for sheet in sheets:
+        violations = sheet.get("violations") if isinstance(sheet, dict) else None
+        if not isinstance(violations, list):
+            raise ValueError("a sheet of the ERC report holds no list of violations")
+        for violation in violations:
+            if not isinstance(violation, dict):
+                raise ValueError("a violation in the ERC report is not a JSON object")
+            for key in ("type", "severity", "description"):
+                if not isinstance(violation.get(key), str):
+                    raise ValueError(f"a violation in the ERC report gives no {key}")
+            if violation["severity"] not in SEVERITIES:
+                raise ValueError(
+                    f"a {violation['type']} violation in the ERC report is of severity "
+                    f"{violation['severity']!r}, which is none of {', '.join(SEVERITIES)}"
+                )
+            items = violation.get("items")
+            if not isinstance(items, list) or not all(
+                isinstance(item, dict) and isinstance(item.get("description"), str)
+                for item in items
+            ):
+                raise ValueError(
+                    f"a {violation['type']} violation in the ERC report does not list "
+                    "the items it names"
+                )
             found.append(
                 Violation(
-                    violation.get("type", ""),
-                    violation.get("severity", ""),
-                    violation.get("description", ""),
-                    tuple(item.get("description", "") for item in violation.get("items", ())),
+                    violation["type"],
+                    violation["severity"],
+                    violation["description"],
+                    tuple(item["description"] for item in items),
                 )
             )
     return tuple(found)
@@ -203,19 +248,29 @@ class KicadErcTool:
             timeout=120,
         )
         written = report.is_file()
+        text = report.read_text(encoding="utf-8") if written else ""
         succeeded = completed.returncode == 0 and written
+        message = "" if succeeded else (
+            f"{self.executable} wrote no report: "
+            f"{(completed.stderr or completed.stdout).strip()}"
+        )
+        if succeeded:
+            # A report the reader is not written for is a run that did not
+            # complete, with the reason, and never an empty report that passes.
+            try:
+                parse_erc(text)
+            except ValueError as exc:
+                succeeded = False
+                message = f"{self.executable} wrote a report fang does not read: {exc}"
         return RawRun(
             self.name,
             self.version(),
             completed.returncode,
             stdout=completed.stdout,
             stderr=completed.stderr,
-            outputs={REPORT: report.read_text(encoding="utf-8")} if written else {},
+            outputs={REPORT: text} if written else {},
             status=Status.SUCCEEDED if succeeded else Status.FAILED,
-            message="" if succeeded else (
-                f"{self.executable} wrote no report: "
-                f"{(completed.stderr or completed.stdout).strip()}"
-            ),
+            message=message,
         )
 
     def read(self, job: Job, raw: RawRun) -> tuple:

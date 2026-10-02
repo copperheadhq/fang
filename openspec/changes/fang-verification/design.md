@@ -474,8 +474,22 @@ from its latest provenance record -- asserted 1, inferred 0.8, unverified 0.5
 an assumption; `assumed_provenance(reason)` states it. A model's relative path
 resolves against the declaring program's folder, the deck includes it by that
 same relative path (an absolute or escaping path becomes `models/<name>`), and
-the run copies it beside the deck. A primitive is written from the value the
-graph holds, in SI decimals; one with no value is refused, never written as 1.
+the run copies it beside the deck. Two parts declared in different folders may
+name different files by one relative path; named by the path alone they shared
+one bundle entry and one include, so one part ran the other's model.
+`bundle_paths` keeps the relative path where it names one file and, where two
+different files would share it, names each `<digest>/<path>` under the first
+twelve hex digits of its own digest, which is as machine-independent; the same
+file named twice is one entry, and the Touchstone reader names its files the
+same way. Two different files declaring one subcircuit are refused, naming the
+parts, because a deck holds one definition (ngspice warns of a redefinition
+and ignores it), so distinct includes alone would still run one model for
+both. A port several pins land on, as a part's ground pins do, is reached
+through one node: pins on different nodes are refused under SIM-0006, naming
+the part, the port and each pin's net, and a pin on no net carries nothing, so
+the port is taken through a pin on a net where the part has one. A primitive
+is written from the value the graph holds, in SI decimals; one with no value
+is refused, never written as 1.
 
 **The bench under AC.** Each supply is also the AC stimulus, at its own
 magnitude, and the job records that as an assumption. A question with no
@@ -491,9 +505,25 @@ which no transaction proposed, so `--commit` writes it only once the gate has
 seen it whole: every entity proposed against an empty snapshot with the default
 checks, exactly as `build` gates what it writes (the workspace keeps records,
 not typed entities, so the persisted head cannot be rebuilt to propose a
-re-elaboration against). A measurement still current under a constraint
-tightened since breaks a hard constraint, and the commit is refused with the
-gate's TXN-0002, as `build` would refuse it.
+re-elaboration against). That head carries the program as it is now, so
+committing it would persist an edit made since the last build past `build`'s
+tool plan, when `--commit` promises measurements and nothing else. Before
+anything runs, `--commit` carries the persisted measured facts onto the fresh
+elaboration whatever their currency (`carry_measurements(..., current=...)`
+with a test that keeps every run) and compares the result with the persisted
+records, entity by entity. An unchanged program gives the persisted design
+back; anything else is an edit, a retuned part or a tightened constraint among
+them, and the commit is refused, saying to run `fang build` first. The files a
+program reads are outside the comparison, so a measurement made stale by an
+edited model or a rebuilt firmware runs again and its answer is committed.
+Entities are compared as records rather than by snapshot hash, so a newer
+compiler that elaborates the same design is not an edit, and run evidence no
+verification cites any more (a retried run's first attempt, left on the head)
+is set aside, since a run left it and the next build drops it. The whole-design
+gate stays behind the comparison. The `stale:` lines are judged on the
+committed runs laid over the fresh elaboration, since a bound firmware is
+found beside the program that declares its part; on the runs alone it fell
+back to the working directory and read as missing.
 
 **Re-elaboration keeps a measurement while it is current.** `carry_measurements`
 keeps an answered verification, its evidence and the values that evidence is the
@@ -557,7 +587,13 @@ warning totals; errors fail and warnings do not. The ERC job carries the sheet
 fang draws with the snapshot's hash replaced -- the job names its snapshot
 beside itself -- so the job is the same wherever the program was read from.
 The report format was captured from kicad-cli 10.0.6, as the risk note below
-asks, and a trimmed capture is the parser's fixture. `Checks` defaults to no
+asks, and a trimmed capture is the parser's fixture. The reader requires that
+schema, `erc.v1`, and every field it reads (the sheets, their violations, and
+each violation's rule, severity, description and items); read leniently, a
+report of a changed schema or with no sheets was a report of no violations and
+passed. Such a report fails the run with the reason, so its evidence is
+recorded as a run that did not complete, no verdict is drawn and the
+verification stays unknown. `Checks` defaults to no
 named tool and routes by method; the built-in tools load on first use of the
 registry, because `rulecheck.py` imports `verification.py`.
 
@@ -569,6 +605,12 @@ port toward the model; the record carries each with its position, because the
 record stream sorts any list it does not know to be ordered. A part is a shunt
 element when one of its terminals is on ground and a series element otherwise,
 and its value is the inductance, capacitance or resistance the graph holds.
+The named parts must be the ladder the graph connects: counted back from the
+model's port 1, each shunt part joins the node reached so far to ground and
+each series part joins it to the next node toward the port, and the first part
+that does not is refused under SIM-0003, naming the part, the node reached and
+the nets it joins. Otherwise parts named out of order, or a typo naming some
+other capacitor, composed a plausible number for a circuit nobody drew.
 Return loss is positive, -20 log10 |Gamma|, against a reference of 50 Ohm
 unless the measure names another; the file's own reference is honoured when
 the load is read back from S11, which is how files in different references
@@ -640,7 +682,8 @@ when absent, and `extensions` already serializes.
 ## Open Questions
 
 - Whether `verify --commit` should also re-run `build`'s tool plan. It does not
-  in this change; the two commands stay independent.
+  in this change, and it refuses a program changed since the last build, so
+  the design it commits into is one `build`'s plan ran over.
 - The confidence scale. Tools state a confidence in `[0, 1]` bounded by model
   provenance, and nothing yet consumes it beyond recording. A policy that
   refuses to commit an inferred value below a confidence is the obvious next

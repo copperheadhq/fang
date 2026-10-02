@@ -43,7 +43,7 @@ import shutil
 from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, ClassVar, Iterator, Mapping, Protocol, Sequence, runtime_checkable
+from typing import Any, Callable, ClassVar, Iterator, Mapping, Protocol, Sequence, runtime_checkable
 
 from .constraints import CheckStatus, Constraint, Node, Ref
 from .diagnostics import (
@@ -76,6 +76,7 @@ from .simulation import (
     XyceBackend,
     XyceDialect,
     analysis_from_dict,
+    bundle_models,
     compile_plan,
     load_model,
     lower_question,
@@ -728,7 +729,8 @@ class ReturnLoss(Measure):
     matching parts named in order from the port toward the model, and against
     a reference impedance, 50 Ohm unless the question says otherwise. Each
     matching part is a series or a shunt element by how the graph connects it,
-    and its value is the one the graph holds.
+    and its value is the one the graph holds; parts that do not form that
+    ladder, in the order named, are refused when the question is prepared.
     """
 
     at: Quantity = field(kw_only=True)
@@ -1484,13 +1486,16 @@ class SpiceTool:
                 back = resolved.get("return")
                 return node(resolved["signal"]), node(back) if back else "0"
 
-            models = {
-                use.component: load_model(
-                    snapshot.entities[use.component], traits.get(use.component, "simulatable")
-                )
-                for use in plan.models
-                if use.source
-            }
+            models = bundle_models(
+                {
+                    use.component: load_model(
+                        snapshot.entities[use.component], traits.get(use.component, "simulatable")
+                    )
+                    for use in plan.models
+                    if use.source
+                },
+                designator_of,
+            )
             devices = self._devices(snapshot, plan, netlist, nodes, models, traits)
 
             items = [
@@ -1563,6 +1568,9 @@ class SpiceTool:
         for entity in snapshot.entities.values():
             if entity.kind == "pin":
                 pins_of.setdefault(entity.owner, []).append(entity.vendor_name)
+        net_of = {
+            (node.designator, node.pin): net.name for net in netlist.nets for node in net.nodes
+        }
         lines = []
         for component in netlist.components:
             if component.entity_id not in scope or component.entity_id in abstracted:
@@ -1575,7 +1583,10 @@ class SpiceTool:
             model = models.get(entity.id)
             if model is not None:
                 trait = traits.get(entity.id, "simulatable")
-                lines.append(subcircuit_instance(designator, model, trait.pin_map, pins))
+                nets = {
+                    pin: net_of[(designator, pin)] for pin in pins if (designator, pin) in net_of
+                }
+                lines.append(subcircuit_instance(designator, model, trait.pin_map, pins, nets))
                 continue
             if not _is_primitive(entity):
                 raise SimulationError(
@@ -2593,7 +2604,10 @@ class Currency:
         )
 
 
-def carry_measurements(elaborated, facts: MeasuredFacts, *, traits=None, tools: ToolRegistry | None = None):
+def carry_measurements(
+    elaborated, facts: MeasuredFacts, *, traits=None, tools: ToolRegistry | None = None,
+    current: Callable[[Any], bool] | None = None,
+):
     """A fresh elaboration, with what runs measured kept in place while it is
     still current.
 
@@ -2608,9 +2622,15 @@ def carry_measurements(elaborated, facts: MeasuredFacts, *, traits=None, tools: 
     so is a question the program has changed. A program cannot give a
     measured parameter a value of its own (elaboration refuses one), so the
     value carried is always the measurement's.
+
+    `current` says whether one run's evidence is still current, and is
+    `Currency` over the elaboration unless given. One that keeps every run
+    asks only whether the program has changed: carried that way, an
+    unchanged program gives back the design its measurements were committed
+    to, whatever has happened since to the files it reads.
     """
     entities = dict(elaborated.entities)
-    current = Currency(elaborated, traits=traits, tools=tools)
+    current = current or Currency(elaborated, traits=traits, tools=tools)
     for verification_id, answered in sorted(facts.verifications.items()):
         declared = entities.get(verification_id)
         if not isinstance(declared, Verification):

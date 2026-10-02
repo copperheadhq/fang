@@ -141,7 +141,11 @@ unsupported, by name, and is not by itself a failure. A program with no
 question says there is nothing to verify and exits `0`.
 
 Without `--commit` nothing is written, not even a scratch deck. `--commit`
-needs a workspace, so run `fang build` first. See
+needs a workspace, so run `fang build` first. It persists measurements and
+nothing else: where the program has changed since that build, it refuses
+before anything runs and exits `1`, saying to run `fang build` again. A model
+or firmware file changed since a run is not a change to the program, and its
+question runs again and is committed. See
 [Verification](/reference/verification/).
 
 ## Emulation
