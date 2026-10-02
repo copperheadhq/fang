@@ -15,7 +15,7 @@ from dataclasses import dataclass, field, replace
 from typing import Callable, Iterable, Mapping, Sequence
 
 from . import SCHEMA_VERSION, __version__
-from .constraints import CheckStatus, Constraint, Resolver
+from .constraints import CheckStatus, Constraint, Node, Ref, Resolver
 from .diagnostics import (
     Diagnostic,
     Severity,
@@ -33,6 +33,7 @@ from .entities import (
     Connection,
     ConnectionKind,
     Entity,
+    Verification,
 )
 from .provenance import Provenance, ProvenanceRecord
 from .serialization import canonical_bytes, content_hash
@@ -578,12 +579,21 @@ class KernelGraph:
         # Gate condition 5: no undecided result covers a must-be-decided
         # requirement. An undecided result is neither a pass nor a failure; whether
         # it blocks is the policy's decision, made here rather than by the evaluator.
+        # A constraint left undecided only by a question's measured parameters,
+        # while the question awaits its answer or has failed, is excepted: the
+        # verification's own result states it for the requirement.
+        awaiting: set[tuple[str, str]] | None = None
         for result in results:
             if result.status is not CheckStatus.UNKNOWN:
                 continue
             constraint = candidate.entities.get(result.subject)
             source = getattr(constraint, "source", None)
             if source in policy.must_be_decided:
+                if isinstance(constraint, Constraint):
+                    if awaiting is None:
+                        awaiting = _awaiting_measurement(candidate)
+                    if _undecided_only_for(constraint, candidate, awaiting):
+                        continue
                 diagnostics.append(
                     Diagnostic(
                         TXN_UNDECIDED_BLOCKED,
@@ -634,6 +644,63 @@ class KernelGraph:
         if proposal.accepted:
             self.commit(proposal)
         return proposal
+
+
+def _awaiting_measurement(snapshot: Snapshot) -> set[tuple[str, str]]:
+    """The parameters a declared question measures into that hold no value,
+    as (entity id, parameter name), for each question unanswered or failed.
+
+    Spec: "The Commit Gate", condition 5, and RFC 12 Section 12.9. The question
+    is read off its verification's own record, since graph.py sits below the
+    verification module. A question a run answered with anything but FAIL is
+    not awaiting: a constraint a re-entering measurement leaves undecided still
+    blocks.
+    """
+    awaiting: set[tuple[str, str]] = set()
+    for entity in snapshot.entities.values():
+        if not isinstance(entity, Verification):
+            continue
+        question = entity.extensions.get("question")
+        if not isinstance(question, Mapping):
+            continue
+        answered = bool(entity.evidence) or entity.tool is not None
+        if answered and entity.result != "FAIL":
+            continue
+        for entry in question.get("measures", ()):
+            holder_id, _, name = str(entry.get("parameter", "")).partition(".")
+            holder = snapshot.entities.get(holder_id)
+            value = holder.parameters.get(name) if holder is not None else None
+            if not (isinstance(value, Value) and value.known):
+                awaiting.add((holder_id, name))
+    return awaiting
+
+
+def _reads(node: Node | None) -> set[tuple[str, str]]:
+    """Every (entity id, attribute) an expression reads."""
+    if node is None:
+        return set()
+    if isinstance(node, Ref):
+        return {(node.ref, node.attr)}
+    found: set[tuple[str, str]] = set()
+    for arg in getattr(node, "args", ()):
+        found |= _reads(arg)
+    return found
+
+
+def _undecided_only_for(
+    constraint: Constraint, snapshot: Snapshot, awaiting: set[tuple[str, str]]
+) -> bool:
+    """Whether every parameter the constraint reads that holds no known value
+    is one a question awaits, and at least one does. A constraint undecided on
+    any other account, an ordinary unknown or an overlap of known values, is
+    not excepted."""
+    resolve = snapshot.resolver()
+    unknown = {
+        (entity_id, attr)
+        for entity_id, attr in _reads(constraint.expression) | _reads(constraint.applicability)
+        if not ((value := resolve(entity_id, attr)) is not None and value.known)
+    }
+    return bool(unknown) and unknown <= awaiting
 
 
 # --------------------------------------------------------------------------
