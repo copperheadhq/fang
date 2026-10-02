@@ -9,7 +9,9 @@ requirement it serves: the parameters it measures into, the measures that
 produce them, the method, and for a circuit question the bench. The question
 SHALL elaborate to a verification entity whose result is unknown, carrying its
 source location. A program SHALL NOT be able to declare a computed result for a
-question; a result is produced only by a run.
+question; a result is produced only by a run. A parameter a question measures
+into SHALL be declared without a value, and a program that gives it one, by a
+default or an assignment, SHALL fail elaboration.
 
 #### Scenario: A declared question becomes an unanswered verification
 
@@ -27,6 +29,12 @@ question; a result is produced only by a run.
 
 - **WHEN** a question measures into a name that is not a declared parameter of
   the module declaring it
+- **THEN** elaboration fails with a diagnostic naming the parameter
+
+#### Scenario: A measured parameter is declared without a value
+
+- **WHEN** a program gives a value to a parameter one of its questions measures
+  into
 - **THEN** elaboration fails with a diagnostic naming the parameter
 
 #### Scenario: A verification by inspection is still declarable
@@ -74,17 +82,27 @@ be recorded as a coverage gap.
 ### Requirement: The Cheapest Verification Level Is Chosen And Recorded
 
 The runner SHALL route a question to the cheapest level that can decide it. A
-question whose constraints the kernel's own evaluator already decides SHALL be
-answered at the equation level with no tool run. The chosen level and tool SHALL
-be recorded on the verification entity. A question no registered tool covers
-SHALL be reported unroutable rather than answered by a tool at another level.
+question every one of whose measured parameters holds a value, and whose
+constraints the kernel's own evaluator already decides, SHALL be answered at the
+equation level with no tool run. A measured parameter with no value SHALL NOT
+let the evaluator answer. The chosen level and tool SHALL be recorded on the
+verification entity. A question no registered tool covers SHALL be reported
+unroutable rather than answered by a tool at another level.
 
 #### Scenario: A question the evaluator decides runs no tool
 
-- **WHEN** every constraint over a question's measured parameters already
-  evaluates to a decided status
+- **WHEN** every parameter a question measures into holds a value and every
+  constraint over them already evaluates to a decided status
 - **THEN** the question is routed to the equation level
 - **AND** no tool is prepared or run
+
+#### Scenario: A measure nobody took is not decided by the evaluator
+
+- **WHEN** a question measures into a parameter that holds no value and no
+  constraint reads, while the constraints over its other parameters are decided
+- **THEN** the question is routed to its tool rather than to the evaluator
+- **AND** while nothing measures that parameter, the result is unknown, naming
+  the missing measure
 
 #### Scenario: An undecided circuit question routes to a circuit simulator
 
@@ -160,8 +178,13 @@ A measurement SHALL enter canonical state only as a transaction against the
 committed head that sets each measured parameter to an inferred value whose
 source is the run's evidence, adds that evidence carrying the structured
 measurement record, and replaces the declared verification under its original
-identity. The constraint over a measured parameter SHALL be decided by the
-gate's existing constraint check and by nothing else.
+identity. A run already recorded for the same job and the same tool version
+SHALL NOT be run again: its recorded measurements SHALL re-enter by the same
+transaction, citing its evidence as it stands rather than adding it again, and
+the result SHALL be what the gate decides on the head now. The constraint over a measured parameter SHALL be decided by the
+gate's existing constraint check and by nothing else. A committed measurement
+SHALL be kept across re-elaboration only while it is current: while preparing
+its question afresh gives the job its evidence records.
 
 #### Scenario: A measured parameter is an inferred value with its evidence
 
@@ -180,7 +203,9 @@ gate's existing constraint check and by nothing else.
 
 - **WHEN** a run's evidence is read
 - **THEN** it names the tool and its version, the level, a hash of the native
-  input, each measure with its quantity, the assumptions, and the coverage gaps
+  input, the run's terminal status, whether it ran locally or on a hosted
+  runner, the run's confidence, each measure with its quantity or the reason it
+  has none, the assumptions, and the coverage gaps
 - **AND** it names the digest of every input file the run read that the
   snapshot does not hold, such as a model file
 
@@ -189,6 +214,19 @@ gate's existing constraint check and by nothing else.
 - **WHEN** a question is answered
 - **THEN** the verification entity has the identifier it was declared with, its
   result, the evidence, and a provenance record for the run
+
+#### Scenario: A recorded run re-enters rather than running again
+
+- **WHEN** a question is asked again with the same job on the same tool
+  version as a completed run its verification already cites, after a change
+  to the constraints over its measured parameters
+- **THEN** no tool runs and no evidence is added
+- **AND** the run's recorded measurements re-enter through the gate, and the
+  verification's result is what the gate now decides, so a failure whose
+  constraint was relaxed passes and a pass whose constraint became undecided is
+  unknown
+- **AND** the question is reported current only when the gate decides what the
+  head already holds
 
 #### Scenario: Measurements against a stale head are refused
 
@@ -203,6 +241,19 @@ gate's existing constraint check and by nothing else.
   source
 - **AND** the program, which declared the parameter without a value, is not
   recorded as having changed it
+
+#### Scenario: A measurement is kept only while it is current
+
+- **WHEN** a program whose measured parameter holds a committed measurement is
+  elaborated again with a change to anything the run rested on, such as a part
+  in the circuit, a model file, or the firmware image, while the question
+  itself is unchanged
+- **THEN** preparing the question again gives a job other than the one the
+  evidence records, and the measured value and the verification answered from
+  it are not kept
+- **AND** the question is answered again rather than reported current
+- **AND** whether a measurement is kept does not depend on whether the tool is
+  installed, or which version is
 
 #### Scenario: Confidence is bounded by model provenance
 
@@ -272,7 +323,11 @@ A part MAY carry a Touchstone model as a trait with its provenance. An RF
 question over it SHALL be answered by reading the file and composing the named
 matching parts in closed form, at the equation level, and the measurement's
 confidence SHALL be bounded by the model's provenance. A frequency outside the
-file's range SHALL be refused rather than extrapolated.
+file's range SHALL be refused rather than extrapolated, and the file's
+frequencies SHALL be scaled and compared exactly, so that a frequency the file
+names is inside its range. A return loss is in decibels, and SHALL be measured
+only into a parameter declared in decibels; a decibel SHALL NOT convert to, or
+be compared or combined with, any other dimensionless unit.
 
 #### Scenario: A one-port file answers a return-loss question
 
@@ -298,6 +353,20 @@ file's range SHALL be refused rather than extrapolated.
 - **THEN** the question is refused naming the range
 - **AND** nothing is extrapolated
 
+#### Scenario: A frequency the file names is inside its range
+
+- **WHEN** the question's frequency is the file's last point, written in the
+  file's own frequency unit
+- **THEN** the question is answered at that point and not refused
+
+#### Scenario: A return loss goes only into a decibel parameter
+
+- **WHEN** a question measures a return loss into a parameter declared in a
+  dimensionless unit other than decibels, such as percent
+- **THEN** elaboration fails with a unit diagnostic
+- **AND** a constraint comparing a decibel parameter with such a unit is refused
+  where it is written
+
 #### Scenario: The file's format options are honoured
 
 - **WHEN** two files describe the same network in different units, formats, and
@@ -309,7 +378,10 @@ file's range SHALL be refused rather than extrapolated.
 The `verify` command SHALL route and run every declared question, print each
 question's level, tool, measurements, and result or the reason it did not run,
 exit non-zero when any verification failed, and persist measurements only when
-asked to commit into an existing workspace.
+asked to commit into an existing workspace. What it persists SHALL first pass
+the commit gate whole, as what `build` persists does; a design the gate rejects
+SHALL NOT be written, and the command SHALL report the gate's diagnostics and
+exit non-zero.
 
 #### Scenario: Verify reports each question
 
@@ -332,6 +404,13 @@ asked to commit into an existing workspace.
 
 - **WHEN** `verify` runs without being asked to commit
 - **THEN** the workspace is unchanged
+
+#### Scenario: A commit the gate rejects writes nothing
+
+- **WHEN** `verify` is asked to commit a design the commit gate rejects, such as
+  one holding a committed measurement that breaks a constraint tightened since
+- **THEN** nothing is written to the workspace
+- **AND** the command reports the gate's diagnostics and exits non-zero
 
 #### Scenario: A program with no questions says so
 

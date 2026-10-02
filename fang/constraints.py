@@ -23,7 +23,15 @@ from .diagnostics import (
     error,
 )
 from .entities import Entity
-from .units import DIMENSIONLESS, Dimension, Quantity, _CONTEXT, _decimal_str
+from .units import (
+    DIMENSIONLESS,
+    SCALE_MISMATCH,
+    Dimension,
+    Quantity,
+    _CONTEXT,
+    _decimal_str,
+    scale_of,
+)
 from .values import Value, ValueStatus
 
 
@@ -143,9 +151,17 @@ Resolver = Callable[[str, str], Value | None]
 
 
 class Node:
-    """A node of a typed expression tree. Every node has a dimension."""
+    """A node of a typed expression tree. Every node has a dimension.
+
+    A dimensionless node also says, where its layer knows, whether it is a
+    decibel (`logarithmic` True) or a linear ratio (False): the seven bases
+    cannot tell the two apart, and an expression mixing them is refused when
+    it is written, as a dimension mismatch is. None is "not known here": a
+    bare number, a dimensioned node, or a reference read back from a record.
+    """
 
     dimension: Dimension
+    logarithmic: bool | None = None
 
     def evaluate(self, resolve: Resolver) -> Interval | Truth:
         raise NotImplementedError
@@ -175,6 +191,8 @@ class Literal(Node):
             "dimension",
             self.quantity.dimension if self.quantity is not None else DIMENSIONLESS,
         )
+        if self.quantity is not None:
+            object.__setattr__(self, "logarithmic", scale_of(self.quantity.unit))
 
     @classmethod
     def of(cls, value) -> "Literal":
@@ -212,11 +230,15 @@ class Ref(Node):
 
     The attribute's dimension is declared here, because a dimension mismatch must
     be catchable when the expression is written rather than when it is evaluated.
+    So is, where the writer knows the attribute's declared unit, whether it is
+    a decibel: the language layer passes `logarithmic`, which is a check made
+    at write time and not part of the record.
     """
 
     ref: str
     attr: str
     attr_dimension: Dimension = DIMENSIONLESS
+    logarithmic: bool | None = field(default=None, compare=False, repr=False)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "dimension", self.attr_dimension)
@@ -241,6 +263,17 @@ class Ref(Node):
         }
 
 
+def _one_scale(op: str, args: Sequence[Node]) -> bool | None:
+    """The scale operands share, refusing a decibel beside a linear ratio."""
+    scales = {arg.logarithmic for arg in args if arg.logarithmic is not None}
+    if len(scales) > 1:
+        raise error(
+            UNIT_DIMENSION_MISMATCH,
+            f"{op} mixes a decibel with a linear dimensionless ratio: {SCALE_MISMATCH}",
+        )
+    return scales.pop() if scales else None
+
+
 ARITHMETIC_OPS = ("add", "sub", "mul", "div", "pow", "neg", "abs", "min", "max")
 COMPARISON_OPS = ("lt", "le", "eq", "ne", "ge", "gt")
 LOGICAL_OPS = ("and", "or", "not")
@@ -256,6 +289,9 @@ class Arithmetic(Node):
         if self.op not in ARITHMETIC_OPS:
             raise ValueError(f"{self.op!r} is not an arithmetic operator")
         object.__setattr__(self, "dimension", self._check())
+        scale = _one_scale(self.op, self.args)
+        if self.dimension.dimensionless:
+            object.__setattr__(self, "logarithmic", scale)
 
     def _check(self) -> Dimension:
         args = self.args
@@ -352,6 +388,7 @@ class Comparison(Node):
                 f"{self.op} requires operands of equal dimension: "
                 f"{left.dimension} is not {right.dimension}",
             )
+        _one_scale(self.op, self.args)
         object.__setattr__(self, "dimension", DIMENSIONLESS)
 
     def evaluate(self, resolve: Resolver) -> Truth:

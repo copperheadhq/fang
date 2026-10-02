@@ -84,7 +84,7 @@ from .simulation import (
     spice_nodes,
     subcircuit_instance,
 )
-from .units import Dimension, Quantity, Unit
+from .units import SCALE_MISMATCH, Dimension, Quantity, Unit
 
 #: The dimensions a circuit question reasons in.
 VOLTAGE = Unit.parse("V").dimension
@@ -144,6 +144,11 @@ class Measure:
         """The dimension of what this measure produces under an analysis kind,
         or None where that depends on an analysis not yet named."""
         return VOLTAGE
+
+    def logarithmic(self) -> bool:
+        """Whether what it produces is a decibel, which no dimension says: a
+        decibel goes only into a parameter declared in decibels."""
+        return False
 
     def check(self, analysis: str | None) -> None:
         """Refuse a field whose dimension the analysis cannot give a meaning."""
@@ -443,8 +448,9 @@ class QuestionDeclaration(Verifies):
     """A verification whose result a run produces, never the program.
 
     The common base of every declared question. It fixes the method, refuses a
-    result, checks that every measure writes a parameter its module declares,
-    resolves every surface while the module tree is still in hand, and builds
+    result, checks that every measure writes a parameter its module declares
+    and gives no value, resolves every surface while the module tree is still
+    in hand, and builds
     the canonical question dictionary that `elaborate` stores in the
     verification's `extensions["question"]`.
 
@@ -518,6 +524,20 @@ class QuestionDeclaration(Verifies):
                     entities=(module._entity_id,),
                     location=self._source,
                 )
+            stated = module.value_of(name)
+            if stated.known:
+                # A value the program gives would be the question's answer,
+                # stated rather than produced, and would let the evaluator
+                # answer the question with nothing run.
+                raise error(
+                    SIM_QUESTION_RESULT,
+                    f"{self.attribute} measures into {name}, which "
+                    f"{type(module).__name__} gives the value {stated.quantity}; a "
+                    "measured parameter is declared without a value, and only a "
+                    "run gives it one",
+                    entities=(module._entity_id,),
+                    location=self._source,
+                )
             produced = self.measured_dimension(measure)
             if produced is not None and produced != parameter.unit.dimension:
                 raise error(
@@ -525,6 +545,19 @@ class QuestionDeclaration(Verifies):
                     f"{self.attribute} measures {name} with "
                     f"{type(measure).__name__}, which does not produce "
                     f"{parameter.unit}",
+                    location=self._source,
+                )
+            if (
+                produced is not None
+                and produced.dimensionless
+                and measure.logarithmic() != parameter.unit.logarithmic
+            ):
+                gives = "decibels" if measure.logarithmic() else "a linear ratio"
+                raise error(
+                    UNIT_DIMENSION_MISMATCH,
+                    f"{self.attribute} measures {name} with "
+                    f"{type(measure).__name__}, which gives {gives}, but {name} is "
+                    f"declared in {parameter.unit}: {SCALE_MISMATCH}",
                     location=self._source,
                 )
             measures.append(
@@ -722,6 +755,9 @@ class ReturnLoss(Measure):
 
     def produces(self, analysis: str | None) -> Dimension | None:
         return Unit.parse("dB").dimension
+
+    def logarithmic(self) -> bool:
+        return True
 
     def fields(self) -> dict:
         # The matching parts are a chain, so each carries its position: the
@@ -1278,26 +1314,43 @@ def constraint_statuses(snapshot, question: Question, resolve=None) -> dict[str,
     }
 
 
+def unmeasured(snapshot, question: Question, resolve=None) -> list[str]:
+    """The question's measures whose parameter holds no known value."""
+    resolve = resolve or snapshot.resolver()
+    out = []
+    for entry in question.measures:
+        value = resolve(entry.entity, entry.attr)
+        if value is None or not value.known or value.quantity is None:
+            out.append(entry.name)
+    return out
+
+
 def route(snapshot, question: Question, *, tools: ToolRegistry | None = None) -> Route:
     """Route a question to the cheapest level that can decide it.
 
-    If every constraint over its measured parameters already evaluates to a
-    decided result, the evaluator is the answer and no tool runs. Otherwise
-    the method names the level, and the first registered tool at that level
-    that covers the question is chosen -- the one the question names, if it
-    names one. A question nothing covers is unroutable; it is never answered
-    by a tool at another level, because a cheaper answer is not the same
-    answer.
+    If every measured parameter already holds a value and every constraint
+    over them already evaluates to a decided result, the evaluator is the
+    answer and no tool runs. A parameter with no value and no constraint over
+    it is a measure nobody has taken, and the evaluator cannot stand in for
+    it. Otherwise the method names the level, and the first registered tool
+    at that level that covers the question is chosen -- the one the question
+    names, if it names one. A question nothing covers is unroutable; it is
+    never answered by a tool at another level, because a cheaper answer is not
+    the same answer.
     """
     tools = TOOLS if tools is None else tools
     statuses = constraint_statuses(snapshot, question)
-    if statuses and all(status is not CheckStatus.UNKNOWN for status in statuses.values()):
+    if (
+        statuses
+        and not unmeasured(snapshot, question)
+        and all(status is not CheckStatus.UNKNOWN for status in statuses.values())
+    ):
         return Route(
             question.id,
             Level.EQUATION,
             EVALUATOR,
-            "every constraint over its measured parameters is already decided; "
-            "nothing runs",
+            "every measured parameter holds a value and every constraint over "
+            "them is already decided; nothing runs",
             decided=True,
         )
 
@@ -1697,13 +1750,18 @@ def register_tool(tool: Tool, *, before: str | None = None, registry: ToolRegist
 # --------------------------------------------------------------------------
 
 #: The fields a measurement record defines. A tool's `extra` fields sit beside
-#: them in the record and may not take one of their names.
+#: them in the record and may not take one of their names, save `ran`, which a
+#: tool may state through its job and the record then carries as its own.
 RECORD_FIELDS = frozenset(
     {
-        "tool", "level", "job", "status", "exit_status", "confidence", "measures",
-        "assumptions", "coverage_gaps", "inputs", "message",
+        "tool", "level", "job", "status", "ran", "exit_status", "confidence",
+        "measures", "assumptions", "coverage_gaps", "inputs", "message",
     }
 )
+
+#: Where a run happened, as RFC 3's record names it: here, or on a hosted
+#: runner whose isolation is stronger. Every record says which.
+RAN = ("local", "hosted")
 
 
 def evidence_identity(snapshot, question: Question, job: Job, version: str, *, attempt: int = 0):
@@ -1743,13 +1801,19 @@ def measurement_record(
 ) -> dict:
     """The measurement record a run's evidence carries.
 
-    The tool and its version, the level, the job's hash, each measure with its
-    quantity or the reason it has none, the assumptions, the coverage gaps,
-    and the digest of every input the snapshot does not hold -- with the
-    tool's own fields beside them.
+    The tool and its version, the level, the job's hash, the run's terminal
+    status, where it ran, its confidence, each measure with its quantity or
+    the reason it has none, the assumptions, the coverage gaps, and the
+    digest of every input the snapshot does not hold -- with the tool's own
+    fields beside them. A run is local unless its tool's job says it was
+    hosted; the record carries that once, as its own field.
     """
+    extra = dict(job.extra)
+    ran = extra.pop("ran", "local")
+    if ran not in RAN:
+        raise ValueError(f"{job.tool} says it ran {ran!r}; a run is one of {', '.join(RAN)}")
     judged = dict(verdict.record) if verdict is not None else {}
-    clashes = sorted((RECORD_FIELDS & (set(job.extra) | set(judged))) | (set(job.extra) & set(judged)))
+    clashes = sorted((RECORD_FIELDS & (set(extra) | set(judged))) | (set(extra) & set(judged)))
     if clashes:
         raise ValueError(
             f"{job.tool}'s record fields {', '.join(clashes)} would overwrite "
@@ -1760,6 +1824,7 @@ def measurement_record(
         "level": level.label,
         "job": job.hash,
         "status": raw.status.value,
+        "ran": ran,
         "exit_status": raw.exit_status,
         "confidence": job.confidence,
         "measures": [measurement.as_record() for measurement in measurements],
@@ -1769,7 +1834,7 @@ def measurement_record(
     }
     if raw.message:
         record["message"] = raw.message
-    record.update(job.extra)
+    record.update(extra)
     record.update(judged)
     return canonical(record)
 
@@ -1836,20 +1901,23 @@ def _replaced(verification: Verification, *, result: str, evidence: tuple[str, .
 
 def measurement_transaction(
     head, question: Question, evidence, measurements: Sequence[Measurement], *,
-    result: str, level: Level,
+    result: str, level: Level, record=None,
 ):
     """The transaction a run's measurements enter by, and nothing else.
 
     Three kinds of operation: each measured parameter set to an inferred value
     whose source is the evidence, the evidence added, and the declared
     verification replaced under its own identity with the result, the
-    evidence, the level and the tool.
+    evidence, the level and the tool. Evidence already on the head, that of
+    a run already recorded whose measurements re-enter, is cited as it
+    stands and not added again, and `record` is the provenance the
+    verification gains in place of the run's own.
     """
     from .graph import AddEntity, RemoveEntity, SetParameter, Transaction
     from .values import Value
 
     verification = head.entities[question.id]
-    record = evidence.provenance.records[-1]
+    record = record or evidence.provenance.records[-1]
     operations: list = []
     for measurement in measurements:
         if not measurement.measured:
@@ -1863,7 +1931,8 @@ def measurement_transaction(
                 value=Value.inferred(measurement.quantity, evidence.id, measurement.confidence),
             )
         )
-    operations.append(AddEntity(reason=f"the evidence of {question.label}'s run", entity=evidence))
+    if evidence.id not in head.entities:
+        operations.append(AddEntity(reason=f"the evidence of {question.label}'s run", entity=evidence))
     operations.extend(
         (
             RemoveEntity(reason=f"{question.label} is answered", target=question.id),
@@ -1880,18 +1949,20 @@ def measurement_transaction(
     return Transaction(head.hash, tuple(operations), origin=record)
 
 
-def failure_transaction(head, question: Question, evidence, *, level: Level):
+def failure_transaction(head, question: Question, evidence, *, level: Level, record=None):
     """The failure, recorded as knowledge: the evidence, and the verification
     with result FAIL. It changes no parameter, so the head never holds the
-    value that failed."""
+    value that failed. Evidence already on the head is cited, not added."""
     from .graph import AddEntity, RemoveEntity, Transaction
 
     verification = head.entities[question.id]
-    record = evidence.provenance.records[-1]
+    record = record or evidence.provenance.records[-1]
+    added = () if evidence.id in head.entities else (
+        AddEntity(reason=f"the evidence of {question.label}'s failed run", entity=evidence),
+    )
     return Transaction(
         head.hash,
-        (
-            AddEntity(reason=f"the evidence of {question.label}'s failed run", entity=evidence),
+        added + (
             RemoveEntity(reason=f"{question.label} failed its verification", target=question.id),
             AddEntity(
                 reason=f"{question.label} failed by {record.actor.id}",
@@ -1982,6 +2053,7 @@ class Outcome:
 def reenter(
     graph, question: Question, job: Job, raw: RawRun, measurements: Sequence[Measurement], *,
     level: Level, route_: Route | None = None, record_time=None, verdict: Verdict | None = None,
+    recorded=None,
 ) -> Outcome:
     """Return a run's measurements through the commit gate.
 
@@ -1992,6 +2064,12 @@ def reenter(
     verification with result FAIL are recorded by a second transaction that
     sets no parameter. Rejected for any other reason, nothing is recorded.
     Measurements prepared against anything but the head are refused.
+
+    `recorded` is the evidence of a run already on the head, whose
+    measurements re-enter rather than a new run's: the evidence is cited as
+    it stands, and where the gate decides what the head already says (the
+    same result, and the measured parameters as the head holds them),
+    nothing is committed and the answer is `current`.
     """
     from datetime import datetime, timezone
 
@@ -2007,9 +2085,12 @@ def reenter(
         )
     route_ = route_ or Route(question.id, level, job.tool, "")
     record_time = record_time or datetime.now(timezone.utc)
-    evidence = measurement_evidence(
-        head, question, job, raw, measurements, level, record_time, verdict=verdict
-    )
+    if recorded is None:
+        evidence, provenance = measurement_evidence(
+            head, question, job, raw, measurements, level, record_time, verdict=verdict
+        ), None
+    else:
+        evidence, provenance = recorded, _reentry_record(head, question, recorded, record_time)
 
     # The result written on the verification is what the gate's constraint
     # check decides. It is predicted with the same evaluator, and the proposal
@@ -2035,24 +2116,45 @@ def reenter(
             return "FAIL"
         return verdict.result if not question.parameters else result
 
+    def transaction(result: str):
+        return measurement_transaction(
+            head, question, evidence, measurements, result=result, level=level, record=provenance
+        )
+
     result = judged(constraint_statuses(head, question, resolve))
-    proposal = graph.propose(
-        measurement_transaction(head, question, evidence, measurements, result=result, level=level)
-    )
+    proposal = graph.propose(transaction(result))
     if proposal.accepted:
         decided = _gate_statuses(proposal, question)
         if decided and judged(decided) != result:
             result = judged(decided)
-            proposal = graph.propose(
-                measurement_transaction(
-                    head, question, evidence, measurements, result=result, level=level
-                )
-            )
+            proposal = graph.propose(transaction(result))
     common = dict(
         question=question, route=route_, job=job, raw=raw, measurements=tuple(measurements),
         evidence=evidence.id, verdict=verdict,
     )
+    verification = head.entities[question.id]
+    again = "" if recorded is None else (
+        "the run already recorded for this job, re-entered through the gate"
+    )
+
+    def unchanged(candidate) -> bool:
+        """Whether the gate decided what the head already says."""
+        return recorded is not None and candidate.entities[question.id].result == verification.result and all(
+            candidate.entities[entity_id].parameters.get(attr)
+            == head.entities[entity_id].parameters.get(attr)
+            for entity_id, attr in question.parameters
+        )
+
+    def current() -> Outcome:
+        return Outcome(
+            question, route_, UP_TO_DATE, verification.result,
+            message=f"this run is already recorded, on {evidence.id}",
+            job=job, evidence=evidence.id, verification=verification,
+        )
+
     if proposal.accepted:
+        if unchanged(proposal.candidate):
+            return current()
         graph.commit(proposal)
         if missing:
             message = "not measured: " + ", ".join(missing)
@@ -2061,33 +2163,81 @@ def reenter(
         else:
             message = "no constraint over its parameters decides it"
         return Outcome(
-            status=ANSWERED, result=result, message=message, proposal=proposal,
-            verification=graph.head.entities[question.id], **common,
+            status=ANSWERED, result=result,
+            message="; ".join(part for part in (again, message) if part),
+            proposal=proposal, verification=graph.head.entities[question.id], **common,
         )
 
     reasons = "; ".join(d.message for d in proposal.diagnostics if d.severity.blocking)
     if _failed_on_a_measured_constraint(proposal, question):
-        recorded = graph.propose(failure_transaction(head, question, evidence, level=level))
-        if recorded.accepted:
-            graph.commit(recorded)
+        failure = graph.propose(
+            failure_transaction(head, question, evidence, level=level, record=provenance)
+        )
+        if failure.accepted:
+            if unchanged(failure.candidate):
+                return current()
+            graph.commit(failure)
+            refused = "the gate refused the measurement" + (
+                "" if recorded is None else ", re-entered from the run already recorded"
+            )
             return Outcome(
                 status=FAILED, result="FAIL",
-                message=f"the gate refused the measurement: {reasons}",
-                proposal=proposal, recorded=recorded,
+                message=f"{refused}: {reasons}",
+                proposal=proposal, recorded=failure,
                 verification=graph.head.entities[question.id], **common,
             )
-        reasons = "; ".join(d.message for d in recorded.diagnostics if d.severity.blocking)
+        reasons = "; ".join(d.message for d in failure.diagnostics if d.severity.blocking)
         return Outcome(
-            status=REJECTED, result=head.entities[question.id].result,
+            status=REJECTED, result=verification.result,
             message=f"the failure could not be recorded: {reasons}",
-            proposal=proposal, recorded=recorded,
-            verification=head.entities[question.id], **common,
+            proposal=proposal, recorded=failure, verification=verification, **common,
         )
     return Outcome(
-        status=REJECTED, result=head.entities[question.id].result,
+        status=REJECTED, result=verification.result,
         message=f"the gate refused the measurement, and nothing is recorded: {reasons}",
-        proposal=proposal, verification=head.entities[question.id], **common,
+        proposal=proposal, verification=verification, **common,
     )
+
+
+def _reentry_record(head, question: Question, evidence, record_time):
+    """The provenance a verification gains when a recorded run's
+    measurements re-enter: the tool that measured them, the evidence they
+    come from, and no new run."""
+    from .provenance import ProvenanceOrigin, ProvenanceRecord
+
+    run = evidence.provenance.records[-1]
+    return ProvenanceRecord(
+        ProvenanceOrigin.GENERATED,
+        "verification_reentry",
+        run.actor,
+        head.revision_id,
+        record_time,
+        derived_from=(question.id, evidence.id),
+        inputs=run.inputs,
+        source_location=question.source_location,
+        confidence=Confidence.INFERRED,
+    )
+
+
+def recorded_measurements(record: Mapping) -> tuple[Measurement, ...]:
+    """The measurements a run's measurement record holds, read back: a
+    quantity in its recorded unit, or no value and the recorded reason."""
+    tool = record["tool"]
+    confidence = Decimal(str(record["confidence"]))
+    out = []
+    for entry in record.get("measures", ()):
+        quantity, reason = None, entry.get("reason")
+        if reason is None:
+            payload = {k: v for k, v in entry.items() if k not in ("name", "parameter")}
+            payload.setdefault("kind", "scalar")
+            quantity = Quantity.from_dict(payload)
+        out.append(
+            Measurement(
+                entry["name"], entry["parameter"], quantity, tool["name"], tool["version"],
+                record["job"], confidence, reason,
+            )
+        )
+    return tuple(out)
 
 
 def _decide(graph, question: Question, route_: Route, record_time) -> Outcome:
@@ -2100,7 +2250,9 @@ def _decide(graph, question: Question, route_: Route, record_time) -> Outcome:
 
     head = graph.head
     verification = head.entities[question.id]
-    result = _result(constraint_statuses(head, question), ())
+    # `route` decides only where nothing is unmeasured; were anything, the
+    # result stays unknown rather than passing on what was never measured.
+    result = _result(constraint_statuses(head, question), unmeasured(head, question))
     if verification.result == result:
         return Outcome(
             question, route_, UP_TO_DATE, result,
@@ -2206,13 +2358,28 @@ def answer(
     except ToolUnavailable as exc:
         return unsupported(str(exc))
 
-    # The same job on the same version is the same run: once it has completed
-    # and answered this verification, asking again changes nothing. A run that
-    # did not complete is tried again, as evidence of its own.
+    # The same job on the same version is the same run, and is not run again
+    # once it has completed and answered this verification. Its recorded
+    # measurements re-enter through the gate instead, which decides on the
+    # head as it is now: a constraint relaxed since a FAIL, or one that has
+    # become undecided, changes the result, and an unchanged one is current.
+    # A verdict is the checker's own over the same job and is not re-judged.
+    # A run that did not complete is tried again, as evidence of its own.
+    judge = getattr(tool, "verdict", None)
     recorded = _attempts(head, question, job, version)
     if recorded and recorded[-1] in verification.evidence:
         last = head.entities[recorded[-1]]
-        if last.extensions.get("measurement", {}).get("status") == Status.SUCCEEDED.value:
+        record = last.extensions.get("measurement", {})
+        if record.get("status") == Status.SUCCEEDED.value:
+            if judge is None and question.parameters:
+                raw = RawRun(
+                    record["tool"]["name"], record["tool"]["version"],
+                    int(record.get("exit_status", 0)), message=record.get("message", ""),
+                )
+                return reenter(
+                    graph, question, job, raw, recorded_measurements(record),
+                    level=route_.level, route_=route_, record_time=record_time, recorded=last,
+                )
             return Outcome(
                 question, route_, UP_TO_DATE, verification.result,
                 message=f"this run is already recorded, on {last.id}",
@@ -2225,7 +2392,6 @@ def answer(
     except Exception as exc:          # a tool's failure is data, not a crash
         raw = RawRun(tool.name, version, -1, status=Status.FAILED, message=str(exc))
     measurements = tool.read(job, raw)
-    judge = getattr(tool, "verdict", None)
     return reenter(
         graph, question, job, raw, measurements, level=route_.level, route_=route_,
         record_time=record_time, verdict=judge(job, raw) if judge is not None else None,
@@ -2360,19 +2526,91 @@ class MeasuredFacts:
         return cls(verifications, evidence, values)
 
 
-def carry_measurements(elaborated, facts: MeasuredFacts):
-    """A fresh elaboration, with what runs measured kept in place.
+def _answers(evidence) -> str | None:
+    """The question a run's evidence answers, from the record of its run."""
+    for record in reversed(evidence.provenance.records):
+        if record.activity == "verification_run" and record.derived_from:
+            return record.derived_from[0]
+    return None
+
+
+class Currency:
+    """Whether what a run measured is still what the design would measure.
+
+    A run is current while preparing the same question afresh, on a fresh
+    elaboration, gives the job its measurement record names: the question
+    is routed there and prepared by the tool it routes to, and the job's
+    hash must be the recorded one. The hash covers the native input the
+    snapshot lowers to, the digest of every file the run read that the
+    snapshot does not hold (a model, a firmware image) and the question, and
+    not the snapshot's own hash, so it moves exactly when what the run rested
+    on does. A question that no longer routes to the run's tool, or that the
+    tool refuses to prepare, is not current.
+
+    Nothing about the machine enters: whether the tool is installed here, or
+    which version is, does not decide what a rebuild keeps, so the same
+    program and workspace rebuild to the same snapshot everywhere. A run on
+    another version is evidence of its own when the question is next asked
+    (`answer`), not a reason to drop this one.
+    """
+
+    def __init__(self, snapshot, *, traits=None, tools: ToolRegistry | None = None) -> None:
+        self.snapshot = snapshot
+        self.traits = traits
+        self.tools = TOOLS if tools is None else tools
+        self._jobs: dict[str, tuple[str | None, str | None]] = {}
+
+    def job(self, question: Question) -> tuple[str | None, str | None]:
+        """The tool the question routes to here, and the hash of its job."""
+        if question.id not in self._jobs:
+            routed = route(self.snapshot, question, tools=self.tools)
+            found: tuple[str | None, str | None] = (None, None)
+            if routed.routed and not routed.decided:
+                try:
+                    prepared = self.tools.get(routed.tool).prepare(
+                        self.snapshot, question, traits=self.traits
+                    )
+                    found = (routed.tool, prepared.hash)
+                except NotRunnable:
+                    found = (routed.tool, None)
+            self._jobs[question.id] = found
+        return self._jobs[question.id]
+
+    def __call__(self, evidence) -> bool:
+        record = evidence.extensions.get("measurement")
+        if record is None:
+            return True                       # not a run; nothing to repeat
+        declared = self.snapshot.entities.get(_answers(evidence) or "")
+        question = Question.of(declared) if declared is not None else None
+        if question is None:
+            return False
+        tool, job = self.job(question)
+        return (
+            tool is not None
+            and job is not None
+            and tool == record.get("tool", {}).get("name")
+            and job == record.get("job")
+        )
+
+
+def carry_measurements(elaborated, facts: MeasuredFacts, *, traits=None, tools: ToolRegistry | None = None):
+    """A fresh elaboration, with what runs measured kept in place while it is
+    still current.
 
     The program declared each measured parameter without a value, so
     elaborating it again says nothing about the value and must not withdraw
     it. An answered verification is kept, with its evidence and the values
     that evidence is the source of, wherever the program still declares the
-    same question; a question the program has changed is answered afresh,
-    and a value the program now states itself is the program's.
+    same question and every run it rests on is still current (`Currency`):
+    the same question prepared afresh gives the same job. A changed circuit,
+    model file or firmware changes the job, and the question is answered
+    afresh rather than reported current on a measurement of something else;
+    so is a question the program has changed. A program cannot give a
+    measured parameter a value of its own (elaboration refuses one), so the
+    value carried is always the measurement's.
     """
-    from .values import Value
-
     entities = dict(elaborated.entities)
+    current = Currency(elaborated, traits=traits, tools=tools)
     for verification_id, answered in sorted(facts.verifications.items()):
         declared = entities.get(verification_id)
         if not isinstance(declared, Verification):
@@ -2380,6 +2618,8 @@ def carry_measurements(elaborated, facts: MeasuredFacts):
         if declared.extensions.get("question") != answered.extensions.get("question"):
             continue
         if any(ref not in facts.evidence and ref not in entities for ref in answered.evidence):
+            continue
+        if not all(current(facts.evidence[ref]) for ref in answered.evidence if ref in facts.evidence):
             continue
         entities[verification_id] = answered
         for ref in answered.evidence:
@@ -2390,24 +2630,21 @@ def carry_measurements(elaborated, facts: MeasuredFacts):
             target = entities.get(entity_id)
             if value is None or target is None or value.source not in answered.evidence:
                 continue
-            current = target.parameters.get(attr)
-            if isinstance(current, Value) and current.known:
-                continue
             entities[entity_id] = target.with_parameter(attr, value)
     return elaborated.with_entities(entities, elaborated.revision_id)
 
 
-def reelaboration(head, elaborated):
+def reelaboration(head, elaborated, *, traits=None, tools: ToolRegistry | None = None):
     """The transaction that moves a head to a fresh elaboration of its program.
 
-    It keeps what runs measured (`carry_measurements`), so an unchanged
-    program elaborated again is an empty transaction: the measured value and
-    its evidence stay, and the program is not recorded as having changed a
-    parameter it never gave a value.
+    It keeps what runs measured while it is current (`carry_measurements`),
+    so an unchanged program elaborated again is an empty transaction: the
+    measured value and its evidence stay, and the program is not recorded as
+    having changed a parameter it never gave a value.
     """
     from .graph import AddEntity, RemoveEntity, Transaction
 
-    target = carry_measurements(elaborated, MeasuredFacts.of(head))
+    target = carry_measurements(elaborated, MeasuredFacts.of(head), traits=traits, tools=tools)
     operations: list = []
     for entity_id in sorted(set(head.entities) - set(target.entities)):
         operations.append(RemoveEntity(reason="no longer elaborated", target=entity_id))

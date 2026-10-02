@@ -172,6 +172,25 @@ def test_a_return_loss_is_taken_at_a_frequency_against_a_resistance():
         ReturnLoss("antenna.rf", at=2.44 * GHz, reference=50 * dB)
 
 
+def test_a_return_loss_goes_only_into_a_parameter_declared_in_decibels(tmp_path):
+    """A return loss is in dB, and a percent is as dimensionless as a dB:
+    measured into a percent parameter, 10 dB would have been 1000 percent.
+    The elaboration refuses it, as it refuses a measure of the wrong
+    dimension."""
+    model = write_model(tmp_path / "antenna.s1p", LOAD)
+
+    class Linear(matched(model)):
+        return_loss = Parameter("percent")
+
+        def constraints(self):
+            pass
+
+    result = elaborate(Linear, project_id=PROJECT)
+    assert not result.ok
+    assert result.diagnostics[0].code == diagnostics.UNIT_DIMENSION_MISMATCH
+    assert "decibels" in result.diagnostics[0].message
+
+
 def test_an_rf_question_routes_to_the_equation_level(tmp_path):
     model = write_model(tmp_path / "antenna.s1p", LOAD)
     snapshot = elaborate(matched(model), project_id=PROJECT).snapshot
@@ -269,6 +288,25 @@ def test_a_frequency_outside_the_file_is_refused_naming_the_range(tmp_path):
 
     graph, outcome = evaluate(tmp_path, matched(model, at=3 * GHz))
     assert outcome.status == NOT_RUNNABLE and outcome.result == "UNKNOWN"
+
+
+def test_a_question_at_the_files_last_point_is_inside_its_range(tmp_path):
+    """2.01 GHz scaled to hertz in binary floats is 2009999999.9999998, just
+    below the 2.01 GHz a question names, which was then refused as outside
+    the file. Frequencies are scaled and compared as decimals."""
+    network = read_touchstone("# GHZ S RI R 50\n2.00 0 0\n2.01 0.5 0\n", ports=1)
+    assert network.span == (Decimal("2.00E9"), Decimal("2.01E9"))
+    assert network.reflection(Decimal("2010000000")) == complex(0.5, 0)
+
+    model = tmp_path / "antenna.s1p"
+    model.write_text("# GHZ S RI R 50\n1.99 0 0\n2.00 0 0\n2.01 0.333333333333 0\n")
+    result = elaborate(matched(model, at=2.01 * GHz, through=()), project_id=PROJECT)
+    job = TOUCHSTONE.prepare(result.snapshot, questions(result.snapshot)[0], traits=result.traits)
+    assert '"at":"2010000000"' in job.input
+
+    graph, outcome = evaluate(tmp_path, matched(model, at=2.01 * GHz, through=()))
+    assert outcome.status != NOT_RUNNABLE
+    assert outcome.measurements[0].quantity == Quantity.scalar("9.54243", "dB")
 
 
 def test_confidence_is_bounded_by_the_models_provenance(tmp_path):

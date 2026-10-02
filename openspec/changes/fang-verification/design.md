@@ -363,7 +363,10 @@ reason and the count excluded.
 - Every number crosses the boundary as a `Decimal` under the kernel's fixed
   context. A tool that computes in binary floats — the Touchstone reader's
   complex arithmetic — quantizes to six significant figures before the
-  boundary.
+  boundary. The reader's frequencies are not among those floats: they are read
+  from the file's text and scaled to hertz as decimals, because `2.01 * 1e9`
+  is 2009999999.9999998 and a question at a file's last point was refused as
+  outside it.
 - Tool versions are recorded on every evidence entity. Two runs on two versions
   of ngspice are two pieces of evidence, not one.
 - Seeds are recorded where a tool takes one; none of the delivered tools does.
@@ -415,14 +418,18 @@ exit status, stdout, stderr, output files and a terminal `Status`.
 evidence records; only a measurement with a value sets a parameter.
 
 **Equation-level answers.** The tool recorded is `evaluator`. An unanswered
-question whose constraints are already decided is answered by replacing its
+question whose measured parameters all hold values and whose constraints are
+already decided is answered by replacing its
 verification with the evaluator's result, its evidence being whatever entity
 the measured values name as their source. A question already answered with the
 same result is reported `current` and nothing changes, so asking again on a
 head where ngspice answered it leaves the circuit-level record in place. This
 is how `rc_filter` shows one question at two levels: answered by ngspice on
 the elaborated program, then, on the head that run committed, routed to the
-equation level with nothing run. The listing shows both passes.
+equation level with nothing run. The listing shows both passes. A measured
+parameter with no value keeps the question off the evaluator even where no
+constraint reads it: deciding the others would otherwise pass a question one of
+whose measures nobody took.
 
 **A run's result** is FAIL when any constraint over a measured parameter
 fails, UNKNOWN when a measure has no value or no constraint reads the measured
@@ -432,16 +439,27 @@ rare disagreement with the gate's check results, which decide.
 
 **Evidence identity** is derived from the verification's path and a digest of
 the job's hash, the tool and its version: the same run is the same evidence, so
-asking again with the same job and version is `current` rather than a duplicate,
-and a tightened constraint fails on the same evidence the passing run had. A
+asking again with the same job and version runs nothing and adds no duplicate,
+and a tightened constraint fails on the same evidence the passing run had. Such a
+run's recorded measurements re-enter through the gate (`reenter(...,
+recorded=evidence)`): the parameters are set from the measurement record, the
+evidence is cited as it stands, and the verification gains a
+`verification_reentry` provenance record rather than a second run record. The
+gate decides on the head as it is now, so a FAIL whose constraint has been
+relaxed passes, and a PASS whose constraint has become undecided is unknown; the
+answer is `current`, with nothing committed, only when the gate decides what the
+head already holds. A verdict is the checker's own over the same job and is not
+re-judged, so a rule check asked again is current as before. A
 run that did not complete is tried again when asked, each attempt recorded as
 evidence of its own (`run_<digest>_retryN`), so a crash does not stand in for
 an answer. A tool that turns out to be missing only when it is run is reported
 unsupported, like one missing before. The
-measurement record follows RFC 3 Section 14 and adds the run's terminal status,
-exit status, confidence and message; a measure with no value appears in
-`measures` with its `reason` in place of a value, and a tool's `extra` fields
-sit beside the record's own, refusing their names.
+measurement record follows RFC 3 Section 14, carrying the run's terminal status,
+where it ran (`ran`, `local` unless a tool's job says `hosted`, set once as the
+record's own field for every tool) and its confidence, and adds the exit status
+and message; a measure with no value appears in `measures` with its `reason` in
+place of a value, and a tool's `extra` fields sit beside the record's own,
+refusing their names.
 
 **The constraint check reads what a constraint reads.** Its scope was each
 constraint and its targets; it now includes every entity the expression
@@ -467,12 +485,36 @@ analysis is not runnable under SIM-0004, as one with no supply is.
 question the program left unrunnable or a measurement the gate refused for
 another reason, since the work the command names did not happen. Unsupported
 and unroutable are zero. Runs go to a scratch directory, and only `--commit`
-writes, into `.copperhead/simulations` and the record stream.
+writes, into `.copperhead/simulations` and the record stream. The head `verify`
+starts from is the program elaborated afresh with what runs measured carried in,
+which no transaction proposed, so `--commit` writes it only once the gate has
+seen it whole: every entity proposed against an empty snapshot with the default
+checks, exactly as `build` gates what it writes (the workspace keeps records,
+not typed entities, so the persisted head cannot be rebuilt to propose a
+re-elaboration against). A measurement still current under a constraint
+tightened since breaks a hard constraint, and the commit is refused with the
+gate's TXN-0002, as `build` would refuse it.
 
-**Re-elaboration keeps a measurement.** `carry_measurements` keeps an answered
-verification, its evidence and the values that evidence is the source of,
-wherever the fresh elaboration declares the same question; a changed question is
-answered afresh, and a value the program now states is the program's.
+**Re-elaboration keeps a measurement while it is current.** `carry_measurements`
+keeps an answered verification, its evidence and the values that evidence is the
+source of, wherever the fresh elaboration declares the same question and every
+run it rests on is still current; a changed question is answered afresh. The
+question's own description covers neither the circuit nor a model file nor the
+firmware, so it cannot say whether a run is still current; preparing the
+question afresh can. A run is current while routing its question on the fresh
+elaboration and preparing it with the program's traits gives the job hash the
+measurement record names (`Currency`). The hash covers the native input, the
+digest of every input the snapshot does not hold and the question, and not the
+snapshot's hash, so a 10 kOhm resistor changed to 22 kOhm, an edited model or a
+rebuilt firmware image drops the measurement, and `verify` runs the question
+again instead of reporting the old PASS current at the equation level. Whether
+the tool is installed, and which version, is not consulted: it is machine state,
+and letting it decide what a rebuild keeps would make `fang build` give
+different snapshots on different machines. A run on another version is evidence
+of its own the next time the question is asked. A program cannot state a measured value: a default or an
+assignment on a measured parameter fails elaboration with SIM-0002, the code a
+stated result gets, since the value would be the question's answer and would let
+the evaluator answer it with nothing run.
 `reelaboration(head, elaborated)` is the transaction, empty for an unchanged
 program. `build`, `diff` and `verify` rebuild the head around the facts read
 back from the workspace's record stream (`MeasuredFacts.from_records`, with
@@ -535,8 +577,18 @@ terminated in the file's reference, and the job says so. Interpolation is
 linear in real and imaginary parts. The run re-reads the declared file and
 refuses one whose digest has changed since preparation. A perfect match is an
 infinite return loss. Decibels needed a unit: `dB` is dimensionless with a
-factor of 1, compared only with decibels, and `GHz`, `nH` and `dB` join the
-literals `fang.lang` exports. The design's sketch names `("series_l",
+factor of 1, and `GHz`, `nH` and `dB` join the literals `fang.lang` exports.
+The seven bases cannot tell a decibel from a percent, so a unit also says
+whether it is logarithmic (`units.LOGARITHMIC`), and a decibel is kept apart
+from every linear dimensionless unit with UNIT-0001 wherever the units are
+known: `converted_to` refuses the conversion either way (10 dB is not 1000
+percent), an expression node carries whether it is a decibel (a `Literal` from
+its quantity, a `Ref` from the declared unit `fang.lang` hands it, unserialized,
+`Arithmetic` from its operands) so `Comparison` and `Arithmetic` refuse a mix
+where it is written, a parameter declared in dB refuses a value in another
+dimensionless unit, and a measure into a dimensionless parameter of the other
+scale fails elaboration, a `ReturnLoss` into anything not declared in dB among
+them. A bare number stays neutral. The design's sketch names `("series_l",
 "shunt_c")`; the shipped example's antenna is below 50 Ohm, so its match puts
 the shunt part at the port, `("shunt_c", "series_l")`.
 

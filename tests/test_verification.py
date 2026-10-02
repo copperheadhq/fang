@@ -94,6 +94,7 @@ from fang.verification import (
     Average,
     Crossing,
     Job,
+    Maximum,
     MeasuredFacts,
     Measurement,
     NotRunnable,
@@ -308,6 +309,28 @@ def test_a_measure_naming_an_undeclared_parameter_fails_elaboration():
     assert diagnostic.code == diagnostics.SIM_UNDECLARED_PARAMETER
     assert "'knee'" in diagnostic.message
     assert diagnostic.location is not None
+
+
+def test_a_program_cannot_give_a_measured_parameter_a_value():
+    """A value written in the program would be the question's answer stated
+    rather than produced, and would let the evaluator answer it with nothing
+    run: a default and an assignment are both refused, naming the parameter."""
+
+    class Defaulted(Filter):
+        corner = Parameter("Hz", default=1.6 * kHz)
+
+    class Assigned(Filter):
+        def architecture(self):
+            super().architecture()
+            self.corner = 1.6 * kHz
+
+    for system in (Defaulted, Assigned):
+        result = elaborate(system, project_id=PROJECT)
+        assert not result.ok
+        (diagnostic,) = result.diagnostics
+        assert diagnostic.code == diagnostics.SIM_QUESTION_RESULT
+        assert "measures into corner" in diagnostic.message
+        assert "1.6 kHz" in diagnostic.message
 
 
 def test_a_surface_with_no_pins_fails_elaboration_naming_it():
@@ -599,6 +622,48 @@ def test_a_question_the_evaluator_decides_runs_no_tool(tmp_path):
     assert (verification.result, verification.level, verification.tool) == (
         "PASS", "equation", EVALUATOR,
     )
+
+
+class TwoMeasures(Filter):
+    """The filter, with a second measured parameter nothing constrains."""
+
+    peak = Parameter("V", description="the output's peak, as measured")
+    by_simulation = corner_question(
+        measures={
+            "corner": Crossing("outlet.line", level=707.1 * mV, edge="falling"),
+            "peak": Maximum("outlet.line"),
+        }
+    )
+
+
+def test_a_measure_nobody_took_is_not_decided_by_the_evaluator(tmp_path):
+    """The corner is known and its constraints decided, but the peak has no
+    value and no constraint: the evaluator cannot answer for a measure
+    nobody took, so the question runs, and is unknown naming the peak while
+    nothing measures it."""
+    result, graph = graph_of(TwoMeasures)
+    graph.apply(
+        Transaction(
+            graph.head.hash,
+            (
+                SetParameter(
+                    target=SYSTEM, name="corner",
+                    value=Value.inferred(Quantity.scalar("1600", "Hz"), "SRC-HAND-CALC", "1"),
+                ),
+            ),
+        )
+    )
+    question = questions(graph.head)[0]
+    assert set(constraint_statuses(graph.head, question).values()) == {CheckStatus.PASS}
+
+    spy = Spy("spy")
+    routed = route(graph.head, question, tools=ToolRegistry((spy,)))
+    assert not routed.decided and routed.tool == "spy"
+    outcome = answer(graph, question, tools=ToolRegistry((spy,)), workspace=tmp_path)
+    assert spy.prepared == [question.id]
+    assert outcome.result == "UNKNOWN"
+    assert "peak" in outcome.message
+    assert graph.head.entities[question.id].result == "UNKNOWN"
 
 
 def test_a_question_nothing_covers_is_unroutable_and_not_answered_elsewhere(tmp_path):
@@ -1129,6 +1194,8 @@ def test_the_evidence_carries_the_whole_measurement_record(tmp_path, follower):
     assert record["tool"] == {"name": "ngspice", "version": "ngspice-45.2"}
     assert record["level"] == "circuit"
     assert record["job"] == outcome.job.hash
+    assert (record["status"], record["ran"]) == ("succeeded", "local")
+    assert record["confidence"] == "0.5"
     assert record["measures"] == [
         {"name": "corner", "parameter": f"{SYSTEM}.corner", "unit": "Hz", "value": "1591.612"}
     ]
@@ -1136,6 +1203,29 @@ def test_the_evidence_carries_the_whole_measurement_record(tmp_path, follower):
     assert "system.inlet is abstracted, not modelled" in record["coverage_gaps"]
     digest = "sha256:" + hashlib.sha256(FOLLOWER.encode()).hexdigest()
     assert record["inputs"] == [{"path": "models/follower.sub", "hash": digest}]
+
+
+def test_every_record_says_where_its_run_happened(tmp_path):
+    """RFC 3's record carries `ran` for every tool: local unless the tool's
+    job says it was hosted, once, as the record's own field, and nothing
+    else."""
+    from fang.verification import measurement_record
+
+    result = build()
+    question = questions(result.snapshot)[0]
+    raw = RawRun("spy", "spy-1", 0)
+
+    def record(**extra):
+        job = Job.single("spy", question, result.snapshot.hash, "input.txt", "spy", extra=extra)
+        return measurement_record(job, raw, (), Level.CIRCUIT)
+
+    assert record()["ran"] == "local"
+    hosted = record(ran="hosted", seed="7")
+    assert (hosted["ran"], hosted["seed"]) == ("hosted", "7")
+    with pytest.raises(ValueError, match="ran"):
+        record(ran="somewhere")
+    with pytest.raises(ValueError, match="status"):
+        record(status="PASS")
 
 
 def test_the_verification_keeps_its_identity_and_names_its_answer(tmp_path):
@@ -1195,6 +1285,72 @@ def test_the_failure_is_recorded_as_knowledge(tmp_path):
     # The second transaction set no parameter.
     assert "set_parameter" not in [op.op for op in outcome.recorded.transaction.operations]
     assert len(graph.history) == 2
+
+
+def _carried_into(system, graph):
+    """A fresh elaboration of another program, with what the graph's runs
+    measured carried in, as a rebuild into the workspace would give."""
+    return KernelGraph(
+        carry_measurements(build(system).snapshot, MeasuredFacts.of(graph.head)),
+        checks=DEFAULT_CHECKS,
+    )
+
+
+def _evidence_count(snapshot) -> int:
+    return sum(1 for e in snapshot.entities.values() if e.kind == "evidence" and "measurement" in e.extensions)
+
+
+def test_a_recorded_failure_re_enters_when_its_constraint_is_relaxed(tmp_path):
+    """The same job on the same version is not run again, and its recorded
+    measurements re-enter through the gate: the FAIL a tightened constraint
+    left stands while the constraint does, and passes once it is relaxed,
+    on the same evidence, with nothing run."""
+    graph, failed = answered(tmp_path, Tightened)
+    assert failed.status == FAILED
+    tool, tools = canned()
+    history = len(graph.history)
+
+    again = answer(graph, failed.question, tools=tools, workspace=tmp_path, record_time=FIXED_TIME)
+    assert (again.status, again.result) == ("current", "FAIL")
+    assert len(graph.history) == history and tool.backend.runs == []
+
+    relaxed = _carried_into(Filter, graph)
+    question = questions(relaxed.head)[0]
+    assert relaxed.head.entities[question.id].result == "FAIL"
+    outcome = answer(relaxed, question, tools=tools, workspace=tmp_path, record_time=FIXED_TIME)
+    assert (outcome.status, outcome.result) == (ANSWERED, "PASS")
+    assert "re-entered through the gate" in outcome.message
+    assert tool.backend.runs == []
+    assert _evidence_count(relaxed.head) == 1
+    value = relaxed.head.entities[SYSTEM].parameters["corner"]
+    assert value.source == failed.evidence and value.quantity == Quantity.scalar("1591.612", "Hz")
+    verification = relaxed.head.entities[question.id]
+    assert verification.evidence == (failed.evidence,)
+    assert verification.provenance.records[-1].activity == "verification_reentry"
+
+
+class Coupled(Filter):
+    """The filter, its corner now also held below a limit nobody has set."""
+
+    limit = Parameter("Hz", description="a limit with no value yet")
+
+    def constraints(self):
+        super().constraints()
+        require(self.corner <= self.limit)
+
+
+def test_a_recorded_pass_whose_constraint_becomes_undecided_is_not_current(tmp_path):
+    graph, passed = answered(tmp_path)
+    assert passed.result == "PASS"
+    tool, tools = canned()
+
+    coupled = _carried_into(Coupled, graph)
+    question = questions(coupled.head)[0]
+    assert coupled.head.entities[question.id].result == "PASS"
+    outcome = answer(coupled, question, tools=tools, workspace=tmp_path, record_time=FIXED_TIME)
+    assert (outcome.status, outcome.result) == (ANSWERED, "UNKNOWN")
+    assert coupled.head.entities[question.id].result == "UNKNOWN"
+    assert tool.backend.runs == [] and _evidence_count(coupled.head) == 1
 
 
 def test_an_unrelated_rejection_records_nothing(tmp_path):
@@ -1364,6 +1520,75 @@ def test_a_changed_question_is_answered_afresh(tmp_path):
     assert not rebuilt.entities[SYSTEM].parameters["corner"].known
 
 
+class Retuned(Filter):
+    """The same filter and question, with a 22 kOhm resistor: its corner is
+    723 Hz, not the 1.59 kHz measured on the 10 kOhm one."""
+
+    r = Resistor(resistance=22 * kOhm)
+
+
+def test_a_measurement_of_a_changed_circuit_is_not_carried(tmp_path):
+    """The question is the same, so its description is too; the circuit it
+    lowers to is not. Preparing it afresh gives another job, so the old
+    measurement is not current and the question is answered again."""
+    graph, outcome = answered(tmp_path)
+    facts = MeasuredFacts.of(graph.head)
+
+    kept = carry_measurements(build().snapshot, facts)
+    assert verification_of(kept).result == "PASS"
+    assert kept.entities[SYSTEM].parameters["corner"].known
+
+    rebuilt = carry_measurements(build(Retuned).snapshot, facts)
+    assert verification_of(rebuilt).result == "UNKNOWN"
+    assert not rebuilt.entities[SYSTEM].parameters["corner"].known
+    assert outcome.evidence not in rebuilt.entities
+    # Routed on the carried head, the question runs rather than being decided.
+    assert not route(rebuilt, questions(rebuilt)[0]).decided
+
+
+def test_a_changed_model_file_makes_its_measurement_stale(tmp_path, follower):
+    """A model file is not in the snapshot; its digest is in the job."""
+    graph, outcome = answered(tmp_path, buffered(follower))
+    facts = MeasuredFacts.of(graph.head)
+    result = build(buffered(follower))
+    kept = carry_measurements(result.snapshot, facts, traits=result.traits)
+    assert kept.entities[SYSTEM].parameters["corner"].known
+
+    follower.write_bytes(FOLLOWER.replace("Rin in gnd 1e9", "Rin in gnd 1e6").encode())
+    result = build(buffered(follower))
+    rebuilt = carry_measurements(result.snapshot, facts, traits=result.traits)
+    assert verification_of(rebuilt).result == "UNKNOWN"
+    assert not rebuilt.entities[SYSTEM].parameters["corner"].known
+
+
+@dataclass
+class Untouchable:
+    """A backend that fails the test if anything asks it a question."""
+
+    name: str = "ngspice"
+
+    def available(self) -> bool:
+        raise AssertionError("currency consulted whether the tool is installed")
+
+    def version(self) -> str:
+        raise AssertionError("currency consulted the installed version")
+
+    def run(self, netlist, *, workspace, timeout=60):
+        raise AssertionError("currency ran the tool")
+
+
+def test_currency_rests_on_the_job_and_not_on_this_machine(tmp_path):
+    """Whether a measurement is kept is the same on every machine: it is the
+    job's hash, which preparation gives, and never whether the tool is
+    installed here or which version is."""
+    graph, outcome = answered(tmp_path)
+    untouchable = ToolRegistry((SpiceTool("ngspice", NgspiceDialect(), Untouchable()),))
+    kept = carry_measurements(build().snapshot, MeasuredFacts.of(graph.head), tools=untouchable)
+    assert kept.hash == carry_measurements(build().snapshot, MeasuredFacts.of(graph.head)).hash
+    assert kept.entities[SYSTEM].parameters["corner"].known
+    assert verification_of(kept).result == "PASS"
+
+
 # ==========================================================================
 # The command
 # ==========================================================================
@@ -1523,3 +1748,70 @@ def test_a_commit_persists_and_a_rebuild_keeps_the_measured_value(tmp_path, ngsp
     assert "equation level, by the constraint evaluator; nothing runs" in output
     assert "nothing new to commit" in output
     assert len(ngspice.runs) == runs
+
+
+def test_verify_commits_only_what_the_gate_accepts(tmp_path, ngspice, capsys):
+    """A PASS committed at 1.59 kHz under a 2 kHz limit, and the limit then
+    tightened to 1.2 kHz. The measurement is still current, so the head
+    verify starts from holds a value that breaks a hard constraint; that head
+    was never proposed, and --commit refuses to write it, with the gate's
+    diagnostics, as build does."""
+    source = program(tmp_path)
+    workspace = Workspace(tmp_path)
+    assert main(["build", source, "-C", str(tmp_path)]) == EXIT_OK
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_OK
+    committed = snapshot_of(workspace.dir)
+    capsys.readouterr()
+
+    program(tmp_path, upper="1.2")
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_FAILED
+    captured = capsys.readouterr()
+    assert captured.out.rstrip().endswith("FAIL")
+    assert "TXN-0002" in captured.err
+    assert "the commit gate rejected the verified design; nothing is committed" in captured.err
+    assert snapshot_of(workspace.dir) == committed
+    # What verify refused, build refuses too: the two persist through one gate.
+    assert main(["build", source, "-C", str(tmp_path)]) == EXIT_FAILED
+    assert "TXN-0002" in capsys.readouterr().err
+
+
+def test_a_relaxed_constraint_re_enters_a_recorded_failure(tmp_path, ngspice, capsys):
+    """A FAIL left the corner unknown; with the constraint relaxed, verify
+    does not print the old FAIL as current forever, nor run again: the
+    recorded measurement re-enters and the gate passes it."""
+    source = program(tmp_path, upper="1.2")
+    assert main(["build", source, "-C", str(tmp_path)]) == EXIT_OK
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_FAILED
+    assert main(["verify", source, "-C", str(tmp_path)]) == EXIT_FAILED
+    assert "current: this run is already recorded" in capsys.readouterr().out
+    runs = len(ngspice.runs)
+
+    program(tmp_path, upper="2")
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_OK
+    output = capsys.readouterr().out
+    assert "current" not in output
+    assert "re-entered through the gate" in output
+    assert output.splitlines()[-2].strip() == "PASS"
+    assert len(ngspice.runs) == runs
+
+
+def test_a_changed_circuit_is_answered_again_and_not_reported_current(tmp_path, ngspice, capsys):
+    """The committed corner was measured on a 10 kOhm resistor. With 22 kOhm
+    the question is the same and the circuit is not: the measurement is not
+    carried, so the question runs again instead of reporting the old PASS."""
+    source = program(tmp_path)
+    assert main(["build", source, "-C", str(tmp_path)]) == EXIT_OK
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_OK
+    capsys.readouterr()
+    runs = len(ngspice.runs)
+
+    # A different length as well as a different value: a program rewritten
+    # within the second at the same size could be read from stale bytecode.
+    path = Path(source)
+    path.write_text(path.read_text().replace("10 * kOhm)", "22 * kOhm)  # retuned"))
+    main(["verify", source, "-C", str(tmp_path)])
+    output = capsys.readouterr().out
+    assert "current" not in output
+    assert "  circuit level, ngspice (ngspice-45.2)" in output
+    assert len(ngspice.runs) == runs + 1
+    assert "22k" in ngspice.runs[-1] or "22000" in ngspice.runs[-1]

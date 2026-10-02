@@ -29,8 +29,9 @@ change.
       verify the entity names the requirement, method, measured parameters and
       bench, and that two elaborations are byte-identical.
 - [x] 2.3 Fail elaboration with a `SIM` diagnostic when a measure names an
-      undeclared parameter or a surface with no pins; verify each names what is
-      wrong.
+      undeclared parameter or a surface with no pins, or a parameter the
+      program gives a value (SIM-0002, as for a stated result); verify each
+      names what is wrong.
 - [x] 2.4 Verify a plain `Verifies(..., method="inspection", result="PASS")`
       elaborates exactly as before and is never routed.
 
@@ -39,10 +40,12 @@ change.
 - [x] 3.1 Define `Tool`, `Question`, `Job`, `RawRun` and `Measurement`, and the
       default tool registry in its documented order; verify `Job.input` hashes
       identically across two preparations.
-- [x] 3.2 Implement `route()`: equation level when every constraint over the
-      measured parameters is already decided, else the first covering tool at
-      the method's level, else unroutable; verify all three, and that no tool is
-      prepared for an equation-level answer.
+- [x] 3.2 Implement `route()`: equation level when every measured parameter
+      holds a value and every constraint over them is already decided, else the
+      first covering tool at the method's level, else unroutable; verify all
+      three, that no tool is prepared for an equation-level answer, and that a
+      measured parameter with no value and no constraint keeps the question
+      off the evaluator.
 - [x] 3.3 Report a question with no supply as not runnable naming what is
       missing, and a missing tool as unsupported by name with nothing
       substituted; verify both.
@@ -85,8 +88,20 @@ change.
       measurements prepared against a stale head are refused.
 - [x] 5.5 When a program is elaborated again into a workspace whose head holds a
       measured value for a parameter the program declares without one, keep
-      the measured value and its evidence; verify an unchanged re-elaboration
-      leaves both in place and records no change to the parameter.
+      the measured value and its evidence while the measurement is current
+      (preparing its question afresh gives the job its evidence records);
+      verify an unchanged re-elaboration leaves both in place and records no
+      change to the parameter, that a changed part, model file or firmware
+      drops both so the question runs again, and that the installed tool is
+      never consulted.
+
+- [x] 5.6 Re-enter a run already recorded for the same job and tool version
+      through the gate instead of running it again or reporting it current:
+      set the parameters from its measurement record, cite its evidence as it
+      stands, and report current only when the gate decides what the head
+      holds; verify a relaxed constraint passes a recorded failure, a
+      constraint that became undecided unseats a recorded pass, and an
+      unchanged one is current with nothing committed.
 
 ## 6. The command
 
@@ -94,6 +109,10 @@ change.
       measurements and result per question, exits non-zero on a failed
       verification, zero on an unsupported one and on a program with no
       questions, and leaves the workspace untouched without `--commit`.
+- [x] 6.2 Gate what `verify --commit` writes as `build` gates what it writes,
+      the whole design proposed against an empty snapshot with the default
+      checks; verify a design holding a measurement that breaks a tightened
+      constraint is refused with the gate's diagnostics and nothing written.
 
 ## 7. The spine's examples and acceptance test
 
@@ -155,6 +174,12 @@ change.
       and says so in its header and provenance; README and `out/`.
 - [x] 10.7 Add `tests/test_rf.py` covering the delta spec's Touchstone
       scenarios; verify the whole suite passes.
+- [x] 10.8 Read and compare a file's frequencies as decimals; verify a
+      question at the file's last point is answered, not refused.
+- [x] 10.9 Keep `dB` apart from every linear dimensionless unit in conversion,
+      in expressions, in parameter values and in what a measure writes; verify
+      each refusal, and that a `ReturnLoss` into a percent parameter fails
+      elaboration.
 
 ## 11. Documents
 

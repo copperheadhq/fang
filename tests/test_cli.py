@@ -1,6 +1,7 @@
 """Spec: The Command Surface."""
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -237,3 +238,61 @@ def test_sim_reports_a_rejected_plan_rather_than_running_it(tmp_path, capsys):
 def test_sim_prints_the_coverage_the_run_does_not_provide(tmp_path, capsys):
     main(["sim", DIVIDER, "--project", "PRJ-CLI", "-C", str(tmp_path)])
     assert "coverage gap" in capsys.readouterr().out
+
+
+def _example_copy(tmp_path, name: str) -> Path:
+    """A scratch copy of an example, without its committed outputs."""
+    copy = tmp_path / name
+    shutil.copytree(EXAMPLES / name, copy, ignore=shutil.ignore_patterns("out"))
+    return copy
+
+
+@pytest.mark.skipif(not NgspiceBackend().available(), reason="ngspice is not installed here")
+def test_a_retuned_filter_is_measured_again_not_reported_current(tmp_path, capsys):
+    """rc_filter's corner, committed at 1.59 kHz on 10 kOhm. With 22 kOhm the
+    question's description is unchanged and its circuit is not: verify runs
+    it again and fails at 723 Hz, rather than reporting the old PASS current."""
+    copy = _example_copy(tmp_path, "rc_filter")
+    program = str(copy / "rc_filter.py")
+    assert main(["build", program, "-C", str(copy)]) == EXIT_OK
+    assert main(["verify", program, "-C", str(copy), "--commit"]) == EXIT_OK
+    assert "corner = 1590 Hz" in capsys.readouterr().out
+
+    source = copy / "rc_filter.py"
+    # 22.0, not 22: a program rewritten at the same size within the second
+    # could be read back from stale bytecode.
+    source.write_text(source.read_text().replace("resistance=10 * kOhm", "resistance=22.0 * kOhm"))
+    assert main(["verify", program, "-C", str(copy)]) == EXIT_FAILED
+    output = capsys.readouterr().out
+    assert "current" not in output
+    assert "circuit level, ngspice" in output
+    assert "corner = 723 Hz" in output
+    assert output.rstrip().endswith("FAIL")
+
+
+@pytest.mark.skipif(shutil.which("renode") is None, reason="renode is not installed here")
+def test_a_rebuilt_firmware_is_run_again_not_reported_current(tmp_path, capsys):
+    """sensor_node's questions, committed on its firmware. With another build
+    copied over the bound ELF the board and the questions are unchanged and
+    the job is not, since the firmware's digest is part of it: verify names
+    the stale evidence and runs both questions again, and the push-pull
+    build fails the startup question, rather than the old PASS being
+    reported current."""
+    import shutil
+
+    copy = _example_copy(tmp_path, "sensor_node")
+    program = str(copy / "sensor_node.py")
+    assert main(["build", program, "-C", str(copy)]) == EXIT_OK
+    assert main(["verify", program, "-C", str(copy), "--commit"]) == EXIT_OK
+    capsys.readouterr()
+
+    elf = copy / "firmware" / "elf"
+    shutil.copyfile(elf / "push_pull.elf", elf / "sensor_node.elf")
+    assert main(["verify", program, "-C", str(copy)]) == EXIT_FAILED
+    output = capsys.readouterr().out
+    assert "current" not in output
+    assert "stale: system.startup: firmware/elf/sensor_node.elf" in output
+    assert output.count("behavioural level, renode") == 2
+    assert "mux_mismatches = 2" in output
+    startup = output[output.index("system.startup ("):]
+    assert startup.rstrip().endswith("FAIL")

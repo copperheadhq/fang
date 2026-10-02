@@ -34,7 +34,7 @@ from .diagnostics import (
 from .entities import ConnectionKind
 from .toolplan import Handle, PlanRecorder
 from .traits import DatasheetEvidence, Footprint, Sourcing, Trait
-from .units import DIMENSIONLESS, Dimension, Quantity, Unit
+from .units import DIMENSIONLESS, SCALE_MISMATCH, Dimension, Quantity, Unit, scale_of
 from .values import Value
 
 _ORDER = itertools.count()
@@ -216,15 +216,22 @@ class ParameterRef:
     evaluating one.
     """
 
-    __slots__ = ("owner", "name", "dimension")
+    __slots__ = ("owner", "name", "dimension", "unit")
 
-    def __init__(self, owner: "Module", name: str, dimension: Dimension) -> None:
+    def __init__(
+        self, owner: "Module", name: str, dimension: Dimension, unit: Unit | None = None
+    ) -> None:
         self.owner = owner
         self.name = name
         self.dimension = dimension
+        self.unit = unit
 
     def _node(self) -> Ref:
-        return Ref(self.owner._entity_id, self.name, self.dimension)
+        # The declared unit says whether the parameter is a decibel, which its
+        # dimension cannot: the reference carries that to the expression
+        # built from it, so mixing it with a linear ratio is refused here.
+        scale = scale_of(self.unit) if self.unit is not None else None
+        return Ref(self.owner._entity_id, self.name, self.dimension, logarithmic=scale)
 
     def _other(self, other) -> Node:
         if isinstance(other, ParameterRef):
@@ -287,7 +294,10 @@ class Parameter(Declared):
         self.default = default
         self.description = description
         self.name = ""
-        if default is not None and default.dimension != self.unit.dimension:
+        if default is not None and (
+            default.dimension != self.unit.dimension
+            or default.unit.logarithmic != self.unit.logarithmic
+        ):
             raise error(
                 UNIT_DIMENSION_MISMATCH,
                 f"default {default} does not match the declared unit {self.unit}",
@@ -299,7 +309,7 @@ class Parameter(Declared):
     def __get__(self, instance, owner=None):
         if instance is None:
             return self
-        return ParameterRef(instance, self.name, self.unit.dimension)
+        return ParameterRef(instance, self.name, self.unit.dimension, self.unit)
 
     def __set__(self, instance, value) -> None:
         instance._set_parameter(self.name, self, value)
@@ -533,6 +543,12 @@ class Module(Declared, metaclass=ModuleMeta):
                 UNIT_DIMENSION_MISMATCH,
                 f"{type(self).__name__}.{name} is declared in {parameter.unit} but "
                 f"was assigned {value.unit}",
+            )
+        if value.unit.logarithmic != parameter.unit.logarithmic:
+            raise error(
+                UNIT_DIMENSION_MISMATCH,
+                f"{type(self).__name__}.{name} is declared in {parameter.unit} but "
+                f"was assigned {value.unit}: {SCALE_MISMATCH}",
             )
         self._values[name] = Value.explicit(value)
 

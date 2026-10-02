@@ -1,6 +1,8 @@
 """Spec: Simulation Is A Compiler Target; Simulation Plan Validation; SPICE
 Lowering; The Backend Boundary; Normalized Simulation Results."""
 
+import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -23,6 +25,7 @@ from fang.simulation import (
     RawResult,
     SimulationError,
     Transient,
+    XyceBackend,
     compile_plan,
     lower_to_spice,
     normalize,
@@ -420,3 +423,33 @@ def test_a_relative_workspace_still_finds_its_deck(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     raw = NgspiceBackend().run(deck, workspace=Path(".copperhead") / "simulations")
     assert raw.exit_status == 0
+
+
+#: A stand-in for Xyce: it prints a version, refuses a deck it cannot find
+#: from where it runs, and writes a measure file beside the deck, as Xyce does.
+FAKE_XYCE = """#!/bin/sh
+if [ "$1" = "-v" ]; then echo "Xyce Release 7.9-fake"; exit 0; fi
+if [ ! -f "$1" ]; then echo "netlist $1 not found" >&2; exit 2; fi
+echo "fang_m0 = 1.0" > "$1.mt0"
+echo "Xyce ran $1"
+"""
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="the stand-in Xyce is a shell script, which Windows does not run"
+)
+def test_a_relative_workspace_still_finds_its_xyce_deck(tmp_path, monkeypatch):
+    """Xyce, like ngspice, runs from inside the workspace and is handed the
+    deck's path, so a relative workspace must not be resolved twice."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    executable = bin_dir / "Xyce"
+    executable.write_text(FAKE_XYCE)
+    executable.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
+    monkeypatch.chdir(tmp_path)
+
+    raw = XyceBackend().run("* a deck\n.end\n", workspace=Path(".copperhead") / "simulations")
+    assert raw.exit_status == 0, raw.stdout
+    assert raw.version == "Xyce Release 7.9-fake"
+    assert raw.outputs == {"deck.cir.mt0": "fang_m0 = 1.0\n"}

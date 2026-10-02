@@ -112,24 +112,53 @@ def cmd_init(args) -> int:
     return EXIT_OK
 
 
-def _with_measurements(snapshot: Snapshot, workspace: Workspace) -> Snapshot:
-    """A fresh elaboration, keeping what runs measured into this workspace.
-
-    The program declared each measured parameter without a value, so building
-    it again must not withdraw a measurement a run committed.
-    """
+def _measured_facts(workspace: Workspace):
+    """What runs committed into this workspace, or None where nothing was."""
     if not workspace.manifest_path.exists():
-        return snapshot
-    from .verification import MeasuredFacts, carry_measurements
+        return None
+    from .verification import MeasuredFacts
 
     facts = MeasuredFacts.from_records(workspace.read_records())
-    if not facts.verifications:
+    return facts if facts.verifications else None
+
+
+def _with_measurements(snapshot: Snapshot, workspace: Workspace, traits=None) -> Snapshot:
+    """A fresh elaboration, keeping what runs measured into this workspace
+    while it is still current.
+
+    The program declared each measured parameter without a value, so building
+    it again must not withdraw a measurement a run committed. Nor may it keep
+    one the design no longer gives: a measurement whose question, prepared
+    afresh with the program's traits, is not the job that ran is dropped, and
+    the question is answered again.
+    """
+    facts = _measured_facts(workspace)
+    if facts is None:
         return snapshot
+    from .verification import carry_measurements
+
     # The measurements belong to the revision they were committed in, so the
     # state rebuilt around them keeps that revision: an unchanged program
     # rebuilt this way is the persisted snapshot, byte for byte.
-    carried = carry_measurements(snapshot, facts)
+    carried = carry_measurements(snapshot, facts, traits=traits)
     return carried.with_entities(carried.entities, workspace.read_manifest().revision_id)
+
+
+def _gated(snapshot: Snapshot, reason: str):
+    """The gate's verdict on a whole design about to be persisted.
+
+    Every entity is proposed, as one transaction, against an empty snapshot
+    of the project, with the default checks, so the gate runs every check
+    class over all of it. Whatever `build` or `verify --commit` writes into
+    the workspace has passed this first: neither persists a state the gate
+    never saw.
+    """
+    graph = KernelGraph(Snapshot(snapshot.project_id, "REV-000000"), checks=DEFAULT_CHECKS)
+    operations = tuple(
+        AddEntity(entity=entity, reason=reason)
+        for entity in sorted(snapshot.entities.values(), key=lambda e: e.id)
+    )
+    return graph.propose(Transaction(graph.head.hash, operations))
 
 
 def _revision_number(revision_id: str) -> int:
@@ -142,18 +171,11 @@ def cmd_build(args) -> int:
     """Elaborate, gate, persist, and run the plan. The whole pipeline."""
     result = _elaborate(args)
     workspace = Workspace(args.directory)
-    snapshot = _with_measurements(result.snapshot, workspace)
+    snapshot = _with_measurements(result.snapshot, workspace, result.traits)
     plan = result.plan.with_snapshot(snapshot.hash)
 
     # Canonical state advances only through the gate, even here.
-    graph = KernelGraph(
-        Snapshot(snapshot.project_id, "REV-000000"), checks=DEFAULT_CHECKS
-    )
-    operations = tuple(
-        AddEntity(entity=entity, reason="elaborated")
-        for entity in sorted(snapshot.entities.values(), key=lambda e: e.id)
-    )
-    proposal = graph.apply(Transaction(graph.head.hash, operations))
+    proposal = _gated(snapshot, "elaborated")
     if proposal.rejected:
         report_diagnostics(proposal.diagnostics)
         print("fang: the commit gate rejected the build", file=sys.stderr)
@@ -446,14 +468,21 @@ def cmd_verify(args) -> int:
         )
         return EXIT_FAILED
 
-    head = _with_measurements(result.snapshot, workspace)
+    head = _with_measurements(result.snapshot, workspace, result.traits)
     from .emulation import stale
 
-    for label, path, recorded, current in stale(head):
-        print(
-            f"stale: {label}: {path} is now {current}, not the {recorded} its evidence "
-            "names; it runs again"
+    # Read from what was committed, not from the head: a run on a firmware
+    # rebuilt since is no longer current, so the head no longer carries it.
+    facts = _measured_facts(workspace)
+    if facts is not None:
+        committed = result.snapshot.with_entities(
+            {**facts.verifications, **facts.evidence}, result.snapshot.revision_id
         )
+        for label, path, recorded, current in stale(committed):
+            print(
+                f"stale: {label}: {path} is now {current}, not the {recorded} its "
+                "evidence names; it runs again"
+            )
     if not questions(head):
         print(f"nothing to verify: {Path(args.program).name} declares no question")
         return EXIT_OK
@@ -474,6 +503,17 @@ def cmd_verify(args) -> int:
         if workspace.read_manifest().snapshot == graph.head.hash:
             print("nothing new to commit")
         else:
+            # The head began as the program elaborated afresh with what runs
+            # measured carried in, which no transaction proposed; it is
+            # persisted only once the gate has seen it whole, as build's is.
+            proposal = _gated(graph.head, "verified")
+            if proposal.rejected:
+                report_diagnostics(proposal.diagnostics)
+                print(
+                    "fang: the commit gate rejected the verified design; nothing is committed",
+                    file=sys.stderr,
+                )
+                return EXIT_FAILED
             manifest = workspace.write_snapshot(graph.head)
             print(f"committed {manifest.entity_count} entities, snapshot {manifest.snapshot}")
 
@@ -525,7 +565,7 @@ def cmd_diff(args) -> int:
         return EXIT_FAILED
 
     result = _elaborate(args)
-    snapshot = _with_measurements(result.snapshot, workspace)
+    snapshot = _with_measurements(result.snapshot, workspace, result.traits)
     manifest = workspace.read_manifest()
     if manifest.snapshot == snapshot.hash:
         print("no change")
