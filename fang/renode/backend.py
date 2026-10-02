@@ -5,7 +5,8 @@ Reported, Never Substituted" and "Security And Trust Boundaries".
 
 The bundle is copied into a temporary directory and Renode runs there, without
 a shell, in a process group of its own, so that a wall-clock limit ends every
-process the run started. Whatever events were recorded before the end are
+process the run started: the group, on a POSIX system, and on Windows the
+process tree, which `taskkill /T` ends. Whatever events were recorded before the end are
 kept. The isolation is only this — temporary copies, a time limit and a
 recorded invocation — and the outcome says the run was local; network and
 resource limits belong to a hosted runner.
@@ -107,7 +108,7 @@ class RenodeBackend:
                     stdin=subprocess.DEVNULL,
                     stdout=log,
                     stderr=subprocess.STDOUT,
-                    start_new_session=True,
+                    **_new_group(),
                 )
                 try:
                     exit_status: int | None = process.wait(timeout=timeout)
@@ -131,10 +132,32 @@ class RenodeBackend:
             )
 
 
+def _new_group() -> dict:
+    """Popen options that start a run in a group of its own.
+
+    Windows has no process groups to signal, and ignores `start_new_session`;
+    a new process group there is what keeps the run from sharing the console's.
+    """
+    if os.name == "nt":
+        return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+    return {"start_new_session": True}
+
+
 def _kill_group(process: subprocess.Popen) -> None:
     """End the run and every process it started."""
-    try:
-        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
-    except ProcessLookupError:
-        pass
+    if os.name == "nt":
+        # /T ends the tree the process heads, /F without asking it first.
+        # Should taskkill not reach it, the run itself is still ended.
+        subprocess.run(
+            ["taskkill", "/F", "/T", "/PID", str(process.pid)],
+            capture_output=True,
+            check=False,
+        )
+        if process.poll() is None:
+            process.kill()
+    else:
+        try:
+            os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+        except ProcessLookupError:
+            pass
     process.wait()

@@ -674,13 +674,52 @@ def test_a_rebuilt_firmware_makes_its_verification_stale(tmp_path):
     assert path == "firmware/elf/sensor_node.elf" and recorded != current
 
 
+def test_a_run_past_its_limit_is_ended_with_every_process_it_started(tmp_path):
+    """The kill is the operating system's, not Renode's, so it is checked on
+    every machine, Windows included, with a stand-in: a parent that starts a
+    child, and the child writing a heartbeat. Ending the run ends both, and
+    the heartbeat stops."""
+    import sys
+    import time
+
+    from fang.renode.backend import _kill_group, _new_group
+
+    beat = tmp_path / "beat"
+    child = (
+        "import time\n"
+        "while True:\n"
+        f"    open({str(beat)!r}, 'a').write('.')\n"
+        "    time.sleep(0.05)\n"
+    )
+    parent = (
+        "import subprocess, sys, time\n"
+        f"subprocess.Popen([sys.executable, '-c', {child!r}])\n"
+        "time.sleep(120)\n"
+    )
+    process = subprocess.Popen([sys.executable, "-c", parent], **_new_group())
+    deadline = time.monotonic() + 30
+    while not (beat.exists() and beat.stat().st_size > 2):
+        if time.monotonic() > deadline:
+            _kill_group(process)
+            pytest.fail("the stand-in child never started")
+        time.sleep(0.05)
+
+    _kill_group(process)
+    assert process.returncode is not None
+    time.sleep(0.3)             # a write already in flight may still land
+    size = beat.stat().st_size
+    time.sleep(0.5)
+    assert beat.stat().st_size == size, "a process the run started outlived it"
+
+
 @needs_renode
 def test_a_hung_run_is_ended_whole_and_keeps_its_partial_events():
     p = plan(run_until_ns=3_600_000_000_000)
     run = RenodeBackend().run(bundle(p, (ELF / "sensor_node.elf").read_bytes()), timeout=12)
     assert run.outcome == "timeout" and run.exit_status is None
-    survivors = subprocess.run(["pgrep", "-f", "fang-renode-"], capture_output=True, text=True).stdout
-    assert survivors.strip() == ""
+    if shutil.which("pgrep"):
+        survivors = subprocess.run(["pgrep", "-f", "fang-renode-"], capture_output=True, text=True).stdout
+        assert survivors.strip() == ""
     measured_run = measure(p, run_record(run.events, run.outcome))
     assert all(m.quantity is None for m in measured_run)
 
