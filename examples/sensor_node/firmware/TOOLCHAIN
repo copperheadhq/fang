@@ -7,7 +7,7 @@ The ELFs in elf/ were built with `make` from this folder by:
 The build embeds no path, date or build ID, so the same toolchain rebuilds them
 byte for byte from any directory:
 
-  58f6c5b9666cdfa2b94e19cb47f353dee9ef60f0d28893139549ed30ae1ab114  elf/sensor_node.elf
-  bbac32bed3cbf1c76d786f571be0ae5186f4591bf77c1923c7a935bd7ebd1f72  elf/wrong_address.elf
-  0faeea32687a33c6647a370346a1a9ea6e7d80530e1cf70c631f1077ed448784  elf/push_pull.elf
-  521c4e699919d7bc042cc100cffc22ec77a5ca5955c2213708b75d055a458d55  elf/no_timeout.elf
+  66cf0b7b9f61d265c54610a5774bf1c5e7e361ca6b30dba86c1658bad5e7aacf  elf/sensor_node.elf
+  69798e6a652b672c1efeca768981f85eb63557f0f5f59631263bd44ce5248d4b  elf/wrong_address.elf
+  b2ab7d61441c9456bbf6fad7dd94df1a51bd52ba05629279ce243ee287b771b8  elf/push_pull.elf
+  ddca35adbe4765747439d9bdf5142e4176a87764c90e414671e24dc02a7db014  elf/no_timeout.elf

@@ -63,6 +63,9 @@ include = ["fang*"]
 
 [tool.setuptools.package-data]
 fang = ["py.typed"]
+# The emulator's platform description, its probes and the model descriptors are
+# data the lowering copies into every bundle.
+"fang.renode" = ["platforms/*.repl", "probes/*.cs", "models/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

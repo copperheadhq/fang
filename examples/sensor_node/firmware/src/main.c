@@ -170,7 +170,11 @@ static void i2c_stop(void)
 
 static int i2c_address(uint8_t address, int read)
 {
-    I2C1_CR1 |= CR1_START;
+    /* STOP is written as 0 rather than carried over by read-modify-write. On
+       silicon it reads 0 by now, the hardware having cleared it with the stop
+       condition; Renode's model leaves it set after an address NACK, and
+       carrying it into this write would make the model swallow the START. */
+    I2C1_CR1 = (I2C1_CR1 & ~CR1_STOP) | CR1_START;
     if (i2c_wait(SR1_SB)) {
         i2c_stop();
         return -1;
