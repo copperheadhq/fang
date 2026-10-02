@@ -1,6 +1,6 @@
 # Examples
 
-Eleven programs, smallest first. Each one is a folder: the program, a document
+Twelve programs, smallest first. Each one is a folder: the program, a document
 explaining what it is for and the files `fang` produces from it under `out/`.
 Every one elaborates, passes the gate and is built by
 [`tests/test_examples.py`](../tests/test_examples.py) on every run, so none of
@@ -13,6 +13,7 @@ them is a sketch that no longer works.
 | [`equations/`](equations/) | Values chosen by equation, then reused by inheritance | 7 | 6 |
 | [`sensor_board/`](sensor_board/) | Interfaces lowering to pins, a recorded decision, a check left undecided | 7 | 4 |
 | [`i2c_bus/`](i2c_bus/) | A multi-drop bus, addresses as constrained parameters | 9 | 4 |
+| [`sensor_node/`](sensor_node/) | Ports that name their controller, cited pin selectors, an address the check reads | 11 | 9 |
 | [`usb_uart_bridge/`](usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet | 17 | 11 |
 | [`buck_regulator/`](buck_regulator/) | Requirement, decision, calculation and verification beside the circuit | 12 | 9 |
 | [`servo_drive/`](servo_drive/) | Composition: one `HalfBridge` instantiated three times | 24 | 26 |
@@ -20,7 +21,7 @@ them is a sketch that no longer works.
 | [`jee_advanced/problem_2/`](jee_advanced/problem_2/) | Not a board either: one claimed current, and the two branches that carry none | 12 | 7 |
 | [`noninverting_amp/`](noninverting_amp/) | Not a board: two midband answers, and the reading of the figure they rest on | 13 | 8 |
 
-The last three are the odd ones out: eight boards, then two exam questions
+The last three are the odd ones out: nine boards, then two exam questions
 and a textbook figure, because the kernel decides a claim about a circuit the
 same way whichever it is. The two exam questions share a folder —
 [`jee_advanced/`](jee_advanced/) groups them and is not itself an example,

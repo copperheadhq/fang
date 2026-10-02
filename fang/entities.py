@@ -1,8 +1,9 @@
 """The EIR entity model the kernel graph holds.
 
 Spec: "Typed Connections", "Typed Interfaces, Ports, Buses, and Domains",
-"Requirement State Transitions", and "Structural Validation". The kernel graph
-holds these entities and nothing else; there is no second model.
+"Requirement State Transitions", "Structural Validation", "A Port May Be One
+Peripheral Instance", and "An Addressed Bus Device Carries Its Address". The
+kernel graph holds these entities and nothing else; there is no second model.
 """
 
 from __future__ import annotations
@@ -151,6 +152,12 @@ class Connection(Entity):
 
     The kind is required and has no default: an untyped connection must not be
     representable.
+
+    A pin connection a lowering made carries, for each pin whose candidate
+    declared one, the selector that routes the signal there and the evidence it
+    was taken from (Spec: "A Port May Be One Peripheral Instance"). It lives on
+    the connection rather than the pin because one pin serves several ports, at
+    a different selector for each.
     """
 
     kind: str = "connection"
@@ -158,6 +165,8 @@ class Connection(Entity):
     source: str = ""
     target: str = ""
     derived_from_interface: str | None = None
+    #: Pin identifier to ``{"selector": ..., "evidence": <evidence id>}``.
+    selectors: Mapping[str, Mapping[str, str]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if self.connection_kind is None:
@@ -174,6 +183,10 @@ class Connection(Entity):
         refs = (self.source, self.target)
         if self.derived_from_interface is not None:
             refs += (self.derived_from_interface,)
+        # A selector is only as good as the table it was read from, so the
+        # evidence it cites has to exist.
+        cited = {entry.get("evidence") for entry in self.selectors.values()}
+        refs += tuple(sorted(evidence for evidence in cited if evidence))
         return refs
 
     def as_dict(self) -> dict:
@@ -187,6 +200,10 @@ class Connection(Entity):
         )
         if self.derived_from_interface is not None:
             out["derived_from_interface"] = self.derived_from_interface
+        if self.selectors:
+            out["selectors"] = {
+                pin: dict(entry) for pin, entry in sorted(self.selectors.items())
+            }
         return out
 
 
@@ -300,21 +317,45 @@ class Interface(Entity):
 
 @dataclass(frozen=True)
 class Port(Entity):
-    """An interface instance owned by a component, module, or block."""
+    """An interface instance owned by a component, module, or block.
+
+    A port may be one instance of a peripheral, such as a microcontroller's
+    ``I2C1`` (Spec: "A Port May Be One Peripheral Instance"). An addressed bus
+    device's port may carry its address as a strap rather than a fixed
+    ``address`` parameter: the strap pin, and the address each of the device's
+    own pins selects when the strap is tied to it (Spec: "An Addressed Bus
+    Device Carries Its Address"). The strap is the one place that fact lives;
+    the address it selects is resolved from the nets, never stored beside it.
+    """
 
     kind: str = "port"
     interface: str = ""
     owner: str = ""
     direction: str | None = None
+    peripheral: str | None = None
+    #: ``{"pin": <strap pin id>, "by_pin": {<pin id>: <address>}}``.
+    address_strap: Mapping[str, Any] | None = None
 
     def references(self) -> tuple[str, ...]:
-        return (self.interface, self.owner)
+        refs = (self.interface, self.owner)
+        if self.address_strap is not None:
+            refs += (self.address_strap["pin"],) + tuple(
+                sorted(self.address_strap["by_pin"])
+            )
+        return refs
 
     def as_dict(self) -> dict:
         out = self._base_dict()
         out.update({"interface": self.interface, "owner": self.owner})
         if self.direction is not None:
             out["direction"] = self.direction
+        if self.peripheral is not None:
+            out["peripheral"] = self.peripheral
+        if self.address_strap is not None:
+            out["address_strap"] = {
+                "pin": self.address_strap["pin"],
+                "by_pin": dict(sorted(self.address_strap["by_pin"].items())),
+            }
         return out
 
 

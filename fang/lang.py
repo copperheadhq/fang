@@ -2,7 +2,8 @@
 
 Spec: "Fang Is Ordinary Python", "Declarative Module Composition", "Parameter
 Declaration And Reference", "Declared Constraints Are Not Evaluated Eagerly",
-and "The Connect Operator".
+"The Connect Operator", and "A Port May Be One Peripheral Instance" (a merged
+pin map keeps each selector with the evidence its own map cites).
 
 A Fang program is an ordinary Python module. Nothing here mutates geometry,
 calls a tool, or evaluates a constraint; declarations are recorded and the
@@ -583,23 +584,49 @@ class Module(Declared, metaclass=ModuleMeta):
 
 
 def _merge_pin_maps(maps):
-    """One module may declare several pin maps; the merge is their union."""
+    """One module may declare several pin maps; the merge is their union.
+
+    A selector travels with the name of the evidence its own map cites, so two
+    maps citing two tables each keep their own citation.
+    """
     merged: dict[str, tuple[str, ...]] = {}
+    selectors: dict[str, dict[str, tuple[str, str | None]]] = {}
     for pin_map in sorted(maps, key=lambda m: m._order):
         merged.update(pin_map.mapping)
-    return _MergedPinMap(merged)
+        for signal_path in pin_map.mapping:
+            # A later map that restates a signal replaces it whole, selectors
+            # included, exactly as it replaces the candidates.
+            selectors.pop(signal_path, None)
+            routed = getattr(pin_map, "selectors", {}).get(signal_path)
+            if routed:
+                selectors[signal_path] = {
+                    pin: (selector, pin_map.evidence) for pin, selector in routed.items()
+                }
+    return _MergedPinMap(merged, selectors)
 
 
 class _MergedPinMap:
     """The lookup the lowering uses. Empty when a module declares no pins."""
 
-    __slots__ = ("mapping",)
+    __slots__ = ("mapping", "selectors")
 
-    def __init__(self, mapping: Mapping[str, tuple[str, ...]]) -> None:
+    def __init__(
+        self,
+        mapping: Mapping[str, tuple[str, ...]],
+        selectors: Mapping[str, Mapping[str, tuple[str, str | None]]] | None = None,
+    ) -> None:
         self.mapping = dict(mapping)
+        self.selectors = {key: dict(value) for key, value in (selectors or {}).items()}
 
     def candidates(self, port_attribute: str, signal: str) -> tuple[str, ...]:
         return self.mapping.get(f"{port_attribute}.{signal}", ())
+
+    def selector(
+        self, port_attribute: str, signal: str, pin: str
+    ) -> tuple[str, str | None] | None:
+        """The selector routing this signal to this pin, and the evidence named
+        for it, or None where the candidate declares no selector."""
+        return self.selectors.get(f"{port_attribute}.{signal}", {}).get(pin)
 
     def as_dict(self) -> dict:
         return {key: list(value) for key, value in sorted(self.mapping.items())}

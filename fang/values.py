@@ -81,8 +81,10 @@ class Value:
         return cls(ValueStatus.ASSUMED, quantity, rationale=rationale)
 
     @classmethod
-    def unknown(cls) -> "Value":
-        return cls(ValueStatus.UNKNOWN)
+    def unknown(cls, reason: str | None = None) -> "Value":
+        """Not known. A reason, where one is given, says what would make it
+        known — the strap pin left on no net, say — and is kept as the rationale."""
+        return cls(ValueStatus.UNKNOWN, rationale=reason)
 
     # -- semantics ---------------------------------------------------------
 

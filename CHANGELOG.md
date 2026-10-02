@@ -41,8 +41,38 @@ tracked separately and moves only when the serialized form changes.
   always been keyed by parameter, and nothing said so.
 - [site/docs/](site/docs/), an Astro + Starlight documentation site for
   `fang.copperhead.sh`, pinned to the versions `docs.copperhead.sh` runs.
+- A port can name the peripheral instance it is,
+  `I2CPort(peripheral="I2C1")`, recorded on the port entity. A part with I2C on
+  two controllers declares two ports, and a connection lowers only onto the
+  named one's pins.
+- A candidate pin can carry the selector that routes the signal to it:
+  `PinMap({"i2c1.scl": {"PB8": AF(4), "PB6": AF(4)}}, evidence="af_table")`,
+  with `Selector(text)` as the general form. A map with selectors names the
+  `Cites` declaration they were read from, or elaboration refuses it
+  (`IFACE-0003`). The lowering records the chosen pin's selector and the
+  evidence on the pin connection, as `selectors`.
+- An addressed bus device's port carries its address: a dimensionless `address`
+  on the I2C interface, or `Strap(pin, {device pin: address})`, whose pin names
+  are resolved at elaboration (`IFACE-0004` for one the part does not have).
+  `fang.compatibility.resolve_address` reads either, resolving a strap from the
+  inferred nets, and the addressing rule now uses it for every participant: two
+  devices at one address fail naming both, an unresolved strap is undecided
+  naming the pin, a controller with no address is not reported, and a bus whose
+  addresses are known and distinct passes.
+- [examples/sensor_node/](examples/sensor_node/): an STM32F401RE reading an
+  HS3001 on I2C1, with a console on USART2 and an LED on PA5. Every pad number,
+  alternate function and address is cited by table and page from ST's and
+  Renesas's datasheets.
 
 ### Changed
+
+- `SCHEMA_VERSION` is 1.2. Port records gain optional `peripheral` and
+  `address_strap` keys and connection records an optional `selectors` key, each
+  omitted when absent, which the spec counts as an additive change.
+- An interface parameter given as a bare number is refused with `UNIT-0001`
+  naming the parameter, as a module parameter already was, rather than raising
+  `AttributeError`.
+- `Value.unknown` takes an optional reason, kept as the value's rationale.
 
 - Views are drawn to be read. A node carries the name it has in the program
   rather than its class — `bridge_u.high`, not a third box saying `Transistor` —

@@ -51,6 +51,7 @@ VIEWS: dict[str, tuple[str, ...]] = {
     "equations": ("interconnect",),
     "sensor_board": ("interfaces", "ground"),
     "i2c_bus": ("interfaces", "interconnect"),
+    "sensor_node": ("interfaces", "power"),
     "usb_uart_bridge": ("interfaces", "power"),
     "buck_regulator": ("power", "system"),
     "servo_drive": ("system", "power", "safety"),

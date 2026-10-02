@@ -54,9 +54,17 @@ a program that could observe a tool's result would not be reproducible.
 | --- | --- |
 | `IFACE-0001` | A required interface signal has no pin |
 | `IFACE-0002` | Two interfaces disagree on membership |
+| `IFACE-0003` | A pin selector cites no evidence the part declares |
+| `IFACE-0004` | An address strap names a pin the part does not have |
 
 An optional signal with no pin is not an error. `IFACE-0001` is about signals
 the interface says it requires.
+
+`IFACE-0003` refuses a `PinMap` whose [selectors](/reference/interfaces/#peripheral-instances-and-selectors)
+name no `Cites` declaration on the same part. An address given as a bare
+number is `UNIT-0001`, as any bare-number parameter is. A strap that resolves
+to no address is not a diagnostic at all: the board is legal, and the
+compatibility check reports the address as undecided.
 
 ## TXN: transactions and the gate
 

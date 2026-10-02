@@ -1,0 +1,20 @@
+C1     100 nF           Package:C_0402
+C2     100 nF           Package:C_0402
+C3     100 nF           Package:C_0402
+DS1    LED              Package:LED_0603
+J1     ConsoleHeader    Package:PinHeader_1x03_P2.54mm
+J2     PowerHeader      Package:PinHeader_1x02_P2.54mm
+R1     2.2 kOhm         Package:R_0402
+R2     2.2 kOhm         Package:R_0402
+R3     1 kOhm           Package:R_0402
+U1     HS3001           Package:LGA-6
+U2     STM32F401RE      Package:LQFP-64
+Net-(C1-Pad1)            C1.1 C2.1 J2.VCC R1.1 R2.1 U1.VDD U2.VDD
+Net-(C1-Pad2)            C1.2 C2.2 C3.2 DS1.K J1.GND J2.GND U1.VSS U2.VSS
+Net-(C3-Pad1)            C3.1 U1.VC
+Net-(DS1-PadA)           DS1.A R3.2
+Net-(J1-PadRXD)          J1.RXD U2.PA3
+Net-(J1-PadTXD)          J1.TXD U2.PA2
+Net-(R1-Pad2)            R1.2 U1.SCL U2.PB8
+Net-(R2-Pad2)            R2.2 U1.SDA U2.PB9
+Net-(R3-Pad1)            R3.1 U2.PA5

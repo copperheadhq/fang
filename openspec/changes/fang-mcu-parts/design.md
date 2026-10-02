@@ -158,6 +158,74 @@ additive change that increments the minor version. `Port.peripheral`,
 when absent, so no committed output changes except the snapshot hash the suite
 already normalizes.
 
+## Implementation notes
+
+What the decisions above left open, settled while implementing them. None
+changes a decision.
+
+- `resolve_address` returns a fixed address exactly as recorded, and a resolved
+  strap as an inferred value whose `source` is the device pin that selected it,
+  at confidence 1. Its unknown values carry their reason as the value's
+  `rationale`, which `Value.unknown(reason)` now accepts. It takes a snapshot
+  or an entity mapping.
+- The addressing rule also passes, naming each address and its port, when every
+  addressed participant's address is known and no two collide, so a bus with
+  one addressed device shows the rule decided. It still says nothing on a bus
+  where no participant is addressed.
+- The bare-number refusal covers every interface parameter, not only
+  `address`; a bare number was never a valid value for any of them.
+- `Connection.references()` includes the evidence its selectors cite, and
+  `Port.references()` the pins its strap names, so a dangling one fails
+  referential integrity like any other reference.
+- A selector is recorded on every pin connection that lands on the candidate,
+  including a single-wire connection such as a pull-up reaching `i2c1.scl`,
+  because that connection is an assignment of the same port signal.
+- The example's HS3001 is modelled with all six pins. Its application circuit
+  needs a 0.1 uF capacitor on VC and one on VDD, so the board carries
+  `env_bypass` and `vc_bypass` beside the MCU's `bypass`. The bus pull-up
+  parameters sit on the sensor's port, where its datasheet requires them. The
+  console header is connected port to port, passing USART2 through, so its
+  pins carry the board's signal names.
+
+## Verified datasheet facts
+
+Read from the vendors' own PDFs on 2026-10-02. PDF page numbers equal the
+printed ones in both.
+
+ST, *STM32F401xD/xE datasheet*, DS10086 Rev 5 (February 2026; the cover still
+reads "preliminary data"):
+
+| Fact | Value | Locator |
+| --- | --- | --- |
+| LQFP64 pins | PA2 16, PA3 17, PA5 21, PB6 58, PB7 59, PB8 61, PB9 62, VSS 63, VDD 64 | Table 8, pp. 38-44; Figure 12, p. 35 |
+| Other LQFP64 supply pins | VDD 19, 32, 48; VSS 18, 31, 47; VSSA/VREF- 12; VDDA/VREF+ 13; VCAP_1 30; VBAT 1; NRST 7; BOOT0 60 | Table 8 |
+| Pin type | PA2, PA3, PA5, PB6-PB9 are FT I/O | Table 8; Table 7, p. 38 |
+| I2C1 | SCL AF4 on PB6 and PB8; SDA AF4 on PB7 and PB9 | Table 9, p. 46 |
+| USART2 | TX AF7 on PA2; RX AF7 on PA3 | Table 9, p. 45 |
+| FT input levels | VIL max 0.3 VDD, VIH min 0.7 VDD, 1.7 V to 3.6 V | Table 54, p. 91 |
+| CMOS output at 8 mA | VOL max 0.4 V, VOH min VDD - 0.4 V, 2.7 V to 3.6 V | Table 55, p. 94 |
+| I2C rate | standard mode to 100 kHz, fast mode to 400 kHz | Section 6.3.19, p. 98 |
+| VDD | 1.7 V to 3.6 V | Table 14, p. 60 |
+| Decoupling | 6 x 100 nF + 1 x 4.7 uF across the VDD pins | Figure 18, p. 57 |
+| STM32F401RET6 | R 64 pins, E 512 Kbytes, T LQFP, 6 -40 to 85 C | Table 87, p. 132; Table 88, p. 133 |
+
+Renesas, *HS3xxx Datasheet*, R36DS0045EU0101 Rev 1.01 (17 June 2024):
+
+| Fact | Value | Locator |
+| --- | --- | --- |
+| Address | 0x44, the only 7-bit address the device responds to; custom on request | Section 7.2, p. 10 |
+| Package and pins | 6-LGA 3.0 x 2.41 mm: 1 SCL, 2 SDA, 3 VC, 4 VDD, 5 NC, 6 VSS | Section 1.2, Figure 1, p. 4 |
+| Application circuit | pull-ups to VDD, 2.2 kOhm typical; 0.1 uF VC to ground; 0.1 uF VDD to ground | Figure 13, p. 9; Section 7, p. 10 |
+| I2C rate | fSCL up to 400 kHz | Table 1, p. 10 |
+| Supply | 2.3 V to 5.5 V on the cover and in Section 3; the recommended-conditions table leaves the minimum blank | p. 1; Section 2.2, p. 5 |
+| I/O logic levels | not stated anywhere in the datasheet | - |
+| Orderable part | `HS3001` | Section 13, p. 17 |
+
+Not verified: a per-pin decoupling rule for LQFP64, and a VCAP_1 value or ESR
+specific to one-VCAP packages; the example does not model either. Renesas's
+product pages list the HS3001 as obsolete; that is lifecycle information, not
+a datasheet fact, and nothing in the example depends on it.
+
 ## Risks / Trade-offs
 
 - [A selector copied wrongly from the datasheet] → every selector cites its

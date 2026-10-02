@@ -1,0 +1,4 @@
+UNDECIDED interface_compatibility: logic high margin is undecided on i2c: voh_min unknown
+UNDECIDED interface_compatibility: logic high margin is undecided on uart: vih_min unknown
+UNDECIDED interface_compatibility: logic high margin is undecided on uart: voh_min unknown
+11 checks, 0 failed, 3 undecided
