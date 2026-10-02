@@ -415,14 +415,18 @@ exit status, stdout, stderr, output files and a terminal `Status`.
 evidence records; only a measurement with a value sets a parameter.
 
 **Equation-level answers.** The tool recorded is `evaluator`. An unanswered
-question whose constraints are already decided is answered by replacing its
+question whose measured parameters all hold values and whose constraints are
+already decided is answered by replacing its
 verification with the evaluator's result, its evidence being whatever entity
 the measured values name as their source. A question already answered with the
 same result is reported `current` and nothing changes, so asking again on a
 head where ngspice answered it leaves the circuit-level record in place. This
 is how `rc_filter` shows one question at two levels: answered by ngspice on
 the elaborated program, then, on the head that run committed, routed to the
-equation level with nothing run. The listing shows both passes.
+equation level with nothing run. The listing shows both passes. A measured
+parameter with no value keeps the question off the evaluator even where no
+constraint reads it: deciding the others would otherwise pass a question one of
+whose measures nobody took.
 
 **A run's result** is FAIL when any constraint over a measured parameter
 fails, UNKNOWN when a measure has no value or no constraint reads the measured

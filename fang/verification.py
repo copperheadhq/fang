@@ -1299,26 +1299,43 @@ def constraint_statuses(snapshot, question: Question, resolve=None) -> dict[str,
     }
 
 
+def unmeasured(snapshot, question: Question, resolve=None) -> list[str]:
+    """The question's measures whose parameter holds no known value."""
+    resolve = resolve or snapshot.resolver()
+    out = []
+    for entry in question.measures:
+        value = resolve(entry.entity, entry.attr)
+        if value is None or not value.known or value.quantity is None:
+            out.append(entry.name)
+    return out
+
+
 def route(snapshot, question: Question, *, tools: ToolRegistry | None = None) -> Route:
     """Route a question to the cheapest level that can decide it.
 
-    If every constraint over its measured parameters already evaluates to a
-    decided result, the evaluator is the answer and no tool runs. Otherwise
-    the method names the level, and the first registered tool at that level
-    that covers the question is chosen -- the one the question names, if it
-    names one. A question nothing covers is unroutable; it is never answered
-    by a tool at another level, because a cheaper answer is not the same
-    answer.
+    If every measured parameter already holds a value and every constraint
+    over them already evaluates to a decided result, the evaluator is the
+    answer and no tool runs. A parameter with no value and no constraint over
+    it is a measure nobody has taken, and the evaluator cannot stand in for
+    it. Otherwise the method names the level, and the first registered tool
+    at that level that covers the question is chosen -- the one the question
+    names, if it names one. A question nothing covers is unroutable; it is
+    never answered by a tool at another level, because a cheaper answer is not
+    the same answer.
     """
     tools = TOOLS if tools is None else tools
     statuses = constraint_statuses(snapshot, question)
-    if statuses and all(status is not CheckStatus.UNKNOWN for status in statuses.values()):
+    if (
+        statuses
+        and not unmeasured(snapshot, question)
+        and all(status is not CheckStatus.UNKNOWN for status in statuses.values())
+    ):
         return Route(
             question.id,
             Level.EQUATION,
             EVALUATOR,
-            "every constraint over its measured parameters is already decided; "
-            "nothing runs",
+            "every measured parameter holds a value and every constraint over "
+            "them is already decided; nothing runs",
             decided=True,
         )
 
@@ -2121,7 +2138,9 @@ def _decide(graph, question: Question, route_: Route, record_time) -> Outcome:
 
     head = graph.head
     verification = head.entities[question.id]
-    result = _result(constraint_statuses(head, question), ())
+    # `route` decides only where nothing is unmeasured; were anything, the
+    # result stays unknown rather than passing on what was never measured.
+    result = _result(constraint_statuses(head, question), unmeasured(head, question))
     if verification.result == result:
         return Outcome(
             question, route_, UP_TO_DATE, result,

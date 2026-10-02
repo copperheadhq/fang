@@ -74,17 +74,27 @@ be recorded as a coverage gap.
 ### Requirement: The Cheapest Verification Level Is Chosen And Recorded
 
 The runner SHALL route a question to the cheapest level that can decide it. A
-question whose constraints the kernel's own evaluator already decides SHALL be
-answered at the equation level with no tool run. The chosen level and tool SHALL
-be recorded on the verification entity. A question no registered tool covers
-SHALL be reported unroutable rather than answered by a tool at another level.
+question every one of whose measured parameters holds a value, and whose
+constraints the kernel's own evaluator already decides, SHALL be answered at the
+equation level with no tool run. A measured parameter with no value SHALL NOT
+let the evaluator answer. The chosen level and tool SHALL be recorded on the
+verification entity. A question no registered tool covers SHALL be reported
+unroutable rather than answered by a tool at another level.
 
 #### Scenario: A question the evaluator decides runs no tool
 
-- **WHEN** every constraint over a question's measured parameters already
-  evaluates to a decided status
+- **WHEN** every parameter a question measures into holds a value and every
+  constraint over them already evaluates to a decided status
 - **THEN** the question is routed to the equation level
 - **AND** no tool is prepared or run
+
+#### Scenario: A measure nobody took is not decided by the evaluator
+
+- **WHEN** a question measures into a parameter that holds no value and no
+  constraint reads, while the constraints over its other parameters are decided
+- **THEN** the question is routed to its tool rather than to the evaluator
+- **AND** while nothing measures that parameter, the result is unknown, naming
+  the missing measure
 
 #### Scenario: An undecided circuit question routes to a circuit simulator
 

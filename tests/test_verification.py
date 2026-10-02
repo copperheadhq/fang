@@ -94,6 +94,7 @@ from fang.verification import (
     Average,
     Crossing,
     Job,
+    Maximum,
     MeasuredFacts,
     Measurement,
     NotRunnable,
@@ -599,6 +600,48 @@ def test_a_question_the_evaluator_decides_runs_no_tool(tmp_path):
     assert (verification.result, verification.level, verification.tool) == (
         "PASS", "equation", EVALUATOR,
     )
+
+
+class TwoMeasures(Filter):
+    """The filter, with a second measured parameter nothing constrains."""
+
+    peak = Parameter("V", description="the output's peak, as measured")
+    by_simulation = corner_question(
+        measures={
+            "corner": Crossing("outlet.line", level=707.1 * mV, edge="falling"),
+            "peak": Maximum("outlet.line"),
+        }
+    )
+
+
+def test_a_measure_nobody_took_is_not_decided_by_the_evaluator(tmp_path):
+    """The corner is known and its constraints decided, but the peak has no
+    value and no constraint: the evaluator cannot answer for a measure
+    nobody took, so the question runs, and is unknown naming the peak while
+    nothing measures it."""
+    result, graph = graph_of(TwoMeasures)
+    graph.apply(
+        Transaction(
+            graph.head.hash,
+            (
+                SetParameter(
+                    target=SYSTEM, name="corner",
+                    value=Value.inferred(Quantity.scalar("1600", "Hz"), "SRC-HAND-CALC", "1"),
+                ),
+            ),
+        )
+    )
+    question = questions(graph.head)[0]
+    assert set(constraint_statuses(graph.head, question).values()) == {CheckStatus.PASS}
+
+    spy = Spy("spy")
+    routed = route(graph.head, question, tools=ToolRegistry((spy,)))
+    assert not routed.decided and routed.tool == "spy"
+    outcome = answer(graph, question, tools=ToolRegistry((spy,)), workspace=tmp_path)
+    assert spy.prepared == [question.id]
+    assert outcome.result == "UNKNOWN"
+    assert "peak" in outcome.message
+    assert graph.head.entities[question.id].result == "UNKNOWN"
 
 
 def test_a_question_nothing_covers_is_unroutable_and_not_answered_elsewhere(tmp_path):

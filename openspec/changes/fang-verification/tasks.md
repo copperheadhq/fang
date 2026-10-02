@@ -39,10 +39,12 @@ change.
 - [x] 3.1 Define `Tool`, `Question`, `Job`, `RawRun` and `Measurement`, and the
       default tool registry in its documented order; verify `Job.input` hashes
       identically across two preparations.
-- [x] 3.2 Implement `route()`: equation level when every constraint over the
-      measured parameters is already decided, else the first covering tool at
-      the method's level, else unroutable; verify all three, and that no tool is
-      prepared for an equation-level answer.
+- [x] 3.2 Implement `route()`: equation level when every measured parameter
+      holds a value and every constraint over them is already decided, else the
+      first covering tool at the method's level, else unroutable; verify all
+      three, that no tool is prepared for an equation-level answer, and that a
+      measured parameter with no value and no constraint keeps the question
+      off the evaluator.
 - [x] 3.3 Report a question with no supply as not runnable naming what is
       missing, and a missing tool as unsupported by name with nothing
       substituted; verify both.
