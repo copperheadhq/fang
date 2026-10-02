@@ -2,7 +2,7 @@
 title: Workspace
 description: What `.copperhead/` holds and what may be deleted.
 sidebar:
-  order: 7
+  order: 9
   attrs:
     data-icon: laptop
 ---

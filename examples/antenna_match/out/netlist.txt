@@ -1,0 +1,7 @@
+AE1    ChipAntenna      Package:Antenna_Chip_3216
+C1     1.5 pF           Package:C_0402
+J1     RFConnector      Package:UFL
+L1     1.8 nH           Package:L_0402
+Net-(AE1-PadFEED)        AE1.FEED L1.2
+Net-(AE1-PadGND)         AE1.GND C1.2 J1.GND
+Net-(C1-Pad1)            C1.1 J1.SIG L1.1

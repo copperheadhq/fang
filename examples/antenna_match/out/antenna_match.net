@@ -1,0 +1,93 @@
+(export
+  (version "E")
+  (design
+    (source "antenna_match.py")
+    (tool "fang 0.1.0")
+    (snapshot "sha256:4130aa3cd92bfa772193b693c7143a2b103c62b9fd557bf3028ae63ad9c1de9b")
+    (project "PRJ-EXAMPLES")
+  )
+  (components
+    (comp
+      (ref "AE1")
+      (value "ChipAntenna")
+      (footprint "Package:Antenna_Chip_3216")
+      (property
+        (name "fang_id")
+        (value "CMP-eae764b0bc08")
+      )
+    )
+    (comp
+      (ref "C1")
+      (value "1.5 pF")
+      (footprint "Package:C_0402")
+      (property
+        (name "fang_id")
+        (value "CMP-4e8847eff69d")
+      )
+    )
+    (comp
+      (ref "J1")
+      (value "RFConnector")
+      (footprint "Package:UFL")
+      (property
+        (name "fang_id")
+        (value "CMP-ae0dd20b2b9f")
+      )
+    )
+    (comp
+      (ref "L1")
+      (value "1.8 nH")
+      (footprint "Package:L_0402")
+      (property
+        (name "fang_id")
+        (value "CMP-c56bbd49ae4f")
+      )
+    )
+  )
+  (nets
+    (net
+      (code "1")
+      (name "Net-(AE1-PadFEED)")
+      (node
+        (ref "AE1")
+        (pin "FEED")
+      )
+      (node
+        (ref "L1")
+        (pin "2")
+      )
+    )
+    (net
+      (code "2")
+      (name "Net-(AE1-PadGND)")
+      (node
+        (ref "AE1")
+        (pin "GND")
+      )
+      (node
+        (ref "C1")
+        (pin "2")
+      )
+      (node
+        (ref "J1")
+        (pin "GND")
+      )
+    )
+    (net
+      (code "3")
+      (name "Net-(C1-Pad1)")
+      (node
+        (ref "C1")
+        (pin "1")
+      )
+      (node
+        (ref "J1")
+        (pin "SIG")
+      )
+      (node
+        (ref "L1")
+        (pin "1")
+      )
+    )
+  )
+)

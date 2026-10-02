@@ -2,7 +2,8 @@
 
 Spec: "Simulation Is A Compiler Target", "Simulation Plan Validation", "SPICE
 Lowering", "Backends Are Reached Across A Process Boundary", "Normalized
-Simulation Results", and "Verification Level Selection".
+Simulation Results", "Verification Level Selection", and, for a question's
+deck, "Verification Tools Sit Behind One Protocol".
 
 Components expose models; the kernel compiles a scope into a simulator's native
 input and normalizes what comes back. A pass is a finding with the confidence its
@@ -588,20 +589,20 @@ class ModelFile:
     subcircuit: Subcircuit
 
 
-def load_model(component: Component, trait: Simulatable) -> ModelFile:
-    """Find, digest and read the model a part's trait names.
+def model_path(component: Component, source: str) -> tuple[str, Path]:
+    """Where a part's model file is, and how a run's workspace names it.
 
     A relative source is resolved against the folder of the program that
-    declared the part, which its source location gives. The deck refers to
-    the file by that same relative path, so nothing machine-specific reaches
-    the deck, the job's hash or the evidence.
+    declared the part, which its source location gives, and is named in the
+    workspace by that same relative path, so nothing machine-specific reaches
+    a job, its hash or the evidence. An absolute or escaping path is named
+    `models/<file>`.
     """
-    import hashlib
     from pathlib import PurePosixPath
 
-    if not trait.source:
+    if not source:
         raise SimulationError(f"{component.id}'s model names no file")
-    written = Path(trait.source)
+    written = Path(source)
     if written.is_absolute():
         location = written
     elif component.source_location is not None:
@@ -609,19 +610,24 @@ def load_model(component: Component, trait: Simulatable) -> ModelFile:
     else:
         location = Path.cwd() / written
 
-    relative = PurePosixPath(trait.source)
+    relative = PurePosixPath(source)
     if relative.is_absolute() or ".." in relative.parts:
         relative = PurePosixPath("models") / relative.name
-
     if not location.is_file():
-        raise SimulationError(
-            f"{component.id}'s model {trait.source} is not a file at {location}"
-        )
+        raise SimulationError(f"{component.id}'s model {source} is not a file at {location}")
+    return relative.as_posix(), location
+
+
+def load_model(component: Component, trait: Simulatable) -> ModelFile:
+    """Find, digest and read the subcircuit model a part's trait names."""
+    import hashlib
+
+    relative, location = model_path(component, trait.source)
     data = location.read_bytes()
     subcircuit = read_subcircuit(data.decode("utf-8", errors="replace"), source=trait.source)
     return ModelFile(
         component.id,
-        relative.as_posix(),
+        relative,
         str(location),
         "sha256:" + hashlib.sha256(data).hexdigest(),
         subcircuit,
@@ -761,13 +767,25 @@ class SpiceDialect:
     analyses: frozenset[str] = frozenset()
 
     def options(self, options: Mapping[str, str]) -> list[str]:
+        """The solver options, in the simulator's own form."""
         return [f".options {name}={value}" for name, value in sorted(options.items())]
 
-    def control(self, analysis: Analysis, measures: Sequence[DeckMeasure]) -> list[str]:
+    def analysis_lines(self, analysis: Analysis, measures: Sequence[DeckMeasure]) -> list[str]:
+        """The analysis and a measurement line for each measure."""
         raise NotImplementedError
 
-    def parse(self, output: str, measures: Sequence[DeckMeasure]) -> dict[str, Decimal | str]:
-        """Each slot's number, or the reason the output gives none."""
+    def parse(
+        self,
+        output: str,
+        measures: Sequence[DeckMeasure],
+        *,
+        outputs: Mapping[str, str] | None = None,
+    ) -> dict[str, Decimal | str]:
+        """Each slot's number, or the reason the output gives none.
+
+        `output` is what the simulator printed and `outputs` the files it
+        wrote; a dialect reads whichever its simulator reports measures in.
+        """
         raise NotImplementedError
 
 
@@ -813,7 +831,7 @@ class NgspiceDialect(SpiceDialect):
             expression = f"{voltage(measure.positive)}-{voltage(measure.negative)}"
         return f"mag({expression})" if analysis == "ac" else expression
 
-    def control(self, analysis: Analysis, measures: Sequence[DeckMeasure]) -> list[str]:
+    def analysis_lines(self, analysis: Analysis, measures: Sequence[DeckMeasure]) -> list[str]:
         if analysis.kind not in self.analyses:
             raise SimulationError(f"ngspice does not measure over a {analysis.kind} analysis here")
         if getattr(analysis, "initial_conditions", None):
@@ -860,7 +878,13 @@ class NgspiceDialect(SpiceDialect):
         lines.append(".endc")
         return lines
 
-    def parse(self, output: str, measures: Sequence[DeckMeasure]) -> dict[str, Decimal | str]:
+    def parse(
+        self,
+        output: str,
+        measures: Sequence[DeckMeasure],
+        *,
+        outputs: Mapping[str, str] | None = None,
+    ) -> dict[str, Decimal | str]:
         """Read `name = value` lines into decimals, and nothing else.
 
         A measure ngspice reports as failed, or does not report at all, gets a
@@ -879,6 +903,118 @@ class NgspiceDialect(SpiceDialect):
                 found[slot] = f"ngspice printed {text!r}, which is not a number"
         return {
             measure.slot: found.get(measure.slot, "ngspice's output does not report it")
+            for measure in measures
+        }
+
+
+#: Xyce's name for each measure's statistic, which is SPICE's.
+_XYCE_STATISTIC = dict(_NGSPICE_STATISTIC)
+
+_XYCE_EDGE = dict(_NGSPICE_EDGE)
+
+#: Which of the solver options Xyce takes, and in which of its packages.
+_XYCE_TIMEINT = ("abstol", "method", "reltol")
+
+
+class XyceDialect(SpiceDialect):
+    """Xyce: deck-level `.MEASURE` lines, read back from its measure file.
+
+    Written from the Xyce Reference Guide, not against a binary, because Xyce
+    is not installed where this was built: Xyce takes `.MEASURE` at the deck
+    level and writes each result to a measure file beside the netlist --
+    `<netlist>.mt0` for a transient, `<netlist>.ma0` for an AC sweep -- one
+    `NAME = value` line per measure, with `FAILED` in place of a value for a
+    measure that could not be taken. An AC measure reads the magnitude, `VM`.
+    Solver options belong to packages; the tolerances and the integration
+    method are `TIMEINT` options, and an option with no Xyce counterpart is
+    named in a comment rather than written as something it is not.
+    """
+
+    name = "xyce"
+    analyses = frozenset({"transient", "ac"})
+
+    _MEASURED = re.compile(r"^\s*(fang_m\d+)\s*=\s*(\S+)", re.MULTILINE | re.IGNORECASE)
+    _MEASURE_FILE = re.compile(r"\.m[a-z]\d+$")
+
+    def options(self, options: Mapping[str, str]) -> list[str]:
+        timeint = [
+            f"{name.upper()}={value}"
+            for name, value in sorted(options.items())
+            if name in _XYCE_TIMEINT
+        ]
+        lines = [".OPTIONS TIMEINT " + " ".join(timeint)] if timeint else []
+        lines += [
+            f"* {name}={value} has no Xyce option and is not written"
+            for name, value in sorted(options.items())
+            if name not in _XYCE_TIMEINT
+        ]
+        return lines
+
+    @staticmethod
+    def _signal(measure: DeckMeasure, analysis: str) -> str:
+        if measure.positive == "0" and measure.negative == "0":
+            raise SimulationError(f"{measure.slot} would measure ground against ground")
+        nodes = measure.positive if measure.negative == "0" else f"{measure.positive},{measure.negative}"
+        return f"VM({nodes})" if analysis == "ac" else f"V({nodes})"
+
+    def analysis_lines(self, analysis: Analysis, measures: Sequence[DeckMeasure]) -> list[str]:
+        if analysis.kind not in self.analyses:
+            raise SimulationError(f"Xyce does not measure over a {analysis.kind} analysis here")
+        if getattr(analysis, "initial_conditions", None):
+            raise SimulationError("initial conditions are not lowered for a question")
+        sweep = {"transient": "TRAN", "ac": "AC"}[analysis.kind]
+        lines = [analysis.directive()]
+        for measure in measures:
+            signal = self._signal(measure, analysis.kind)
+            head = f".MEASURE {sweep} {measure.slot}"
+            if measure.kind in _XYCE_STATISTIC:
+                window = "".join(
+                    f" {name}={spice_number(value)}"
+                    for name, value in (("FROM", measure.after), ("TO", measure.until))
+                    if value is not None
+                )
+                lines.append(f"{head} {_XYCE_STATISTIC[measure.kind]} {signal}{window}")
+            elif measure.kind == "value_at":
+                if measure.at is None:
+                    raise SimulationError(f"{measure.slot} names no point to take the value at")
+                lines.append(f"{head} FIND {signal} AT={spice_number(measure.at)}")
+            elif measure.kind == "crossing":
+                after = f" FROM={spice_number(measure.after)}" if measure.after is not None else ""
+                lines.append(
+                    f"{head} WHEN {signal}={spice_number(measure.level)} "
+                    f"{_XYCE_EDGE[measure.edge]}={measure.occurrence}{after}"
+                )
+            else:
+                raise SimulationError(f"Xyce has no lowering for a {measure.kind} measure")
+        return lines
+
+    def parse(
+        self,
+        output: str,
+        measures: Sequence[DeckMeasure],
+        *,
+        outputs: Mapping[str, str] | None = None,
+    ) -> dict[str, Decimal | str]:
+        """Read the measure file's `NAME = value` lines into decimals.
+
+        `FAILED` is a measure Xyce could not take; a measure the file does not
+        name is not reported. Either gets a reason and no number.
+        """
+        found: dict[str, Decimal | str] = {}
+        for path, text in sorted((outputs or {}).items()):
+            if not self._MEASURE_FILE.search(path):
+                continue
+            for slot, value in self._MEASURED.findall(text):
+                slot = slot.lower()
+                if value.upper() == "FAILED":
+                    found[slot] = "Xyce reported the measure as failed"
+                    continue
+                try:
+                    found[slot] = Decimal(value)
+                except Exception:
+                    found[slot] = f"Xyce wrote {value!r}, which is not a number"
+        return {
+            measure.slot: found.get(measure.slot, "Xyce's measure file does not report it")
             for measure in measures
         }
 
@@ -909,7 +1045,7 @@ def lower_question(
     for path in sorted({model.path for model in models}):
         lines.append(f".include {path}")
     lines.extend(dialect.options(options))
-    lines.extend(dialect.control(analysis, measures))
+    lines.extend(dialect.analysis_lines(analysis, measures))
     lines.append(".end")
     return "\n".join(lines) + "\n"
 
@@ -930,6 +1066,8 @@ class RawResult:
     stdout: str
     exit_status: int
     netlist: str
+    #: Files the run wrote beside its input, by name: Xyce's measure files.
+    outputs: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -984,6 +1122,60 @@ class NgspiceBackend:
         )
         return RawResult(
             self.name, self.version(), completed.stdout, completed.returncode, netlist
+        )
+
+
+@dataclass
+class XyceBackend:
+    """Xyce, reached across a process boundary as ngspice is.
+
+    Xyce writes its measures to files beside the netlist rather than to its
+    output, so a run returns those files with what it printed. Where Xyce is
+    not installed it says so, by name, and nothing runs in its place.
+    """
+
+    name: str = "xyce"
+    executable: str = "Xyce"
+
+    def available(self) -> bool:
+        return shutil.which(self.executable) is not None
+
+    def version(self) -> str:
+        if not self.available():
+            raise BackendUnavailable(f"{self.executable} is not installed")
+        completed = subprocess.run(
+            [self.executable, "-v"], capture_output=True, text=True, timeout=30
+        )
+        printed = [line.strip() for line in (completed.stdout or completed.stderr).splitlines()]
+        for line in printed:
+            if self.name in line.lower():
+                return line
+        return next((line for line in printed if line), "unknown")
+
+    def run(self, netlist: str, *, workspace: Path, timeout: int = 60) -> RawResult:
+        if not self.available():
+            raise BackendUnavailable(
+                f"{self.executable} is not installed; the run reports unsupported "
+                "rather than producing a substitute result"
+            )
+        workspace.mkdir(parents=True, exist_ok=True)
+        deck = workspace / "deck.cir"
+        deck.write_text(netlist)
+        completed = subprocess.run(
+            [self.executable, str(deck)],
+            capture_output=True,
+            text=True,
+            cwd=workspace,
+            timeout=timeout,
+        )
+        outputs = {
+            path.name: path.read_text(errors="replace")
+            for path in sorted(workspace.glob(f"{deck.name}.m*"))
+            if path.is_file()
+        }
+        return RawResult(
+            self.name, self.version(), completed.stdout, completed.returncode, netlist,
+            outputs=outputs,
         )
 
 

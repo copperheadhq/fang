@@ -2,7 +2,7 @@
 title: Firmware against the board
 description: Why emulation is a verification question, and why the board, not a second wiring description, decides what the emulator sees.
 sidebar:
-  order: 7
+  order: 8
   attrs:
     data-icon: puzzle
 ---
@@ -24,9 +24,9 @@ changes with it.
 
 ## A question, not a report
 
-An emulation is a question in the same sense a circuit simulation is: declared
-beside the requirement it serves, compiled into a plan, run by a tool, and
-answered by measurements that re-enter the graph through the commit gate. The
+An emulation is a question in the same sense a circuit simulation is (see
+[Verification](/concepts/verification/)): declared beside the requirement it
+serves, compiled into a plan, run by a tool, and answered by measurements that re-enter the graph through the commit gate. The
 constraint the requirement states is decided by the constraint check the gate
 already runs. A measured value that breaks a hard constraint never reaches the
 head; the run is recorded as a failed verification, with the number that

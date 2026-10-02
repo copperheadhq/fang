@@ -2,15 +2,16 @@
 title: Emulation
 description: Running a board's compiled firmware in Renode, and what a run can and cannot show.
 sidebar:
-  order: 6
+  order: 8
   attrs:
     data-icon: rocket
 ---
 
 An emulation question runs the board's compiled firmware in an emulator and
-measures what the emulator observes. It is a verification question like a
-circuit one: declared beside the requirement it serves, routed to a tool, and
-answered through the commit gate. The tool is [Renode](https://renode.io), run
+measures what the emulator observes. It is a
+[verification question](/reference/verification/) like a circuit one: declared
+beside the requirement it serves, routed to a tool, and answered through the
+commit gate. The tool is [Renode](https://renode.io), run
 across a process boundary.
 
 ```bash

@@ -114,55 +114,55 @@ change.
 
 ## 8. Xyce
 
-- [ ] 8.1 Add the Xyce dialect (`.measure` lines) behind the dialect seam;
+- [x] 8.1 Add the Xyce dialect (`.measure` lines) behind the dialect seam;
       verify the ngspice and Xyce decks differ only in analysis and measurement
       lines.
-- [ ] 8.2 Parse Xyce's measure file into `Decimal`; verify against a captured
+- [x] 8.2 Parse Xyce's measure file into `Decimal`; verify against a captured
       measure file, and that a failed or absent measure yields no measurement.
-- [ ] 8.3 Add `XyceBackend` beside `NgspiceBackend`; verify it reports
+- [x] 8.3 Add `XyceBackend` beside `NgspiceBackend`; verify it reports
       unsupported by name where Xyce is absent.
 
 ## 9. Rule checks
 
-- [ ] 9.1 Add the `Checks` declaration, refusing a `result`, and refuse an
+- [x] 9.1 Add the `Checks` declaration, refusing a `result`, and refuse an
       exclusion with no reason; verify both with tests.
-- [ ] 9.2 Add `fang/rulecheck.py`: run `kicad-cli sch erc --format json` over a
+- [x] 9.2 Add `fang/rulecheck.py`: run `kicad-cli sch erc --format json` over a
       scratch copy of the compiled schematic and parse violations; verify the
       parser against JSON captured from the installed kicad-cli, and that an
       absent `kicad-cli` reports unsupported by name.
-- [ ] 9.3 Apply declared exclusions, recording rule, reason and count; verify
+- [x] 9.3 Apply declared exclusions, recording rule, reason and count; verify
       errors fail, warnings do not, and excluded rules do neither.
-- [ ] 9.4 Add `tests/test_rulecheck.py` covering the delta spec's rule-check
+- [x] 9.4 Add `tests/test_rulecheck.py` covering the delta spec's rule-check
       scenarios; verify it passes with `PATH` stripped of kicad-cli.
 
 ## 10. Touchstone
 
-- [ ] 10.1 Add the `Touchstone` trait to `fang/traits.py` (source, ports,
+- [x] 10.1 Add the `Touchstone` trait to `fang/traits.py` (source, ports,
       provenance); verify it registers and enumerates like `Simulatable`.
-- [ ] 10.2 Add the `ReturnLoss` measure and the `Evaluates` declaration,
+- [x] 10.2 Add the `ReturnLoss` measure and the `Evaluates` declaration,
       refusing a `result`; verify a declaration with a result raises.
-- [ ] 10.3 Add `fang/rf.py`: read `.s1p`/`.s2p` with option-line units, the RI,
+- [x] 10.3 Add `fang/rf.py`: read `.s1p`/`.s2p` with option-line units, the RI,
       MA and DB formats and reference resistance, and interpolate; verify two
       files in different formats give the same measurement, and that a frequency
       outside the range is refused naming the range.
-- [ ] 10.4 Compose named series and shunt parts into the one-port from the
+- [x] 10.4 Compose named series and shunt parts into the one-port from the
       graph's values, leaving the question unanswered when a value is unknown;
       verify against a hand-computed match.
-- [ ] 10.5 Quantize to six significant figures at the `Decimal` boundary; verify
+- [x] 10.5 Quantize to six significant figures at the `Decimal` boundary; verify
       the measurement's text is stable.
-- [ ] 10.6 Add `examples/antenna_match/`: a chip antenna's Touchstone model
+- [x] 10.6 Add `examples/antenna_match/`: a chip antenna's Touchstone model
       through an L match, return loss at 2.44 GHz; the model file is synthetic
       and says so in its header and provenance; README and `out/`.
-- [ ] 10.7 Add `tests/test_rf.py` covering the delta spec's Touchstone
+- [x] 10.7 Add `tests/test_rf.py` covering the delta spec's Touchstone
       scenarios; verify the whole suite passes.
 
 ## 11. Documents
 
-- [ ] 11.1 Add `site/docs/.../reference/verification.md` and
+- [x] 11.1 Add `site/docs/.../reference/verification.md` and
       `concepts/verification.md`; update `reference/cli.md` and
       `reference/simulation.md`; verify internal links resolve.
-- [ ] 11.2 Update `README.md`, `CLAUDE.md`, `CHANGELOG.md`,
-      `openspec/ROADMAP.md` (stage 13) and `examples/README.md`; verify the
+- [x] 11.2 Update `README.md`, `CLAUDE.md`, `CHANGELOG.md`,
+      `openspec/ROADMAP.md` (in flight) and `examples/README.md`; verify the
       counts quoted anywhere match the tree.
-- [ ] 11.3 Quote the requirement names in each new module's docstring; verify
+- [x] 11.3 Quote the requirement names in each new module's docstring; verify
       `openspec validate fang-verification --strict` passes.

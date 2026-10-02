@@ -31,10 +31,12 @@ netlist a person can open.
 Changes beyond the twelve, under copperhead RFC 12 version 1.3 and RFC 3
 version 1.5 ([copperheadhq/copperhead-rfcs#6](https://github.com/copperheadhq/copperhead-rfcs/pull/6)).
 Each is implemented with its tests and is archived once the revision is
-adopted.
+adopted, which folds its delta spec, and its acceptance tests (AT-V1, AT-F1,
+AT-F2), into the combined spec.
 
 | # | Change | Delivers |
 | --- | --- | --- |
+| — | `fang-verification` | Verification questions beside requirements, explicit benches and measures, the tool protocol and level routing, measurements re-entering through the gate; ngspice, Xyce, KiCad ERC and Touchstone; `fang verify` |
 | — | `fang-mcu-parts` | Ports that name their peripheral instance, cited alternate-function selectors on the lowered pins, and I2C addresses — fixed or strapped — that the compatibility check reads from the board |
 | — | `fang-emulation` | A board's compiled firmware run in Renode as a verification question: plans resolved from the graph, the Renode lowering and backend, probes, measures over events, `fang emulate`, and the `sensor_node` demo with its firmware |
 

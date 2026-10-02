@@ -88,7 +88,7 @@ None. The project holds one capability and this change extends it.
   and skip it, by name, where ngspice is absent.
 - Docs: a verification reference page and a concepts page on the site, the CLI
   and simulation pages, `README.md`, `CLAUDE.md`, `CHANGELOG.md`, and
-  `openspec/ROADMAP.md` (stage 13).
+  `openspec/ROADMAP.md` (in flight).
 - Order of work: the spine — questions, routing and the protocol, re-entry and
   `fang verify` — lands first, proven on ngspice, as RFC 12 Appendix B.12 has
   it; Xyce, rule checks and Touchstone follow on the same protocol, off the

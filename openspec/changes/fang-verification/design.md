@@ -433,7 +433,11 @@ rare disagreement with the gate's check results, which decide.
 **Evidence identity** is derived from the verification's path and a digest of
 the job's hash, the tool and its version: the same run is the same evidence, so
 asking again with the same job and version is `current` rather than a duplicate,
-and a tightened constraint fails on the same evidence the passing run had. The
+and a tightened constraint fails on the same evidence the passing run had. A
+run that did not complete is tried again when asked, each attempt recorded as
+evidence of its own (`run_<digest>_retryN`), so a crash does not stand in for
+an answer. A tool that turns out to be missing only when it is run is reported
+unsupported, like one missing before. The
 measurement record follows RFC 3 Section 14 and adds the run's terminal status,
 exit status, confidence and message; a measure with no value appears in
 `measures` with its `reason` in place of a value, and a tool's `extra` fields
@@ -483,6 +487,58 @@ not -- with only the switches' resistance the ring outlasts the run and the
 peak-to-peak would measure it rather than the ripple. The rail header is
 abstracted beside the input parts, because a connector has no SPICE device and
 the load is applied at its surface. `ripple` is declared in mV.
+
+**Xyce** is the second dialect on the same seam, `XyceDialect` with
+`XyceBackend`, registered after ngspice; it answers a question that names it
+(`tool="xyce"`) or one ngspice does not cover, and covers transient and AC
+questions, not operating points. Its deck is the ngspice deck up to the solver
+options: the options are each simulator's own form -- Xyce's tolerances and
+integration method are `TIMEINT` options, and `vntol`, which has no Xyce
+counterpart, is named in a comment -- so "only the analysis and measurement
+conventions differ" counts the options among those conventions. An AC measure
+reads `VM`. Xyce is not installed here, so its lowering and its measure-file
+reader are written from the Xyce Reference Guide and tested on preparation and
+on a measure file written in the guide's documented form, not one captured from
+a run; `RawResult` gains `outputs` so a backend can return the files a run
+wrote. The first run on a machine with Xyce is the check this cannot make.
+
+**Rule checks answer with a verdict, not a measurement.** A rule check writes
+no parameter, so its result cannot come from a constraint. A tool may define
+`verdict(job, raw) -> Verdict` beside `read`: the result, the fields its
+evidence carries beside the measurement record's own, and the lines a listing
+shows. The runner asks for it when the tool has one; for a question with no
+measured parameters the verdict is the result, and for one with parameters the
+constraints still decide and a failing verdict can only make it worse. The
+ERC verdict records every violation with its rule, severity, description and
+items, each declared exclusion with its reason and count, and the error and
+warning totals; errors fail and warnings do not. The ERC job carries the sheet
+fang draws with the snapshot's hash replaced -- the job names its snapshot
+beside itself -- so the job is the same wherever the program was read from.
+The report format was captured from kicad-cli 10.0.6, as the risk note below
+asks, and a trimmed capture is the parser's fixture. `Checks` defaults to no
+named tool and routes by method; the built-in tools load on first use of the
+registry, because `rulecheck.py` imports `verification.py`.
+
+**Touchstone questions.** `Evaluates` fixes the method `analysis`, which
+routes to the equation level, where the in-tree `touchstone` tool covers a
+question whose measures are all `ReturnLoss`. The tool is always available and
+its version is fang's. `through` names the matching parts in order from the
+port toward the model; the record carries each with its position, because the
+record stream sorts any list it does not know to be ordered. A part is a shunt
+element when one of its terminals is on ground and a series element otherwise,
+and its value is the inductance, capacitance or resistance the graph holds.
+Return loss is positive, -20 log10 |Gamma|, against a reference of 50 Ohm
+unless the measure names another; the file's own reference is honoured when
+the load is read back from S11, which is how files in different references
+agree. A file of more than one port is read at port 1 with the others
+terminated in the file's reference, and the job says so. Interpolation is
+linear in real and imaginary parts. The run re-reads the declared file and
+refuses one whose digest has changed since preparation. A perfect match is an
+infinite return loss. Decibels needed a unit: `dB` is dimensionless with a
+factor of 1, compared only with decibels, and `GHz`, `nH` and `dB` join the
+literals `fang.lang` exports. The design's sketch names `("series_l",
+"shunt_c")`; the shipped example's antenna is below 50 Ohm, so its match puts
+the shunt part at the port, `("shunt_c", "series_l")`.
 
 **Infinity.** A quantity bound may be infinite; it serializes as `Infinity`,
 which `Decimal` reads back, and compares under interval semantics. A NaN is

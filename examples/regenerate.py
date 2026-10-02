@@ -67,6 +67,7 @@ VIEWS: dict[str, tuple[str, ...]] = {
     "jee_advanced/problem_2": ("interconnect",),
     "noninverting_amp": ("interconnect",),
     "rc_filter": ("interconnect",),
+    "antenna_match": ("interconnect",),
 }
 
 #: The examples that ship a schematic. A schematic is the picture an engineer
