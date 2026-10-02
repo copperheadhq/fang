@@ -1,0 +1,44 @@
+* scaling_adder: e3_alone
+* plan for ngspice over sha256:70c9bc4fdd1b37cdca07e256910a6d4fa341c94602f4279c98d8e04bc8f207fd
+* GND1 abstracted; no device emitted
+R1 2 3 100k
+R2 4 2 1k
+R3 5 2 10k
+R4 6 2 100k
+* TP1 abstracted; no device emitted
+* TP2 abstracted; no device emitted
+* TP3 abstracted; no device emitted
+* TP4 abstracted; no device emitted
+* TP5 abstracted; no device emitted
+* U1 abstracted; no device emitted
+.options abstol=1e-12
+.options method=gear
+.options reltol=1e-3
+.options vntol=1e-6
+.op
+* added by the bench: the drive, and the parts fang abstracted
+VDRIVE_e1 4 0 DC 0
+VDRIVE_e2 5 0 DC 0
+VDRIVE_e3 6 0 DC 0.1
+XU1 0 2 3 HB_OPAMP A=1e+06 GBW=1e+07 VOH=13.5 VOL=-13.5 VOS=0
+.subckt HB_OPAMP inp inn out A=1e6 GBW=1e7 VOH=13.5 VOL=-13.5 VOS=0
+VOS inp x DC {VOS}
+RIN x inn 1e12
+GM 0 n1 x inn 1e-3
+R1 n1 0 {A*1e3}
+C1 n1 0 {1e-3/(6.283185307179586*GBW)}
+DH n1 h HB_CLAMP
+VH h 0 DC {VOH}
+DL l n1 HB_CLAMP
+VL l 0 DC {VOL}
+EO out 0 n1 0 1
+.model HB_CLAMP D(IS=1e-15 N=0.01)
+.ends HB_OPAMP
+.control
+run
+let gain_e3 = v(3) / v(6)
+print gain_e3
+let z_in_e3 = -v(6) / i(vdrive_e3)
+print z_in_e3
+.endc
+.end

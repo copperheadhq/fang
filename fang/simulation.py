@@ -483,12 +483,20 @@ def spice_nodes(snapshot, netlist: Netlist) -> dict[tuple[str, str], str]:
 
 
 def _spice_value(value: str) -> str:
-    """Render a quantity the way SPICE expects, without changing its magnitude."""
+    """Render a quantity the way SPICE expects, without changing its magnitude.
+
+    SPICE reads its scale suffixes without regard to case, so `M` is milli to
+    it and mega is spelled `Meg`. A 1 MOhm resistor written as `1M` would be
+    simulated as a thousandth of an ohm, so the mega prefix is respelled rather
+    than passed through.
+    """
     text = value.replace(" ", "")
     for unit in ("Ohm", "F", "H", "V", "A", "W", "Hz"):
         if text.endswith(unit):
             text = text[: -len(unit)]
             break
+    if text.endswith("M"):
+        text = text[:-1] + "Meg"
     return text or "1"
 
 

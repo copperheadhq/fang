@@ -1,0 +1,54 @@
+# differential_input_amplifier: SBOA092B page 67, The Differential Input Amplifier
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## e1_alone: operating point, `.op`
+
+  drive  e1: DC 1
+  drive  e2: DC 0
+
+  gain_e1           -10   claimed -10 (a_e1) +/- 0.1%, holds
+
+## e2_alone: operating point, `.op`
+
+  drive  e1: DC 0
+  drive  e2: DC 1
+
+  gain_e2            10   claimed 10 (a_e2) +/- 0.1%, holds
+
+## difference: operating point, `.op`
+
+  drive  e1: DC 0.3
+  drive  e2: DC 0.5
+
+  e_o           2 V   claimed 2 V +/- 0.1%, holds
+       (R_O/R1)(E2 - E1) = 10 x 0.2 V
+
+## common_mode: operating point, `.op`
+
+  drive  e1: DC 1
+  drive  e2: DC 1
+
+  e_o     -1.676 fV   claimed 0 V +/- 100 uV, holds
+       1 V on both inputs. With the ratios matched the cancellation does not
+       depend on the open-loop gain, so what ngspice reads is its own
+       rounding.
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e1): a terminal; it marks a node and adds nothing
+  TP2 (e2): a terminal; it marks a node and adds nothing
+  TP3 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+4 of 4 claims hold.

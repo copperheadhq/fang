@@ -1,0 +1,35 @@
+# simple_meter_amplifier: SBOA092B page 79, Simple Meter Amplifier
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## sine: transient, `.tran 10u 60m`
+
+A 100 Hz sine of 1 V peak, four whole periods averaged. The average of |E_I|
+is 2/pi of its peak, so the ratio is the meter's average current over the
+input's rectified average. The 0.5% allowance covers the diode's turn-on at
+each zero crossing, which the loop closes over but not instantly.
+
+  drive  e_in: SIN(0 1 100)
+
+  g_meter        33.1 uA/V   claimed 33.1 uA/V (g_meter) +/- 0.5%, holds
+  g_handbook     33.1 uA/V   claimed 33.33 uA/V (g_handbook) +/- 1%, holds
+              the handbook's E_I / 30 mA, which the 100 Ohm meter takes 0.7%
+              less than
+  i_avg           21.07 uA   not a claim
+  e_peak               1 V   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  D1 (d_bottom): 1N4148 diode model
+  D2 (d_top): 1N4148 diode model
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  M1 (meter): meter movement of 100 Ohm
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+2 of 2 claims hold.

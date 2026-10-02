@@ -1,0 +1,54 @@
+# direct_addition: SBOA092B page 65, Direct Addition
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## e1_alone: operating point, `.op`
+
+  drive  e1: DC 1
+  drive  e2: DC 0
+
+  gain_e1             1   claimed 1 (a_v) +/- 0.1%, holds
+  z_in_e1       15 kOhm   claimed 15 kOhm (z_in) +/- 0.1%, holds
+
+## e2_alone: operating point, `.op`
+
+  drive  e1: DC 0
+  drive  e2: DC 1
+
+  gain_e2             1   claimed 1 (a_v) +/- 0.1%, holds
+  z_in_e2       15 kOhm   claimed 15 kOhm (z_in) +/- 0.1%, holds
+
+## both: operating point, `.op`
+
+With E2 driven, E1's source no longer sees 15 kOhm: the + input sits at 1/3
+V, so E1 drives (1.5 - 1/3) V across its 10 kOhm and sees 1.5 V / 116.7 uA =
+12.86 kOhm. The page's 15 kOhm is for one input at a time.
+
+  drive  e1: DC 1.5
+  drive  e2: DC -0.5
+
+  e_o               1 V   claimed 1 V +/- 0.1%, holds
+           1.5 + (-0.5) = 1 V
+  e_plus       333.3 mV   claimed 333.3 mV +/- 0.1%, holds
+           (E1 + E2)/3: the + input at the average of E1, E2 and ground
+  z_in_e1    12.86 kOhm   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (common): a terminal; it marks a node and adds nothing
+  TP2 (e1): a terminal; it marks a node and adds nothing
+  TP3 (e2): a terminal; it marks a node and adds nothing
+  TP4 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+6 of 6 claims hold.

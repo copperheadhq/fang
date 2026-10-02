@@ -1,0 +1,45 @@
+# presettable_voltage_source: SBOA092B page 52, Presettable Voltage Source
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## ten_volts: operating point, `.op`
+
+  e_out           10 V   claimed 10 V (e_out) +/- 0.01%, holds
+          Held to 100 ppm: a noise gain near 10 costs 10 ppm of loop-gain
+          error, and the 1 uV offset another 1 ppm.
+  i_set           1 mA   claimed 1 mA (i_set) +/- 0.01%, holds
+  i_cell  -1.002e-17 A   claimed 0 A (i_cell) +/- 1 nA, holds
+          Held to 1 nA, absolute: the model's - input draws no bias current.
+
+## five_volts: operating point, `.op`
+
+  set    r_out.resistance = 3981.7
+
+  e_out           5 V   claimed 5 V +/- 0.01%, holds
+         The dial at 3981.7 Ohm: 3981.7 mV above Eref.
+
+## dial_at_zero: operating point, `.op`
+
+  set    r_out.resistance = 0
+
+  e_out       1.018 V   claimed 1.018 V +/- 0.01%, holds
+         The dial at zero: the lowest E_O the circuit gives is Eref.
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  RV1 (r_out): 8.982 kOhm split at the wiper, set to 1 of its travel
+  TP1 (out): a terminal; it marks a node and adds nothing
+  TP2 (out_return): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 1 uV
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+5 of 5 claims hold.

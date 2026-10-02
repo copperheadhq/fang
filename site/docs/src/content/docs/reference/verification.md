@@ -139,8 +139,8 @@ refused naming its range (`SIM-0007`).
 1. If every constraint over the question's measured parameters already
    evaluates to a decided result, the **equation** level answers it with the
    constraint evaluator, and no tool is prepared or run.
-2. Otherwise the method names the level -- `simulation` is circuit, `rule
-   check` is external, `analysis` is equation, `emulation` is behavioural -- and the first registered tool
+2. Otherwise the method names the level (`simulation` is circuit, `rule
+   check` is external, `analysis` is equation, `emulation` is behavioural) and the first registered tool
    at that level that covers the question is chosen, the one it names if it
    names one.
 3. A question nothing covers is **unroutable**. It is not answered at another

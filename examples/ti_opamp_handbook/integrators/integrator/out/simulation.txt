@@ -1,0 +1,42 @@
+# integrator: SBOA092B page 55, Integrators
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## ramp: transient, `.tran 10u 10m`
+
+A DC step of 10 mV, the output started at zero by `.ic`. It ramps at -10
+V/s; the slope over 1 ms to 9 ms, divided by E_I, is the rate.
+
+  drive  e_in: DC 0.01
+
+  rate_per_volt        -1 k/s   claimed -1 k/s (rate) +/- 0.1%, holds
+  e_1ms                -10 mV   not a claim
+  e_9ms                -90 mV   not a claim
+
+## sine: ac, `.ac dec 20 1 100k`
+
+  drive  e_in: DC 0 AC 1
+
+  gain_unity             1   claimed 1 +/- 0.1%, holds
+              at f_unity, 1/(2 pi f R_I C_O) is 1
+  gain_15hz9            10   claimed 10 +/- 0.1%, holds
+              a decade lower the gain is ten times higher
+  phase_deg             90   claimed 90 +/- 0.1, holds
+              E_O/E_I = -1/(j 2 pi f R_I C_O) = +j/(2 pi f R_I C_O): the
+              integral lags the input by 90 degrees and the inversion adds
+              180, so the output leads by 90
+  phase_rad          1.571   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+4 of 4 claims hold.

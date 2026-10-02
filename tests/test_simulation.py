@@ -7,7 +7,7 @@ import pytest
 
 from fang.elaborate import elaborate
 from fang.interfaces import Pin, PinMap
-from fang.lang import Electrical, Parameter, Part, Power, System, V, kOhm, uF
+from fang.lang import Electrical, MOhm, Parameter, Part, Power, System, V, kOhm, mOhm, uF
 from fang.netlist import compile_netlist
 from fang.parts import Capacitor, Resistor
 from fang.simulation import (
@@ -190,6 +190,25 @@ def test_lowering_is_deterministic(divider):
     first = lower_to_spice(divider.snapshot, plan, traits=divider.traits)
     second = lower_to_spice(divider.snapshot, plan, traits=divider.traits)
     assert first == second
+
+
+def test_a_value_keeps_its_magnitude_in_the_simulators_suffixes():
+    """SPICE reads `M` as milli whatever its case, so mega is written `Meg`."""
+
+    class Bias(System):
+        feed = Resistor(resistance=1 * MOhm)
+        leak = Resistor(resistance=10 * MOhm)
+        trim = Resistor(resistance=1 * mOhm)
+
+        def architecture(self):
+            self.feed.p2 >> self.leak.p1
+            self.leak.p2 >> self.trim.p1
+
+    result = elaborate(Bias, project_id=PROJECT)
+    plan = compile_plan(result.snapshot, traits=result.traits)
+    deck = lower_to_spice(result.snapshot, plan, traits=result.traits)
+    values = sorted(line.split()[-1] for line in deck.splitlines() if line.startswith("R"))
+    assert values == ["10Meg", "1Meg", "1m"]
 
 
 def test_every_terminal_gets_a_node_even_when_it_is_floating(divider):

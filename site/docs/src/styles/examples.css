@@ -1,19 +1,52 @@
-/* The renders on the example pages.
+/* The pictures on the example pages, each a figure with its caption.
 
-   `fang view` draws an SVG on its own white ground: it is a figure meant to be
-   read on its own — dropped into a report, opened in a browser, attached to a
-   review — so it carries no theme and does not inherit one. Recolouring it here
-   would put the view's palette in two places and make the page's copy the one
-   that goes stale, so the page gives it a surface to sit on instead. On the
-   dark theme that reads as a figure laid on the page rather than a hole burnt
-   through it; on the light theme the border is what separates the two whites. */
-.sl-markdown-content img[src^="/examples/"] {
-  display: block;
-  width: 100%;
-  height: auto;
-  background: #ffffff;
-  border: 1px solid var(--sl-color-hairline);
-  border-radius: 0.5rem;
-  padding: 0.75rem;
+   A schematic is a transparent SVG cut to the circuit, and a fang view is a
+   block diagram in black ink on a transparent page, so neither needs a card to
+   sit on: the picture is laid on the page as it is, and its alt text is
+   written under it as the caption. */
+.sl-markdown-content figure.example-figure {
   margin-block: 1.25rem;
+}
+/* One standard scale. A block diagram is shown at its own size, one pixel of
+   the drawing to one on the page, so its words are the same size on every
+   page, and it shrinks only if it is wider than the column. A KiCad render is
+   sized in millimetres, true to the sheet, which puts its 1.27 mm text at a
+   few pixels, so a schematic fills the column instead, as a picture of a
+   printed question does. */
+.sl-markdown-content figure.example-figure img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
+}
+.sl-markdown-content figure.example-figure :is(img[src$="/schematic.svg"], img[src$=".png"]) {
+  width: 100%;
+}
+
+.sl-markdown-content figure.example-figure figcaption {
+  margin-top: 0.5rem;
+  font-size: var(--sl-text-sm);
+  color: var(--sl-color-gray-3);
+  text-align: center;
+}
+
+/* In a narrow column (a phone) a drawing shrunk to fit would put its words at
+   a few pixels. A block diagram keeps its own size and a schematic a readable
+   width, and the figure scrolls sideways to show the rest; a tap opens it
+   whole. A printed question still fits the width: it is text, and a phone
+   zooms text better than it scrolls it. */
+@container (max-width: 33.99rem) {
+  .sl-markdown-content figure.example-figure > a {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sl-markdown-content figure.example-figure img:not([src$=".png"]) {
+    max-width: none;
+    margin-inline: 0;
+  }
+  .sl-markdown-content figure.example-figure img[src$="/schematic.svg"] {
+    width: 640px;
+  }
 }

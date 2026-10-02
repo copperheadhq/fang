@@ -18,7 +18,7 @@ it is never a persisted or public representation — and the MCP SDK, which only
 
 ```bash
 pip install -e ".[dev]"          # add ",analysis" for the NetworkX-backed queries, ",mcp" for `fang mcp`
-python -m pytest                 # whole suite (830 tests): ~22s; ~5 min where Renode runs the emulations live
+python -m pytest                 # whole suite (1499 tests): ~75s; ~6 min where Renode runs the emulations live
 fang build examples/sensor_board/sensor_board.py   # the console script, after an editable install
 python -m pytest -rs             # also lists the acceptance tests deferred to later phases
 python -m pytest tests/test_graph.py::test_name -x
@@ -139,10 +139,10 @@ part with no symbol, or a net left with fewer than two drawn pins, is reported a
 against the board in Renode, as one more verification question: `Emulates` sits on the question
 base in [fang/verification.py](fang/verification.py), and importing `fang.emulation` registers the
 `emulation` method at the behavioural level and the `renode` tool after ngspice. `compile_plan`
-resolves everything from the snapshot and the traits before anything runs — the target and its
+resolves everything from the snapshot and the traits before anything runs: the target and its
 firmware, each I2C bus's controller (the port's `peripheral`), pins and selectors (the lowered
 connections), open drain (the interface), addresses (`resolve_address`), observed pins (the
-platform descriptor's own pin table, never a pin's name) — or refuses with `SIM-0009`..`SIM-0016`.
+platform descriptor's own pin table, never a pin's name). Otherwise it refuses with `SIM-0009`..`SIM-0016`.
 [fang/renode/](fang/renode/) lowers the plan to Renode's own `.repl` and `.resc` and runs it on a
 temporary copy in its own process group; its package data is the F401 platform description, the
 C# probes (`probes/fang_probes.cs`) and the model descriptors (`models/*.json`), which say what
@@ -168,8 +168,8 @@ change as electrical or presentation-only and propagates invalidation.
 than deleted** — add new ones via `_allocate` at the bottom of the relevant area block.
 
 **Verification.** [fang/verification.py](fang/verification.py) turns an undecided constraint into
-a decided one without a second way in. A question -- `Simulates`, `Checks`, `Evaluates`, all on
-`QuestionDeclaration` -- is a `Verification` entity whose result is `UNKNOWN`, carrying the
+a decided one without a second way in. A question (`Simulates`, `Checks`, `Evaluates`, all on
+`QuestionDeclaration`) is a `Verification` entity whose result is `UNKNOWN`, carrying the
 canonical question in `extensions["question"]` with every surface resolved to pins at elaboration;
 a program cannot state its result. `route()` answers at the equation level when the constraints
 over the measured parameters are already decided, and otherwise picks the first registered tool at
@@ -179,8 +179,8 @@ unsupported rather than replaced. Tools sit behind the `Tool` protocol (`covers`
 and `Measurement`s; the built-ins, in routing order, are ngspice and Xyce (`SpiceTool` over the
 lowering in [fang/simulation.py](fang/simulation.py)), KiCad ERC ([fang/rulecheck.py](fang/rulecheck.py))
 and Touchstone ([fang/rf.py](fang/rf.py)), and `register_tool` adds more. A run's measurements
-re-enter as one transaction -- inferred `SetParameter`s sourced from the run's `Evidence`, that
-evidence with the measurement record, the verification replaced under its own identifier -- and the
+re-enter as one transaction (inferred `SetParameter`s sourced from the run's `Evidence`, that
+evidence with the measurement record, the verification replaced under its own identifier) and the
 gate's constraint check decides; a measured value that fails a hard constraint never reaches the
 head and is recorded as a `FAIL` by a second transaction that sets no parameter.
 `carry_measurements` keeps a measurement across re-elaboration, which `fang build`, `diff` and
@@ -241,10 +241,18 @@ and skipped by name where they are not. `python examples/regenerate.py` rewrites
 [tests/test_examples.py](tests/test_examples.py) rebuilds them and compares, so
 a committed output cannot drift from the program beside it. An example named in
 `regenerate.SCHEMATICS` also ships a `.kicad_sch` and KiCad's render of it, so
-regenerating or testing that one needs `kicad-cli` on the path; one named in
+regenerating or testing that one needs `kicad-cli` on the path; without it the tests
+still check every one of its outputs but the render. One named in
 `regenerate.DRAFTED` also ships copperhead's draft under `out/copperhead/`, and
 needs `copperhead` there too; one named in `regenerate.EMULATED` ships each emulation question's
-plan, platform description and script under `out/renode/`, which need no emulator. Two things in an
+plan, platform description and script under `out/renode/`, which need no emulator. The textbook
+groups in `regenerate.FIGURES` are drafted by copperhead too, but by `examples/draw_figures.py`
+into each example's `figure/`, which neither `regenerate.py` nor the suite runs. A program that
+declares a module-level `BENCH` (the circuits under `examples/ti_opamp_handbook/`
+do, through its `handbook.py`) is simulated too: its `out/` ships each SPICE deck
+and a `simulation.txt` of measurements against claims, so it needs `ngspice`, and
+[tests/test_handbook.py](tests/test_handbook.py) fails on any claim that does not
+hold. Two things in an
 output are normalized before that comparison and only two: the compiler version
 and the snapshot hash, which covers provenance and so covers this checkout's
 absolute path. Add an example by adding the folder — the suite discovers it —
@@ -257,9 +265,9 @@ change with a proposal, a delta spec, and tasks. All twelve are archived under
 `openspec/changes/archive/<date>-<id>/`; a new stage starts with `/opsx:propose`. The ordering is a
 product ordering: stages 1–6 close the loop from a Fang program to a KiCad netlist. **All twelve
 stages are delivered**, and every acceptance criterion in the spec is demonstrated rather than
-deferred. Every stage ships working code and tests — nothing is a placeholder. Three changes are
-in flight under copperhead RFC 12 version 1.3 — `fang-verification`, `fang-mcu-parts` and
-`fang-emulation` — each built and tested, and archived once that revision is adopted.
+deferred. Every stage ships working code and tests; nothing is a placeholder. Three changes are
+in flight under copperhead RFC 12 version 1.3, `fang-verification`, `fang-mcu-parts` and
+`fang-emulation`, each built and tested, and archived once that revision is adopted.
 
 Use the `/opsx:*` skills (propose, apply, update, sync, archive, explore) for that workflow rather
 than editing `openspec/` artifacts ad hoc. `openspec/config.yaml` carries project context that
@@ -274,7 +282,7 @@ is copperhead's own, taken from `docs.copperhead.sh`, with two values nudged for
 reason recorded. Fang is a sub-brand of copperhead, so a change to the identity belongs upstream
 in copperhead's system first.
 [site/social/](site/social/) holds images for posting, drawn in that identity by its `make.py`
-from runs made as they are drawn — the firmware emulation renders run `sensor_node` and its broken
-builds in Renode — so no number on an image is typed in by hand.
+from runs made as they are drawn (the firmware emulation renders run `sensor_node` and its broken
+builds in Renode), so no number on an image is typed in by hand.
 
 RFC 2119 keywords in the spec and RFCs are normative.

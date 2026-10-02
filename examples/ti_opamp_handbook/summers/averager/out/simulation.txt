@@ -1,0 +1,56 @@
+# averager: SBOA092B page 65, Averager
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## average: operating point, `.op`
+
+  drive  e1: DC 1
+  drive  e2: DC 2
+  drive  e3: DC 4.5
+
+  e_o            -2.5 V   claimed -2.5 V +/- 0.1%, holds
+           -(1 + 2 + 4.5)/3 = -2.5 V
+  divisor             3   claimed 3 (inputs) +/- 0.1%, holds
+           -(E1 + E2 + E3)/E_O: the number of inputs
+
+## unused_input_grounded: operating point, `.op`
+
+  drive  e1: DC 1
+  drive  e2: DC 2
+  drive  e3: DC 0
+
+  e_o          -1 V   claimed -1 V +/- 0.1%, holds
+       E3 grounded: -(1 + 2 + 0)/3 = -1 V. The scale is kept, and the
+       grounded input counts as a zero in the average.
+
+## unused_input_open: operating point, `.op`
+
+  drive  e1: DC 1
+  drive  e2: DC 2
+
+  e_o              -1 V   claimed -1 V +/- 0.1%, holds
+           E3 left open gives the same -1 V: the open R_I sits at the
+           summing point's ground and carries nothing. The page's advice
+           does not change the scale of this circuit.
+  e3_open      1.002 uV   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (common): a terminal; it marks a node and adds nothing
+  TP2 (e1): a terminal; it marks a node and adds nothing
+  TP3 (e2): a terminal; it marks a node and adds nothing
+  TP4 (e3): a terminal; it marks a node and adds nothing
+  TP5 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+4 of 4 claims hold.

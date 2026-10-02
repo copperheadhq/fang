@@ -1,0 +1,49 @@
+* double_integrator: rule_step
+* plan for ngspice over sha256:78878477150d92b145ca5e45f57ba8656e09c2c3cb6b250c5c1f8d800ff21afd
+C1 1 0 1u
+C2 3 4 1u
+C3 4 5 1u
+* GND1 abstracted; no device emitted
+R1 6 1 1Meg
+R2 1 3 1Meg
+R3 4 0 10k
+* TP1 abstracted; no device emitted
+* TP2 abstracted; no device emitted
+* U1 abstracted; no device emitted
+.options abstol=1e-12
+.options method=gear
+.options reltol=1e-3
+.options vntol=1e-6
+.tran 1m 2.01
+* added by the bench: the drive, and the parts fang abstracted
+VDRIVE_e_in 6 0 PWL(0 0 10m 0 10.001m 0.1)
+XU1 0 3 5 HB_OPAMP A=1e+07 GBW=1e+07 VOH=13.5 VOL=-13.5 VOS=0
+* the rule's values, C_O = C_I/2 and R_O = R_I/2, beside the drawn circuit
+RRULE_I1 6 rule_t 1meg
+RRULE_I2 rule_t rule_sum 1meg
+CRULE_I rule_t 0 1u
+CRULE_O1 rule_sum rule_b 0.5u
+CRULE_O2 rule_b rule_out 0.5u
+RRULE_O rule_b 0 500k
+XRULE 0 rule_sum rule_out HB_OPAMP A=1e+07 GBW=1e+07 VOH=13.5 VOL=-13.5 VOS=0
+.subckt HB_OPAMP inp inn out A=1e6 GBW=1e7 VOH=13.5 VOL=-13.5 VOS=0
+VOS inp x DC {VOS}
+RIN x inn 1e12
+GM 0 n1 x inn 1e-3
+R1 n1 0 {A*1e3}
+C1 n1 0 {1e-3/(6.283185307179586*GBW)}
+DH n1 h HB_CLAMP
+VH h 0 DC {VOH}
+DL l n1 HB_CLAMP
+VL l 0 DC {VOL}
+EO out 0 n1 0 1
+.model HB_CLAMP D(IS=1e-15 N=0.01)
+.ends HB_OPAMP
+.control
+run
+meas tran e_1s find v(rule_out) at=1.01
+meas tran e_2s find v(rule_out) at=2.01
+let k_step = e_2s / (0.1 * 2 * 2 / 2)
+print k_step
+.endc
+.end

@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "parts": [
+    {
+      "ref": "C1",
+      "libId": "Device:C",
+      "value": "10uF",
+      "group": "Circuit"
+    },
+    {
+      "ref": "C2",
+      "libId": "Device:C",
+      "value": "10uF",
+      "group": "Circuit"
+    },
+    {
+      "ref": "GND1",
+      "libId": "power:GND",
+      "value": "GND",
+      "group": "Circuit"
+    },
+    {
+      "ref": "RV1",
+      "libId": "Device:R_Potentiometer",
+      "value": "Potentiometer",
+      "group": "Circuit"
+    },
+    {
+      "ref": "RV2",
+      "libId": "Device:R_Potentiometer",
+      "value": "Potentiometer",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP1",
+      "libId": "Connector:TestPoint",
+      "value": "E_IN",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP2",
+      "libId": "Connector:TestPoint",
+      "value": "E_OUT",
+      "group": "Circuit"
+    },
+    {
+      "ref": "U1",
+      "libId": "Simulation_SPICE:OPAMP",
+      "value": "OPAMP",
+      "group": "Circuit"
+    }
+  ],
+  "nets": [
+    {
+      "name": "Net-(C1-Pad1)",
+      "pins": [
+        "C1.1",
+        "RV1.2"
+      ]
+    },
+    {
+      "name": "GND",
+      "pins": [
+        "C1.2",
+        "C2.2",
+        "GND1.1",
+        "U1.1"
+      ],
+      "kind": "ground"
+    },
+    {
+      "name": "Net-(C2-Pad1)",
+      "pins": [
+        "C2.1",
+        "RV2.2"
+      ]
+    },
+    {
+      "name": "Net-(RV1-Pad1)",
+      "pins": [
+        "RV1.1",
+        "RV2.3",
+        "U1.2"
+      ]
+    },
+    {
+      "name": "E_OUT",
+      "pins": [
+        "RV1.3",
+        "TP2.1",
+        "U1.5"
+      ]
+    },
+    {
+      "name": "E_IN",
+      "pins": [
+        "RV2.1",
+        "TP1.1"
+      ]
+    }
+  ],
+  "hints": {
+    "date": "2026-01-01"
+  }
+}

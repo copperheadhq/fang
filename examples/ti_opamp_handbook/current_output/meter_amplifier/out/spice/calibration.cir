@@ -1,0 +1,54 @@
+* meter_amplifier: calibration
+* plan for ngspice over sha256:e7303b8c6d06066da08676b15d67bccb4c1cac79da6c5cb799190d5c54c13b36
+C1 1 2 1u
+C2 3 4 10u
+C3 5 4 10u
+* D1 abstracted; no device emitted
+* D2 abstracted; no device emitted
+* GND1 abstracted; no device emitted
+* M1 abstracted; no device emitted
+R1 6 4 220k
+R2 2 0 220k
+R3 4 10 47
+R4 3 9 100
+R5 5 8 100
+R6 9 8 68k
+* RV1 abstracted; no device emitted
+* TP1 abstracted; no device emitted
+* U1 abstracted; no device emitted
+.options abstol=1e-12
+.options method=gear
+.options reltol=1e-3
+.options vntol=1e-6
+.tran 2u 200m
+* added by the bench: the drive, and the parts fang abstracted
+VDRIVE_e_in 1 0 SIN(0 0.141421356 1k)
+DD1 3 6 D1N4148
+DD2 6 5 D1N4148
+RM1 8 sense_M1 100
+VM1_SENSE sense_M1 9 DC 0
+RRV1_A 10 10 0.001
+RRV1_B 10 0 100
+XU1 2 4 6 HB_OPAMP A=1e+06 GBW=1e+07 VOH=13.5 VOL=-13.5 VOS=0
+.model D1N4148 D(IS=2.52e-9 RS=0.568 N=1.752 CJO=4e-12 M=0.4 TT=20e-9 BV=100 IBV=100e-6)
+.subckt HB_OPAMP inp inn out A=1e6 GBW=1e7 VOH=13.5 VOL=-13.5 VOS=0
+VOS inp x DC {VOS}
+RIN x inn 1e12
+GM 0 n1 x inn 1e-3
+R1 n1 0 {A*1e3}
+C1 n1 0 {1e-3/(6.283185307179586*GBW)}
+DH n1 h HB_CLAMP
+VH h 0 DC {VOH}
+DL l n1 HB_CLAMP
+VL l 0 DC {VOL}
+EO out 0 n1 0 1
+.model HB_CLAMP D(IS=1e-15 N=0.01)
+.ends HB_OPAMP
+.control
+run
+meas tran i_avg avg i(vm1_sense) from=100m to=200m
+meas tran e_rms rms v(1) from=100m to=200m
+let reading_per_volt = i_avg / e_rms
+print reading_per_volt
+.endc
+.end

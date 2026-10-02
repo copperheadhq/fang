@@ -32,14 +32,14 @@ a program that tries to state one is refused.
 
 ## What comes out
 
-4 parts, 3 nets, 37 entities, 2 checks, none failed and both undecided -- until
+4 parts, 3 nets, 37 entities, 2 checks, none failed and both undecided, until
 the question is answered.
 
 [`out/verification.txt`](out/verification.txt) is the file to read. On the
 elaborated program the constraint is undecided, so the question routes to the
 circuit level and ngspice answers it: 1590 Hz, inside the band, PASS. The
-measurement re-enters as a transaction -- the corner set to an inferred value
-whose source is the run's evidence -- and the gate's constraint check decides
+measurement re-enters as a transaction (the corner set to an inferred value
+whose source is the run's evidence) and the gate's constraint check decides
 the constraint. Asked again on that committed head, the same question is
 answered at the equation level: the evaluator already decides the constraint,
 so nothing runs.

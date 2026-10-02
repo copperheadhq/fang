@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "parts": [
+    {
+      "ref": "GND1",
+      "libId": "power:GND",
+      "value": "GND",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R1",
+      "libId": "Device:R",
+      "value": "20k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP1",
+      "libId": "Connector:TestPoint",
+      "value": "OUT",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP2",
+      "libId": "Connector:TestPoint",
+      "value": "OUT_RETURN",
+      "group": "Circuit"
+    },
+    {
+      "ref": "U1",
+      "libId": "Simulation_SPICE:OPAMP",
+      "value": "OPAMP",
+      "group": "Circuit"
+    },
+    {
+      "ref": "V1",
+      "libId": "Device:Battery_Cell",
+      "value": "1.0183V",
+      "group": "Circuit"
+    }
+  ],
+  "nets": [
+    {
+      "name": "GND",
+      "pins": [
+        "GND1.1",
+        "R1.2",
+        "TP2.1",
+        "V1.2"
+      ],
+      "kind": "ground"
+    },
+    {
+      "name": "OUT",
+      "pins": [
+        "R1.1",
+        "TP1.1",
+        "U1.2",
+        "U1.5"
+      ]
+    },
+    {
+      "name": "Net-(U1-PadIN+)",
+      "pins": [
+        "U1.1",
+        "V1.1"
+      ]
+    }
+  ],
+  "hints": {
+    "date": "2026-01-01"
+  }
+}

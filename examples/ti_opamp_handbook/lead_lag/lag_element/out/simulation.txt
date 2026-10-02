@@ -1,0 +1,41 @@
+# lag_element: SBOA092B page 84, Lag Element
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## dc_gain: operating point, `.op`
+
+  drive  e_in: DC 1
+
+  gain         -0.01   claimed -0.01 (a_v) +/- 0.1%, holds
+        the page's -10/(10 + P) has a DC gain of -1; with the drawn 1 MOhm
+        in and 10 kOhm across it is -0.01
+
+## corner: ac, `.ac dec 200 10m 1k`
+
+The -3 dB point is 3.0103 dB under the DC gain of -40 dB.
+
+  drive  e_in: DC 0 AC 1
+
+  gain_low          0.01   claimed 0.01 +/- 0.1%, holds
+            |a_v|, a decade and more below the corner
+  f_3db         1.592 Hz   claimed 1.592 Hz (f_c) +/- 0.5%, holds
+            10 rad/s, the pole the page prints, which the drawn R_O C_O =
+            0.1 s does give
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+3 of 3 claims hold.

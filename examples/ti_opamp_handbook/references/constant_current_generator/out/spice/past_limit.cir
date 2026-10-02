@@ -1,0 +1,45 @@
+* constant_current_generator: past_limit
+* plan for ngspice over sha256:a4e0a0da5548c4fa72ddeb903105d35c6fd4d44c19c0266879c7833196263074
+* D1 abstracted; no device emitted
+* GND1 abstracted; no device emitted
+R1 3 2 330
+R2 2 4 300
+* RV1 abstracted; no device emitted
+* TP1 abstracted; no device emitted
+* TP2 abstracted; no device emitted
+* U1 abstracted; no device emitted
+V1 3 0 15
+.options abstol=1e-12
+.options method=gear
+.options reltol=1e-3
+.options vntol=1e-6
+.op
+* added by the bench: the drive, and the parts fang abstracted
+DD1 0 2 DZ_D1
+RRV1_A 4 5 800
+RRV1_B 5 5 0.001
+XU1 0 4 5 HB_OPAMP A=1e+06 GBW=1e+07 VOH=13.5 VOL=-13.5 VOS=0
+.model DZ_D1 D(IS=1e-12 N=1.5 RS=2 BV=6 IBV=5m NBV=1.5)
+.subckt HB_OPAMP inp inn out A=1e6 GBW=1e7 VOH=13.5 VOL=-13.5 VOS=0
+VOS inp x DC {VOS}
+RIN x inn 1e12
+GM 0 n1 x inn 1e-3
+R1 n1 0 {A*1e3}
+C1 n1 0 {1e-3/(6.283185307179586*GBW)}
+DH n1 h HB_CLAMP
+VH h 0 DC {VOH}
+DL l n1 HB_CLAMP
+VL l 0 DC {VOL}
+EO out 0 n1 0 1
+.model HB_CLAMP D(IS=1e-15 N=0.01)
+.ends HB_OPAMP
+.control
+run
+let i_load = (v(4) - v(5)) / 800
+print i_load
+let e_out = v(5)
+print e_out
+let i_over_divider = (v(4) - v(5)) / 800 * 1100 / (v(2) + 13.5)
+print i_over_divider
+.endc
+.end

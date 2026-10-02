@@ -1,0 +1,45 @@
+# precision_rectifier: SBOA092B page 88, Precision Rectifier
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## transfer: dc, `.dc VDRIVE_e_in -2 2 0.01`
+
+  drive  e_in: DC 0
+
+  gain_negative            -5   claimed -5 (a_v) +/- 0.1%, holds
+  e_at_plus_1       -19.69 uV   claimed 0 V +/- 1 mV, holds
+                 the other half: the upper diode is off and E_O rests on the
+                 virtual ground through R_O
+  e_at_minus_1            5 V   not a claim
+
+## half_wave: transient, `.tran 1u 3m`
+
+E_I is a 1 V peak, 1 kHz sine; the last two cycles are measured. The one
+excursion below zero is a spike of a few microseconds as E_I crosses zero
+going positive, while the op amp output swings across the two diode drops
+and the upper diode recovers. It is reported, not claimed.
+
+  drive  e_in: SIN(0 1 1k)
+
+  e_peak             5 V   claimed 5 V +/- 0.2%, holds
+            -5 times the -1 V peak of E_I
+  e_off        -19.77 uV   claimed 0 V +/- 1 mV, holds
+            at the positive peak of E_I: E_O stays at zero, without a diode
+            drop
+  e_glitch     -8.816 mV   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  D1 (d_clamp): 1N4148 diode model
+  D2 (d_out): 1N4148 diode model
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+4 of 4 claims hold.

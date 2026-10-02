@@ -1,0 +1,117 @@
+(export
+  (version "E")
+  (design
+    (source "integrator.py")
+    (tool "fang 0.1.0")
+    (snapshot "sha256:16000664b7de374db6c6857d6d547d2ff5f6e0fe7381d12bf60a339f567eb096")
+    (project "PRJ-EXAMPLES")
+  )
+  (components
+    (comp
+      (ref "C1")
+      (value "0.1 uF")
+      (property
+        (name "fang_id")
+        (value "CMP-d0f40f6fc9a3")
+      )
+    )
+    (comp
+      (ref "GND1")
+      (value "Ground")
+      (property
+        (name "fang_id")
+        (value "CMP-2a934da363ec")
+      )
+    )
+    (comp
+      (ref "R1")
+      (value "10 kOhm")
+      (property
+        (name "fang_id")
+        (value "CMP-ba02db80e645")
+      )
+    )
+    (comp
+      (ref "TP1")
+      (value "Terminal")
+      (property
+        (name "fang_id")
+        (value "CMP-103230d81393")
+      )
+    )
+    (comp
+      (ref "TP2")
+      (value "Terminal")
+      (property
+        (name "fang_id")
+        (value "CMP-a263a1d98125")
+      )
+    )
+    (comp
+      (ref "U1")
+      (value "OpAmp")
+      (property
+        (name "fang_id")
+        (value "CMP-ed601b553153")
+      )
+    )
+  )
+  (nets
+    (net
+      (code "1")
+      (name "Net-(C1-Pad1)")
+      (node
+        (ref "C1")
+        (pin "1")
+      )
+      (node
+        (ref "R1")
+        (pin "2")
+      )
+      (node
+        (ref "U1")
+        (pin "IN-")
+      )
+    )
+    (net
+      (code "2")
+      (name "Net-(C1-Pad2)")
+      (node
+        (ref "C1")
+        (pin "2")
+      )
+      (node
+        (ref "TP2")
+        (pin "1")
+      )
+      (node
+        (ref "U1")
+        (pin "OUT")
+      )
+    )
+    (net
+      (code "3")
+      (name "Net-(GND1-Pad1)")
+      (node
+        (ref "GND1")
+        (pin "1")
+      )
+      (node
+        (ref "U1")
+        (pin "IN+")
+      )
+    )
+    (net
+      (code "4")
+      (name "Net-(R1-Pad1)")
+      (node
+        (ref "R1")
+        (pin "1")
+      )
+      (node
+        (ref "TP1")
+        (pin "1")
+      )
+    )
+  )
+)

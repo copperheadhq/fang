@@ -1,0 +1,47 @@
+# adjustable_lead: SBOA092B page 85, Adjustable Lead
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## dc_gain: operating point, `.op`
+
+  drive  e_in: DC 1
+
+  gain            -1   claimed -1 (a_v) +/- 0.1%, holds
+        the printed -[(D - D^2) R C P] E_I would give 0 here; the drawn
+        circuit gives -1
+
+## lead: ac, `.ac dec 200 100m 1k`
+
+D = 1/2. The rise flattens only where the op amp runs out of loop gain, far
+above this sweep.
+
+  drive  e_in: DC 0 AC 1
+
+  f_3db         6.366 Hz   claimed 6.366 Hz (f_z) +/- 0.5%, holds
+            where the gain has risen 3 dB above unity
+  gain_z           1.414   claimed 1.414 +/- 0.5%, holds
+            |1 + j| at the zero; without the 1 it would be 1
+  phase_z         -2.356   claimed -2.356 +/- 0.5%, holds
+            radians: -135 degrees, the inversion less the zero's 45
+  gain_10z         10.05   claimed 10.05 +/- 0.5%, holds
+            |1 + 10 j| a decade above the zero; the op amp's 10 MHz is far
+            off
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  RV1 (pot): 10 kOhm split at the wiper, set to 0.5 of its travel
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+5 of 5 claims hold.

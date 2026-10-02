@@ -1,0 +1,61 @@
+* regenerative_integrator: hold_without_regeneration
+* plan for ngspice over sha256:6b3be0a9f8b0acc62886ec5d32bef0c814d5c03cbdffe2a78eeb23ebc727f452
+C1 1 2 1u
+* GND1 abstracted; no device emitted
+R1 4 1 100k
+R2 5 6 10k
+R3 7 8 100k
+R4 8 2 10Meg
+R5 8 9 1k
+R6 10 1 1Meg
+R7 10 7 1Meg
+R8 11 12 10k
+* RV1 abstracted; no device emitted
+* RV2 abstracted; no device emitted
+* SW1 abstracted; no device emitted
+* TP1 abstracted; no device emitted
+* TP2 abstracted; no device emitted
+* TP3 abstracted; no device emitted
+* TP4 abstracted; no device emitted
+* U1 abstracted; no device emitted
+.options abstol=1e-12
+.options method=gear
+.options reltol=1e-3
+.options vntol=1e-6
+.tran 10m 101
+* added by the bench: the drive, and the parts fang abstracted
+VDRIVE_rail_minus 5 0 DC -15
+VDRIVE_rail_plus 11 0 DC 15
+RRV1_A 9 0 500
+RRV1_B 0 0 1500
+RRV2_A 12 10 5000
+RRV2_B 10 6 5000
+SSW1 1 2 ctl_SW1 0 HB_SWITCH
+VSW1_CTL ctl_SW1 0 PWL(0 1 10m 1 10.001m 0)
+XU1 7 1 2 HB_OPAMP A=5000 GBW=1e+07 VOH=13.5 VOL=-13.5 VOS=0
+VSIG sig 0 DC 1
+SSIG sig 4 sig_ctl 0 HB_SWITCH
+VSIG_CTL sig_ctl 0 PWL(0 1 510m 1 510.1m 0)
+RNOREGEN 8 0 1m
+.subckt HB_OPAMP inp inn out A=1e6 GBW=1e7 VOH=13.5 VOL=-13.5 VOS=0
+VOS inp x DC {VOS}
+RIN x inn 1e12
+GM 0 n1 x inn 1e-3
+R1 n1 0 {A*1e3}
+C1 n1 0 {1e-3/(6.283185307179586*GBW)}
+DH n1 h HB_CLAMP
+VH h 0 DC {VOH}
+DL l n1 HB_CLAMP
+VL l 0 DC {VOL}
+EO out 0 n1 0 1
+.model HB_CLAMP D(IS=1e-15 N=0.01)
+.ends HB_OPAMP
+.model HB_SWITCH SW(VT=0.5 VH=0.1 RON=1 ROFF=1e12)
+.control
+run
+meas tran e_1s find v(2) at=1
+meas tran e_101s find v(2) at=101
+let tau = -100 / ln(e_101s / e_1s)
+print tau
+.endc
+.end

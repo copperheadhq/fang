@@ -1,0 +1,317 @@
+(export
+  (version "E")
+  (design
+    (source "clamped_comparator.py")
+    (tool "fang 0.1.0")
+    (snapshot "sha256:61babec069b4eb318fd3a920c796d0225b9a5ae9bbfff65f6a742d69ee837319")
+    (project "PRJ-EXAMPLES")
+  )
+  (components
+    (comp
+      (ref "D1")
+      (value "SignalDiode")
+      (property
+        (name "fang_id")
+        (value "CMP-3e4b90336913")
+      )
+    )
+    (comp
+      (ref "D2")
+      (value "SignalDiode")
+      (property
+        (name "fang_id")
+        (value "CMP-b8d398ccfff2")
+      )
+    )
+    (comp
+      (ref "GND1")
+      (value "Ground")
+      (property
+        (name "fang_id")
+        (value "CMP-2a934da363ec")
+      )
+    )
+    (comp
+      (ref "R1")
+      (value "100 kOhm")
+      (property
+        (name "fang_id")
+        (value "CMP-1116cb228fe1")
+      )
+    )
+    (comp
+      (ref "R2")
+      (value "1 MOhm")
+      (property
+        (name "fang_id")
+        (value "CMP-37372974c055")
+      )
+    )
+    (comp
+      (ref "R3")
+      (value "15 kOhm")
+      (property
+        (name "fang_id")
+        (value "CMP-ce0027290805")
+      )
+    )
+    (comp
+      (ref "R4")
+      (value "15 kOhm")
+      (property
+        (name "fang_id")
+        (value "CMP-32ec3106ee98")
+      )
+    )
+    (comp
+      (ref "R5")
+      (value "10 kOhm")
+      (property
+        (name "fang_id")
+        (value "CMP-491f26900685")
+      )
+    )
+    (comp
+      (ref "R6")
+      (value "3 kOhm")
+      (property
+        (name "fang_id")
+        (value "CMP-4578b9429a66")
+      )
+    )
+    (comp
+      (ref "TP1")
+      (value "Terminal")
+      (property
+        (name "fang_id")
+        (value "CMP-103230d81393")
+      )
+    )
+    (comp
+      (ref "TP2")
+      (value "Terminal")
+      (property
+        (name "fang_id")
+        (value "CMP-5b9125ed26d3")
+      )
+    )
+    (comp
+      (ref "TP3")
+      (value "Terminal")
+      (property
+        (name "fang_id")
+        (value "CMP-a263a1d98125")
+      )
+    )
+    (comp
+      (ref "TP4")
+      (value "Terminal")
+      (property
+        (name "fang_id")
+        (value "CMP-7a58a2bcd730")
+      )
+    )
+    (comp
+      (ref "TP5")
+      (value "Terminal")
+      (property
+        (name "fang_id")
+        (value "CMP-6e1f9b254399")
+      )
+    )
+    (comp
+      (ref "U1")
+      (value "OpAmp")
+      (property
+        (name "fang_id")
+        (value "CMP-ed601b553153")
+      )
+    )
+    (comp
+      (ref "V1")
+      (value "15 V")
+      (property
+        (name "fang_id")
+        (value "CMP-723c86ecca3f")
+      )
+    )
+    (comp
+      (ref "V2")
+      (value "15 V")
+      (property
+        (name "fang_id")
+        (value "CMP-f7a218b72aad")
+      )
+    )
+    (comp
+      (ref "V3")
+      (value "15 V")
+      (property
+        (name "fang_id")
+        (value "CMP-93cfce9cb79b")
+      )
+    )
+  )
+  (nets
+    (net
+      (code "1")
+      (name "Net-(D1-PadA)")
+      (node
+        (ref "D1")
+        (pin "A")
+      )
+      (node
+        (ref "D2")
+        (pin "K")
+      )
+      (node
+        (ref "R1")
+        (pin "2")
+      )
+      (node
+        (ref "R2")
+        (pin "2")
+      )
+      (node
+        (ref "U1")
+        (pin "IN-")
+      )
+    )
+    (net
+      (code "2")
+      (name "Net-(D1-PadK)")
+      (node
+        (ref "D1")
+        (pin "K")
+      )
+      (node
+        (ref "R3")
+        (pin "2")
+      )
+      (node
+        (ref "R5")
+        (pin "1")
+      )
+    )
+    (net
+      (code "3")
+      (name "Net-(D2-PadA)")
+      (node
+        (ref "D2")
+        (pin "A")
+      )
+      (node
+        (ref "R4")
+        (pin "1")
+      )
+      (node
+        (ref "R6")
+        (pin "2")
+      )
+    )
+    (net
+      (code "4")
+      (name "Net-(GND1-Pad1)")
+      (node
+        (ref "GND1")
+        (pin "1")
+      )
+      (node
+        (ref "TP2")
+        (pin "1")
+      )
+      (node
+        (ref "TP4")
+        (pin "1")
+      )
+      (node
+        (ref "U1")
+        (pin "IN+")
+      )
+      (node
+        (ref "V1")
+        (pin "+")
+      )
+      (node
+        (ref "V2")
+        (pin "-")
+      )
+      (node
+        (ref "V3")
+        (pin "+")
+      )
+    )
+    (net
+      (code "5")
+      (name "Net-(R1-Pad1)")
+      (node
+        (ref "R1")
+        (pin "1")
+      )
+      (node
+        (ref "TP1")
+        (pin "1")
+      )
+    )
+    (net
+      (code "6")
+      (name "Net-(R2-Pad1)")
+      (node
+        (ref "R2")
+        (pin "1")
+      )
+      (node
+        (ref "TP5")
+        (pin "1")
+      )
+      (node
+        (ref "V3")
+        (pin "-")
+      )
+    )
+    (net
+      (code "7")
+      (name "Net-(R3-Pad1)")
+      (node
+        (ref "R3")
+        (pin "1")
+      )
+      (node
+        (ref "V2")
+        (pin "+")
+      )
+    )
+    (net
+      (code "8")
+      (name "Net-(R4-Pad2)")
+      (node
+        (ref "R4")
+        (pin "2")
+      )
+      (node
+        (ref "V1")
+        (pin "-")
+      )
+    )
+    (net
+      (code "9")
+      (name "Net-(R5-Pad2)")
+      (node
+        (ref "R5")
+        (pin "2")
+      )
+      (node
+        (ref "R6")
+        (pin "1")
+      )
+      (node
+        (ref "TP3")
+        (pin "1")
+      )
+      (node
+        (ref "U1")
+        (pin "OUT")
+      )
+    )
+  )
+)

@@ -1,7 +1,7 @@
 """The smallest program that drives something: an MCU pin, a resistor, an LED.
 
-The board everybody builds first. What it shows is the shape of a Fang program —
-declared surfaces, connections between them, and a constraint that states the
+The board everybody builds first. What it shows is the shape of a Fang program:
+declared surfaces, connections between them and a constraint that states the
 engineering intent rather than the answer.
 """
 

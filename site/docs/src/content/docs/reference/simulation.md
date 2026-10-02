@@ -51,8 +51,8 @@ the difference the plan records.
 
 Verification levels run one to five, cheapest first: equation, symbolic,
 behavioural, circuit, external. A declared question is routed by `route()`,
-which looks at the graph -- if the constraints over what it measures are
-already decided, the equation level answers it and nothing runs -- and the
+which looks at the graph (if the constraints over what it measures are
+already decided, the equation level answers it and nothing runs) and the
 level and tool it chose are written on the verification. `select_level()`
 remains for a caller that knows the answers to its questions already. See
 [Verification](/reference/verification/).

@@ -1,0 +1,39 @@
+* differential_input_amplifier: difference
+* plan for ngspice over sha256:80bb073afbe5b3e6c374c201d2f0228bcfe1f7b704e239d9d2ac11f7452f24a9
+* GND1 abstracted; no device emitted
+R1 2 3 10k
+R2 4 5 10k
+R3 5 0 100k
+R4 3 6 100k
+* TP1 abstracted; no device emitted
+* TP2 abstracted; no device emitted
+* TP3 abstracted; no device emitted
+* U1 abstracted; no device emitted
+.options abstol=1e-12
+.options method=gear
+.options reltol=1e-3
+.options vntol=1e-6
+.op
+* added by the bench: the drive, and the parts fang abstracted
+VDRIVE_e1 2 0 DC 0.3
+VDRIVE_e2 4 0 DC 0.5
+XU1 5 3 6 HB_OPAMP A=1e+06 GBW=1e+07 VOH=13.5 VOL=-13.5 VOS=0
+.subckt HB_OPAMP inp inn out A=1e6 GBW=1e7 VOH=13.5 VOL=-13.5 VOS=0
+VOS inp x DC {VOS}
+RIN x inn 1e12
+GM 0 n1 x inn 1e-3
+R1 n1 0 {A*1e3}
+C1 n1 0 {1e-3/(6.283185307179586*GBW)}
+DH n1 h HB_CLAMP
+VH h 0 DC {VOH}
+DL l n1 HB_CLAMP
+VL l 0 DC {VOL}
+EO out 0 n1 0 1
+.model HB_CLAMP D(IS=1e-15 N=0.01)
+.ends HB_OPAMP
+.control
+run
+let e_o = v(6)
+print e_o
+.endc
+.end

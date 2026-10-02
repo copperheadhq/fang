@@ -1,0 +1,11 @@
+GND1   Ground           -
+R1     1018.3 Ohm       -
+RV1    Potentiometer    -
+TP1    Terminal         -
+TP2    Terminal         -
+U1     OpAmp            -
+V1     1.0183 V         -
+Net-(GND1-Pad1)          GND1.1 R1.2 TP2.1 U1.IN+
+Net-(R1-Pad1)            R1.1 RV1.1 V1.+
+Net-(RV1-Pad2)           RV1.2 RV1.3 TP1.1 U1.OUT
+Net-(U1-PadIN-)          U1.IN- V1.-

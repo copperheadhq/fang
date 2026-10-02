@@ -20,17 +20,23 @@ from pathlib import Path
 import pytest
 
 from examples.regenerate import (
+    DRAFTED,
     PROJECT,
     examples as example_names,
     render as regenerate,
+    schematic_of,
+    simulated,
     verification_tools,
 )
 from fang.checks import DEFAULT_CHECKS
 from fang.cli import load_system
 from fang.constraints import CheckStatus
+from fang.copperhead import CopperheadDrafter
 from fang.elaborate import elaborate
 from fang.kicad import emit_netlist
 from fang.netlist import compile_netlist
+from fang.schematic import KicadRenderer
+from fang.simulation import NgspiceBackend
 from fang.verification import TOOLS, questions
 
 ROOT = Path(__file__).resolve().parent.parent / "examples"
@@ -77,6 +83,27 @@ def build(path: Path):
 def name(request):
     """The example under test, named by its path relative to examples/."""
     return request.param
+
+
+#: The outputs only a tool can make: KiCad's render of a schematic, and
+#: copperhead's draft of one, with KiCad's render of that.
+def tool_made(relative: str) -> bool:
+    return relative == "schematic.svg" or relative.startswith("copperhead/")
+
+
+@pytest.fixture
+def renderable(name):
+    """Whether this example's outputs can all be made here. One that ships a
+    schematic ships KiCad's render of it, which needs `kicad-cli`, and one
+    that ships copperhead's draft needs `copperhead` as well; without them
+    those files are left out and every other output is still checked. One
+    that carries a bench ships what ngspice measured, and nothing of that can
+    be checked without `ngspice`."""
+    if simulated(name) and not NgspiceBackend().available():
+        pytest.skip("ngspice is not installed here")
+    if name in DRAFTED and not CopperheadDrafter().available():
+        return False
+    return not (schematic_of(name) or name in DRAFTED) or KicadRenderer().available()
 
 
 @pytest.fixture
@@ -129,20 +156,22 @@ def test_an_example_builds_identically_twice(example):
     assert first.hash == second.hash
 
 
-def test_an_example_ships_the_outputs_it_documents(example, name):
+def test_an_example_ships_the_outputs_it_documents(example, name, renderable):
     """A folder with no out/ is a folder that documents nothing."""
     out = example.parent / "out"
     committed = {
         path.relative_to(out).as_posix() for path in out.rglob("*") if path.is_file()
     }
-    assert committed == set(render(name))
+    if not renderable:
+        committed = {relative for relative in committed if not tool_made(relative)}
+    assert committed == set(render(name, with_render=renderable))
 
 
-def test_a_committed_output_still_matches_the_program(example, name):
+def test_a_committed_output_still_matches_the_program(example, name, renderable):
     """Regenerate every output and compare; `python examples/regenerate.py`
     is the fix when this fails."""
     out = example.parent / "out"
-    for relative, text in sorted(render(name).items()):
+    for relative, text in sorted(render(name, with_render=renderable).items()):
         if relative == VERIFICATION:
             continue
         assert stable((out / relative).read_text(encoding="utf-8")) == stable(text), relative

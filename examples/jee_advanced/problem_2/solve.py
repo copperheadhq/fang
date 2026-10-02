@@ -51,7 +51,7 @@ CONTROL = ".control\nop\nprint all\n.endc\n.end"
 
 NODE = re.compile(r"^[vV]\((\d+)\)\s*=\s*([-+0-9.eE]+)$")
 
-QUESTION = "JEE (Advanced) 2015, question 13: the value of I"
+QUESTION = "JEE (Advanced) 2015, Paper 2, question 8: the value of I"
 
 #: What the paper asks, the part in the program that answers it, and the
 #: magnitude the paper claims. The two zero-current branches are not asked for

@@ -158,7 +158,7 @@ python -m pytest
 Pure Python 3.11+, and the core install has no dependencies at all. Everything
 else is optional and none of it is required: NetworkX, an extra used for graph
 *analysis*; the MCP SDK, the extra behind `fang mcp`; and four external tools
-reached across a process boundary -- ngspice and Xyce, which simulate,
+reached across a process boundary: ngspice and Xyce, which simulate,
 `kicad-cli`, which renders schematics and checks their electrical rules, and
 Renode, which runs a board's firmware. When any of them is absent the toolchain
 says so rather than substituting anything.
@@ -182,7 +182,7 @@ says so rather than substituting anything.
 ## Tests
 
 ```bash
-python -m pytest          # 830 tests; those needing a binary skip by name
+python -m pytest          # 1499 tests; those needing a binary skip by name
 python -m pytest -rs      # names each environment-dependent skip
 ```
 
@@ -233,7 +233,7 @@ in [tests/test_examples.py](https://github.com/copperheadhq/fang/blob/main/tests
   quadrature encoder, from one block declaration instantiated three times
 - [examples/jee_advanced/](https://github.com/copperheadhq/fang/tree/main/examples/jee_advanced/): two exam
   questions rather than two boards, each answered by constraints the checker
-  decides — one paper's four claimed currents, and one claimed current beside
+  decides: one paper's four claimed currents, and one claimed current beside
   the two branches that carry none
 - [examples/noninverting_amp/](https://github.com/copperheadhq/fang/tree/main/examples/noninverting_amp/): a textbook
   figure's input impedance and gain, with the reading of the drawing they rest

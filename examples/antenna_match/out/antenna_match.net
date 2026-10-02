@@ -3,7 +3,7 @@
   (design
     (source "antenna_match.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:4130aa3cd92bfa772193b693c7143a2b103c62b9fd557bf3028ae63ad9c1de9b")
+    (snapshot "sha256:0929bae13a7c88649e7d19b4302b8f7ed88ee54540af0e38aede7ab4bfd2f235")
     (project "PRJ-EXAMPLES")
   )
   (components

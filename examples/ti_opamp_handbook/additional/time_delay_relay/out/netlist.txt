@@ -1,0 +1,24 @@
+C1     10 uF            -
+D1     SignalDiode      -
+D2     SignalDiode      -
+D3     SignalDiode      -
+GND1   Ground           -
+M1     Meter            -
+R1     100 kOhm         -
+R2     4.7 kOhm         -
+R3     10 kOhm          -
+R4     10 kOhm          -
+R5     10 kOhm          -
+RV1    Potentiometer    -
+SW1    Switch           -
+U1     OpAmp            -
+V1     15 V             -
+Net-(C1-Pad1)            C1.1 D1.A R1.2 U1.IN-
+Net-(C1-Pad2)            C1.2 D3.K R4.1
+Net-(D1-PadK)            D1.K R2.1 R3.2
+Net-(D2-PadA)            D2.A M1.2
+Net-(D2-PadK)            D2.K D3.A R5.2 SW1.1
+Net-(GND1-Pad1)          GND1.1 M1.1 R4.2 RV1.1 U1.IN+ V1.-
+Net-(R1-Pad1)            R1.1 RV1.2
+Net-(R2-Pad2)            R2.2 SW1.2 U1.OUT
+Net-(R3-Pad1)            R3.1 R5.1 RV1.3 V1.+

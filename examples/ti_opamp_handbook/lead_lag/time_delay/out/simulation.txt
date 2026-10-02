@@ -1,0 +1,48 @@
+# time_delay: SBOA092B page 86, Time Delay
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## dc_gain: operating point, `.op`
+
+  drive  e_in: DC 1
+
+  gain            -1   claimed -1 (a_v) +/- 0.1%, holds
+
+## step: transient, `.tran 1u 5m`
+
+A 1 V step at t = 0. The sketch has the output still until RC and then
+moving; the simulated edge is smoother than that, already 10% of the way at
+0.46 RC, but its middle sits at RC and it takes 1.1 RC from 10% to 90%.
+
+  drive  e_in: PULSE(0 1 0 1n 1n 1 2)
+
+  t50            589.1 us   claimed 600 us (rc) +/- 5%, holds
+             the 50% point of the inverted step, against the RC the sketch
+             marks; the page draws the delay and prints no formula, so the
+             claim is held to 5%
+  rise           671.2 us   claimed 660 us (rise) +/- 5%, holds
+             10% to 90%, against the sketch's 1.1 RC, held to 5% for the
+             same reason
+  final              -1 V   claimed -1 V (a_v) +/- 0.1%, holds
+             a 1 V step settles at -1 V
+  t10            275.4 us   not a claim
+  t90            946.6 us   not a claim
+  overshoot      -1.022 V   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+4 of 4 claims hold.

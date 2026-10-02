@@ -1,0 +1,14 @@
+C1     15.9 nF          -
+C2     15.9 nF          -
+C3     31.8 nF          -
+GND1   Ground           -
+R1     10 kOhm          -
+R2     10 kOhm          -
+RV1    Potentiometer    -
+TP1    Terminal         -
+U1     OpAmp            -
+Net-(C1-Pad1)            C1.1 R1.1 TP1.1 U1.OUT
+Net-(C1-Pad2)            C1.2 C2.1 RV1.1
+Net-(C2-Pad2)            C2.2 R2.2 U1.IN-
+Net-(C3-Pad1)            C3.1 R1.2 R2.1
+Net-(C3-Pad2)            C3.2 GND1.1 RV1.2 RV1.3 U1.IN+

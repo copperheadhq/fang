@@ -1,0 +1,57 @@
+# differential_input_output: SBOA092B page 75, Differential Input-Output
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## difference: operating point, `.op`
+
+E_O is the top output less the bottom one. Where the bottom output sits is
+set inside the op amp; this model centres the pair on ground, so it is
+-E_O/2 here and not a handbook claim.
+
+  drive  e1: DC 0.1
+  drive  e2: DC 0.4
+
+  gain            10   claimed 10 (a_d) +/- 0.1%, holds
+  e_p         -1.5 V   not a claim
+
+## floating_load: operating point, `.op`
+
+The load (see `load`) is a card, since the figure draws none. The model's
+outputs are ideal, so the load cannot pull them; a real part's output
+resistance would.
+
+  drive  e1: DC 0.1
+  drive  e2: DC 0.4
+
+  e_o              3 V   claimed 3 V +/- 0.1%, holds
+          10 x 0.3 V, with 1 kOhm across the outputs and no ground on it
+  i_load          3 mA   not a claim
+
+## common_mode: operating point, `.op`
+
+  drive  e1: DC 1
+  drive  e2: DC 1
+
+  e_o      2.285 fV   claimed 0 V +/- 100 uV, holds
+       1 V on both inputs gives no difference out
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (common): a terminal; it marks a node and adds nothing
+  TP2 (e1): a terminal; it marks a node and adds nothing
+  TP3 (e2): a terminal; it marks a node and adds nothing
+  TP4 (e_o): a terminal; it marks a node and adds nothing
+  TP5 (e_p): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+3 of 3 claims hold.

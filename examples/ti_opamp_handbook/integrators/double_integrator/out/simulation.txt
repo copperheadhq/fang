@@ -1,0 +1,66 @@
+# double_integrator: SBOA092B page 58, Double Integrator
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## drawn: ac, `.ac dec 20 1m 100`
+
+The circuit as drawn: C_O = 1 uF, R_O = 10 kOhm. It integrates twice at low
+frequency, with a coefficient of 50 rather than 4.
+
+  drive  e_in: DC 0 AC 1
+
+  k_low        -50.04 /s^2   claimed -50 /s^2 (k_drawn) +/- 0.2%, holds
+              |E_O/E_I| times (2 pi f)^2 at 10 mHz, signed as the inversion
+              makes it: the drawn circuit's low-frequency coefficient is
+              -50, not the printed -4. The 0.2% band holds the -0.05% the
+              input tee's pole still leaves at 10 mHz
+  gain_0hz1          120.8   claimed 120.8 +/- 0.2%, holds
+              from the drawn transfer function; the rule's formula gives
+              10.13
+  gain_1hz          0.3872   claimed 0.3872 +/- 0.2%, holds
+              from the drawn transfer function; the rule's formula gives
+              0.1013
+  gain_10mhz     1.268e+04   not a claim
+
+## rule: ac, `.ac dec 20 1m 100`
+
+The same circuit with C_O = C_I/2 = 0.5 uF and R_O = R_I/2 = 500 kOhm,
+written as cards beside the drawn one and read at its own output. |E_O/E_I|
+(2 pi f)^2 is the coefficient, the same at every frequency.
+
+  drive  e_in: DC 0 AC 1
+
+  k_0hz1          -4 /s^2   claimed -4 /s^2 (k_rule) +/- 0.1%, holds
+  k_1hz           -4 /s^2   claimed -4 /s^2 (k_rule) +/- 0.1%, holds
+  phase_rad         4e-08   claimed 0 +/- 0.002, holds
+             -4/(j 2 pi f R_I C_I)^2 is real and positive: two integrations
+             lag 180 degrees and the inversion puts it back
+  gain_0hz1         10.13   not a claim
+  gain_1hz         0.1013   not a claim
+
+## rule_step: transient, `.tran 1m 2.01`
+
+A 0.1 V step at 10 ms into the rule's copy, from rest: -4 double integral
+gives -0.2 t^2, -0.2 V at 1 s and -0.8 V at 2 s. The drawn circuit is in the
+deck too, and saturates; it is not read.
+
+  drive  e_in: PWL(0 0 10m 0 10.001m 0.1)
+
+  k_step       -4 /s^2   claimed -4 /s^2 (k_rule) +/- 0.2%, holds
+          E_O = -4 x 0.1 V x t^2/2, read 2 s after the step
+  e_1s         -200 mV   not a claim
+  e_2s         -800 mV   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+07 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+7 of 7 claims hold.

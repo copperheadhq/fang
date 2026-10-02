@@ -75,7 +75,7 @@ startup = Emulates(
 
 Each measure writes into a parameter the system declares, and constraints over
 those parameters are what the run decides. Everything is named by part surface
-— `env`, `mcu.status`, `mcu.usart2` — never by an emulator name. The question
+(`env`, `mcu.status`, `mcu.usart2`), never by an emulator name. The question
 is part of the graph, so widening a window is a transaction with a diff, not an
 edit nobody sees.
 
@@ -147,8 +147,8 @@ events are kept.
 
 ## What a run can see
 
-Events come from probes in the emulator — what a device was asked and
-answered, what a pin did, what a UART carried — never from the firmware's
+Events come from probes in the emulator (what a device was asked and
+answered, what a pin did, what a UART carried), never from the firmware's
 account of itself. A number read from the console is recorded as the
 firmware's report.
 

@@ -1,0 +1,14 @@
+GND1   Ground           -
+L1     10 mH            -
+R1     5 Ohm            -
+R2     10 kOhm          -
+R3     10 kOhm          -
+R4     10 Ohm           -
+TP1    Terminal         -
+U1     OpAmp            -
+Net-(GND1-Pad1)          GND1.1 R4.2 U1.IN+
+Net-(L1-Pad1)            L1.1 R1.2
+Net-(L1-Pad2)            L1.2 R2.2 R4.1
+Net-(R1-Pad1)            R1.1 U1.OUT
+Net-(R2-Pad1)            R2.1 R3.2 U1.IN-
+Net-(R3-Pad1)            R3.1 TP1.1

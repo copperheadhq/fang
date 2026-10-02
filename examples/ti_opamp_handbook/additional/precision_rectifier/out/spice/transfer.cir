@@ -1,0 +1,43 @@
+* precision_rectifier: transfer
+* plan for ngspice over sha256:7216bdcc61dcb01a3b955775df96f902c470fb2497942ba9470adac4db7402ee
+* D1 abstracted; no device emitted
+* D2 abstracted; no device emitted
+* GND1 abstracted; no device emitted
+R1 5 6 2k
+R2 6 3 10k
+R3 6 1 10k
+* TP1 abstracted; no device emitted
+* TP2 abstracted; no device emitted
+* U1 abstracted; no device emitted
+.options abstol=1e-12
+.options method=gear
+.options reltol=1e-3
+.options vntol=1e-6
+.dc VDRIVE_e_in -2 2 0.01
+* added by the bench: the drive, and the parts fang abstracted
+VDRIVE_e_in 5 0 DC 0
+DD1 1 2 D1N4148
+DD2 2 3 D1N4148
+XU1 0 6 2 HB_OPAMP A=1e+06 GBW=1e+07 VOH=13.5 VOL=-13.5 VOS=0
+.model D1N4148 D(IS=2.52e-9 RS=0.568 N=1.752 CJO=4e-12 M=0.4 TT=20e-9 BV=100 IBV=100e-6)
+.subckt HB_OPAMP inp inn out A=1e6 GBW=1e7 VOH=13.5 VOL=-13.5 VOS=0
+VOS inp x DC {VOS}
+RIN x inn 1e12
+GM 0 n1 x inn 1e-3
+R1 n1 0 {A*1e3}
+C1 n1 0 {1e-3/(6.283185307179586*GBW)}
+DH n1 h HB_CLAMP
+VH h 0 DC {VOH}
+DL l n1 HB_CLAMP
+VL l 0 DC {VOL}
+EO out 0 n1 0 1
+.model HB_CLAMP D(IS=1e-15 N=0.01)
+.ends HB_OPAMP
+.control
+run
+meas dc e_at_minus_1 find v(3) at=-1
+meas dc e_at_plus_1 find v(3) at=1
+let gain_negative = e_at_minus_1 / -1
+print gain_negative
+.endc
+.end

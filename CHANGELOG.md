@@ -96,10 +96,10 @@ tracked separately and moves only when the serialized form changes.
   alternate function and address is cited by table and page from ST's and
   Renesas's datasheets.
 - Firmware emulation in Renode (`fang.emulation`, `fang.renode`). `Emulates`
-  declares a question beside its requirement — a run's virtual duration,
+  declares a question beside its requirement: a run's virtual duration,
   stimuli (`At`), faults (`Absent`), abstracted parts and measures (`FirstAt`,
   `Count`, `Latency`, `UartValue`, `PinConfig` over `I2CRead`, `I2CWrite`,
-  `Rises`, `Falls` and `UartLine`) — routed at the behavioural level to the
+  `Rises`, `Falls` and `UartLine`), routed at the behavioural level to the
   `renode` tool. Its plan resolves every bus, pin, alternate function and
   address from the graph before anything runs; the lowering writes Renode's own
   platform description and script; C# probes record what devices, pins and

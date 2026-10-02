@@ -1,0 +1,37 @@
+# inverting_amplifier: SBOA092B page 54, The Inverting Amplifier
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## gain: operating point, `.op`
+
+  drive  e_in: DC 1
+
+  gain           -10   claimed -10 (a_v) +/- 0.1%, holds
+
+## bandwidth: ac, `.ac dec 20 10 10meg`
+
+The magnitude, so 10 rather than -10. The -3 dB point is not a handbook
+claim: it is the op amp's, 10 MHz over a noise gain of 11.
+
+  drive  e_in: DC 0 AC 1
+
+  gain_1k            10   claimed 10 +/- 0.1%, holds
+  f_3db       906.9 kHz   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+2 of 2 claims hold.

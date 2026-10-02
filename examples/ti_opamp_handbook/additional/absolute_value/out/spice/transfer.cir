@@ -1,0 +1,49 @@
+* absolute_value: transfer
+* plan for ngspice over sha256:32b1540bb6c6d4b7690b850b8e6766be976dae3f0eb9f44dc6b9e2b7f17798f1
+* D1 abstracted; no device emitted
+* D2 abstracted; no device emitted
+* GND1 abstracted; no device emitted
+R1 3 4 10k
+R2 4 5 10k
+* TP1 abstracted; no device emitted
+* TP2 abstracted; no device emitted
+* U1 abstracted; no device emitted
+.options abstol=1e-12
+.options method=gear
+.options reltol=1e-3
+.options vntol=1e-6
+.dc VDRIVE_e_in -6 6 0.01
+* added by the bench: the drive, and the parts fang abstracted
+VDRIVE_e_in 3 0 DC 0
+DD1 0 2 D1N4148
+DD2 3 2 D1N4148
+XU1 2 4 5 HB_OPAMP A=1e+06 GBW=1e+07 VOH=13.5 VOL=-13.5 VOS=0
+.model D1N4148 D(IS=2.52e-9 RS=0.568 N=1.752 CJO=4e-12 M=0.4 TT=20e-9 BV=100 IBV=100e-6)
+.subckt HB_OPAMP inp inn out A=1e6 GBW=1e7 VOH=13.5 VOL=-13.5 VOS=0
+VOS inp x DC {VOS}
+RIN x inn 1e12
+GM 0 n1 x inn 1e-3
+R1 n1 0 {A*1e3}
+C1 n1 0 {1e-3/(6.283185307179586*GBW)}
+DH n1 h HB_CLAMP
+VH h 0 DC {VOH}
+DL l n1 HB_CLAMP
+VL l 0 DC {VOL}
+EO out 0 n1 0 1
+.model HB_CLAMP D(IS=1e-15 N=0.01)
+.ends HB_OPAMP
+.control
+run
+meas dc out_n5 find v(5) at=-5
+meas dc out_n1 find v(5) at=-1
+meas dc out_0 find v(5) at=0
+meas dc out_p1 find v(5) at=1
+meas dc out_p5 find v(5) at=5
+meas dc vplus_p5 find v(2) at=5
+let gain_p5 = out_p5 / 5
+print gain_p5
+let gain_n5 = out_n5 / -5
+print gain_n5
+meas dc vplus_n5 find v(2) at=-5
+.endc
+.end

@@ -1,0 +1,47 @@
+* ac_integrator: ac_on_dc
+* plan for ngspice over sha256:262f4e219d3efe34486e49176be654df9e2b9af49f7a780f3e4e9449ee5819bd
+C1 1 0 100u
+C2 3 4 0.01u
+* GND1 abstracted; no device emitted
+R1 5 1 100k
+R2 6 3 100k
+* SW1 abstracted; no device emitted
+* TP1 abstracted; no device emitted
+* TP2 abstracted; no device emitted
+* U1 abstracted; no device emitted
+.options abstol=1e-12
+.options method=gear
+.options reltol=1e-3
+.options vntol=1e-6
+.tran 10u 1.1
+* added by the bench: the drive, and the parts fang abstracted
+VDRIVE_e_in 6 0 SIN(0.1 0.1 100 0 0 90)
+SSW1 3 4 ctl_SW1 0 HB_SWITCH
+VSW1_CTL ctl_SW1 0 DC 0
+XU1 1 3 4 5 HB_FDA A=1e+06 GBW=1e+07 VOH=13.5 VOL=-13.5 VOS=0
+.ic v(xu1.xhalf.n1)=-0.2 v(3)=0.1
+.subckt HB_FDA inp inn outp outn A=1e6 GBW=1e7 VOH=13.5 VOL=-13.5 VOS=0
+XHALF inp inn half HB_OPAMP A={A} GBW={GBW} VOH={VOH} VOL={VOL} VOS={VOS}
+EP outp 0 half 0 0.5
+EN outn 0 half 0 -0.5
+.ends HB_FDA
+.subckt HB_OPAMP inp inn out A=1e6 GBW=1e7 VOH=13.5 VOL=-13.5 VOS=0
+VOS inp x DC {VOS}
+RIN x inn 1e12
+GM 0 n1 x inn 1e-3
+R1 n1 0 {A*1e3}
+C1 n1 0 {1e-3/(6.283185307179586*GBW)}
+DH n1 h HB_CLAMP
+VH h 0 DC {VOH}
+DL l n1 HB_CLAMP
+VL l 0 DC {VOL}
+EO out 0 n1 0 1
+.model HB_CLAMP D(IS=1e-15 N=0.01)
+.ends HB_OPAMP
+.model HB_SWITCH SW(VT=0.5 VH=0.1 RON=1 ROFF=1e12)
+.control
+run
+meas tran e_pp pp v(4) from=1.0 to=1.03
+meas tran e_avg avg v(4) from=0.4 to=1.03
+.endc
+.end

@@ -1,0 +1,70 @@
+# linear_current_source: SBOA092B page 81, Linear Current Source
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## r3_1000_ohm: operating point, `.op`
+
+  drive  e_in: DC 1
+  set    r3.resistance = 1000
+
+  i_per_volt      999 uA/V   claimed 1 mA/V (i_per_volt) +/- 0.2%, holds
+              Low by R_L / R2, 0.1% for 100 Ohm: the current the upper R2
+              takes back.
+  v_load           99.9 mV   not a claim
+  second_out         1.1 V   not a claim
+
+## r3_100_ohm: operating point, `.op`
+
+  drive  e_in: DC 1
+  set    r3.resistance = 100
+
+  i_per_volt     9.99 mA/V   claimed 10 mA/V +/- 0.2%, holds
+              Table 2: R3 = 100 Ohm gives 10 mA / Volt. Low by R_L / R2,
+              0.1% for 100 Ohm: the current the upper R2 takes back.
+  v_load            999 mV   not a claim
+  second_out       1.999 V   not a claim
+
+## r3_10_ohm: operating point, `.op`
+
+E_I is 100 mV here, so the load current is 10 mA rather than 100.
+
+  drive  e_in: DC 0.1
+  set    r3.resistance = 10
+
+  i_per_volt    99.89 mA/V   claimed 100 mA/V +/- 0.2%, holds
+              Table 2: R3 = 10 Ohm gives 100 mA / Volt. Low by R_L / R2,
+              0.1% for 100 Ohm: the current the upper R2 takes back.
+  v_load          998.9 mV   not a claim
+  second_out       1.099 V   not a claim
+
+## step: transient, `.tran 0.5u 1m`
+
+A 1 V step into E_I, to see the two loops settle rather than ring.
+
+  drive  e_in: PULSE(0 1 10u 1u 1u 2m 4m)
+
+  i_settled        999 uA   claimed 999 uA +/- 0.2%, holds
+             1 mA per volt, less the 0.1% the upper R2 takes
+  i_peak           999 uA   claimed 999 uA +/- 1%, holds
+             no overshoot worth the name: the loop through the upper R2
+             settles with C_O in place
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  RS1 (r3): 1000 Ohm, with its current sensed
+  RS2 (r_load): 100 Ohm, with its current sensed
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  U1 (first): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+  U2 (second): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+5 of 5 claims hold.

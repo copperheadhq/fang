@@ -1,0 +1,62 @@
+# gain_control: SBOA092B page 73, Gain Control
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## chosen: operating point, `.op`
+
+  drive  e_in: DC 1
+
+  gain             10   claimed 10 (a_v) +/- 0.1%, holds
+  e_out          10 V   not a claim
+
+## k_100: operating point, `.op`
+
+  drive  e_in: DC 1
+  set    pot.setting = 1
+
+  gain             1   claimed 1 +/- 0.1%, holds
+        1 / k = 1 / 1
+
+## k_050: operating point, `.op`
+
+  drive  e_in: DC 1
+  set    pot.setting = 0.5
+
+  gain             2   claimed 2 +/- 0.1%, holds
+        1 / k = 1 / 0.5
+
+## k_025: operating point, `.op`
+
+  drive  e_in: DC 1
+  set    pot.setting = 0.25
+
+  gain             4   claimed 4 +/- 0.1%, holds
+        1 / k = 1 / 0.25
+
+## k_002: operating point, `.op`
+
+  drive  e_in: DC 0.2
+  set    pot.setting = 0.02
+
+  gain            50   claimed 50 +/- 0.1%, holds
+        1 / 0.02; E_I is 0.2 V here so that E_O, 10 V, stays inside the
+        swing
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  RV1 (pot): 10 kOhm split at the wiper, set to 0.1 of its travel
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+5 of 5 claims hold.

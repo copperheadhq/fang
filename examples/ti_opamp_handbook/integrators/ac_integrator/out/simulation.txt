@@ -1,0 +1,84 @@
+# ac_integrator: SBOA092B page 59, AC Integrator
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## dc: operating point, `.op`
+
+E_I = 1 V DC. C_I has charged to -E_O, and the - input follows it to E_I.
+
+  drive  e_in: DC 1
+
+  dc_gain               -1   claimed -1 +/- 0.1%, holds
+              a DC input comes out inverted, not integrated: nothing ramps
+  plus_input           1 V   not a claim
+
+## sine: ac, `.ac dec 50 1m 100k`
+
+Above the 1.59 Hz corner the circuit integrates; below it the gain returns
+to 1. The peak at the corner is the Q of 50 the drawn values give; it is not
+a handbook claim.
+
+  drive  e_in: DC 0 AC 1
+
+  gain_unity             1   claimed 1 +/- 0.1%, holds
+              1/(2 pi f_unity R_I C_O) = 1
+  gain_100hz         1.592   claimed 1.591 +/- 0.1%, holds
+              1/(2 pi 100 Hz x 1 ms)
+  phase_deg          90.01   claimed 90 +/- 0.1, holds
+              an inverting integrator: the output leads the input by 90
+              degrees
+  gain_1mhz          1.002   claimed 1.002 +/- 0.1%, holds
+              at 1 mHz the circuit is back to its DC gain of 1 (|1 + j 2 pi
+              f tau_2| = 1.002)
+  phase_rad          1.571   not a claim
+  peak                4573   not a claim
+  f_peak          1.585 Hz   not a claim
+
+## ac_on_dc: transient, `.tran 10u 1.1`
+
+0.1 V DC plus a 0.1 V, 100 Hz cosine. The capacitors start where the steady
+state puts them at t = 0 (the `.ic`), so the 1.6 Hz resonance is barely
+rung. The swing is read over 1.0 to 1.03 s; the average over 0.4 to 1.03 s,
+63 cycles of the input and one period of that resonance.
+
+  drive  e_in: SIN(0.1 0.1 100 0 0 90)
+
+  e_pp       318.6 mV   claimed 318.3 mV +/- 1%, holds
+         0.1 V at 100 Hz integrated: 2 x 0.1/(2 pi 100 Hz x 1 ms). 1%: the
+         start is close to the steady state, not exactly on it, and what is
+         left rings at 1.6 Hz under the 100 Hz wave
+  e_avg       -100 mV   claimed -100 mV +/- 3 mV, holds
+         the 0.1 V DC component passes at -1 and does not ramp
+
+## dc_step: transient, `.tran 1m 100`
+
+A 10 mV DC step at 10 ms, from rest. The output rings at 1.6 Hz (the Q of
+50) and settles at -10 mV with a 10 s time constant; the swing it reaches
+first is in e_min and e_max.
+
+  drive  e_in: PWL(0 0 10m 0 10.001m 0.01)
+
+  e_100s     -10.03 mV   claimed -10 mV +/- 500 uV, holds
+          an ordinary integrator would be at -1000 V (a rail) by now; this
+          one has settled at -E_I
+  e_min      -994.2 mV   not a claim
+  e_max       943.4 mV   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  SW1 (reset): switch: 1 Ohm closed, 1 TOhm open
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+8 of 8 claims hold.

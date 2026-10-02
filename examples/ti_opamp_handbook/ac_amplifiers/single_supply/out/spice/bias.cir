@@ -1,0 +1,42 @@
+* single_supply: bias
+* plan for ngspice over sha256:302584e608538e755a2c9aab860b8b7b5ab684658c137b02b4d24137ab1875ec
+C1 1 0 100u
+C2 3 4 1u
+* GND1 abstracted; no device emitted
+R1 5 1 10k
+R2 1 0 10k
+R3 4 6 10k
+R4 6 7 100k
+* TP1 abstracted; no device emitted
+* TP2 abstracted; no device emitted
+* U1 abstracted; no device emitted
+V1 5 0 15
+.options abstol=1e-12
+.options method=gear
+.options reltol=1e-3
+.options vntol=1e-6
+.op
+* added by the bench: the drive, and the parts fang abstracted
+VDRIVE_e_in 3 0 DC 0
+XU1 1 6 7 HB_OPAMP A=1e+06 GBW=1e+07 VOH=13.5 VOL=0 VOS=0
+.subckt HB_OPAMP inp inn out A=1e6 GBW=1e7 VOH=13.5 VOL=-13.5 VOS=0
+VOS inp x DC {VOS}
+RIN x inn 1e12
+GM 0 n1 x inn 1e-3
+R1 n1 0 {A*1e3}
+C1 n1 0 {1e-3/(6.283185307179586*GBW)}
+DH n1 h HB_CLAMP
+VH h 0 DC {VOH}
+DL l n1 HB_CLAMP
+VL l 0 DC {VOL}
+EO out 0 n1 0 1
+.model HB_CLAMP D(IS=1e-15 N=0.01)
+.ends HB_OPAMP
+.control
+run
+let e_out = v(7)
+print e_out
+let e_plus = v(1)
+print e_plus
+.endc
+.end

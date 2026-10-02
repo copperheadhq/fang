@@ -3,7 +3,7 @@
   (design
     (source "usb_uart_bridge.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:4efe3002f6203335652983c26e929e0b1130e507c7938dd6dfdd6f5eef370ba1")
+    (snapshot "sha256:e177c0af52dc5310c666927a43bed97461e2b60a4bf6b5ed9f308482d3c35227")
     (project "PRJ-EXAMPLES")
   )
   (components

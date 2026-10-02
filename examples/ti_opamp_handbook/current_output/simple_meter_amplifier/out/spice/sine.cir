@@ -1,0 +1,48 @@
+* simple_meter_amplifier: sine
+* plan for ngspice over sha256:15d6277cef85bcb7f90d135e2a9eb5b6a3b1583f84a84eb784d3a541cad5f1be
+* D1 abstracted; no device emitted
+* D2 abstracted; no device emitted
+* GND1 abstracted; no device emitted
+* M1 abstracted; no device emitted
+R1 2 6 4.7k
+R2 7 1 10k
+R3 2 5 4.7k
+R4 3 6 4.7k
+* TP1 abstracted; no device emitted
+* U1 abstracted; no device emitted
+.options abstol=1e-12
+.options method=gear
+.options reltol=1e-3
+.options vntol=1e-6
+.tran 10u 60m
+* added by the bench: the drive, and the parts fang abstracted
+VDRIVE_e_in 7 0 SIN(0 1 100)
+DD1 1 2 D1N4148
+DD2 3 1 D1N4148
+RM1 5 sense_M1 100
+VM1_SENSE sense_M1 3 DC 0
+XU1 0 1 6 HB_OPAMP A=1e+06 GBW=1e+07 VOH=13.5 VOL=-13.5 VOS=0
+.model D1N4148 D(IS=2.52e-9 RS=0.568 N=1.752 CJO=4e-12 M=0.4 TT=20e-9 BV=100 IBV=100e-6)
+.subckt HB_OPAMP inp inn out A=1e6 GBW=1e7 VOH=13.5 VOL=-13.5 VOS=0
+VOS inp x DC {VOS}
+RIN x inn 1e12
+GM 0 n1 x inn 1e-3
+R1 n1 0 {A*1e3}
+C1 n1 0 {1e-3/(6.283185307179586*GBW)}
+DH n1 h HB_CLAMP
+VH h 0 DC {VOH}
+DL l n1 HB_CLAMP
+VL l 0 DC {VOL}
+EO out 0 n1 0 1
+.model HB_CLAMP D(IS=1e-15 N=0.01)
+.ends HB_OPAMP
+.control
+run
+meas tran i_avg avg i(vm1_sense) from=20m to=60m
+meas tran e_peak max v(7) from=20m to=60m
+let g_meter = i_avg / (e_peak * 0.6366197723675814)
+print g_meter
+let g_handbook = i_avg / (e_peak * 0.6366197723675814)
+print g_handbook
+.endc
+.end

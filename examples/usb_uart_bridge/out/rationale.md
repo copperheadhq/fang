@@ -1,4 +1,4 @@
-# usb_uart_bridge — rationale
+# usb_uart_bridge: rationale
 
 Every line below is an entity in the elaborated graph, projected by
 `python examples/regenerate.py`. Nothing here is prose kept beside the
@@ -6,7 +6,7 @@ design; it is the design.
 
 ## Requirements
 
-### system.bus_powered — `REQ-b7a9b0b97172`
+### system.bus_powered (`REQ-b7a9b0b97172`)
 
 > The board draws no more than 100 mA before USB enumeration
 
@@ -16,7 +16,7 @@ MUST, state KNOWN, validation by analysis.
 
 ## Decisions
 
-### system.bridge_choice — `DEC-84d581f8693d`
+### system.bridge_choice (`DEC-84d581f8693d`)
 
 **Which USB-UART bridge?** → CH340C
 
@@ -28,7 +28,7 @@ MUST, state KNOWN, validation by analysis.
 
 ## Evidence
 
-### system.dp_pullup_value — `EVD-7ad910c95ff6`
+### system.dp_pullup_value (`EVD-7ad910c95ff6`)
 
 > A full-speed device signals its speed with 1.5k from D+ to 3.3 V
 

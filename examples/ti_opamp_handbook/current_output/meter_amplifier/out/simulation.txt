@@ -1,0 +1,48 @@
+# meter_amplifier: SBOA092B page 80, Meter Amplifier
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## sine: transient, `.tran 2u 200m`
+
+100 mV rms at 1 kHz. The first 100 ms let the 10 uF bridge capacitors reach
+their level; the next 100 are averaged.
+
+  drive  e_in: SIN(0 0.141421356 1k)
+
+  reading_per_volt    4.479 mA/V   claimed 4.5 mA/V (reading_per_volt) +/- 1%, holds
+                    The handbook prints 0.9 E_I / (R4 + R5), the full-wave
+                    average of a sine over its rms. The drawn bridge has two
+                    diodes and two capacitors, and its meter carries one
+                    diode's average: 0.45. The 1% allowance covers R0 and
+                    R8, which between them take 0.5% of the current.
+  i_avg                 447.9 uA   not a claim
+  e_rms                   100 mV   not a claim
+
+## calibration: transient, `.tran 2u 200m`
+
+R5 turned to its full 100 Ohm: the reading follows R4 + R5.
+
+  drive  e_in: SIN(0 0.141421356 1k)
+  set    r5.setting = 0
+
+  reading_per_volt    3.043 mA/V   claimed 3.061 mA/V +/- 1%, holds
+                    0.45 / (47 + 100) Ohm, with the whole of R5 in circuit
+  i_avg                 304.3 uA   not a claim
+  e_rms                   100 mV   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  D1 (d_left): 1N4148 diode model
+  D2 (d_right): 1N4148 diode model
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  M1 (meter): meter movement of 100 Ohm
+  RV1 (r5): 100 Ohm split at the wiper, set to 0.47 of its travel
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+2 of 2 claims hold.

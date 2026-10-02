@@ -7,8 +7,8 @@ sidebar:
     data-icon: approve-check
 ---
 
-A hard constraint over a number nobody has -- a rail's ripple, a filter's
-corner, an antenna's return loss -- evaluates to
+A hard constraint over a number nobody has (a rail's ripple, a filter's
+corner, an antenna's return loss) evaluates to
 [undecided](/concepts/values-and-undecided/) and stays there. Verification is
 how it stops being undecided: a question declared in the program, answered by a
 tool, with the answer returned through [the gate](/concepts/the-commit-gate/)
@@ -54,7 +54,7 @@ every part left out as a coverage gap.
 The levels run cheapest first: equation, symbolic, behavioural, circuit,
 external. If the constraints over a question's parameters already decide --
 because a value reached the graph some other way, or because an earlier run's
-measurement is there -- the constraint evaluator is the answer and nothing
+measurement is there, the constraint evaluator is the answer and nothing
 runs. Otherwise the method names the level, and the first registered tool there
 answers. A question no tool covers is unroutable: a cheaper answer is not the
 same answer, so none is substituted. The level and the tool are written on the
@@ -72,7 +72,7 @@ RemoveEntity + AddEntity(Verification: result, evidence, level, tool)
 ```
 
 The value is **inferred**, never explicit, and its source is the evidence. The
-constraint over it is decided by the gate's own constraint check -- there is no
+constraint over it is decided by the gate's own constraint check; there is no
 second resolver that consults evidence, which would be a second place a value
 could come from.
 
@@ -80,7 +80,7 @@ could come from.
 gate rejects it, correctly, and the runner records what happened in a second
 transaction that sets no parameter: the evidence, and the verification with
 result `FAIL`. The design is on record as having failed, with the number that
-failed it, and the constraint stays undecided in the graph, which is true -- the
+failed it, and the constraint stays undecided in the graph, which is true: the
 design has no accepted value for it.
 
 ## A finding, not a proof

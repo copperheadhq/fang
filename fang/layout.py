@@ -16,8 +16,21 @@ from .views import ViewEdge, ViewGraph, ViewNode
 #: Default geometry. Presentation only; no engineering decision depends on it.
 NODE_WIDTH = 168
 NODE_HEIGHT = 60
-LAYER_GAP = 104
+LAYER_GAP = 168
 ROW_GAP = 28
+
+#: The room each wire takes on a box's side. A box is tall enough (or, laid
+#: out downwards, wide enough) to give every wire it carries a point of its
+#: own, so two nets never meet a box at one point and read as one.
+SLOT = 12
+SLOT_ACROSS = 16
+
+#: Laid out downwards, the gap between two layers, and between two boxes in one.
+DOWN_LAYER_GAP = 132
+DOWN_ROW_GAP = 40
+
+#: The directions a view can flow in: layers left to right, or top to bottom.
+DIRECTIONS = ("right", "down")
 
 #: A box grows with its label rather than clipping it, between these bounds.
 MIN_NODE_WIDTH = 132
@@ -99,6 +112,7 @@ class PositionedView:
     positions: Mapping[str, Position]
     width: int
     height: int
+    direction: str = "right"
 
     def as_dict(self) -> dict:
         return {
@@ -106,6 +120,7 @@ class PositionedView:
             "positions": {k: v.as_dict() for k, v in sorted(self.positions.items())},
             "width": self.width,
             "height": self.height,
+            **({"direction": self.direction} if self.direction != "right" else {}),
         }
 
 
@@ -152,13 +167,40 @@ def box_size(label: str, detail: str = "") -> tuple[int, int]:
     return width, NODE_HEIGHT
 
 
-def to_request(graph: ViewGraph, hints: Mapping[str, str] | None = None) -> LayoutRequest:
+def node_sizes(graph: ViewGraph, direction: str = "right") -> dict[str, tuple[int, int]]:
+    """Every box's size: big enough for its words and for its wires.
+
+    Wires meet a box on the sides facing along the flow, so a box laid out to
+    the right grows taller with the wires it carries, and one laid out
+    downwards grows wider. The number of edges at a box is layout information,
+    so this is on the near side of the boundary too, and the renderer asks
+    here rather than working it out again."""
+    degree = {node.id: 0 for node in graph.nodes}
+    for edge in graph.edges:
+        if edge.source != edge.target:
+            for end in (edge.source, edge.target):
+                if end in degree:
+                    degree[end] += 1
+    sizes = {}
+    for node in graph.nodes:
+        width, height = box_size(node.label, node.detail)
+        if direction == "down":
+            sizes[node.id] = (max(width, (degree[node.id] + 1) * SLOT_ACROSS), height)
+        else:
+            sizes[node.id] = (width, max(height, (degree[node.id] + 1) * SLOT))
+    return sizes
+
+
+def to_request(
+    graph: ViewGraph, hints: Mapping[str, str] | None = None, direction: str = "right"
+) -> LayoutRequest:
     """Strip a view graph down to what layout may see."""
+    sizes = node_sizes(graph, direction)
     return LayoutRequest(
         tuple(
             LayoutNode(
                 node.id,
-                *box_size(node.label, node.detail),
+                *sizes[node.id],
                 ports=node.ports,
                 parent=node.parent,
             )
@@ -283,7 +325,9 @@ def _grid(
     return positions, columns * cell - ROW_GAP, rows * row_height - ROW_GAP
 
 
-def layered(request: LayoutRequest, seeds: PlacementSeeds | None = None) -> dict[str, Position]:
+def layered(
+    request: LayoutRequest, seeds: PlacementSeeds | None = None, direction: str = "right"
+) -> dict[str, Position]:
     """A deterministic layered layout.
 
     Layers come from the longest path from a source, rows within a layer are
@@ -310,23 +354,40 @@ def layered(request: LayoutRequest, seeds: PlacementSeeds | None = None) -> dict
         rows.setdefault(layer[node_id], []).append(node_id)
     _order_rows(rows, successors, predecessors, seeds)
 
-    columns = {
-        depth: (max(sizes[n][0] for n in members), _stack(members, sizes))
-        for depth, members in sorted(rows.items())
-    }
-    tallest = max((height for _, (_, height) in columns.values()), default=0)
-
     positions: dict[str, Position] = {}
-    x = 0
-    for depth, (column_width, (offsets, height)) in sorted(columns.items()):
-        top = (tallest - height) // 2
-        for node_id, offset in offsets.items():
-            # Centre a narrow box in its column, so a column reads as a column.
-            indent = (column_width - sizes[node_id][0]) // 2
-            positions[node_id] = Position(x + indent, top + offset)
-        x += column_width + LAYER_GAP
+    if direction == "down":
+        # Each layer is a row, its boxes side by side, rows stacked downwards
+        # and each centred against the widest.
+        spans = {
+            depth: sum(sizes[n][0] for n in members) + DOWN_ROW_GAP * (len(members) - 1)
+            for depth, members in rows.items()
+        }
+        widest = max(spans.values(), default=0)
+        y = 0
+        for depth, members in sorted(rows.items()):
+            row_height = max(sizes[n][1] for n in members)
+            x = (widest - spans[depth]) // 2
+            for node_id in members:
+                positions[node_id] = Position(x, y + (row_height - sizes[node_id][1]) // 2)
+                x += sizes[node_id][0] + DOWN_ROW_GAP
+            y += row_height + DOWN_LAYER_GAP
+        width, tallest = widest, max(y - DOWN_LAYER_GAP, 0)
+    else:
+        columns = {
+            depth: (max(sizes[n][0] for n in members), _stack(members, sizes))
+            for depth, members in sorted(rows.items())
+        }
+        tallest = max((height for _, (_, height) in columns.values()), default=0)
+        x = 0
+        for depth, (column_width, (offsets, height)) in sorted(columns.items()):
+            top = (tallest - height) // 2
+            for node_id, offset in offsets.items():
+                # Centre a narrow box in its column, so a column reads as a column.
+                indent = (column_width - sizes[node_id][0]) // 2
+                positions[node_id] = Position(x + indent, top + offset)
+            x += column_width + LAYER_GAP
+        width = max(x - LAYER_GAP, 0)
 
-    width = max(x - LAYER_GAP, 0)
     grid, grid_width, grid_height = _grid(isolated, sizes, width)
     offset = tallest + ISOLATED_GAP if positions else 0
     for node_id, position in grid.items():
@@ -351,10 +412,16 @@ def place(
     *,
     seeds: PlacementSeeds | None = None,
     hints: Mapping[str, str] | None = None,
+    direction: str = "right",
 ) -> PositionedView:
-    """Lay a view out and bring the geometry back as a positioned view graph."""
-    request = to_request(graph, hints)
-    positions = layered(request, seeds)
+    """Lay a view out and bring the geometry back as a positioned view graph.
+
+    `direction` is which way the layers run: "right", the default, or "down",
+    which keeps a diagram of many stages narrow enough for a page's column."""
+    if direction not in DIRECTIONS:
+        raise ValueError(f"direction must be one of {DIRECTIONS}, not {direction!r}")
+    request = to_request(graph, hints, direction)
+    positions = layered(request, seeds, direction)
     sizes = {node.id: (node.width, node.height) for node in request.nodes}
     width, height = content_size(positions, sizes)
-    return PositionedView(graph, positions, width, height)
+    return PositionedView(graph, positions, width, height, direction)

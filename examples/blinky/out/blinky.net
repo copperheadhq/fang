@@ -3,7 +3,7 @@
   (design
     (source "blinky.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:deee4774d263c04f0c308ebac599cc0e6f71fa4c46ebfefb29b2cfcb4360b1a3")
+    (snapshot "sha256:dab7fbedff03ec019e23be5984d535093cf576f8c12c787f2b41cd448315f8a3")
     (project "PRJ-EXAMPLES")
   )
   (components

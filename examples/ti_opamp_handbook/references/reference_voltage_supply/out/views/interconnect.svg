@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="460" height="1164" viewBox="0 0 460 1164" font-family="Helvetica, Arial, sans-serif">
+<title>interconnect: What is connected to what?</title>
+<defs><marker id="arrow" viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0.8 L8,4 L0,7.2 Z" fill="#000000"/></marker></defs>
+<g transform="translate(43,0)">
+<polyline points="158.0,280.0 158.0,298.0 174.0,298.0 174.0,586.0 166.8,586.0 166.8,604.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-4519b17f8f99</title></polyline>
+<polyline points="202.0,280.0 202.0,305.0 346.0,305.0 346.0,778.0 266.0,778.0 266.0,796.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-59321d691cbc</title></polyline>
+<polyline points="140.4,988.0 140.4,970.0 72.0,970.0 72.0,856.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-01b7014be933</title></polyline>
+<polyline points="219.6,988.0 219.6,963.0 266.0,963.0 266.0,856.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-c0b547af3300</title></polyline>
+<polyline points="116.0,856.0 116.0,956.0 166.8,956.0 166.8,988.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-b3df9522a1aa</title></polyline>
+<polyline points="72.0,472.0 72.0,490.0 14.0,490.0 14.0,949.0 193.2,949.0 193.2,988.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-a060544611fc</title></polyline>
+<polyline points="180.0,88.0 180.0,202.0 180.0,202.0 180.0,220.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-dd1fe7b3f522</title></polyline>
+<polyline points="244.0,472.0 244.0,579.0 193.2,579.0 193.2,604.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-4d1ca10e619c</title></polyline>
+<polyline points="140.4,604.0 140.4,572.0 116.0,572.0 116.0,472.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-76e0d034f372</title></polyline>
+<polyline points="219.6,604.0 219.6,565.0 288.0,565.0 288.0,472.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-58788eea8844</title></polyline>
+<g><rect x="114" y="220" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="180" y="249.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">R_1</text><text x="180" y="262.0" text-anchor="middle" font-size="9" fill="#000000">(RESISTOR)</text><title>CMP-1116cb228fe1, unknown: power_rating, tolerance_pct</title></g>
+<g><rect x="114" y="988" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="180" y="1017.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">AMP_2</text><text x="180" y="1030.0" text-anchor="middle" font-size="9" fill="#000000">(OPAMP)</text><title>CMP-20ea00ca82b2</title></g>
+<g><rect x="28" y="796" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="94" y="825.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">R_2</text><text x="94" y="838.0" text-anchor="middle" font-size="9" fill="#000000">(RESISTOR)</text><title>CMP-37372974c055, unknown: power_rating, tolerance_pct</title></g>
+<g><rect x="28" y="412" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="94" y="441.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">R_3</text><text x="94" y="454.0" text-anchor="middle" font-size="9" fill="#000000">(RESISTOR)</text><title>CMP-4cd5e4d4b60d, unknown: power_rating, tolerance_pct</title></g>
+<g><rect x="114" y="28" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="180" y="57.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">E_REF</text><text x="180" y="70.0" text-anchor="middle" font-size="9" fill="#000000">(CELL)</text><title>CMP-90e203cf744d</title></g>
+<g><rect x="200" y="412" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="266" y="441.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">R_0</text><text x="266" y="454.0" text-anchor="middle" font-size="9" fill="#000000">(RESISTOR)</text><title>CMP-9f649540f4bc, unknown: power_rating, tolerance_pct</title></g>
+<g><rect x="114" y="604" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="180" y="633.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">AMP_1</text><text x="180" y="646.0" text-anchor="middle" font-size="9" fill="#000000">(OPAMP)</text><title>CMP-ae72c09f6b61</title></g>
+<g><rect x="200" y="796" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="266" y="825.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">R_4</text><text x="266" y="838.0" text-anchor="middle" font-size="9" fill="#000000">(RESISTOR)</text><title>CMP-e5d84f6363ba, unknown: power_rating, tolerance_pct</title></g>
+<text x="161.0" y="289.0" text-anchor="start" font-size="8" fill="#000000">INVERTING</text>
+<text x="143.4" y="984.0" text-anchor="start" font-size="8" fill="#000000">INVERTING</text>
+<text x="222.6" y="984.0" text-anchor="start" font-size="8" fill="#000000">OUTPUT</text>
+<text x="119.0" y="865.0" text-anchor="start" font-size="8" fill="#000000">OUTPUT</text>
+<text x="75.0" y="481.0" text-anchor="start" font-size="8" fill="#000000">INVERTING</text>
+<text x="247.0" y="481.0" text-anchor="start" font-size="8" fill="#000000">OUTPUT</text>
+<text x="143.4" y="600.0" text-anchor="start" font-size="8" fill="#000000">OUTPUT</text>
+<text x="222.6" y="600.0" text-anchor="start" font-size="8" fill="#000000">INVERTING</text>
+<line x1="28" y1="1076" x2="54" y2="1076" stroke="#000000" stroke-width="1"/>
+<text x="60" y="1079.5" font-size="9.5" fill="#000000">ELECTRICAL</text>
+<text x="28" y="1106" font-size="9.5" fill="#000000">5 node(s) carry unknown parameters; a dashed border marks them</text>
+</g>
+<text x="230.0" y="1136" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">INTERCONNECT</text>
+<text x="230.0" y="1152" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">What is connected to what?</text>
+</svg>

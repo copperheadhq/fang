@@ -1,0 +1,45 @@
+# full_wave_rectifier: SBOA092B page 89, Full Wave Rectifier
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## transfer: dc, `.dc VDRIVE_e_in -2 2 1m`
+
+  drive  e_in: DC 0
+
+  gain_positive            -1   claimed -1 (a_positive) +/- 0.1%, holds
+  gain_negative             1   claimed 1 (a_negative) +/- 0.1%, holds
+  e_plus_10m        -9.998 mV   claimed -10 mV +/- 100 uV, holds
+                 10 mV in, -10 mV out, to 0.1 mV: no diode drop shows
+  e_minus_10m       -9.993 mV   claimed -10 mV +/- 100 uV, holds
+  e_plus_1               -1 V   not a claim
+  e_minus_1              -1 V   not a claim
+
+## sine: transient, `.tran 1u 3m`
+
+E_I is a 1 V peak, 1 kHz sine; the last two cycles are measured.
+
+  drive  e_in: SIN(0 1 1k)
+
+  e_min              -1 V   claimed -1 V +/- 0.2%, holds
+             both peaks of the 1 V sine come out at -1 V
+  e_average     -636.6 mV   claimed -636.6 mV +/- 0.2%, holds
+             -2/pi of the peak, the mean of a full-wave rectified sine; the
+             0.2% allows for the few microseconds at each zero crossing
+             while the first op amp swings across its diodes
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  D1 (d_down): 1N4148 diode model
+  D2 (d_up): 1N4148 diode model
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp_1): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+  U2 (amp_2): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+6 of 6 claims hold.

@@ -1,0 +1,67 @@
+# inverting_gain_control: SBOA092B page 73, Inverting Gain Control
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## chosen: operating point, `.op`
+
+  drive  e_in: DC 1
+
+  gain           -2.5   claimed -2.5 (a_v) +/- 0.1%, holds
+  z_in        10 kOhm   claimed 10 kOhm (z_in) +/- 0.1%, holds
+  wiper          -1 V   claimed -1 V +/- 0.1%, holds
+         the wiper sits at -(R_O / R_I) E_I whatever the setting
+
+## s_000: operating point, `.op`
+
+  drive  e_in: DC 1
+  set    r_2.setting = 0
+
+  gain            -1   claimed -1 +/- 0.1%, holds
+        -(1 / (1 - 0) + 0)
+  z_in       10 kOhm   claimed 10 kOhm (z_in) +/- 0.1%, holds
+
+## s_080: operating point, `.op`
+
+  drive  e_in: DC 1
+  set    r_2.setting = 0.8
+
+  gain          -5.8   claimed -5.8 +/- 0.1%, holds
+        -(1 / (1 - 0.8) + 0.8)
+  z_in       10 kOhm   claimed 10 kOhm (z_in) +/- 0.1%, holds
+
+## s_090: operating point, `.op`
+
+  drive  e_in: DC 1
+  set    r_2.setting = 0.9
+
+  gain         -10.9   claimed -10.9 +/- 0.1%, holds
+        -(1 / (1 - 0.9) + 0.9)
+  z_in       10 kOhm   claimed 10 kOhm (z_in) +/- 0.1%, holds
+
+## s_095: operating point, `.op`
+
+  drive  e_in: DC 0.5
+  set    r_2.setting = 0.95
+
+  gain        -20.95   claimed -20.95 +/- 0.1%, holds
+        -(1 / (1 - 0.95) + 0.95)
+  z_in       10 kOhm   claimed 10 kOhm (z_in) +/- 0.1%, holds
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  RV1 (r_2): 10 kOhm split at the wiper, set to 0.5 of its travel
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+11 of 11 claims hold.

@@ -3,7 +3,7 @@
   (design
     (source "problem_2.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:dda4711d580e3954d45140d099b95fcf3f9fbf67c7dca354a532e1d7a43ae891")
+    (snapshot "sha256:bda827d7dd3d3ea608be39507cdcb7911a9cad66fa8c96672a565e905ea3d4b7")
     (project "PRJ-EXAMPLES")
   )
   (components

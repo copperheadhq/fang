@@ -1,0 +1,214 @@
+{
+  "version": 1,
+  "parts": [
+    {
+      "ref": "C1",
+      "libId": "Device:C",
+      "value": "10uF",
+      "group": "Circuit"
+    },
+    {
+      "ref": "D1",
+      "libId": "Device:D",
+      "value": "1N4148",
+      "group": "Circuit"
+    },
+    {
+      "ref": "D2",
+      "libId": "Device:D",
+      "value": "1N4148",
+      "group": "Circuit"
+    },
+    {
+      "ref": "D3",
+      "libId": "Device:D",
+      "value": "1N4148",
+      "group": "Circuit"
+    },
+    {
+      "ref": "D4",
+      "libId": "Device:D",
+      "value": "1N4148",
+      "group": "Circuit"
+    },
+    {
+      "ref": "GND1",
+      "libId": "power:GND",
+      "value": "GND",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R1",
+      "libId": "Device:R",
+      "value": "100k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R2",
+      "libId": "Device:R",
+      "value": "100k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R3",
+      "libId": "Device:R",
+      "value": "4.7k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R4",
+      "libId": "Device:R",
+      "value": "100k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R5",
+      "libId": "Device:R",
+      "value": "100k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R6",
+      "libId": "Device:R",
+      "value": "100k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP1",
+      "libId": "Connector:TestPoint",
+      "value": "E_IN",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP2",
+      "libId": "Connector:TestPoint",
+      "value": "E_OUT",
+      "group": "Circuit"
+    },
+    {
+      "ref": "U1",
+      "libId": "Simulation_SPICE:OPAMP",
+      "value": "OPAMP",
+      "group": "Circuit"
+    },
+    {
+      "ref": "U2",
+      "libId": "Simulation_SPICE:OPAMP",
+      "value": "OPAMP",
+      "group": "Circuit"
+    },
+    {
+      "ref": "V1",
+      "libId": "Device:Battery_Cell",
+      "value": "15V",
+      "group": "Circuit"
+    },
+    {
+      "ref": "V2",
+      "libId": "Device:Battery_Cell",
+      "value": "15V",
+      "group": "Circuit"
+    }
+  ],
+  "nets": [
+    {
+      "name": "Net-(C1-Pad1)",
+      "pins": [
+        "C1.1",
+        "R6.2",
+        "U2.2"
+      ]
+    },
+    {
+      "name": "E_OUT",
+      "pins": [
+        "C1.2",
+        "R1.2",
+        "TP2.1",
+        "U2.5"
+      ]
+    },
+    {
+      "name": "Net-(D1-PadA)",
+      "pins": [
+        "D1.2",
+        "D3.1",
+        "U1.5"
+      ]
+    },
+    {
+      "name": "Net-(D1-PadK)",
+      "pins": [
+        "D1.1",
+        "D2.1",
+        "R5.1"
+      ]
+    },
+    {
+      "name": "Net-(D2-PadA)",
+      "pins": [
+        "D2.2",
+        "D4.1",
+        "R6.1"
+      ]
+    },
+    {
+      "name": "Net-(D3-PadA)",
+      "pins": [
+        "D3.2",
+        "D4.2",
+        "R4.1"
+      ]
+    },
+    {
+      "name": "GND",
+      "pins": [
+        "GND1.1",
+        "R3.2",
+        "U2.1",
+        "V1.1",
+        "V2.2"
+      ],
+      "kind": "ground"
+    },
+    {
+      "name": "Net-(R1-Pad1)",
+      "pins": [
+        "R1.1",
+        "R2.2",
+        "U1.1"
+      ]
+    },
+    {
+      "name": "E_IN",
+      "pins": [
+        "R2.1",
+        "TP1.1"
+      ]
+    },
+    {
+      "name": "Net-(R3-Pad1)",
+      "pins": [
+        "R3.1",
+        "U1.2"
+      ]
+    },
+    {
+      "name": "Net-(R4-Pad2)",
+      "pins": [
+        "R4.2",
+        "V2.1"
+      ]
+    },
+    {
+      "name": "Net-(R5-Pad2)",
+      "pins": [
+        "R5.2",
+        "V1.2"
+      ]
+    }
+  ],
+  "hints": {
+    "date": "2026-01-01"
+  }
+}

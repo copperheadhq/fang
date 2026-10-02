@@ -9,8 +9,8 @@ sidebar:
 
 A board can record which pin of a microcontroller carries SCL, and which of its
 controllers that pin belongs to, and still say nothing about the firmware that
-will drive it. The defects that live between the two — the wrong address, the
-wrong pin, a missing timeout — are the ones found at bring-up, on a fabricated
+will drive it. The defects that live between the two, the wrong address, the
+wrong pin, a missing timeout, are the ones found at bring-up, on a fabricated
 board. Emulation asks about them earlier, and asks in the board's own terms.
 
 ## The board is the wiring
@@ -46,8 +46,8 @@ for what the bus saw.
 ## Honest about what was not seen
 
 Three rules carry the kernel's treatment of unknowns into a run. An event
-observed not to occur before a completed run's end is a measurement — the
-half-open range after the end — and decides a deadline; a run that ended early
+observed not to occur before a completed run's end is a measurement, the
+half-open range after the end, and decides a deadline; a run that ended early
 decides nothing. A model that warns of something it does not cover withdraws
 the measures that rest on it. And where the emulator does not route a
 peripheral through its pins' configuration, the configuration is measured from
@@ -61,8 +61,8 @@ validation has to find; it does not replace it.
 
 ## Where it goes next
 
-The bundle a run executes — the plan, the platform description, the script,
-the probes, the firmware and a manifest of digests — is a function of the
+The bundle a run executes (the plan, the platform description, the script,
+the probes, the firmware and a manifest of digests) is a function of the
 question and the firmware alone. A hosted runner can execute the same bundle
 in a sandbox, and fang reads its events with the same measures, so the verdict
 is the same code whichever machine ran it.

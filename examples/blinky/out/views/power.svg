@@ -1,23 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="328" viewBox="0 0 900 328" font-family="system-ui, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="460" height="904" viewBox="0 0 460 904" font-family="Helvetica, Arial, sans-serif">
 <title>power: Where does power come from and where does it go?</title>
-<rect width="900" height="328" fill="#ffffff"/>
-<text x="28" y="26" font-size="15" font-weight="600" fill="#1b1b1f">power</text>
-<text x="28" y="43" font-size="11.5" fill="#5f6368">Where does power come from and where does it go?</text>
-<line x1="28" y1="152" x2="872" y2="152" stroke="#c4c7cc" stroke-width="1" stroke-dasharray="3 4"/>
-<text x="28" y="144" font-size="11" fill="#5f6368">nothing in this view connects to these</text>
-<path d="M160.0,84.0 C206.8,84.0 217.2,84.0 264.0,84.0" fill="none" stroke="#b3261e" stroke-width="2" stroke-linecap="round" opacity="0.85"><title>power: NET-dd1fe7b3f522</title></path>
-<path d="M400.0,77.0 C446.8,77.0 457.2,77.0 504.0,77.0" fill="none" stroke="#b3261e" stroke-width="2" stroke-linecap="round" opacity="0.85"><title>power: NET-59321d691cbc</title></path>
-<path d="M400.0,84.0 C446.8,84.0 457.2,84.0 504.0,84.0" fill="none" stroke="#b3261e" stroke-width="2" stroke-linecap="round" opacity="0.85"><title>power: NET-6602c9ac8517</title></path>
-<path d="M400.0,91.0 C446.8,91.0 457.2,91.0 504.0,91.0" fill="none" stroke="#b3261e" stroke-width="2" stroke-linecap="round" opacity="0.85"><title>power: NET-97fc96ee83b8</title></path>
-<path d="M636.0,80.5 C682.8,80.5 693.2,80.5 740.0,80.5" fill="none" stroke="#b3261e" stroke-width="2" stroke-linecap="round" opacity="0.85"><title>power: NET-4411ae54eb05</title></path>
-<path d="M636.0,87.5 C682.8,87.5 693.2,87.5 740.0,87.5" fill="none" stroke="#b3261e" stroke-width="2" stroke-linecap="round" opacity="0.85"><title>power: NET-71b628a325a2</title></path>
-<g><rect x="28" y="54" width="132" height="60" rx="8" fill="#f1f3f4" stroke="#c4c7cc" stroke-width="1"/><text x="94" y="80" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">Blinky</text><text x="94" y="97" text-anchor="middle" font-size="10.5" fill="#5f6368">block</text><title>BLK-42978eb8675a</title></g>
-<g><rect x="28" y="178" width="132" height="60" rx="8" fill="#ffffff" stroke="#b3261e" stroke-dasharray="4 3" stroke-width="1"/><text x="94" y="204" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">indicator</text><text x="94" y="221" text-anchor="middle" font-size="10.5" fill="#5f6368">LED</text><title>CMP-494741b2b3a0 — unknown: luminous_intensity, reverse_voltage</title></g>
-<g><rect x="740" y="54" width="132" height="60" rx="8" fill="#ffffff" stroke="#b3261e" stroke-dasharray="4 3" stroke-width="1"/><text x="806" y="80" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">bypass</text><text x="806" y="97" text-anchor="middle" font-size="10.5" fill="#5f6368">Capacitor</text><title>CMP-64288fd28572 — unknown: tolerance_pct</title></g>
-<g><rect x="264" y="54" width="136" height="60" rx="8" fill="#ffffff" stroke="#c4c7cc" stroke-width="1"/><text x="332" y="80" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">header</text><text x="332" y="97" text-anchor="middle" font-size="10.5" fill="#5f6368">PowerHeader</text><title>CMP-8c7329903870</title></g>
-<g><rect x="188" y="178" width="132" height="60" rx="8" fill="#ffffff" stroke="#b3261e" stroke-dasharray="4 3" stroke-width="1"/><text x="254" y="204" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">series</text><text x="254" y="221" text-anchor="middle" font-size="10.5" fill="#5f6368">Resistor</text><title>CMP-8ce1dec933e0 — unknown: tolerance_pct</title></g>
-<g><rect x="504" y="54" width="132" height="60" rx="8" fill="#ffffff" stroke="#c4c7cc" stroke-width="1"/><text x="570" y="80" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">mcu</text><text x="570" y="97" text-anchor="middle" font-size="10.5" fill="#5f6368">MCU</text><title>CMP-91431a8f1d4e</title></g>
-<line x1="28" y1="266" x2="48" y2="266" stroke="#b3261e" stroke-width="2" stroke-linecap="round"/>
-<text x="54" y="270" font-size="11" fill="#5f6368">power</text>
-<text x="28" y="294" font-size="11" fill="#b3261e">3 node(s) carry unknown parameters; a dashed border marks them</text>
+<defs><marker id="arrow" viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0.8 L8,4 L0,7.2 Z" fill="#000000"/></marker></defs>
+<g transform="translate(56,0)">
+<line x1="28" y1="702" x2="320" y2="702" stroke="#000000" stroke-width="0.6" stroke-dasharray="2 4"/>
+<text x="28" y="695" font-size="9" fill="#000000">NOTHING IN THIS VIEW CONNECTS TO THESE</text>
+<polyline points="96.0,88.0 96.0,202.0 96.0,202.0 96.0,220.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-dd1fe7b3f522</title></polyline>
+<polyline points="62.0,280.0 62.0,394.0 63.0,394.0 63.0,412.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-59321d691cbc</title></polyline>
+<polyline points="96.0,280.0 96.0,387.0 96.0,387.0 96.0,412.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-6602c9ac8517</title></polyline>
+<polyline points="130.0,280.0 130.0,380.0 129.0,380.0 129.0,412.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-97fc96ee83b8</title></polyline>
+<polyline points="74.0,472.0 74.0,586.0 74.0,586.0 74.0,604.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-4411ae54eb05</title></polyline>
+<polyline points="118.0,472.0 118.0,579.0 118.0,579.0 118.0,604.0" fill="none" stroke="#000000" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>power: NET-71b628a325a2</title></polyline>
+<g><rect x="30" y="28" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="96" y="57.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">BLINKY</text><text x="96" y="70.0" text-anchor="middle" font-size="9" fill="#000000">(BLOCK)</text><title>BLK-42978eb8675a</title></g>
+<g><rect x="28" y="728" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="94" y="757.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">INDICATOR</text><text x="94" y="770.0" text-anchor="middle" font-size="9" fill="#000000">(LED)</text><title>CMP-494741b2b3a0, unknown: luminous_intensity, reverse_voltage</title></g>
+<g><rect x="30" y="604" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="96" y="633.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">BYPASS</text><text x="96" y="646.0" text-anchor="middle" font-size="9" fill="#000000">(CAPACITOR)</text><title>CMP-64288fd28572, unknown: tolerance_pct</title></g>
+<g><rect x="28" y="220" width="136" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="96" y="249.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">HEADER</text><text x="96" y="262.0" text-anchor="middle" font-size="9" fill="#000000">(POWERHEADER)</text><title>CMP-8c7329903870</title></g>
+<g><rect x="188" y="728" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="254" y="757.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">SERIES</text><text x="254" y="770.0" text-anchor="middle" font-size="9" fill="#000000">(RESISTOR)</text><title>CMP-8ce1dec933e0, unknown: tolerance_pct</title></g>
+<g><rect x="30" y="412" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="96" y="441.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">MCU</text><text x="96" y="454.0" text-anchor="middle" font-size="9" fill="#000000">(MCU)</text><title>CMP-91431a8f1d4e</title></g>
+<text x="99.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">SUPPLY / DC</text>
+<text x="65.0" y="289.0" text-anchor="start" font-size="8" fill="#000000">DC / POWER</text>
+<text x="99.0" y="289.0" text-anchor="start" font-size="8" fill="#000000">VCC / VDD</text>
+<text x="133.0" y="289.0" text-anchor="start" font-size="8" fill="#000000">GND / VSS</text>
+<text x="77.0" y="481.0" text-anchor="start" font-size="8" fill="#000000">POWER</text>
+<text x="121.0" y="481.0" text-anchor="start" font-size="8" fill="#000000">VDD</text>
+<line x1="28" y1="816" x2="54" y2="816" stroke="#000000" stroke-width="2.2"/>
+<text x="60" y="819.5" font-size="9.5" fill="#000000">POWER</text>
+<text x="28" y="846" font-size="9.5" fill="#000000">3 node(s) carry unknown parameters; a dashed border marks them</text>
+</g>
+<text x="230.0" y="876" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">POWER</text>
+<text x="230.0" y="892" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">Where does power come from and where does it go?</text>
 </svg>

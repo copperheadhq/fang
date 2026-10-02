@@ -1,0 +1,48 @@
+# inverting_buffer_adjustable_gain: SBOA092B page 50, Inverting Buffer Adjustable Gain
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## centre: operating point, `.op`
+
+  drive  e_in: DC 1
+
+  gain            -1   claimed -1 (a_v) +/- 0.01%, holds
+
+## wiper_at_input_end: operating point, `.op`
+
+All 100 Ohm on the feedback side: the most gain the trim gives.
+
+  drive  e_in: DC 1
+  set    pot.setting = 0
+
+  gain         -1.01   claimed -1.01 (a_v_input_end) +/- 0.01%, holds
+
+## wiper_at_output_end: operating point, `.op`
+
+All 100 Ohm on the input side: the least.
+
+  drive  e_in: DC 1
+  set    pot.setting = 1
+
+  gain       -0.9901   claimed -0.9901 (a_v_output_end) +/- 0.01%, holds
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  RV1 (pot): 100 Ohm split at the wiper, set to 0.5 of its travel
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_in_return): a terminal; it marks a node and adds nothing
+  TP3 (e_out): a terminal; it marks a node and adds nothing
+  TP4 (e_out_return): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+3 of 3 claims hold.

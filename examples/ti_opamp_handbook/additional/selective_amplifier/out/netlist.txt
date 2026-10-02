@@ -1,0 +1,20 @@
+C1     100 nF           -
+C2     50 nF            -
+C3     50 nF            -
+C4     50 nF            -
+GND1   Ground           -
+R1     3.3 kOhm         -
+R2     3.3 kOhm         -
+R3     1.65 kOhm        -
+R4     10 kOhm          -
+R5     330 kOhm         -
+TP1    Terminal         -
+TP2    Terminal         -
+U1     OpAmp            -
+Net-(C1-Pad1)            C1.1 R1.2 R2.1
+Net-(C1-Pad2)            C1.2 GND1.1 R3.2 U1.IN+
+Net-(C2-Pad1)            C2.1 R1.1 R4.2 R5.1 U1.IN-
+Net-(C2-Pad2)            C2.2 C3.1 R3.1
+Net-(C3-Pad2)            C3.2 R2.2 R5.2 TP2.1 U1.OUT
+Net-(C4-Pad1)            C4.1 TP1.1
+Net-(C4-Pad2)            C4.2 R4.1

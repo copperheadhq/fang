@@ -1,9 +1,9 @@
 """Ten resistors, one 6.5 V battery, and the single number the paper asks for.
 
-JEE (Advanced) 2015, question 13: "In the following circuit, the current
-through the resistor R (= 2 ohm) is I Amperes. The value of I is". The figure
-is a square, three spokes meeting at a centre node, two legs down to the bottom
-rail, and R in series with the battery feeding the whole thing:
+JEE (Advanced) 2015, Paper 2, question 8: "In the following circuit, the
+current through the resistor R (= 2 ohm) is I Amperes. The value of I is". The
+figure is a square, three spokes meeting at a centre node, two legs down to the
+bottom rail, and R in series with the battery feeding the whole thing:
 
     the square    r_top (1) and r_bottom (10) across, r_left (6) and
                   r_right (2) down the sides
@@ -122,8 +122,8 @@ class Ladder(System):
     question = Cites(
         "In the following circuit, the current through the resistor "
         "R (= 2 ohm) is I Amperes. The value of I is",
-        document="JEE (Advanced) 2015",
-        locator="question 13 — an integer answer, no options offered",
+        document="JEE (Advanced) 2015, Paper 2",
+        locator="question 8, an integer answer, no options offered",
     )
 
     answer = Requires(
@@ -174,7 +174,7 @@ class Ladder(System):
         result=(
             "r_bottom (10 ohm) bridges 3 V to 3 V and r_top_right_spoke "
             "(8 ohm) bridges 4 V to 4 V, so both carry 0 A and what is left "
-            "is series-parallel — which is why I is a whole ampere"
+            "is series-parallel, which is why I is a whole ampere"
         ),
         requirements=("answer",),
     )

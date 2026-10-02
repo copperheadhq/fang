@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="532" height="236" viewBox="0 0 532 236" font-family="Helvetica, Arial, sans-serif">
+<title>interconnect: What is connected to what?</title>
+<defs><marker id="arrow" viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0.8 L8,4 L0,7.2 Z" fill="#000000"/></marker></defs>
+<g transform="translate(0,0)">
+<polyline points="244.0,88.0 244.0,106.0 438.0,106.0 438.0,88.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-4519b17f8f99</title></polyline>
+<polyline points="405.0,88.0 405.0,113.0 94.0,113.0 94.0,88.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-4d1ca10e619c</title></polyline>
+<polyline points="471.0,88.0 471.0,120.0 288.0,120.0 288.0,88.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-59321d691cbc</title></polyline>
+<g><rect x="28" y="28" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="94" y="57.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">R_IN</text><text x="94" y="70.0" text-anchor="middle" font-size="9" fill="#000000">(RESISTOR)</text><title>CMP-ba02db80e645, unknown: power_rating, tolerance_pct</title></g>
+<g><rect x="200" y="28" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="266" y="57.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">R_OUT</text><text x="266" y="70.0" text-anchor="middle" font-size="9" fill="#000000">(RESISTOR)</text><title>CMP-e566c1ef689e, unknown: power_rating, tolerance_pct</title></g>
+<g><rect x="372" y="28" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="438" y="57.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">AMP</text><text x="438" y="70.0" text-anchor="middle" font-size="9" fill="#000000">(OPAMP)</text><title>CMP-ed601b553153</title></g>
+<text x="247.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">OUTPUT</text>
+<text x="408.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">INVERTING</text>
+<text x="474.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">INVERTING</text>
+<line x1="28" y1="148" x2="54" y2="148" stroke="#000000" stroke-width="1"/>
+<text x="60" y="151.5" font-size="9.5" fill="#000000">ELECTRICAL</text>
+<text x="28" y="178" font-size="9.5" fill="#000000">2 node(s) carry unknown parameters; a dashed border marks them</text>
+</g>
+<text x="266.0" y="208" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">INTERCONNECT</text>
+<text x="266.0" y="224" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">What is connected to what?</text>
+</svg>

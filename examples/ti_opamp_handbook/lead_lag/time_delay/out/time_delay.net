@@ -1,0 +1,241 @@
+(export
+  (version "E")
+  (design
+    (source "time_delay.py")
+    (tool "fang 0.1.0")
+    (snapshot "sha256:deae09cdcd73047907f46b680f850ac0e3c89b1a27ef6896b862bbfb89e50ad9")
+    (project "PRJ-EXAMPLES")
+  )
+  (components
+    (comp
+      (ref "C1")
+      (value "8 nF")
+      (property
+        (name "fang_id")
+        (value "CMP-9874b9d4eb72")
+      )
+    )
+    (comp
+      (ref "C2")
+      (value "8 nF")
+      (property
+        (name "fang_id")
+        (value "CMP-6acd5725b422")
+      )
+    )
+    (comp
+      (ref "C3")
+      (value "36 nF")
+      (property
+        (name "fang_id")
+        (value "CMP-7091ffe02399")
+      )
+    )
+    (comp
+      (ref "C4")
+      (value "36 nF")
+      (property
+        (name "fang_id")
+        (value "CMP-d5f874e91003")
+      )
+    )
+    (comp
+      (ref "GND1")
+      (value "Ground")
+      (property
+        (name "fang_id")
+        (value "CMP-2a934da363ec")
+      )
+    )
+    (comp
+      (ref "R1")
+      (value "60 kOhm")
+      (property
+        (name "fang_id")
+        (value "CMP-0b38326e0e64")
+      )
+    )
+    (comp
+      (ref "R2")
+      (value "10 kOhm")
+      (property
+        (name "fang_id")
+        (value "CMP-b806950c5708")
+      )
+    )
+    (comp
+      (ref "R3")
+      (value "40 kOhm")
+      (property
+        (name "fang_id")
+        (value "CMP-8e11d6641e68")
+      )
+    )
+    (comp
+      (ref "R4")
+      (value "10 kOhm")
+      (property
+        (name "fang_id")
+        (value "CMP-5926f70712a7")
+      )
+    )
+    (comp
+      (ref "R5")
+      (value "15 kOhm")
+      (property
+        (name "fang_id")
+        (value "CMP-364c7a7de042")
+      )
+    )
+    (comp
+      (ref "TP1")
+      (value "Terminal")
+      (property
+        (name "fang_id")
+        (value "CMP-103230d81393")
+      )
+    )
+    (comp
+      (ref "TP2")
+      (value "Terminal")
+      (property
+        (name "fang_id")
+        (value "CMP-a263a1d98125")
+      )
+    )
+    (comp
+      (ref "U1")
+      (value "OpAmp")
+      (property
+        (name "fang_id")
+        (value "CMP-ed601b553153")
+      )
+    )
+  )
+  (nets
+    (net
+      (code "1")
+      (name "Net-(C1-Pad1)")
+      (node
+        (ref "C1")
+        (pin "1")
+      )
+      (node
+        (ref "R1")
+        (pin "1")
+      )
+      (node
+        (ref "R4")
+        (pin "2")
+      )
+      (node
+        (ref "U1")
+        (pin "IN-")
+      )
+    )
+    (net
+      (code "2")
+      (name "Net-(C1-Pad2)")
+      (node
+        (ref "C1")
+        (pin "2")
+      )
+      (node
+        (ref "C2")
+        (pin "1")
+      )
+      (node
+        (ref "R5")
+        (pin "1")
+      )
+    )
+    (net
+      (code "3")
+      (name "Net-(C2-Pad2)")
+      (node
+        (ref "C2")
+        (pin "2")
+      )
+      (node
+        (ref "R1")
+        (pin "2")
+      )
+      (node
+        (ref "TP2")
+        (pin "1")
+      )
+      (node
+        (ref "U1")
+        (pin "OUT")
+      )
+    )
+    (net
+      (code "4")
+      (name "Net-(C3-Pad1)")
+      (node
+        (ref "C3")
+        (pin "1")
+      )
+      (node
+        (ref "R2")
+        (pin "2")
+      )
+      (node
+        (ref "R3")
+        (pin "1")
+      )
+    )
+    (net
+      (code "5")
+      (name "Net-(C3-Pad2)")
+      (node
+        (ref "C3")
+        (pin "2")
+      )
+      (node
+        (ref "C4")
+        (pin "2")
+      )
+      (node
+        (ref "GND1")
+        (pin "1")
+      )
+      (node
+        (ref "R5")
+        (pin "2")
+      )
+      (node
+        (ref "U1")
+        (pin "IN+")
+      )
+    )
+    (net
+      (code "6")
+      (name "Net-(C4-Pad1)")
+      (node
+        (ref "C4")
+        (pin "1")
+      )
+      (node
+        (ref "R3")
+        (pin "2")
+      )
+      (node
+        (ref "R4")
+        (pin "1")
+      )
+    )
+    (net
+      (code "7")
+      (name "Net-(R2-Pad1)")
+      (node
+        (ref "R2")
+        (pin "1")
+      )
+      (node
+        (ref "TP1")
+        (pin "1")
+      )
+    )
+  )
+)

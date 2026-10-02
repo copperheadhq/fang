@@ -1,0 +1,45 @@
+* power_booster: offset
+* plan for ngspice over sha256:c4f10de51d0312fc6bc5a515313acebfb468d993eabbbf2f96461292d6a366bd
+C1 1 2 47p
+C2 3 4 10p
+* GND1 abstracted; no device emitted
+R1 6 4 100m
+R2 6 4 100m
+R3 7 0 100k
+R4 1 4 20k
+R5 1 0 1k
+R6 4 0 10
+R7 3 4 10k
+R8 3 0 4.7k
+* TP1 abstracted; no device emitted
+* TP2 abstracted; no device emitted
+* U1 abstracted; no device emitted
+* U2 abstracted; no device emitted
+.options abstol=1e-12
+.options method=gear
+.options reltol=1e-3
+.options vntol=1e-6
+.op
+* added by the bench: the drive, and the parts fang abstracted
+VDRIVE_e_in 7 0 DC 0
+XU1 2 3 6 HB_OPAMP A=1e+06 GBW=4e+06 VOH=35 VOL=-35 VOS=0.006
+XU2 7 1 2 HB_OPAMP A=1e+06 GBW=1e+06 VOH=13 VOL=-13 VOS=2e-05
+.subckt HB_OPAMP inp inn out A=1e6 GBW=1e7 VOH=13.5 VOL=-13.5 VOS=0
+VOS inp x DC {VOS}
+RIN x inn 1e12
+GM 0 n1 x inn 1e-3
+R1 n1 0 {A*1e3}
+C1 n1 0 {1e-3/(6.283185307179586*GBW)}
+DH n1 h HB_CLAMP
+VH h 0 DC {VOH}
+DL l n1 HB_CLAMP
+VL l 0 DC {VOL}
+EO out 0 n1 0 1
+.model HB_CLAMP D(IS=1e-15 N=0.01)
+.ends HB_OPAMP
+.control
+run
+let v_os_out = v(4)
+print v_os_out
+.endc
+.end

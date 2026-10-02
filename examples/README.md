@@ -23,9 +23,15 @@ them is a sketch that no longer works.
 | [`jee_advanced/problem_2/`](jee_advanced/problem_2/) | Not a board either: one claimed current, and the two branches that carry none | 12 | 7 |
 | [`noninverting_amp/`](noninverting_amp/) | Not a board: two midband answers, and the reading of the figure they rest on | 13 | 8 |
 
+Beside them, [`ti_opamp_handbook/`](ti_opamp_handbook/) holds 73 more: every
+circuit in TI's *Handbook of Operational Amplifier Applications* (SBOA092B),
+each simulated in ngspice through `fang.simulation`, with 339 claims that all
+hold. The folder groups them by the handbook's sections, and its README lists
+each circuit and what the handbook got wrong about it.
+
 The last three are the odd ones out: eleven boards, then two exam questions
 and a textbook figure, because the kernel decides a claim about a circuit the
-same way whichever it is. The two exam questions share a folder —
+same way whichever it is. The two exam questions share a folder.
 [`jee_advanced/`](jee_advanced/) groups them and is not itself an example,
 which is why an example's name here is its path below `examples/` rather than
 just a folder name.
@@ -54,10 +60,10 @@ record any reasoning get one. A divider has nothing to explain.
 
 `verification.txt` is what `fang verify` finds, run twice: on the elaborated
 program, and again on the head the first run's measurements were committed to.
-Only an example that declares a question gets one -- `rc_filter/`,
-`antenna_match/` and `buck_regulator/`. It gives three significant figures and
-no tool version, so a simulator release that moves a number in its fourth
-figure moves nothing here.
+Only an example that declares a question gets one: `rc_filter/`,
+`antenna_match/`, `buck_regulator/` and `sensor_node/`. It gives three
+significant figures and no tool version, so a simulator release that moves a
+number in its fourth figure moves nothing here.
 
 ## Running one
 
@@ -78,9 +84,9 @@ python examples/regenerate.py divider    # one of them
 
 An example that ships a schematic needs `kicad-cli` on the path to regenerate,
 because KiCad is what draws it. The two under `jee_advanced/` are the ones
-that do. An example whose question runs ngspice -- `rc_filter/` and
-`buck_regulator/` -- needs ngspice to rewrite its `verification.txt`; without
-it the committed file is left as it is, and the suite skips comparing it,
+that do. An example whose questions route to a tool that is not installed
+(ngspice for `rc_filter/` and `buck_regulator/`, Renode for `sensor_node/`)
+keeps its committed `verification.txt`, and the suite skips comparing it,
 naming the tool.
 
 The committed outputs are built in the project namespace `PRJ-EXAMPLES`, which

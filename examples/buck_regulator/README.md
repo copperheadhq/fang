@@ -35,16 +35,16 @@ now a question, and the program cannot state its answer.
 
 `ripple` and `output` are parameters with no value, each with a constraint:
 ripple at most 30 mV, the output between 3.2 and 3.4 V. The question measures
-both on a bench it names in full -- 12 V on the controller's input, 2.2 Ohm
-across the rail header (1.5 A at 3.3 V), a transient to 1.2 ms measured over
-its last 0.2 ms -- and leaves out the input connector, the fuse, the reverse
+both on a bench it names in full: 12 V on the controller's input, 2.2 Ohm
+across the rail header (1.5 A at 3.3 V), and a transient to 1.2 ms measured
+over its last 0.2 ms. It leaves out the input connector, the fuse, the reverse
 diode and the header, so the supply lands on the controller.
 
 The controller is simulated by [`ideal_buck.sub`](ideal_buck.sub): two ideal
 switches at a fixed duty of 0.275. It is not a model of the TPS62130, and the
 program says so: the trait's provenance is an assumption, which halves the
-confidence of every number measured over it, and what it leaves out -- the
-control loop above all -- is recorded as a coverage gap on every run.
+confidence of every number measured over it, and what it leaves out, the
+control loop above all, is recorded as a coverage gap on every run.
 
 [`out/verification.txt`](out/verification.txt) is what `fang verify` finds:
 3.29 V and 1.90 mV of ripple, both inside their constraints, so the
@@ -60,13 +60,13 @@ three are the rail's own numbers, until `fang verify` measures them.
 [`out/rationale.md`](out/rationale.md) is the file to read. It is the whole
 argument, projected out of the graph in identifier order:
 
-> ### system.inductor_value — `CALC-7d60a2e8f772`
+> ### system.inductor_value (`CALC-7d60a2e8f772`)
 >
 > `L = v_out * (1 - v_out / v_in) / (f_sw * ripple_current)`
 >
 > Result: 4.7 uH at 1.25 MHz for 30% ripple at 1.5 A
 >
-> - Over `system.inductor` — Inductor (`CMP-64dfc4cd840c`)
+> - Over `system.inductor` (Inductor, `CMP-64dfc4cd840c`)
 
 - [`out/verification.txt`](out/verification.txt): the question, answered
 - [`out/buck_regulator.net`](out/buck_regulator.net), [`out/netlist.txt`](out/netlist.txt)

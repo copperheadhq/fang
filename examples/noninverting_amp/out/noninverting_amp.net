@@ -3,7 +3,7 @@
   (design
     (source "noninverting_amp.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:4eb956ccefda6be26897809b9ffd988be0aaa15f3f387bdb48efc0788e3b1699")
+    (snapshot "sha256:71c839dd1e08317242ec799984d00f9c773c76c896466cc6c0ffe4804a29173d")
     (project "PRJ-EXAMPLES")
   )
   (components

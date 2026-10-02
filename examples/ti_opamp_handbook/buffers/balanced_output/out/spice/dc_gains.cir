@@ -1,0 +1,46 @@
+* balanced_output: dc_gains
+* plan for ngspice over sha256:7c476fbdfc9a37117bf9c1afaedcb129a5cf2faeeaa4ac7609be6414b8873244
+* GND1 abstracted; no device emitted
+R1 2 3 10k
+R2 4 5 10k
+R3 3 4 10k
+R4 5 6 10k
+* TP1 abstracted; no device emitted
+* TP2 abstracted; no device emitted
+* TP3 abstracted; no device emitted
+* TP4 abstracted; no device emitted
+* TP5 abstracted; no device emitted
+* U1 abstracted; no device emitted
+* U2 abstracted; no device emitted
+.options abstol=1e-12
+.options method=gear
+.options reltol=1e-3
+.options vntol=1e-6
+.op
+* added by the bench: the drive, and the parts fang abstracted
+VDRIVE_e_in 2 0 DC 1
+XU1 0 3 4 HB_OPAMP A=1e+06 GBW=1e+07 VOH=13.5 VOL=-13.5 VOS=0
+XU2 0 5 6 HB_OPAMP A=1e+06 GBW=1e+07 VOH=13.5 VOL=-13.5 VOS=0
+.subckt HB_OPAMP inp inn out A=1e6 GBW=1e7 VOH=13.5 VOL=-13.5 VOS=0
+VOS inp x DC {VOS}
+RIN x inn 1e12
+GM 0 n1 x inn 1e-3
+R1 n1 0 {A*1e3}
+C1 n1 0 {1e-3/(6.283185307179586*GBW)}
+DH n1 h HB_CLAMP
+VH h 0 DC {VOH}
+DL l n1 HB_CLAMP
+VL l 0 DC {VOL}
+EO out 0 n1 0 1
+.model HB_CLAMP D(IS=1e-15 N=0.01)
+.ends HB_OPAMP
+.control
+run
+let gain_plus = v(4) / v(2)
+print gain_plus
+let gain_minus = v(6) / v(2)
+print gain_minus
+let gain_diff = (v(4) - v(6)) / v(2)
+print gain_diff
+.endc
+.end

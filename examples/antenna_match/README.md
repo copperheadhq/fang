@@ -43,7 +43,7 @@ matched = Evaluates(
 ```
 
 Which of the two parts is a shunt and which is in series is read from the
-graph -- the capacitor has a terminal on ground -- and each value is the one
+graph (the capacitor has a terminal on ground) and each value is the one
 the graph holds.
 
 ## What comes out
@@ -53,7 +53,7 @@ answered.
 
 [`out/verification.txt`](out/verification.txt) is the file to read: the
 touchstone tool reads the model, interpolates it at 2.44 GHz, composes the two
-parts, and finds 38.5 dB, so the verification passes at confidence 0.5 -- half,
+parts, and finds 38.5 dB, so the verification passes at confidence 0.5: half,
 because the model it rests on is an assumption. The number enters the graph
 through the commit gate as an inferred value whose source is the run's
 evidence, and the evidence records the model file's digest, because the

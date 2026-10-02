@@ -3,7 +3,7 @@
 The circuit is ordinary. What is not ordinary is that the requirement, the part
 decision, the datasheet numbers behind it, the two calculations, and the
 question that verifies the requirement are all entities in the same graph as
-the inductor — so `fang` can answer "why is this 4.7 uH?" without anyone having
+the inductor, so `fang` can answer "why is this 4.7 uH?" without anyone having
 written a design document, and `fang verify` can find out whether the rail
 holds under load rather than take a hand-written PASS for it.
 """

@@ -1,0 +1,63 @@
+# scaling_adder: SBOA092B page 64, Scaling Adder
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## e1_alone: operating point, `.op`
+
+  drive  e1: DC 0.1
+  drive  e2: DC 0
+  drive  e3: DC 0
+
+  gain_e1        -99.99   claimed -100 (a_1) +/- 0.1%, holds
+           The handbook prints -100(100 E1 + 10 E2 + E3); R0/R1 is 100, and
+           there is no further factor of 100 in the figure.
+  z_in_e1        1 kOhm   claimed 1 kOhm (z_1) +/- 0.1%, holds
+
+## e2_alone: operating point, `.op`
+
+  drive  e1: DC 0
+  drive  e2: DC 0.1
+  drive  e3: DC 0
+
+  gain_e2        -9.999   claimed -10 (a_2) +/- 0.1%, holds
+  z_in_e2       10 kOhm   claimed 10 kOhm (z_2) +/- 0.1%, holds
+
+## e3_alone: operating point, `.op`
+
+  drive  e1: DC 0
+  drive  e2: DC 0
+  drive  e3: DC 0.1
+
+  gain_e3       -0.9999   claimed -1 (a_3) +/- 0.1%, holds
+  z_in_e3      100 kOhm   claimed 100 kOhm (z_3) +/- 0.1%, holds
+
+## all_three: operating point, `.op`
+
+  drive  e1: DC 0.01
+  drive  e2: DC 0.1
+  drive  e3: DC 1
+
+  e_o          -3 V   claimed -3 V +/- 0.1%, holds
+       -(100 x 0.01 + 10 x 0.1 + 1) = -3 V. The printed formula would ask
+       for -300 V.
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (common): a terminal; it marks a node and adds nothing
+  TP2 (e1): a terminal; it marks a node and adds nothing
+  TP3 (e2): a terminal; it marks a node and adds nothing
+  TP4 (e3): a terminal; it marks a node and adds nothing
+  TP5 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+7 of 7 claims hold.

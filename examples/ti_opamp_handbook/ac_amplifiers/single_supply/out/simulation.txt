@@ -1,0 +1,52 @@
+# single_supply: SBOA092B page 76, Single Supply
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## bias: operating point, `.op`
+
+  drive  e_in: DC 0
+
+  e_out          7.5 V   claimed 7.5 V (e_bias) +/- 0.1%, holds
+  e_plus         7.5 V   not a claim
+
+## response: ac, `.ac dec 40 0.1 10meg`
+
+  drive  e_in: DC 0 AC 1
+
+  gain_1k         9.999   claimed 10 +/- 0.1%, holds
+           the magnitude of -10
+  f_3db        15.92 Hz   claimed 16 Hz (f_low) +/- 1%, holds
+           1/(2 pi R_I C_I) is 15.92 Hz, as above; the handbook prints 16
+
+## signal: transient, `.tran 2u 80m`
+
+A 0.5 V, 1 kHz sine: the output swings 5 V either side of its 7.5 V rest,
+inside the 0 V to 13.5 V it can reach. It is read over the last 5 ms of 80,
+after the 10 ms C_I R_I transient of switching the sine on has died away.
+The tolerance is 0.5% for the sampled peaks.
+
+  drive  e_in: SIN(0 0.5 1k)
+
+  e_top           12.5 V   claimed 12.5 V +/- 0.5%, holds
+            7.5 V + 10 x 0.5 V
+  e_bottom       2.501 V   claimed 2.5 V +/- 0.5%, holds
+            7.5 V - 10 x 0.5 V
+  e_mean           7.5 V   claimed 7.5 V (e_bias) +/- 0.5%, holds
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output 0 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+6 of 6 claims hold.

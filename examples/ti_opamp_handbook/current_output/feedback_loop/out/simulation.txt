@@ -1,0 +1,62 @@
+# feedback_loop: SBOA092B page 79, Feedback Loop
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## load_100_ohm: operating point, `.op`
+
+  drive  e_in: DC 1
+  set    r_load.resistance = 100
+
+  i_per_volt        1 mA/V   claimed 1 mA/V (i_per_volt) +/- 0.1%, holds
+  z_in              1 kOhm   claimed 1 kOhm (z_in) +/- 0.1%, holds
+  e_out            -100 mV   not a claim
+
+## load_1000_ohm: operating point, `.op`
+
+  drive  e_in: DC 1
+  set    r_load.resistance = 1000
+
+  i_per_volt        1 mA/V   claimed 1 mA/V (i_per_volt) +/- 0.1%, holds
+  z_in              1 kOhm   claimed 1 kOhm (z_in) +/- 0.1%, holds
+  e_out               -1 V   not a claim
+
+## load_10000_ohm: operating point, `.op`
+
+  drive  e_in: DC 1
+  set    r_load.resistance = 10000
+
+  i_per_volt        1 mA/V   claimed 1 mA/V (i_per_volt) +/- 0.1%, holds
+  z_in              1 kOhm   claimed 1 kOhm (z_in) +/- 0.1%, holds
+  e_out              -10 V   not a claim
+
+## load_20000_ohm: operating point, `.op`
+
+Past the swing: the claim I = E_I / R_1 holds only while E_I R_L / R_1 fits
+inside the output swing.
+
+  drive  e_in: DC 1
+  set    r_load.resistance = 20000
+
+  e_out           -13.51 V   claimed -13.5 V +/- 1%, holds
+              20 kOhm at 1 mA needs -20 V; the output stops at the -13.5 V
+              swing, and the current falls to 14.5 V / 21 kOhm
+  i_per_volt    690.8 uA/V   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  RL1 (r_load): load of 1000 Ohm, with its current sensed
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+7 of 7 claims hold.

@@ -1,0 +1,56 @@
+# augmented_differentiator: SBOA092B page 62, Augmented Differentiator
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## input_term: operating point, `.op`
+
+  drive  e_in: DC 1
+
+  gain            -1   claimed -1 (a_dc) +/- 0.1%, holds
+        At DC the derivative is zero and only -E_I is left
+
+## both_terms: ac, `.ac dec 100 1 1k`
+
+The page's E_O = -E_I - (1/100) dE_I/dt, in frequency terms: E_O/E_I = -(1 +
+j 2 pi f x 0.01 s).
+
+  drive  e_in: DC 0 AC 1
+
+  gain_equal          1.414   claimed 1.414 +/- 0.1%, holds
+               |1 + j| at f_equal: the two terms equal and 90 degrees apart
+  phase_equal        -2.356   claimed -2.356 +/- 0.1%, holds
+               -3 pi/4 radians: -(1 + j), inverted and 45 degrees ahead
+  gain_159            10.05   claimed 10.05 +/- 0.1%, holds
+               |1 + j 10| a decade up, where the derivative dominates
+  gain_1              1.002   claimed 1.002 +/- 0.1%, holds
+               |1 + j 2 pi 1 Hz 10 ms|: at 1 Hz, nearly E_I alone
+
+## peak: ac, `.ac lin 2401 12k 13.2k`
+
+Not a claim of the page. The derivative has no stop, so the noise gain rises
+like the plain differentiator's and meets the 10 MHz op amp's roll-off near
+sqrt(GBW x 15.9 Hz) = 12.6 kHz.
+
+  drive  e_in: DC 0 AC 1
+
+  f_peak           12.62 kHz   not a claim
+  gain_peak_db      107.6 dB   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (common): a terminal; it marks a node and adds nothing
+  TP2 (e_in): a terminal; it marks a node and adds nothing
+  TP3 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+5 of 5 claims hold.

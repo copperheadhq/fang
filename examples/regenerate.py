@@ -25,6 +25,7 @@ ones this namespace gives and not the ones a local `fang build` would.
 from __future__ import annotations
 
 import contextlib
+import dataclasses
 import io
 import re
 import sys
@@ -41,6 +42,7 @@ from fang.checks import DEFAULT_CHECKS
 from fang.cli import cmd_check, cmd_export, cmd_graph, cmd_netlist, load_system
 from fang.copperhead import CopperheadDrafter, compile_intent
 from fang.elaborate import EPOCH, elaborate
+from fang.entities import Pin
 from fang.graph import KernelGraph
 from fang.layout import PlacementSeeds, place
 from fang.render import to_svg
@@ -73,15 +75,13 @@ VIEWS: dict[str, tuple[str, ...]] = {
 #: The examples that ship a schematic. A schematic is the picture an engineer
 #: recognizes, and it is KiCad that draws it, so regenerating one of these needs
 #: `kicad-cli` on the path.
-SCHEMATICS: frozenset[str] = frozenset(
-    {"jee_advanced/problem_1", "jee_advanced/problem_2", "noninverting_amp"}
-)
+SCHEMATICS: frozenset[str] = frozenset({"noninverting_amp"})
 
 #: The examples that also ship copperhead's draft of the same circuit, placed
 #: and wired rather than laid on a grid, under out/copperhead/. copperhead draws
 #: it and KiCad renders it, so regenerating one of these needs `copperhead` on
-#: the path as well as `kicad-cli`. Only the ones copperhead draws legibly: on
-#: the two resistor meshes its labels still land on symbol bodies.
+#: the path as well as `kicad-cli`. The textbook figures are drafted by
+#: copperhead too, but by `draw_figures.py` into `figure/` (`FIGURES`, below).
 DRAFTED: frozenset[str] = frozenset({"noninverting_amp"})
 
 #: The examples whose firmware runs in Renode. For each emulation question the
@@ -89,6 +89,63 @@ DRAFTED: frozenset[str] = frozenset({"noninverting_amp"})
 #: out/renode/<question>/, here and on every machine: lowering a plan needs no
 #: emulator, so these are compared like any other output.
 EMULATED: frozenset[str] = frozenset({"sensor_node"})
+
+#: Groups whose every example is a textbook figure, and ships the
+#: interconnect view to set beside the page it came from. Naming the folder
+#: rather than each circuit is what keeps a new one in the group from arriving
+#: without it. Their schematics are drawn by copperhead into `figure/`, by
+#: `draw_figures.py`, since copperhead is not a dependency of fang.
+FIGURES = ("ti_opamp_handbook/", "jee_advanced/")
+
+
+#: The parts a textbook figure's block diagram leaves out: the terminals its
+#: signals come in and go out on, and the ground they return to. They are the
+#: figure's edges, not its circuit, and drawn as blocks they crowd out the
+#: amplifier the figure is about.
+FIGURE_FURNITURE = frozenset({"TP", "GND"})
+
+
+def _circuit_only(graph, snapshot):
+    """The view with only the circuit in it: no terminals, no ground, and not
+    the block that holds the whole figure, nor any wire that reaches them."""
+    kept = {
+        node.id
+        for node in graph.nodes
+        if node.kind != "block"
+        and snapshot.entities[node.id].extensions.get("designator_prefix")
+        not in FIGURE_FURNITURE
+    }
+    edges = [edge for edge in graph.edges if edge.source in kept and edge.target in kept]
+
+    # A link is drawn once. The graph records it twice, between two ports and
+    # again between the pins they lower to, and a block diagram is about the
+    # ports: a pin-level wire is kept only where no port-level one joins the
+    # same two parts.
+    def pin_level(edge) -> bool:
+        return isinstance(snapshot.entities[snapshot.entities[edge.id].source], Pin)
+
+    joined = {frozenset((e.source, e.target)) for e in edges if not pin_level(e)}
+    edges = [
+        e for e in edges
+        if not pin_level(e) or frozenset((e.source, e.target)) not in joined
+    ]
+    return dataclasses.replace(
+        graph,
+        nodes=tuple(node for node in graph.nodes if node.id in kept),
+        edges=tuple(edges),
+    )
+
+
+def views_of(name: str) -> tuple[str, ...]:
+    """The views an example ships."""
+    if name.startswith(FIGURES):
+        return ("interconnect",)
+    return VIEWS.get(name, ())
+
+
+def schematic_of(name: str) -> bool:
+    """Whether an example ships a schematic and KiCad's render of it."""
+    return name in SCHEMATICS
 
 #: The entity kinds that carry reasoning rather than circuit. An example with
 #: none of them gets no rationale document, because it would have nothing in it.
@@ -98,7 +155,7 @@ RATIONALE_KINDS = ("requirement", "decision", "evidence", "calculation", "verifi
 #: Folders a search never descends into: an example's own outputs, and Python's
 #: leavings. Everything else under examples/ is either an example or a folder
 #: that groups them.
-_SKIP = frozenset({"out", "views", "__pycache__"})
+_SKIP = frozenset({"out", "views", "figure", "__pycache__"})
 
 
 def _find(folder: Path) -> list[str]:
@@ -194,8 +251,8 @@ def _named(snapshot, identifier: str) -> str:
     if entity is None:
         return f"`{identifier}`"
     label, name = _label(entity), entity.identity.display_name
-    kind = f" — {name}" if name and label.rsplit(".", 1)[-1] != name else ""
-    return f"`{label}`{kind} (`{identifier}`)"
+    inside = f"{name}, " if name and label.rsplit(".", 1)[-1] != name else ""
+    return f"`{label}` ({inside}`{identifier}`)"
 
 
 def _rationale(name: str, snapshot) -> str | None:
@@ -213,7 +270,7 @@ def _rationale(name: str, snapshot) -> str | None:
         return None
 
     out = [
-        f"# {name} — rationale",
+        f"# {name}: rationale",
         "",
         "Every line below is an entity in the elaborated graph, projected by",
         "`python examples/regenerate.py`. Nothing here is prose kept beside the",
@@ -228,7 +285,7 @@ def _rationale(name: str, snapshot) -> str | None:
             verifications = [
                 v for v in kinds["verification"] if v.verifies == req.id
             ]
-            out.append(f"### {_label(req)} — `{req.id}`")
+            out.append(f"### {_label(req)} (`{req.id}`)")
             out.append("")
             out.append(f"> {_resolve(snapshot, req.statement)}")
             out.append("")
@@ -253,7 +310,7 @@ def _rationale(name: str, snapshot) -> str | None:
         out.append("## Decisions")
         out.append("")
         for decision in kinds["decision"]:
-            out.append(f"### {_label(decision)} — `{decision.id}`")
+            out.append(f"### {_label(decision)} (`{decision.id}`)")
             out.append("")
             choice = decision.choice or ""
             out.append(
@@ -276,7 +333,7 @@ def _rationale(name: str, snapshot) -> str | None:
         out.append("## Calculations")
         out.append("")
         for calculation in kinds["calculation"]:
-            out.append(f"### {_label(calculation)} — `{calculation.id}`")
+            out.append(f"### {_label(calculation)} (`{calculation.id}`)")
             out.append("")
             out.append(f"`{calculation.expression}`")
             out.append("")
@@ -290,7 +347,7 @@ def _rationale(name: str, snapshot) -> str | None:
         out.append("## Evidence")
         out.append("")
         for evidence in kinds["evidence"]:
-            out.append(f"### {_label(evidence)} — `{evidence.id}`")
+            out.append(f"### {_label(evidence)} (`{evidence.id}`)")
             out.append("")
             out.append(f"> {_resolve(snapshot, evidence.claim)}")
             out.append("")
@@ -361,34 +418,44 @@ def _emulation_bundles(result) -> dict[str, str]:
     return files
 
 
-def render(name: str) -> dict[str, str]:
+def render(name: str, *, with_render: bool = True) -> dict[str, str]:
     """Every output file for one example, as relative path to text.
 
     The name is a path relative to examples/, so a grouped example is
     `jee_advanced/problem_1`. Files inside its own out/ are named after the
-    leaf, because that is the name the program has.
+    leaf, because that is the name the program has. `with_render=False`
+    leaves out KiCad's render of a schematic, the one output that needs
+    `kicad-cli`, so everything else can still be checked without it.
     """
     stem = Path(name).name
-    result = elaborate(load_system(_program(name)), project_id=PROJECT)
+    system = load_system(_program(name))
+    result = elaborate(system, project_id=PROJECT)
     files = {
         f"{stem}.net": _run(cmd_export, name),
         "netlist.txt": _run(cmd_netlist, name),
         "checks.txt": _run(cmd_check, name),
         "graph.txt": _run(cmd_graph, name),
     }
-    for view_name in VIEWS.get(name, ()):
+    for view_name in views_of(name):
         graph = view(result.snapshot, view_name)
-        files[f"views/{view_name}.svg"] = to_svg(place(graph, seeds=PlacementSeeds()))
-    if name in SCHEMATICS:
+        if name.startswith(FIGURES):
+            graph = _circuit_only(graph, result.snapshot)
+        # Laid out downwards: an example's view is read in a page's column,
+        # and a diagram of many stages laid out to the right is too wide for it.
+        files[f"views/{view_name}.svg"] = to_svg(
+            place(graph, seeds=PlacementSeeds(), direction="down")
+        )
+    if schematic_of(name):
         schematic = compile_schematic(
             result.snapshot, traits=result.traits, title=stem
         )
         files[f"{stem}.kicad_sch"] = schematic
+    if schematic_of(name) and with_render:
         with TemporaryDirectory() as scratch:
             files["schematic.svg"] = KicadRenderer().to_svg(
                 schematic, workspace=Path(scratch), name=stem
             )
-    if name in DRAFTED:
+    if name in DRAFTED and with_render:
         intent = compile_intent(result.snapshot, traits=result.traits, group=stem)
         files["copperhead/schematic.intent.json"] = intent.text()
         with TemporaryDirectory() as scratch:
@@ -401,6 +468,9 @@ def render(name: str) -> dict[str, str]:
             )
     if name in EMULATED:
         files.update(_emulation_bundles(result))
+    bench = bench_of(system)
+    if bench is not None:
+        files.update(bench.render(result, system, stem))
     rationale = _rationale(stem, result.snapshot)
     if rationale is not None:
         files["rationale.md"] = rationale
@@ -418,6 +488,22 @@ def _missing_tools(name: str) -> list[str]:
     return sorted(
         tool for tool in verification_tools(result) if not TOOLS.get(tool).available()
     )
+
+
+def bench_of(system):
+    """The bench a program declares beside its system, if it declares one.
+
+    A program that carries a ``BENCH`` is simulated when its outputs are
+    written: the bench lowers the graph through `fang.simulation`, runs
+    ngspice, and ships each deck and what it measured. Regenerating one needs
+    `ngspice` on the path, as a schematic needs `kicad-cli`.
+    """
+    return getattr(sys.modules.get(system.__module__), "BENCH", None)
+
+
+def simulated(name: str) -> bool:
+    """Whether an example's outputs include a simulation."""
+    return bench_of(load_system(_program(name))) is not None
 
 
 def write(name: str) -> list[Path]:

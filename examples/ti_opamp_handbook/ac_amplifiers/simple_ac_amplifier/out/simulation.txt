@@ -1,0 +1,48 @@
+# simple_ac_amplifier: SBOA092B page 76, Simple Amplifier
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## response: ac, `.ac dec 40 0.1 10meg`
+
+The -3 dB points are where the gain falls to 20 dB - 3.01 dB. The upper one
+is not a handbook claim: it is the op amp's 10 MHz over a noise gain of 11.
+At 1 Hz, a decade and more below the corner, the gain falls 20 dB per
+decade.
+
+  drive  e_in: DC 0 AC 1
+
+  gain_1k          9.999   claimed 10 +/- 0.1%, holds
+            the magnitude of -10
+  z_in           10 kOhm   claimed 10 kOhm (z_in) +/- 0.1%, holds
+            the 1 V drive over the in-phase part of its current at 1 kHz,
+            where C_I is 159 Ohm against 10 kOhm and moves it by 0.03%
+  f_3db         15.92 Hz   claimed 16 Hz (f_low) +/- 1%, holds
+            1/(2 pi R_I C_I) is 15.92 Hz; the handbook prints 16
+  i_in_1k      -99.98 uA   not a claim
+  gain_1hz        0.6271   not a claim
+  f_high       909.1 kHz   not a claim
+
+## dc: operating point, `.op`
+
+  drive  e_in: DC 1
+
+  e_out   5.049e-25 V   claimed 0 V +/- 1 uV, holds
+         C_I blocks the 1 V: at d.c. the stage follows its + input, ground
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+4 of 4 claims hold.

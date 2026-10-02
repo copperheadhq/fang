@@ -1,0 +1,132 @@
+{
+  "version": 1,
+  "parts": [
+    {
+      "ref": "C1",
+      "libId": "Device:C",
+      "value": "100uF",
+      "group": "Circuit"
+    },
+    {
+      "ref": "C2",
+      "libId": "Device:C",
+      "value": "1uF",
+      "group": "Circuit"
+    },
+    {
+      "ref": "GND1",
+      "libId": "power:GND",
+      "value": "GND",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R1",
+      "libId": "Device:R",
+      "value": "10k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R2",
+      "libId": "Device:R",
+      "value": "10k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R3",
+      "libId": "Device:R",
+      "value": "10k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R4",
+      "libId": "Device:R",
+      "value": "100k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP1",
+      "libId": "Connector:TestPoint",
+      "value": "E_IN",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP2",
+      "libId": "Connector:TestPoint",
+      "value": "E_OUT",
+      "group": "Circuit"
+    },
+    {
+      "ref": "U1",
+      "libId": "Simulation_SPICE:OPAMP",
+      "value": "OPAMP",
+      "group": "Circuit"
+    },
+    {
+      "ref": "V1",
+      "libId": "Device:Battery_Cell",
+      "value": "15V",
+      "group": "Circuit"
+    }
+  ],
+  "nets": [
+    {
+      "name": "Net-(C1-Pad1)",
+      "pins": [
+        "C1.1",
+        "R1.2",
+        "R2.1",
+        "U1.1"
+      ]
+    },
+    {
+      "name": "GND",
+      "pins": [
+        "C1.2",
+        "GND1.1",
+        "R2.2",
+        "V1.2"
+      ],
+      "kind": "ground"
+    },
+    {
+      "name": "E_IN",
+      "pins": [
+        "C2.1",
+        "TP1.1"
+      ]
+    },
+    {
+      "name": "Net-(C2-Pad2)",
+      "pins": [
+        "C2.2",
+        "R3.1"
+      ]
+    },
+    {
+      "name": "Net-(R1-Pad1)",
+      "pins": [
+        "R1.1",
+        "V1.1"
+      ]
+    },
+    {
+      "name": "Net-(R3-Pad2)",
+      "pins": [
+        "R3.2",
+        "R4.1",
+        "U1.2"
+      ]
+    },
+    {
+      "name": "E_OUT",
+      "pins": [
+        "R4.2",
+        "TP2.1",
+        "U1.5"
+      ]
+    }
+  ],
+  "hints": {
+    "date": "2026-01-01"
+  }
+}

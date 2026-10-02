@@ -37,7 +37,7 @@ AT-F2), into the combined spec.
 | # | Change | Delivers |
 | --- | --- | --- |
 | — | `fang-verification` | Verification questions beside requirements, explicit benches and measures, the tool protocol and level routing, measurements re-entering through the gate; ngspice, Xyce, KiCad ERC and Touchstone; `fang verify` |
-| — | `fang-mcu-parts` | Ports that name their peripheral instance, cited alternate-function selectors on the lowered pins, and I2C addresses — fixed or strapped — that the compatibility check reads from the board |
+| — | `fang-mcu-parts` | Ports that name their peripheral instance, cited alternate-function selectors on the lowered pins, and I2C addresses, fixed or strapped, that the compatibility check reads from the board |
 | — | `fang-emulation` | A board's compiled firmware run in Renode as a verification question: plans resolved from the graph, the Renode lowering and backend, probes, measures over events, `fang emulate`, and the `sensor_node` demo with its firmware |
 
 ## The vertical slice

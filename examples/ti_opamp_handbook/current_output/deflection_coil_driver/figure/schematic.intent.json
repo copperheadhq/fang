@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "parts": [
+    {
+      "ref": "GND1",
+      "libId": "power:GND",
+      "value": "GND",
+      "group": "Circuit"
+    },
+    {
+      "ref": "L1",
+      "libId": "Device:L",
+      "value": "10mH",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R1",
+      "libId": "Device:R",
+      "value": "5",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R2",
+      "libId": "Device:R",
+      "value": "10k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R3",
+      "libId": "Device:R",
+      "value": "10k",
+      "group": "Circuit"
+    },
+    {
+      "ref": "R4",
+      "libId": "Device:R",
+      "value": "10",
+      "group": "Circuit"
+    },
+    {
+      "ref": "TP1",
+      "libId": "Connector:TestPoint",
+      "value": "E_IN",
+      "group": "Circuit"
+    },
+    {
+      "ref": "U1",
+      "libId": "Simulation_SPICE:OPAMP",
+      "value": "OPAMP",
+      "group": "Circuit"
+    }
+  ],
+  "nets": [
+    {
+      "name": "GND",
+      "pins": [
+        "GND1.1",
+        "R4.2",
+        "U1.1"
+      ],
+      "kind": "ground"
+    },
+    {
+      "name": "Net-(L1-Pad1)",
+      "pins": [
+        "L1.1",
+        "R1.2"
+      ]
+    },
+    {
+      "name": "Net-(L1-Pad2)",
+      "pins": [
+        "L1.2",
+        "R2.2",
+        "R4.1"
+      ]
+    },
+    {
+      "name": "Net-(R1-Pad1)",
+      "pins": [
+        "R1.1",
+        "U1.5"
+      ]
+    },
+    {
+      "name": "Net-(R2-Pad1)",
+      "pins": [
+        "R2.1",
+        "R3.2",
+        "U1.2"
+      ]
+    },
+    {
+      "name": "E_IN",
+      "pins": [
+        "R3.1",
+        "TP1.1"
+      ]
+    }
+  ],
+  "hints": {
+    "date": "2026-01-01"
+  }
+}

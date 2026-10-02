@@ -1,0 +1,60 @@
+# rate_limiter: SBOA092B page 89, Rate Limiter
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## settled: operating point, `.op`
+
+  drive  e_in: DC 2
+
+  gain            -1   claimed -1 (a_v) +/- 0.1%, holds
+
+## small_step: transient, `.tran 100u 0.3`
+
+E_I steps from 0 to 0.1 V at 0.1 s. At the limit that is a 14 ms ramp, so
+E_O is settled well before 0.2 s.
+
+  drive  e_in: PWL(0 0 0.1 0 0.1001 0.1)
+
+  e_after        -100 mV   claimed -100 mV +/- 0.2%, holds
+            -E_I for a 0.1 V step, averaged over the last 0.1 s
+  e_before   -3.44e-18 V   not a claim
+  t_half        106.9 ms   not a claim
+
+## large_step: transient, `.tran 200u 1.2`
+
+E_I steps from 0 to 5 V at 0.1 s. The slope is timed between E_O = -1 V and
+-4 V, well clear of both ends of the ramp.
+
+  drive  e_in: PWL(0 0 0.1 0 0.1001 5)
+
+  slew          7.268 V/s   claimed 7.5 V/s (rate_limit) +/- 5%, holds
+             the page's 7.5 V/s is 15 V / ((R_3 + R_5) C_0); the diode in
+             the path takes about 0.45 V of the 15, so the circuit slews
+             about 3% slower
+  e_final            -5 V   claimed -5 V +/- 0.2%, holds
+             and it arrives at -E_I
+  t_minus_1      237.6 ms   not a claim
+  t_minus_4      650.4 ms   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  D1 (d_bottom_left): 1N4148 diode model
+  D2 (d_bottom_right): 1N4148 diode model
+  D3 (d_top_left): 1N4148 diode model
+  D4 (d_top_right): 1N4148 diode model
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  TP2 (e_out): a terminal; it marks a node and adds nothing
+  U1 (amp_1): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+  U2 (amp_2): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+4 of 4 claims hold.

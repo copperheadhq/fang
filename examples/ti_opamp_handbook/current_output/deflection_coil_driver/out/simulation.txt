@@ -1,0 +1,51 @@
+# deflection_coil_driver: SBOA092B page 82, Deflection Coil Driver
+
+What ngspice measured, against what the program claims. The decks
+it ran are beside this file, under spice/.
+
+## dc: operating point, `.op`
+
+  drive  e_in: DC 1
+
+  i_per_volt   -100.1 mA/V   claimed -100.1 mA/V (i_per_volt) +/- 0.1%, holds
+              The page prints -100 mA / Volt, the current through R3 alone;
+              the coil also carries the E_I / R1 that R0 takes, 0.1 mA per
+              volt more.
+  e_out             -1.5 V   not a claim
+
+## sine: transient, `.tran 0.5u 5m`
+
+0.5 V peak at 1 kHz. The coil current is inverted, so it falls through zero
+as the input rises through it; the lag is between the two crossings.
+
+  drive  e_in: SIN(0 0.5 1k)
+
+  i_per_volt   -100.3 mA/V   claimed -100.1 mA/V (i_per_volt) +/- 0.5%, holds
+              0.5% rather than 0.1%: at 1 kHz the op amp has 80 dB of gain
+              left, and the coil's 63 Ohm of reactance against R3 divides
+              what comes back, so the loop is a few hundred strong rather
+              than a million
+  lag                27 ns   claimed 0 s +/- 1 us, holds
+              a voltage across the same coil would drive a current lagging
+              85 degrees, 236 us at 1 kHz
+  i_pp            100.3 mA   not a claim
+  e_pp                 1 V   not a claim
+  t_in                4 ms   not a claim
+  t_coil              4 ms   not a claim
+  out_peak         3.402 V   not a claim
+
+## What the plan abstracted, and what the bench wrote for it
+
+fang lowers the resistors, capacitors and cells itself. These it names
+as abstracted, which puts each in the plan's assumptions, and the bench
+writes their cards instead:
+
+  GND1 (ground): the ground; its net is node 0, and it adds nothing
+  TP1 (e_in): a terminal; it marks a node and adds nothing
+  U1 (amp): op amp macro-model: 1e+06 open-loop gain, 10 MHz gain-bandwidth, output -13.5 V to 13.5 V, offset 0 V
+
+Coverage the plan itself says it lacks:
+
+  an operating point says nothing about dynamic behaviour
+
+3 of 3 claims hold.

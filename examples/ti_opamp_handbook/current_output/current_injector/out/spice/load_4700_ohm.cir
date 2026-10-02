@@ -1,0 +1,43 @@
+* current_injector: load_4700_ohm
+* plan for ngspice over sha256:8e21a7b3f7b8fb983986c551771a6015b57eca84a9fbfc6473102d4179384d42
+* GND1 abstracted; no device emitted
+R1 2 3 1k
+R2 4 2 1k
+R3 5 0 1k
+R4 3 5 1k
+* RL1 abstracted; no device emitted
+* TP1 abstracted; no device emitted
+* U1 abstracted; no device emitted
+.options abstol=1e-12
+.options method=gear
+.options reltol=1e-3
+.options vntol=1e-6
+.op
+* added by the bench: the drive, and the parts fang abstracted
+VDRIVE_e_in 4 0 DC 1
+RRL1 5 sense_RL1 4700
+VRL1_SENSE sense_RL1 0 DC 0
+XU1 5 2 3 HB_OPAMP A=1e+06 GBW=1e+07 VOH=13.5 VOL=-13.5 VOS=0
+.subckt HB_OPAMP inp inn out A=1e6 GBW=1e7 VOH=13.5 VOL=-13.5 VOS=0
+VOS inp x DC {VOS}
+RIN x inn 1e12
+GM 0 n1 x inn 1e-3
+R1 n1 0 {A*1e3}
+C1 n1 0 {1e-3/(6.283185307179586*GBW)}
+DH n1 h HB_CLAMP
+VH h 0 DC {VOH}
+DL l n1 HB_CLAMP
+VL l 0 DC {VOL}
+EO out 0 n1 0 1
+.model HB_CLAMP D(IS=1e-15 N=0.01)
+.ends HB_OPAMP
+.control
+run
+let i_per_volt = i(vrl1_sense) / v(4)
+print i_per_volt
+let common_mode = v(5)
+print common_mode
+let e_out = v(3)
+print e_out
+.endc
+.end

@@ -3,7 +3,10 @@
  * Sidebar list renderer.
  *
  * Differences from Starlight's default:
- * - group labels are small uppercase headings; the collapse caret only shows on hover
+ * - group labels are small uppercase headings, with the collapse caret always shown so a
+ *   closed group reads as one
+ * - every label keeps to one line, cut short with an ellipsis and whole on hover, so a
+ *   long name cannot break mid-word or push the rows below it down
  * - links are pill-shaped rows with an optional leading icon, set per link in the
  *   sidebar config via `attrs: { 'data-icon': '<starlight icon name>' }`
  * - the active page is highlighted with a tinted pill instead of a solid block
@@ -51,6 +54,7 @@ function anchorAttrs(entry: SidebarLink): Record<string, unknown> {
 						href={entry.href}
 						aria-current={entry.isCurrent ? 'page' : undefined}
 						class:list={['item', { large: !nested }, entry.attrs.class]}
+						title={entry.label}
 						{...anchorAttrs(entry)}
 					>
 						{iconOf(entry) && <Icon name={iconOf(entry)!} class="item-icon" size="1rem" />}
@@ -67,7 +71,7 @@ function anchorAttrs(entry: SidebarLink): Record<string, unknown> {
 					<details open={flatten(entry.entries).some((i) => i.isCurrent) || !entry.collapsed}>
 						<summary>
 							<span class="group-label">
-								<span class="group-title">{entry.label}</span>
+								<span class="group-title" title={entry.label}>{entry.label}</span>
 								{entry.badge && (
 									<Badge
 										variant={entry.badge.variant}
@@ -140,6 +144,9 @@ function anchorAttrs(entry: SidebarLink): Record<string, unknown> {
 		min-width: 0;
 	}
 	.group-title {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 		font-size: 0.6875rem;
 		font-weight: 700;
 		letter-spacing: 0.06em;
@@ -149,15 +156,14 @@ function anchorAttrs(entry: SidebarLink): Record<string, unknown> {
 
 	.caret {
 		flex-shrink: 0;
-		opacity: 0;
 		color: var(--sl-color-gray-3);
 		transition:
-			opacity 0.15s,
+			color 0.15s,
 			transform 0.2s ease-in-out;
 	}
 	summary:hover .caret,
 	summary:focus-visible .caret {
-		opacity: 1;
+		color: var(--sl-color-white);
 	}
 	:global([dir='rtl']) .caret {
 		transform: rotateZ(180deg);
@@ -195,6 +201,9 @@ function anchorAttrs(entry: SidebarLink): Record<string, unknown> {
 	}
 	.label {
 		min-width: 0;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.item[aria-current='page'],

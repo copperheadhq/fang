@@ -1,0 +1,56 @@
+* rate_limiter: large_step
+* plan for ngspice over sha256:a939b2b91975d1566a671f922ee7bb25874216fec83178a345c9c79f19f31fed
+C1 1 2 10u
+* D1 abstracted; no device emitted
+* D2 abstracted; no device emitted
+* D3 abstracted; no device emitted
+* D4 abstracted; no device emitted
+* GND1 abstracted; no device emitted
+R1 8 2 100k
+R2 9 8 100k
+R3 10 0 4.7k
+R4 6 11 100k
+R5 4 12 100k
+R6 5 1 100k
+* TP1 abstracted; no device emitted
+* TP2 abstracted; no device emitted
+* U1 abstracted; no device emitted
+* U2 abstracted; no device emitted
+V1 0 12 15
+V2 11 0 15
+.options abstol=1e-12
+.options method=gear
+.options reltol=1e-3
+.options vntol=1e-6
+.tran 200u 1.2
+* added by the bench: the drive, and the parts fang abstracted
+VDRIVE_e_in 9 0 PWL(0 0 0.1 0 0.1001 5)
+DD1 3 4 D1N4148
+DD2 5 4 D1N4148
+DD3 6 3 D1N4148
+DD4 6 5 D1N4148
+XU1 8 10 3 HB_OPAMP A=1e+06 GBW=1e+07 VOH=13.5 VOL=-13.5 VOS=0
+XU2 0 1 2 HB_OPAMP A=1e+06 GBW=1e+07 VOH=13.5 VOL=-13.5 VOS=0
+.model D1N4148 D(IS=2.52e-9 RS=0.568 N=1.752 CJO=4e-12 M=0.4 TT=20e-9 BV=100 IBV=100e-6)
+.subckt HB_OPAMP inp inn out A=1e6 GBW=1e7 VOH=13.5 VOL=-13.5 VOS=0
+VOS inp x DC {VOS}
+RIN x inn 1e12
+GM 0 n1 x inn 1e-3
+R1 n1 0 {A*1e3}
+C1 n1 0 {1e-3/(6.283185307179586*GBW)}
+DH n1 h HB_CLAMP
+VH h 0 DC {VOH}
+DL l n1 HB_CLAMP
+VL l 0 DC {VOL}
+EO out 0 n1 0 1
+.model HB_CLAMP D(IS=1e-15 N=0.01)
+.ends HB_OPAMP
+.control
+run
+meas tran t_minus_1 when v(2)=-1 fall=1
+meas tran t_minus_4 when v(2)=-4 fall=1
+let slew = 3 / (t_minus_4 - t_minus_1)
+print slew
+meas tran e_final avg v(2) from=1.1 to=1.2
+.endc
+.end
