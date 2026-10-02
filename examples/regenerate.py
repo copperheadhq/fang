@@ -418,14 +418,17 @@ def _emulation_bundles(result) -> dict[str, str]:
     return files
 
 
-def render(name: str, *, with_render: bool = True) -> dict[str, str]:
+def render(name: str, *, with_render: bool = True, with_draft: bool = True) -> dict[str, str]:
     """Every output file for one example, as relative path to text.
 
     The name is a path relative to examples/, so a grouped example is
     `jee_advanced/problem_1`. Files inside its own out/ are named after the
     leaf, because that is the name the program has. `with_render=False`
-    leaves out KiCad's render of a schematic, the one output that needs
-    `kicad-cli`, so everything else can still be checked without it.
+    leaves out KiCad's render of a schematic, which needs `kicad-cli`, and
+    `with_draft=False` copperhead's draft and its render, which need
+    `copperhead` as well, so everything else can still be checked without
+    them. The intent copperhead drafts from needs no tool and is always
+    written.
     """
     stem = Path(name).name
     system = load_system(_program(name))
@@ -455,9 +458,14 @@ def render(name: str, *, with_render: bool = True) -> dict[str, str]:
             files["schematic.svg"] = KicadRenderer().to_svg(
                 schematic, workspace=Path(scratch), name=stem
             )
-    if name in DRAFTED and with_render:
+    if name in DRAFTED:
         intent = compile_intent(result.snapshot, traits=result.traits, group=stem)
+        # An example is drafted to show the whole circuit drawn; one that
+        # would lose a part or a net is not quietly committed with the gap.
+        if intent.losses:
+            raise ValueError(f"{name} is in DRAFTED but its intent loses: {'; '.join(intent.losses)}")
         files["copperhead/schematic.intent.json"] = intent.text()
+    if name in DRAFTED and with_draft:
         with TemporaryDirectory() as scratch:
             drafted = CopperheadDrafter().draft(
                 intent, workspace=Path(scratch) / "draft", name=stem

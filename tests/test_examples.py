@@ -85,25 +85,35 @@ def name(request):
     return request.param
 
 
-#: The outputs only a tool can make: KiCad's render of a schematic, and
-#: copperhead's draft of one, with KiCad's render of that.
-def tool_made(relative: str) -> bool:
-    return relative == "schematic.svg" or relative.startswith("copperhead/")
+#: KiCad's render of a schematic, which only `kicad-cli` can make.
+RENDER = "schematic.svg"
+#: copperhead's draft and KiCad's render of it, which need both tools. The
+#: intent beside them needs neither, and is compared everywhere.
+DRAFT = ("copperhead/schematic.svg",)
+
+
+def _drafted(relative: str) -> bool:
+    return relative in DRAFT or (
+        relative.startswith("copperhead/") and relative.endswith(".kicad_sch")
+    )
 
 
 @pytest.fixture
-def renderable(name):
-    """Whether this example's outputs can all be made here. One that ships a
-    schematic ships KiCad's render of it, which needs `kicad-cli`, and one
-    that ships copperhead's draft needs `copperhead` as well; without them
-    those files are left out and every other output is still checked. One
-    that carries a bench ships what ngspice measured, and nothing of that can
-    be checked without `ngspice`."""
+def tools(name):
+    """Which tool-made outputs can be made here, as (render, draft). One that
+    ships a schematic ships KiCad's render of it, which needs `kicad-cli`;
+    one in DRAFTED ships copperhead's draft, which needs `copperhead` and
+    `kicad-cli`. Without them those files are left out and every other output
+    is still checked. One that carries a bench ships what ngspice measured,
+    and nothing of that can be checked without `ngspice`."""
     if simulated(name) and not NgspiceBackend().available():
         pytest.skip("ngspice is not installed here")
-    if name in DRAFTED and not CopperheadDrafter().available():
-        return False
-    return not (schematic_of(name) or name in DRAFTED) or KicadRenderer().available()
+    return KicadRenderer().available(), CopperheadDrafter().available()
+
+
+def _expected(name, tools):
+    render_here, draft_here = tools
+    return render(name, with_render=render_here, with_draft=draft_here)
 
 
 @pytest.fixture
@@ -156,22 +166,25 @@ def test_an_example_builds_identically_twice(example):
     assert first.hash == second.hash
 
 
-def test_an_example_ships_the_outputs_it_documents(example, name, renderable):
+def test_an_example_ships_the_outputs_it_documents(example, name, tools):
     """A folder with no out/ is a folder that documents nothing."""
     out = example.parent / "out"
     committed = {
         path.relative_to(out).as_posix() for path in out.rglob("*") if path.is_file()
     }
-    if not renderable:
-        committed = {relative for relative in committed if not tool_made(relative)}
-    assert committed == set(render(name, with_render=renderable))
+    render_here, draft_here = tools
+    if not render_here:
+        committed.discard(RENDER)
+    if not draft_here:
+        committed = {relative for relative in committed if not _drafted(relative)}
+    assert committed == set(_expected(name, tools))
 
 
-def test_a_committed_output_still_matches_the_program(example, name, renderable):
+def test_a_committed_output_still_matches_the_program(example, name, tools):
     """Regenerate every output and compare; `python examples/regenerate.py`
     is the fix when this fails."""
     out = example.parent / "out"
-    for relative, text in sorted(render(name, with_render=renderable).items()):
+    for relative, text in sorted(_expected(name, tools).items()):
         if relative == VERIFICATION:
             continue
         assert stable((out / relative).read_text(encoding="utf-8")) == stable(text), relative
