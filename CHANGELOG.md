@@ -66,7 +66,7 @@ tracked separately and moves only when the serialized form changes.
   evidence the design records. `python examples/regenerate.py` rewrites them,
   and `tests/test_examples.py` rebuilds and compares them, so a committed output
   cannot drift from the program beside it.
-- `examples/README.md`, indexing the eight programs and saying what is in an
+- `examples/README.md`, indexing the programs and saying what is in an
   `out/` and how it got there.
 - A regression test that two hard constraints bounding *different* parameters of
   one target are not read as a contradiction — the grouping this relies on has

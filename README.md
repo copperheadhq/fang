@@ -157,10 +157,11 @@ python -m pytest
 
 Pure Python 3.11+, and the core install has no dependencies at all. Everything
 else is optional and none of it is required: NetworkX, an extra used for graph
-*analysis*; the MCP SDK, the extra behind `fang mcp`; and four external tools
+*analysis*; the MCP SDK, the extra behind `fang mcp`; and five external tools
 reached across a process boundary: ngspice and Xyce, which simulate,
-`kicad-cli`, which renders schematics and checks their electrical rules, and
-Renode, which runs a board's firmware. When any of them is absent the toolchain
+`kicad-cli`, which renders schematics and checks their electrical rules,
+copperhead, which drafts a placed and wired schematic, and Renode, which runs a
+board's firmware. When any of them is absent the toolchain
 says so rather than substituting anything.
 
 ## Invariants the tests hold
@@ -190,7 +191,7 @@ The suite includes one test per acceptance criterion (AT-R1 to AT-R13, AT-K1
 to AT-K10, AT-V1, AT-F1 and AT-F2). **All 26 pass**; AT-V1 runs a circuit
 simulation and needs ngspice, and AT-F1 and AT-F2 run firmware and need Renode
 1.17.0. The only skips name what is missing: the NetworkX and MCP extras, and
-the ngspice, Xyce, kicad-cli and Renode binaries. The examples that ship a
+the ngspice, kicad-cli, copperhead and Renode binaries. The examples that ship a
 KiCad schematic need `kicad-cli` to rebuild, and the ones with questions
 compare their `verification.txt` only where the tools those questions route to
 are installed.

@@ -8,17 +8,17 @@ them is a sketch that no longer works.
 
 | Example | Shows | Parts | Nets |
 | --- | --- | ---: | ---: |
-| [`divider/`](divider/) | The smallest real board: two resistors and a capacitor | 4 | 2 |
+| [`divider/`](divider/) | The smallest real board: two resistors and a capacitor | 3 | 2 |
 | [`rc_filter/`](rc_filter/) | One question, answered by ngspice and then at the equation level | 4 | 3 |
 | [`antenna_match/`](antenna_match/) | A Touchstone model through an L match, answered in closed form | 4 | 3 |
-| [`blinky/`](blinky/) | Declared surfaces, connections and a constraint that states intent | 6 | 4 |
-| [`equations/`](equations/) | Values chosen by equation, then reused by inheritance | 7 | 6 |
-| [`sensor_board/`](sensor_board/) | Interfaces lowering to pins, a recorded decision, a check left undecided | 7 | 4 |
-| [`i2c_bus/`](i2c_bus/) | A multi-drop bus, addresses as constrained parameters | 9 | 4 |
+| [`blinky/`](blinky/) | Declared surfaces, connections and a constraint that states intent | 5 | 4 |
+| [`equations/`](equations/) | Values chosen by equation, then reused by inheritance | 6 | 6 |
+| [`sensor_board/`](sensor_board/) | Interfaces lowering to pins, a recorded decision, a check left undecided | 6 | 4 |
+| [`i2c_bus/`](i2c_bus/) | A multi-drop bus, addresses as constrained parameters | 8 | 4 |
 | [`sensor_node/`](sensor_node/) | Ports that name their controller, cited pin selectors, an address the check reads, and its firmware run in Renode | 11 | 9 |
-| [`usb_uart_bridge/`](usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet | 17 | 11 |
 | [`buck_regulator/`](buck_regulator/) | Requirement, decision, calculations, and a question ngspice answers under load | 11 | 9 |
-| [`servo_drive/`](servo_drive/) | Composition: one `HalfBridge` instantiated three times | 24 | 26 |
+| [`usb_uart_bridge/`](usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet | 16 | 11 |
+| [`servo_drive/`](servo_drive/) | Composition: one `HalfBridge` instantiated three times | 23 | 26 |
 | [`jee_advanced/problem_1/`](jee_advanced/problem_1/) | Not a board: four claimed currents, all four decided | 11 | 7 |
 | [`jee_advanced/problem_2/`](jee_advanced/problem_2/) | Not a board either: one claimed current, and the two branches that carry none | 12 | 7 |
 | [`noninverting_amp/`](noninverting_amp/) | Not a board: two midband answers, and the reading of the figure they rest on | 13 | 8 |
@@ -83,8 +83,8 @@ python examples/regenerate.py divider    # one of them
 ```
 
 An example that ships a schematic needs `kicad-cli` on the path to regenerate,
-because KiCad is what draws it. The two under `jee_advanced/` are the ones
-that do. An example whose questions route to a tool that is not installed
+because KiCad is what draws it. `noninverting_amp/` is the one that does, and
+it also ships copperhead's draft, which needs `copperhead` as well. An example whose questions route to a tool that is not installed
 (ngspice for `rc_filter/` and `buck_regulator/`, Renode for `sensor_node/`)
 keeps its committed `verification.txt`, and the suite skips comparing it,
 naming the tool.

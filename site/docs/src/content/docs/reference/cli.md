@@ -18,11 +18,13 @@ script can rely on the exit code rather than parsing output.
 | `fang netlist` | Print the compiled components and nets |
 | `fang export` | Write a KiCad netlist |
 | `fang view` | Compile a view; render it to SVG with `-o` |
+| `fang schematic` | Compile a KiCad schematic; render it with `--svg`, or have copperhead draft it |
 | `fang sim` | Compile a simulation plan, lower it, run it |
 | `fang verify` | Route and run every declared question; persist only with `--commit` |
 | `fang emulate` | Run the firmware in Renode and print what each emulation question measured |
 | `fang graph` | Summarize the kernel graph |
 | `fang diff` | Diff a program against the persisted workspace |
+| `fang mcp` | Serve the kernel to an agent over the Model Context Protocol, on stdio |
 
 ## Options
 
@@ -64,6 +66,36 @@ The six views are `system`, `interconnect`, `power`, `ground`, `interfaces` and
 Each answers one engineering question and is generated only from facts in the
 graph. Each also reports its own incompleteness rather than hiding it: a node
 carrying unknown parameters is drawn with a dashed border.
+
+## Schematic
+
+```bash
+fang schematic board.py -o board.kicad_sch --svg board.svg
+fang schematic board.py --drafter copperhead -o board.kicad_sch
+```
+
+| Option | Default | Does |
+| --- | --- | --- |
+| `-o`, `--output` | stdout | Where to write the `.kicad_sch` |
+| `--svg` | none | Also render the sheet here, with `kicad-cli` |
+| `--drafter` | `fang` | Who draws the sheet: `fang`, a grid joined by labels, or `copperhead`, placed and wired |
+
+fang's own sheet needs no tool; `--svg` needs `kicad-cli`. A copperhead draft
+needs `copperhead` and `kicad-cli`: the sheet is read back with KiCad and
+returned only if its nets are exactly the design's, and refused, naming the
+difference, otherwise. A part with no KiCad symbol, or a net left with fewer
+than two drawn pins, is reported as a loss rather than dropped silently.
+
+## Agent surface
+
+```bash
+fang mcp board.py
+```
+
+Serves the kernel over the Model Context Protocol on stdio, bound to the
+project directory, with the agent's changes going through the same commit gate
+as everything else. It needs the `mcp` extra, `pip install "copperhead-fang[mcp]"`,
+and refuses with `MCP-0005` without it.
 
 ## Simulation
 

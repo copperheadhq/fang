@@ -24,8 +24,8 @@ program that has since changed.
 | [`sensor_board/`](/examples/sensor_board/) | Interfaces lowering to pins, a recorded decision, a check left undecided |
 | [`i2c_bus/`](/examples/i2c_bus/) | A multi-drop bus, addresses as constrained parameters |
 | [`sensor_node/`](/examples/sensor_node/) | Ports that name their controller, cited pin selectors, an address the check reads |
-| [`usb_uart_bridge/`](/examples/usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet |
 | [`buck_regulator/`](/examples/buck_regulator/) | Requirement, decision, calculations, and a question ngspice answers under load |
+| [`usb_uart_bridge/`](/examples/usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet |
 | [`servo_drive/`](/examples/servo_drive/) | Composition: one `HalfBridge` block instantiated three times |
 | [`jee_advanced/problem_1/`](/examples/jee_advanced/problem_1/) | Not a board: four claimed currents, all four decided |
 | [`jee_advanced/problem_2/`](/examples/jee_advanced/problem_2/) | Not a board either: one claimed current, and the two branches that carry none |

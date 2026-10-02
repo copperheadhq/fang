@@ -57,7 +57,7 @@ Four further invariants the tests hold, and which any change must preserve:
   serialization sorts by Unicode code point except for the collections in
   `serialization.ORDERED_COLLECTIONS`, whose order is semantic.
 - **Explicit unknowns.** `null` never means "unknown". `Value.unknown()` is a distinct status.
-- **Undecided is a third truth value** (`Truth.UNKNOWN` / `CheckStatus.UNKNOWN`). An unknown
+- **Undecided is a third truth value** (`Truth.UNDECIDED` / `CheckStatus.UNKNOWN`). An unknown
   operand makes a check undecided; it is never silently a pass or a failure. Whether undecided
   *blocks* is the gate's policy decision, made in `KernelGraph.propose`, not by the evaluator.
 - **Dimensional rejection at write time.** `Arithmetic.__post_init__` checks dimensions when the
@@ -88,7 +88,7 @@ location, and exposes two protocol methods the rest of the kernel relies on:
 **Constraints.** [fang/constraints.py](fang/constraints.py) is the single registry plus a typed
 expression tree (`Literal`, `Ref`, `Arithmetic`, `Comparison`, `Logical`) evaluated over
 `Interval` arithmetic against a `Resolver` supplied by a snapshot. A `Ref` to an unknown value
-yields `Truth.UNKNOWN`, which propagates through Kleene three-valued `and`/`or`/`not`.
+yields `Truth.UNDECIDED`, which propagates through Kleene three-valued `and`/`or`/`not`.
 [fang/topology.py](fang/topology.py) adds `TopologyConstraint` over enumerated conductive paths.
 
 **The graph and the gate.** [fang/graph.py](fang/graph.py) is the centre of the system.
@@ -218,7 +218,7 @@ keeps no separate RFC or design-note directory.
 [tests/test_acceptance.py](tests/test_acceptance.py) holds exactly one test per acceptance
 criterion, AT-R1..AT-R13 and AT-K1..AT-K10, and all 23 pass; AT-V1, AT-F1 and AT-F2 come from the
 changes in flight under `openspec/changes/`. The only skips in the suite are for optional binaries
-that may not be installed (NetworkX, ngspice, Xyce, kicad-cli, copperhead, renode); each names what is missing. If a
+that may not be installed (NetworkX, the MCP SDK, ngspice, kicad-cli, copperhead, renode); each names what is missing. If a
 criterion ever has to be deferred again, skip it with the reason named rather than weakening the
 assertion, so the suite reports what is actually demonstrated.
 

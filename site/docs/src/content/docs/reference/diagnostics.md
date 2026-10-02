@@ -11,7 +11,7 @@ Diagnostic codes are stable. They are **allocated, never reused and retired
 rather than deleted**, so a code in an old log means today what it meant then,
 and searching for one never lands on a different problem.
 
-Seven areas exist: `ELAB`, `IFACE`, `TOPO`, `UNIT`, `TXN`, `SIM`, `IMPORT`.
+Eight areas exist: `ELAB`, `IFACE`, `TOPO`, `UNIT`, `TXN`, `SIM`, `IMPORT`, `MCP`.
 
 ## UNIT: units and dimensions
 
@@ -116,6 +116,20 @@ is missing, rather than running it with something assumed in its place.
 Reported in `import-report.json` rather than raised, because an import that
 stopped at the first unrepresentable construct would be less useful than one
 that says what it could not carry.
+
+## MCP: the agent surface
+
+| Code | Means |
+| --- | --- |
+| `MCP-0001` | A path outside the bound project root was named |
+| `MCP-0002` | No tool by that name is exposed |
+| `MCP-0003` | An argument did not parse |
+| `MCP-0004` | Commit named a proposal the gate did not accept |
+| `MCP-0005` | The protocol dependency is not installed |
+| `MCP-0006` | The operation kind is not one the commit gate evaluates |
+
+A refusal at the protocol boundary is its own area: it describes the boundary,
+not the transaction the boundary was asked about.
 
 ## Adding a code
 
