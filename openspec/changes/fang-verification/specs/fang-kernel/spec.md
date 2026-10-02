@@ -287,6 +287,22 @@ rejection for any other reason SHALL record nothing.
   failed constraint over a measured value
 - **THEN** the head is unchanged and no evidence is added
 
+#### Scenario: A run that measured nothing is recorded under a must-be-decided requirement
+
+- **WHEN** a run produces no value for a measure, and the policy marks the
+  requirement the question serves must-be-decided
+- **THEN** the run's evidence is recorded and the verification reads unknown
+- **AND** the constraints the run left undecided do not block that
+  transaction, because the verification's own result states them
+
+#### Scenario: Two questions measuring into one constraint are both answered
+
+- **WHEN** a hard constraint reads parameters measured by two questions under a
+  must-be-decided requirement
+- **THEN** the first question's measurements enter although the constraint is
+  still undecided for the other's parameter
+- **AND** the second question's measurements decide it
+
 ### Requirement: Rule Checks Are Evidence
 
 A rule-check question SHALL run the external checker over the artifact the

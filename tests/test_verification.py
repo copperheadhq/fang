@@ -1449,9 +1449,10 @@ def test_recording_a_failed_verification_is_not_blocked_by_what_it_leaves_undeci
     assert set(constraint_statuses(graph.head, outcome.question).values()) == {CheckStatus.UNKNOWN}
 
 
-def test_a_constraint_a_run_leaves_undecided_still_blocks(tmp_path):
+def test_a_run_that_measures_nothing_is_recorded_under_a_must_be_decided_requirement(tmp_path):
     # The run reports no corner, so it answers UNKNOWN and sets no parameter.
-    # The exception covers a question awaiting its answer or failed, not this.
+    # The verification's own result states the constraints it leaves
+    # undecided; condition 5 does not, or the run could never be recorded.
     result, snapshot, requirement = served()
     policy = Policy(
         required_checks=frozenset({"constraint"}), must_be_decided=frozenset({requirement})
@@ -1462,9 +1463,45 @@ def test_a_constraint_a_run_leaves_undecided_still_blocks(tmp_path):
         graph, questions(graph.head)[0], traits=result.traits, tools=tools,
         workspace=tmp_path, record_time=FIXED_TIME,
     )
-    assert outcome.status == REJECTED
-    assert any(d.code == diagnostics.TXN_UNDECIDED_BLOCKED for d in outcome.proposal.diagnostics)
-    assert len(graph.history) == 1
+    assert outcome.status == ANSWERED and outcome.result == "UNKNOWN", outcome.message
+    assert len(graph.history) == 2
+    assert graph.head.entities[outcome.question.id].evidence == (outcome.evidence,)
+    assert not graph.head.entities[SYSTEM].parameters["corner"].known
+
+
+class TwoQuestions(Filter):
+    """One constraint over two parameters, each measured by its own question.
+
+    Whichever runs first leaves the constraint undecided for the other's
+    parameter; if condition 5 blocked that, neither could ever be answered.
+    """
+
+    corner_again = Parameter("Hz", description="the same corner, measured again")
+    again = corner_question(
+        measures={"corner_again": Crossing("outlet.line", level=707.1 * mV, edge="falling")}
+    )
+
+    def constraints(self):
+        super().constraints()
+        require(self.corner_again <= self.corner + 1 * kHz)
+
+
+def test_two_questions_measuring_into_one_constraint_are_both_answered(tmp_path):
+    result, snapshot, requirement = served(TwoQuestions)
+    policy = Policy(
+        required_checks=frozenset({"constraint"}), must_be_decided=frozenset({requirement})
+    )
+    graph = KernelGraph(snapshot, checks=DEFAULT_CHECKS, policy=policy)
+    _, tools = canned()
+    outcomes = verify(graph, traits=result.traits, tools=tools, workspace=tmp_path,
+                      record_time=FIXED_TIME)
+    assert [o.status for o in outcomes] == [ANSWERED, ANSWERED], [o.message for o in outcomes]
+    # The first re-entry left the shared constraint undecided for the other
+    # question's parameter and was not blocked; the second decided it.
+    assert outcomes[0].result == "UNKNOWN" and outcomes[1].result == "PASS"
+    assert len(graph.history) == 3
+    held = graph.head.entities[SYSTEM].parameters
+    assert held["corner"].known and held["corner_again"].known
 
 
 def test_measurements_against_a_stale_head_are_refused(tmp_path):

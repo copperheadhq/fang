@@ -648,13 +648,16 @@ class KernelGraph:
 
 def _awaiting_measurement(snapshot: Snapshot) -> set[tuple[str, str]]:
     """The parameters a declared question measures into that hold no value,
-    as (entity id, parameter name), for each question unanswered or failed.
+    as (entity id, parameter name), whatever the question's state.
 
     Spec: "The Commit Gate", condition 5, and RFC 12 Section 12.9. The question
     is read off its verification's own record, since graph.py sits below the
-    verification module. A question a run answered with anything but FAIL is
-    not awaiting: a constraint a re-entering measurement leaves undecided still
-    blocks.
+    verification module. A measured parameter with no value is stated by its
+    verification's result -- unanswered, failed, or answered without a value --
+    so a constraint undecided only by such parameters is never condition 5's
+    to block: otherwise a run that measured nothing could not be recorded
+    under a must-be-decided requirement, and two questions measuring into one
+    constraint could never both be answered.
     """
     awaiting: set[tuple[str, str]] = set()
     for entity in snapshot.entities.values():
@@ -662,9 +665,6 @@ def _awaiting_measurement(snapshot: Snapshot) -> set[tuple[str, str]]:
             continue
         question = entity.extensions.get("question")
         if not isinstance(question, Mapping):
-            continue
-        answered = bool(entity.evidence) or entity.tool is not None
-        if answered and entity.result != "FAIL":
             continue
         for entry in question.get("measures", ()):
             holder_id, _, name = str(entry.get("parameter", "")).partition(".")
