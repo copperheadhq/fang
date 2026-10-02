@@ -22,6 +22,7 @@ import pytest
 from examples.regenerate import (
     DRAFTED,
     PROJECT,
+    answerable,
     examples as example_names,
     render as regenerate,
     schematic_of,
@@ -215,9 +216,12 @@ def test_a_committed_verification_still_matches_the_program(name):
     """What `fang verify` finds, compared where its tool is installed."""
     result = build(ROOT / name / f"{Path(name).name}.py")
     missing = sorted(
-        tool for tool in verification_tools(result) if not TOOLS.get(tool).available()
+        tool for tool in verification_tools(result) if not answerable(TOOLS.get(tool))
     )
     if missing:
-        pytest.skip(f"{', '.join(missing)} is not installed here, so {VERIFICATION} is not compared")
+        pytest.skip(
+            f"{', '.join(missing)} is not installed here at a version it accepts, "
+            f"so {VERIFICATION} is not compared"
+        )
     committed = (ROOT / name / "out" / VERIFICATION).read_text(encoding="utf-8")
     assert stable(committed) == stable(render(name)[VERIFICATION])

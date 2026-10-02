@@ -1638,15 +1638,10 @@ class RenodeTool:
         return question.method == "emulation"
 
     def available(self) -> bool:
-        from .renode import RenodeUnavailable
-
-        if not self.backend.available():
-            return False
-        try:
-            self.backend.check()
-        except RenodeUnavailable:
-            return False
-        return True
+        """Whether Renode is installed. A version the lowering was not checked
+        against is installed, and `version` refuses it naming the version, so
+        a question is reported unsupported for the reason it is."""
+        return self.backend.available()
 
     def version(self) -> str:
         from .renode import RenodeUnavailable

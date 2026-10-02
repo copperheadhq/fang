@@ -626,9 +626,17 @@ def test_at_v1_an_undecided_constraint_is_decided_by_a_run_that_entered_through_
 
 
 def _renode_installed() -> bool:
+    """Renode is on the path, at a version the lowering was checked against."""
     from fang.emulation import RENODE
+    from fang.verification import ToolUnavailable
 
-    return RENODE.available()
+    if not RENODE.available():
+        return False
+    try:
+        RENODE.version()
+    except ToolUnavailable:
+        return False
+    return True
 
 
 def _sensor_node():

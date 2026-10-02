@@ -778,9 +778,34 @@ def test_an_emulator_of_an_unchecked_version_reports_unsupported():
             return "1.18.0", "1.18.0+20270101gitdeadbeef"
 
     tool = RenodeTool(backend=Newer())
-    assert not tool.available()
-    with pytest.raises(ToolUnavailable, match="1.18.0"):
+    # Installed, so not reported missing; its version is what it is refused for.
+    assert tool.available()
+    with pytest.raises(ToolUnavailable, match="1.18.0.*1.17.0"):
         tool.version()
+
+
+def test_an_unchecked_version_is_reported_unsupported_by_version_through_verify(tmp_path):
+    # available() used to fold the version in, so `answer` said "renode is
+    # not installed" and never reached the version it was refused for.
+    from fang.emulation import RenodeTool
+    from fang.renode import RenodeBackend
+    from fang.verification import ToolRegistry
+
+    class Newer(RenodeBackend):
+        def available(self):
+            return True
+
+        def identify(self):
+            return "1.18.0", "1.18.0+20270101gitdeadbeef"
+
+    result = _elaborate(SENSOR_NODE.SensorNode)
+    graph = KernelGraph(result.snapshot, checks=DEFAULT_CHECKS)
+    tools = ToolRegistry((RenodeTool(backend=Newer()),))
+    outcome = answer(graph, _question(graph.head, "startup"), traits=result.traits, tools=tools, workspace=tmp_path)
+    assert outcome.status == "unsupported"
+    assert "1.18.0" in outcome.message and "1.17.0" in outcome.message
+    assert "not installed" not in outcome.message
+    assert graph.head.hash == result.snapshot.hash
 
 
 def test_a_missing_emulator_is_reported_unsupported_through_verify(tmp_path):
@@ -1063,3 +1088,22 @@ def test_the_missing_sensor_question_measures_only_what_the_firmware_does():
     result = _elaborate(SENSOR_NODE.SensorNode)
     question = _question(result.snapshot, "sensor_missing")
     assert [entry.name for entry in question.measures] == ["fast_blinks"]
+
+
+def test_emulate_reports_an_unchecked_version_and_runs_nothing(monkeypatch, capsys):
+    from fang.emulation import RENODE
+
+    class Newer(RenodeBackend):
+        def available(self):
+            return True
+
+        def identify(self):
+            return "1.18.0", "1.18.0+20270101gitdeadbeef"
+
+        def run(self, files, *, timeout=120):
+            raise AssertionError("nothing runs on an unchecked version")
+
+    monkeypatch.setattr(RENODE, "backend", Newer())
+    assert _cli("emulate", str(ROOT / "examples" / "sensor_node" / "sensor_node.py")) == 0
+    printed = capsys.readouterr().out
+    assert "unsupported: Renode 1.18.0 is installed" in printed

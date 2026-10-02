@@ -379,7 +379,7 @@ def cmd_emulate(args) -> int:
     from tempfile import TemporaryDirectory
 
     from .emulation import RENODE
-    from .verification import NotRunnable, _quantity_text, questions
+    from .verification import NotRunnable, ToolUnavailable, _quantity_text, questions
 
     result = _elaborate(args)
     asked = [q for q in questions(result.snapshot) if q.method == "emulation"]
@@ -406,14 +406,15 @@ def cmd_emulate(args) -> int:
             print(f"  wrote the bundle to {folder}")
         if args.bundle_only:
             continue
-        if not RENODE.available():
-            print(
-                "  unsupported: renode is not installed, or is a version the lowering "
-                "was not checked against; nothing ran and no result is fabricated"
-            )
+        try:
+            if not RENODE.available():
+                raise ToolUnavailable("renode is not installed")
+            RENODE.version()
+            with TemporaryDirectory() as scratch:
+                raw = RENODE.run(job, workspace=Path(scratch))
+        except ToolUnavailable as exc:
+            print(f"  unsupported: {exc}; nothing ran and no result is fabricated")
             continue
-        with TemporaryDirectory() as scratch:
-            raw = RENODE.run(job, workspace=Path(scratch))
         print(f"  renode {raw.version}: the run {raw.outputs.get('outcome', 'ended')}")
         for measurement in RENODE.read(job, raw):
             if measurement.quantity is None:
