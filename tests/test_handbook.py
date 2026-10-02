@@ -86,10 +86,10 @@ def test_a_setting_its_part_never_reads_is_refused():
 
 # -- the drawings -------------------------------------------------------------
 
-import json  # noqa: E402
 import importlib.util  # noqa: E402
 
 from examples.regenerate import FIGURES  # noqa: E402
+from fang.copperhead import compile_intent  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location("draw_figures", ROOT / "draw_figures.py")
 draw = importlib.util.module_from_spec(_spec)
@@ -102,11 +102,15 @@ DRAWN = [name for name in example_names() if name.startswith(FIGURES)]
 def test_a_circuit_is_drawn_from_the_program_it_ships_beside(name):
     """copperhead draws the schematic outside the suite, so nothing else
     notices when a program changes and its drawing does not. The intent a
-    drawing was made from has to be the one the program gives today; when it
-    is not, `python examples/draw_figures.py` redraws it."""
+    drawing was made from has to be the one the program gives today, byte for
+    byte, through the kernel's own lowering with the options a figure passes;
+    when it is not, `python examples/draw_figures.py` redraws it."""
     figure = ROOT / name / "figure"
     stem = Path(name).name
     for file in ("schematic.intent.json", f"{stem}.kicad_sch", "schematic.svg"):
         assert (figure / file).is_file(), f"{name} has no figure/{file}"
-    drawn = json.loads((figure / "schematic.intent.json").read_text(encoding="utf-8"))
-    assert drawn == draw.intent(name)
+    result = elaborate(load_system(_program(name)), project_id=PROJECT)
+    intent = compile_intent(result.snapshot, traits=result.traits, **draw.OPTIONS)
+    assert intent.losses == ()
+    assert (figure / "schematic.intent.json").read_text(encoding="utf-8") == intent.text()
+    assert intent.text() == draw.intent(name).text()

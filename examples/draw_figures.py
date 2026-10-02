@@ -15,15 +15,17 @@ For each example it writes `figure/` beside the example's `out/`:
     figure/<name>.kicad_sch        the sheet it drew
     figure/schematic.svg           KiCad's render of the sheet, cut to the circuit
 
-The intent is the circuit's own netlist, with each part given the KiCad
-library symbol that draws it (`SYMBOLS` below). A sheet is written only if
-KiCad reads back from it exactly the connections the circuit has: a drawing
-that joined two nets, or dropped a pin, is refused rather than shipped.
+The intent is the kernel's: `fang.copperhead.compile_intent`, the lowering
+`fang schematic --drafter copperhead` runs, called with the labelling a figure
+asks for (`OPTIONS` below). Which KiCad symbol draws each part, and which of
+its pins each of the part's lands on, is the lowering's and not this script's.
+A sheet is written only if KiCad reads back from it exactly the connections
+the intent has: a drawing that joined two nets, or dropped a pin, is refused
+rather than shipped.
 """
 
 from __future__ import annotations
 
-import json
 import os
 import re
 import subprocess
@@ -38,136 +40,36 @@ sys.path.insert(0, str(EXAMPLES.parent))
 from regenerate import FIGURES, PROJECT, _program, examples  # noqa: E402
 
 from fang.cli import load_system  # noqa: E402
+from fang.copperhead import (  # noqa: E402
+    Intent,
+    compile_intent,
+    drawn_connections,
+    intended_connections,
+)
 from fang.elaborate import elaborate  # noqa: E402
-from fang.netlist import compile_netlist  # noqa: E402
-from fang.sexpr import Node, parse  # noqa: E402
 
 COPPERHEAD = Path(os.environ.get("COPPERHEAD_DIR", Path.home() / "copperhead"))
 
-#: What draws each kind of part: a KiCad library symbol, and which of its pin
-#: numbers each of the part's pins is. A kind is the designator prefix, or for
-#: an op amp or a diode the part itself, since one prefix covers several.
-SYMBOLS: dict[str, tuple[str, dict[str, str]]] = {
-    "R": ("Device:R", {"1": "1", "2": "2"}),
-    "RL": ("Device:R", {"1": "1", "2": "2"}),
-    "RS": ("Device:R", {"1": "1", "2": "2"}),
-    "C": ("Device:C", {"1": "1", "2": "2"}),
-    "L": ("Device:L", {"1": "1", "2": "2"}),
-    "RV": ("Device:R_Potentiometer", {"1": "1", "2": "2", "3": "3"}),
-    # A cell names its terminals; a textbook battery numbers them, 1 positive.
-    "V": ("Device:Battery_Cell", {"+": "1", "-": "2", "1": "1", "2": "2"}),
-    "LP": ("Device:Lamp", {"1": "1", "2": "2"}),
-    "M": ("Device:Ammeter_DC", {"1": "2", "2": "1"}),
-    "SW": ("Switch:SW_SPST", {"1": "1", "2": "2"}),
-    "TP": ("Connector:TestPoint", {"1": "1"}),
-    "GND": ("power:GND", {"1": "1"}),
-    # KiCad's generic op amp, not any one part: the handbook's are ideal.
-    "OpAmp": ("Simulation_SPICE:OPAMP", {"IN+": "1", "IN-": "2", "OUT": "5"}),
-    # TI's own fully differential amplifier; KiCad has no generic one.
-    "DifferentialOpAmp": (
-        "Amplifier_Difference:THS4521IDGK",
-        {"IN+": "8", "IN-": "1", "OUT+": "4", "OUT-": "5"},
-    ),
-    "SignalDiode": ("Device:D", {"A": "2", "K": "1"}),
-    "Zener": ("Device:D_Zener", {"A": "2", "K": "1"}),
-}
-
-#: The value printed under a part, where the graph's would say what the part
-#: is modelled as rather than what it is.
-VALUES = {
-    "OpAmp": "OPAMP",
-    "DifferentialOpAmp": "THS4521",
-    "SignalDiode": "1N4148",
-    "Zener": "Zener",
-    "Ground": "GND",
-    "GroundReference": "GND",
+#: How a figure is labelled, passed to the kernel's own lowering: every part
+#: in one group, the ground net named GND, each terminal labelled with its name
+#: in the program and its net named after it, values as a schematic prints
+#: them, and a fixed date, so the same circuit draws the same bytes on any day.
+#: Which symbol draws which part, and on which of its pins, is the lowering's
+#: (`fang.copperhead.symbol_of`), the same for a figure as for
+#: `fang schematic --drafter copperhead`.
+OPTIONS = {
+    "group": "Circuit",
+    "ground": "GND",
+    "terminal_names": True,
+    "short_values": True,
+    "date": "2026-01-01",
 }
 
 
-def _prefix(designator: str) -> str:
-    return designator.rstrip("0123456789")
-
-
-def _value(text: str) -> str:
-    text = VALUES.get(text, text)
-    for unit, short in ((" kOhm", "k"), (" MOhm", "M"), (" Ohm", "")):
-        text = text.replace(unit, short)
-    return text.replace(" ", "")
-
-
-def intent(name: str) -> dict:
+def intent(name: str) -> Intent:
     """The circuit as copperhead's schematic intent."""
     result = elaborate(load_system(_program(name)), project_id=PROJECT)
-    netlist = compile_netlist(result.snapshot, traits=result.traits)
-    entities = result.snapshot.entities
-    kind, called = {}, {}
-    for c in netlist.components:
-        prefix = _prefix(c.designator)
-        kind[c.designator] = c.value if prefix in ("U", "D") else prefix
-        called[c.designator] = entities[c.entity_id].identity.path.segments[-1].name.upper()
-
-    parts = [
-        {
-            "ref": c.designator,
-            "libId": SYMBOLS[kind[c.designator]][0],
-            # A terminal is labelled with the name the program gives it.
-            "value": called[c.designator] if kind[c.designator] == "TP" else _value(c.value),
-            "group": "Circuit",
-        }
-        for c in netlist.components
-    ]
-    nets = []
-    for net in netlist.nets:
-        nodes = [(n.designator, n.pin) for n in net.nodes]
-        ground = any(kind[d] == "GND" for d, _ in nodes)
-        terminals = sorted(called[d] for d, _ in nodes if kind[d] == "TP")
-        entry = {
-            "name": "GND" if ground else (terminals[0] if terminals else net.name),
-            "pins": [f"{d}.{SYMBOLS[kind[d]][1][p]}" for d, p in nodes],
-        }
-        if ground:
-            entry["kind"] = "ground"
-        nets.append(entry)
-    # A fixed date, so the same circuit draws the same bytes on any day.
-    return {"version": 1, "parts": parts, "nets": nets, "hints": {"date": "2026-01-01"}}
-
-
-def _connections(netlist_text: str) -> set[frozenset[str]]:
-    """Every net of two or more pins, as its pins. KiCad renames a power
-    symbol to `#PWR…`, so those are left out; the ground net is still there."""
-    found = set()
-
-    def walk(node: Node):
-        for item in node.items:
-            if not isinstance(item, Node):
-                continue
-            if item.head != "net":
-                walk(item)
-                continue
-            pins = set()
-            for child in item.items:
-                if isinstance(child, Node) and child.head == "node":
-                    fields = {
-                        f.head: f.items[1].value
-                        for f in child.items
-                        if isinstance(f, Node) and f.head in ("ref", "pin")
-                    }
-                    if not fields["ref"].startswith("#"):
-                        pins.add(f"{fields['ref']}.{fields['pin']}")
-            if len(pins) > 1:
-                found.add(frozenset(pins))
-
-    walk(parse(netlist_text))
-    return found
-
-
-def _wanted(drawn: dict) -> set[frozenset[str]]:
-    power = {p["ref"] for p in drawn["parts"] if p["libId"].startswith("power:")}
-    nets = (
-        frozenset(pin for pin in net["pins"] if pin.split(".")[0] not in power)
-        for net in drawn["nets"]
-    )
-    return {net for net in nets if len(net) > 1}
+    return compile_intent(result.snapshot, traits=result.traits, **OPTIONS)
 
 
 #: Room left around the drawing when the render is cut to it, in millimetres.
@@ -254,9 +156,13 @@ def draw(name: str) -> str:
     stem = Path(name).name
     figure = EXAMPLES / name / "figure"
     drawn = intent(name)
+    # A figure shows the whole circuit; one that would lose a part or a net
+    # is not drawn with the gap.
+    if drawn.losses:
+        return f"{name}: the intent loses " + "; ".join(drawn.losses)
     with tempfile.TemporaryDirectory() as scratch:
         work = Path(scratch)
-        (work / "schematic.intent.json").write_text(json.dumps(drawn, indent=2) + "\n")
+        (work / "schematic.intent.json").write_text(drawn.text(), encoding="utf-8")
         drafted = subprocess.run(
             ["npx", "tsx", str(EXAMPLES / "draft_figure.mts"), str(COPPERHEAD), str(work), stem],
             cwd=COPPERHEAD, capture_output=True, text=True,
@@ -268,12 +174,12 @@ def draw(name: str) -> str:
             ["kicad-cli", "sch", "export", "netlist", "-o", str(work / "back.net"), str(sheet)],
             capture_output=True, check=True,
         )
-        back = _connections((work / "back.net").read_text())
-        if back != _wanted(drawn):
+        back = drawn_connections((work / "back.net").read_text())
+        if back != intended_connections(drawn):
             return f"{name}: the drawing does not have the circuit's connections; not written"
         render = _render(sheet, work)
         figure.mkdir(exist_ok=True)
-        (figure / "schematic.intent.json").write_text(json.dumps(drawn, indent=2) + "\n")
+        (figure / "schematic.intent.json").write_text(drawn.text(), encoding="utf-8")
         (figure / f"{stem}.kicad_sch").write_text(sheet.read_text())
         (figure / "schematic.svg").write_text(render)
     return f"{name}: drawn"

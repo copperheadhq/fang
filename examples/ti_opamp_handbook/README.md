@@ -78,16 +78,25 @@ drafting engine, not by fang, and sits in `figure/` beside `out/`:
 | `figure/<name>.kicad_sch` | The sheet copperhead drew from it |
 | `figure/schematic.svg` | KiCad's render of that sheet, shown in the circuit's README |
 
-[`draw_figures.py`](../draw_figures.py) writes all three. It maps each kind of part to a KiCad
-library symbol (the table is `SYMBOLS` in it), hands copperhead the result,
-and writes the sheet only if KiCad reads back from it exactly the connections
-the circuit has. Copperhead is not a dependency of fang, so `draw_figures.py` is
-not part of `regenerate.py`; it needs a copperhead checkout (`COPPERHEAD_DIR`) and
-`kicad-cli`. The drawings here come from copperhead at `acf53d8` on
-`fix/draft-handbook-legibility`, with that branch's uncommitted edits to the
-drafting engine, which draw an inverting stage the way a textbook does.
-[`tests/test_handbook.py`](../../tests/test_handbook.py) fails if a circuit's
-program no longer matches the intent its drawing was made from.
+[`draw_figures.py`](../draw_figures.py) writes all three. The intent is fang's
+own, from `fang.copperhead.compile_intent`, the lowering `fang schematic
+--drafter copperhead` runs, so the same program drafted from the command line
+gets the same symbols on the same pins. That lowering picks each part's KiCad
+symbol: an op amp is KiCad's generic `Simulation_SPICE:OPAMP` and a diode is
+drawn with its cathode on the symbol's pin 1. `draw_figures.py` passes it only
+the labelling a figure asks for (`OPTIONS` in it): the ground net named `GND`,
+each terminal labelled with its name in the program and its net named after
+it, values printed short (`10k`), and a fixed date. It hands copperhead the
+result and writes the sheet only if KiCad reads back from it exactly the
+connections the circuit has. Copperhead is not a dependency of fang, so
+`draw_figures.py` is not part of `regenerate.py`; it needs a copperhead
+checkout (`COPPERHEAD_DIR`) and `kicad-cli`. The drawings here come from
+copperhead at `acf53d8` on `fix/draft-handbook-legibility`, with that branch's
+uncommitted edits to the drafting engine, which draw an inverting stage the way
+a textbook does.
+[`tests/test_handbook.py`](../../tests/test_handbook.py) fails if the lowering,
+run on a circuit's program today, no longer writes byte for byte the intent its
+drawing was made from.
 
 ## The circuits
 

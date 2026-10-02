@@ -84,7 +84,11 @@ python examples/regenerate.py divider    # one of them
 
 An example that ships a schematic needs `kicad-cli` on the path to regenerate,
 because KiCad is what draws it. `noninverting_amp/` is the one that does, and
-it also ships copperhead's draft, which needs `copperhead` as well. An example whose questions route to a tool that is not installed
+it also ships copperhead's draft, which needs `copperhead` as well. The
+textbook figures under `ti_opamp_handbook/` and `jee_advanced/` are drafted by
+copperhead too, from the intent the same lowering writes, but by
+`draw_figures.py` into each one's `figure/`: it needs a copperhead checkout,
+so neither `regenerate.py` nor the suite runs it. An example whose questions route to a tool that is not installed
 (ngspice for `rc_filter/` and `buck_regulator/`, Renode for `sensor_node/`)
 keeps its committed `verification.txt`, and the suite skips comparing it,
 naming the tool.
