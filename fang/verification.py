@@ -729,7 +729,8 @@ class ReturnLoss(Measure):
     matching parts named in order from the port toward the model, and against
     a reference impedance, 50 Ohm unless the question says otherwise. Each
     matching part is a series or a shunt element by how the graph connects it,
-    and its value is the one the graph holds.
+    and its value is the one the graph holds; parts that do not form that
+    ladder, in the order named, are refused when the question is prepared.
     """
 
     at: Quantity = field(kw_only=True)

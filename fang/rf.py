@@ -7,9 +7,10 @@ A part may carry its network parameters -- a vendor's file, or a network
 analyser's -- as a `Touchstone` trait. A question over it is answered by
 reading the file and composing the matching parts it names in closed form:
 the load the file describes, each part a series or a shunt element by how the
-graph connects it, with the value the graph holds. Nothing is simulated and
-nothing is extrapolated: a frequency outside the file's range is refused,
-naming the range.
+graph connects it, with the value the graph holds. The parts must form that
+ladder from the port to the model, in the order named, and a part that does
+not is refused by name. Nothing is simulated and nothing is extrapolated: a
+frequency outside the file's range is refused, naming the range.
 
 The arithmetic is complex numbers in the standard library: the option line
 (`# GHZ S MA R 50`), the RI, MA and DB formats, renormalization to the
@@ -356,6 +357,10 @@ class TouchstoneTool:
                 elements.append(
                     self._element(snapshot, position, name, parts, designator_of, nodes, pins_of)
                 )
+            self._ladder(
+                snapshot, question, label, nodes[(designator_of[carrier], surface["signal"]["pin"])],
+                elements, netlist, nodes, designator_of, pins_of,
+            )
             digest = "sha256:" + hashlib.sha256(data).hexdigest()
             read.append((len(measures), path, digest, str(location)))
             confidences.append(model_confidence(trait.provenance))
@@ -439,6 +444,60 @@ class TouchstoneTool:
                 return element
         element["reason"] = f"{label}'s {_DEVICES[device]} is unknown"
         return element
+
+    @staticmethod
+    def _ladder(
+        snapshot, question, carrier, port, elements, netlist, nodes, designator_of, pins_of
+    ) -> None:
+        """Refuse matching parts that do not form the ladder they are named as.
+
+        The parts are named from the port toward the model, and the
+        composition takes each as series or shunt by whether it touches
+        ground, so it must be the ladder the graph connects: counted back from
+        the model's port 1, each shunt part joins the node reached so far to
+        ground, and each series part joins it to the next node toward the
+        port. A part anywhere else, a typo among them, would give a plausible
+        number for a circuit nobody drew, so the first part that breaks the
+        chain is refused by name.
+        """
+        net_of = {
+            nodes[(node.designator, node.pin)]: net.name
+            for net in netlist.nets
+            for node in net.nodes
+        }
+
+        def named(node: str) -> str:
+            return "ground" if node == "0" else net_of.get(node, f"node {node}")
+
+        reached, seen = port, {port}
+        for index in range(len(elements) - 1, -1, -1):
+            element = elements[index]
+            component = element["component"]
+            ends = [
+                nodes[(designator_of[component], pin)]
+                for pin in sorted(pins_of.get(component, ()))
+            ]
+            other = ends[1] if ends[0] == reached else ends[0] if ends[1] == reached else None
+            if other is None or other == reached or (other != "0" and other in seen):
+                label = _label(snapshot, component)
+                joins = (
+                    f"joins {named(ends[0])} to itself" if ends[0] == ends[1]
+                    else f"joins {named(ends[0])} and {named(ends[1])}"
+                )
+                after = (
+                    "the model's port 1 is on" if index == len(elements) - 1
+                    else "the parts named after it reach"
+                )
+                raise NotRunnable(
+                    f"{question.label}: {label} does not continue the matching chain into "
+                    f"{carrier}'s model: {after} {named(reached)}, and {label} {joins}; "
+                    "a shunt part joins that node to ground, and a series part joins it to "
+                    "the next node toward the port",
+                    code=SIM_UNRESOLVED_SURFACE,
+                )
+            if other != "0":
+                reached = other
+                seen.add(other)
 
     def run(self, job: Job, *, workspace: Path) -> RawRun:
         """Read the declared model file and compose the ladder, per measure."""

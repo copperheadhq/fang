@@ -396,3 +396,35 @@ def test_two_antennas_naming_one_model_path_each_read_their_own_file(tmp_path):
     assert len(outcome.job.inputs) == 2
     assert all(path.endswith("/antenna.s1p") and len(path) == 12 + len("/antenna.s1p")
                for path in outcome.job.inputs)
+
+
+def test_matching_parts_out_of_their_ladder_are_refused_by_name(tmp_path):
+    """The parts are named from the port toward the model, and each is taken
+    as series or shunt by whether it touches ground. Named in the wrong
+    order, or a part named twice, the composition gave a plausible number
+    for a circuit nobody drew; the part that breaks the chain is refused."""
+    model = write_model(tmp_path / "antenna.s1p", LOAD)
+
+    def refusal(through) -> str:
+        result = elaborate(matched(model, through=through), project_id=PROJECT)
+        with pytest.raises(NotRunnable) as raised:
+            TOUCHSTONE.prepare(result.snapshot, questions(result.snapshot)[0], traits=result.traits)
+        assert raised.value.code == diagnostics.SIM_UNRESOLVED_SURFACE
+        return str(raised.value)
+
+    swapped = refusal(("series_l", "shunt_c"))
+    assert "system.shunt_c does not continue the matching chain into system.antenna's model" in swapped
+    assert "the model's port 1 is on Net-(AE1-PadFEED)" in swapped
+    assert "system.shunt_c joins Net-(C1-Pad1) and ground" in swapped
+
+    alone = refusal(("shunt_c",))
+    assert "system.shunt_c does not continue" in alone
+
+    twice = refusal(("series_l", "series_l"))
+    assert "system.series_l does not continue" in twice
+    assert "the parts named after it reach Net-(C1-Pad1)" in twice
+
+    # The ladder the graph connects, whole or in part, is composed.
+    for through in (("shunt_c", "series_l"), ("series_l",), ()):
+        result = elaborate(matched(model, through=through), project_id=PROJECT)
+        TOUCHSTONE.prepare(result.snapshot, questions(result.snapshot)[0], traits=result.traits)
