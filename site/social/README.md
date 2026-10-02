@@ -31,18 +31,19 @@ listing as `fang verify` prints it. The full listing, gaps and all, is
 - **emulation-run.png:** Terminal output of fang verify on
   examples/sensor_node. The startup question measures first_read 0.0400 s,
   mux_mismatches 0, reported 25.0 degC and slow_blinks 1, and passes. The
-  sensor_missing question measures fast_blinks 5 and missing_reads 0, and
-  passes. Both at the behavioural level in Renode, confidence 0.8.
+  sensor_missing question measures fast_blinks 5, and passes. Both at the behavioural level in Renode, confidence 0.8.
 - **emulation-caught.png:** One board, four firmware builds. The shipping
-  build meets all 6 measures and passes. wrong_address.elf never reads the
-  sensor in the 2 s run, against a 200 ms requirement, and fails.
+  build meets all 5 measures and passes. wrong_address.elf never reads the
+  sensor in the 2 s run, against a 200 ms requirement, and fails; it also
+  fails slow_blinks, and prints no temperature, which leaves reported
+  undecided.
   push_pull.elf has 2 I2C pins configured otherwise than the board requires,
   though every I2C transaction still succeeds, and fails. no_timeout.elf
   blinks the fault 0 times, against at least 4, and fails.
 - **emulation-square.png:** fang: Firmware against the board. The shipping
-  firmware meets six requirements in Renode 1.17.0: first_read 40.0 ms,
-  mux_mismatches 0, reported 25.0 °C, slow_blinks 1, fast_blinks 5,
-  missing_reads 0. Three broken builds each fail.
+  firmware meets five requirements in Renode 1.17.0: first_read 40.0 ms,
+  mux_mismatches 0, reported 25.0 °C, slow_blinks 1 and fast_blinks 5. Three
+  broken builds each fail.
 
 The alt text states the numbers on the images and is written by hand; redraw
 the images and read them against it.
