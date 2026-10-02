@@ -396,11 +396,15 @@ def cmd_emulate(args) -> int:
     The low-level command, as `fang sim` is for SPICE: each question's plan is
     compiled and lowered, its bundle written where asked, and the run made if
     Renode is installed. Nothing goes through the gate and no workspace
-    changes; `fang verify` is the command that takes the answer back in.
+    changes; `fang verify` is the command that takes the answer back in. A
+    question left unrunnable, or a run that timed out or crashed, exits
+    non-zero; Renode not being installed is reported and is not by itself a
+    failure, as under `fang verify`.
     """
     from tempfile import TemporaryDirectory
 
     from .emulation import RENODE
+    from .runtime import Status
     from .verification import NotRunnable, ToolUnavailable, _quantity_text, questions
 
     result = _elaborate(args)
@@ -438,6 +442,9 @@ def cmd_emulate(args) -> int:
             print(f"  unsupported: {exc}; nothing ran and no result is fabricated")
             continue
         print(f"  renode {raw.version}: the run {raw.outputs.get('outcome', 'ended')}")
+        if raw.status is not Status.SUCCEEDED:
+            # Its measures have no value, so nothing it was asked was observed.
+            status = EXIT_FAILED
         for measurement in RENODE.read(job, raw):
             if measurement.quantity is None:
                 print(f"  {measurement.name}: no value ({measurement.reason})")

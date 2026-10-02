@@ -217,3 +217,6 @@ and recorded files the later tests read — each reviewed again as it lands.
       naming the pin and the selector, and give a pin configuration over one
       no value; verify `Selector("AF_4")` on the board and `AF_4` and `AF16`
       in a plan.
+- [x] 11.14 Exit `fang emulate` non-zero when a run timed out or crashed, as
+      `fang verify` does for a failed verification; verify both outcomes with
+      a stand-in Renode.

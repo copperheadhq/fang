@@ -160,6 +160,8 @@ fang emulate board.py --bundle-only -o bundles
 `fang emulate` is the low-level command, as `fang sim` is for SPICE: it prints
 what each measure read and takes nothing through the gate, and it changes no
 workspace. `fang verify` answers emulation questions with every other kind and
-takes the measurements back through the gate. Without Renode 1.17.0 on the
-path, each question is reported unsupported and nothing is fabricated. See
-[Emulation](/reference/emulation/).
+takes the measurements back through the gate. A question the program left
+unrunnable exits `1`, and so does a run that timed out or crashed, whose
+measures have no value. Without Renode 1.17.0 on the path, each question is
+reported unsupported and nothing is fabricated, which is not by itself a
+failure. See [Emulation](/reference/emulation/).

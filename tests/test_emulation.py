@@ -1187,6 +1187,23 @@ def test_emulate_reports_an_unchecked_version_and_runs_nothing(monkeypatch, caps
     assert "unsupported: Renode 1.18.0 is installed" in printed
 
 
+@pytest.mark.parametrize("outcome", ["timeout", "crashed"])
+def test_emulate_fails_when_a_run_does_not_complete(monkeypatch, capsys, outcome):
+    # It exited 0, so a script read a hung or crashed run as a success.
+    from fang.emulation import RENODE
+    from fang.renode import RenodeRun
+
+    class Ends(_Crashes):
+        def run(self, files, *, timeout=120):
+            return RenodeRun("1.17.0", "1.17.0+stand-in", None if outcome == "timeout" else 1,
+                             outcome, b"", "", ())
+
+    monkeypatch.setattr(RENODE, "backend", Ends())
+    assert _cli("emulate", str(ROOT / "examples" / "sensor_node" / "sensor_node.py")) == 1
+    printed = capsys.readouterr().out
+    assert f"the run {outcome}" in printed and "first_read: no value" in printed
+
+
 def _spaced_tmpdir(monkeypatch, tmp_path):
     """TMPDIR set to a path with a space in it, as tempfile reads it afresh."""
     import tempfile

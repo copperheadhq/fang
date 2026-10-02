@@ -426,7 +426,9 @@ events kept, and the run reported failed with the verification left unknown.
 `fang emulate` SHALL compile each emulation question's plan, write its bundle,
 run the emulator where it is installed, and print each measure's value or the
 reason it has none. With `--bundle-only` it SHALL write the bundle and run
-nothing. It SHALL NOT change a workspace.
+nothing. It SHALL NOT change a workspace. It SHALL exit non-zero when a
+question is not runnable or a run did not complete, and an emulator that is
+not installed SHALL NOT by itself make it fail.
 
 #### Scenario: A bundle is written without an emulator
 
@@ -439,6 +441,13 @@ nothing. It SHALL NOT change a workspace.
 - **WHEN** `fang emulate` runs on the demo board with the emulator installed
 - **THEN** it prints each question's measures and leaves any workspace
   untouched
+
+#### Scenario: A run that does not complete fails the command
+
+- **WHEN** `fang emulate` runs a question and the run ends on a timeout or a
+  crash
+- **THEN** it prints how the run ended and that its measures have no value,
+  and exits non-zero
 
 ### Requirement: Emulation Acceptance Tests
 

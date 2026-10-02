@@ -21,6 +21,10 @@ fang emulate board.py -o bundles     # also write each question's bundle
 fang emulate board.py --bundle-only -o bundles   # write the bundles, run nothing
 ```
 
+`fang emulate` exits non-zero when a question is not runnable or a run timed
+out or crashed; Renode not being installed is reported, and is not by itself
+a failure.
+
 A pass says the declared behaviour was observed on models whose limits the
 evidence lists. It does not say the fabricated board works.
 
