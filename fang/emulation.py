@@ -1226,6 +1226,7 @@ from .diagnostics import (  # noqa: E402 - the question layer sits on the plan a
     UNIT_DIMENSION_MISMATCH,
     error,
 )
+from .lang import _caller_location  # noqa: E402
 from .runtime import Status  # noqa: E402
 from .simulation import Level  # noqa: E402
 from .units import Unit  # noqa: E402
@@ -1378,7 +1379,7 @@ def FirstAt(match: Match) -> FirstAtMeasure:
     return FirstAtMeasure(match.surface, match)
 
 
-def _window_ns(within: Sequence[Quantity] | None) -> tuple[int, int] | None:
+def _window_ns(within: Sequence[Quantity] | None, location=None) -> tuple[int, int] | None:
     """A count's window as integer nanoseconds: two single times, the start
     before the end. Anything else is refused where it is declared, because
     an empty window counts 0 whatever the firmware does, and a window in
@@ -1390,28 +1391,33 @@ def _window_ns(within: Sequence[Quantity] | None) -> tuple[int, int] | None:
         raise error(
             SIM_UNRESOLVED_SURFACE,
             f"a Count window is a start and an end, not {len(bounds)} values",
+            location=location,
         )
     for bound in bounds:
         if not isinstance(bound, Quantity) or bound.dimension != _TIME:
             raise error(
                 UNIT_DIMENSION_MISMATCH,
                 f"a Count window is bounded by times, and {bound} is not one",
+                location=location,
             )
         low, high = bound.interval()
         if low != high:
-            raise error(SIM_UNRESOLVED_SURFACE, f"a Count window's bound is one time, not {bound}")
+            raise error(
+                SIM_UNRESOLVED_SURFACE, f"a Count window's bound is one time, not {bound}", location=location
+            )
     start, end = (int((Decimal(b.interval()[0]) * _NS).to_integral_value()) for b in bounds)
     if not start < end:
         raise error(
             SIM_UNRESOLVED_SURFACE,
             f"the Count window ({bounds[0]}, {bounds[1]}) is empty: its start is not "
             "before its end, so it would count 0 whatever the firmware did",
+            location=location,
         )
     return (start, end)
 
 
 def Count(match: Match, *, within: Sequence[Quantity] | None = None) -> CountMeasure:
-    return CountMeasure(match.surface, match, _window_ns(within))
+    return CountMeasure(match.surface, match, _window_ns(within, _caller_location(2)))
 
 
 def Latency(from_: Match, to: Match) -> LatencyMeasure:

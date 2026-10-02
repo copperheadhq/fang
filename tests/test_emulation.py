@@ -935,6 +935,7 @@ def test_a_reversed_count_window_is_refused_where_it_is_declared():
     with pytest.raises(FangError) as refused:
         Count(Rises("mcu.status"), within=(2 * s, 1 * s))
     assert refused.value.diagnostic.code == "SIM-0003" and "2 s" in str(refused.value)
+    assert refused.value.diagnostic.location.file == __file__
     with pytest.raises(FangError):
         Count(Rises("mcu.status"), within=(1 * s, 1 * s))
 
