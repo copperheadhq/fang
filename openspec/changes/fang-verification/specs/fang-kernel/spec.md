@@ -508,3 +508,69 @@ test.
   tool's version
 - **AND** with the constraint tightened past the measured value, the head does
   not move and the verification reads failed with its evidence
+
+## MODIFIED Requirements
+
+### Requirement: The Commit Gate
+
+A transaction SHALL commit only when all of the following hold: it normalizes
+into well-formed entities; the resulting graph passes structural validation
+including identifier uniqueness and referential integrity; every check class the
+active policy marks required for the affected scope has run; no required check
+reports a blocking severity; no undecided result covers a requirement the policy
+marks as must-be-decided; and the policy's approval requirements, where any
+apply, are satisfied.
+
+Absent a project policy, the required set SHALL be structural validation
+together with every check class whose scope intersects the transaction's
+affected entities, the scope being taken over the head the transaction is based
+on as well as over the candidate, so that a removal still requires the check
+whose scope held what it removed. A policy narrows or widens that set but never
+removes the structural check.
+
+An undecided result SHALL NOT count against a must-be-decided requirement when
+every operand that leaves it undecided is a parameter a declared verification
+question measures into and that holds no value: the verification's own result
+states that constraint, whether the question is unanswered, failed, or answered
+without a value (copperhead RFC 12 version 1.3, Sections 9.3 and 12.9). An
+undecided result over any other unknown operand still blocks.
+
+#### Scenario: Downstream artifacts are materialized only after commit
+
+- **WHEN** a transaction has not yet committed
+- **THEN** no change is materialized into a CAD file or any other downstream
+  artifact
+- **AND** external checks such as CAD rule checking have not been run
+
+#### Scenario: External rule-check results are ingested as evidence after commit
+
+- **WHEN** a transaction commits and an external rule check subsequently runs
+- **THEN** its results are ingested as evidence
+- **AND** they were not consulted before the gate
+
+#### Scenario: A removal brings in the check that covered what it removed
+
+- **WHEN** a transaction removes an entity that only the head's scope of a check
+  class held, such as the connection tying an address strap pin
+- **THEN** that check class is required and runs
+- **AND** a result it reports blocks the transaction as any other would
+
+#### Scenario: A question awaiting its answer does not block a must-be-decided requirement
+
+- **WHEN** a program declares a verification question whose measured parameters
+  hold no value, under a requirement the policy marks must-be-decided
+- **THEN** the program commits, with the constraints over those parameters
+  reported undecided
+
+#### Scenario: A recorded failure is not blocked by what it leaves undecided
+
+- **WHEN** a measurement fails a hard constraint and the failed verification is
+  recorded by a transaction that sets no parameter
+- **THEN** that transaction commits under a must-be-decided requirement
+
+#### Scenario: Another unknown operand still blocks
+
+- **WHEN** a constraint is undecided because of a parameter no declared question
+  measures into, under a requirement the policy marks must-be-decided
+- **THEN** the transaction is rejected with the undecided-blocked code, naming
+  that constraint
