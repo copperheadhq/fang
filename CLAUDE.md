@@ -18,7 +18,7 @@ it is never a persisted or public representation — and the MCP SDK, which only
 
 ```bash
 pip install -e ".[dev]"          # add ",analysis" for the NetworkX-backed queries, ",mcp" for `fang mcp`
-python -m pytest                 # whole suite (604 tests, ~14s); addopts = -q, testpaths = tests
+python -m pytest                 # whole suite (614 tests, ~16s); addopts = -q, testpaths = tests
 fang build examples/sensor_board/sensor_board.py   # the console script, after an editable install
 python -m pytest -rs             # also lists the acceptance tests deferred to later phases
 python -m pytest tests/test_graph.py::test_name -x
@@ -117,6 +117,12 @@ because fang places parts and names nets but does not route. `KicadRenderer` run
 it renders the ordinary KiCad picture — background, frame, title block — with fang's own
 `DRAWING_SHEET` rather than the installed KiCad's, whose title block prints that KiCad's
 version, and the page is cut to leave the frame and the block their room.
+[fang/copperhead.py](fang/copperhead.py) is a second schematic lowering: it writes copperhead's
+netlist intent (`schematic.intent.json`) from a snapshot and runs `copperhead draft schematic`
+across the same kind of process boundary, and copperhead places and wires the sheet with KiCad's
+library symbols. A part is drawn with the symbol its designator prefix names, or the one it
+declares as `symbol = "library:name"` (which also reaches the netlist as its `libsource`). A
+part with no symbol, or a net left with fewer than two drawn pins, is reported as a loss.
 
 **Above the graph.** [fang/validation.py](fang/validation.py) checks identifier uniqueness,
 referential integrity, provenance traceability, prohibited cycles, contradictory mandatory
@@ -150,7 +156,7 @@ the requirement they implement by name (e.g. `Spec: "The Commit Gate"`) — keep
 
 [tests/test_acceptance.py](tests/test_acceptance.py) holds exactly one test per acceptance
 criterion, AT-R1..AT-R13 and AT-K1..AT-K10, and all 23 pass. The only skips in the suite are for
-optional binaries that may not be installed (NetworkX, ngspice); each names what is missing. If a
+optional binaries that may not be installed (NetworkX, ngspice, kicad-cli, copperhead); each names what is missing. If a
 criterion ever has to be deferred again, skip it with the reason named rather than weakening the
 assertion, so the suite reports what is actually demonstrated.
 
@@ -170,7 +176,9 @@ reasoning. `python examples/regenerate.py` rewrites them all;
 [tests/test_examples.py](tests/test_examples.py) rebuilds them and compares, so
 a committed output cannot drift from the program beside it. An example named in
 `regenerate.SCHEMATICS` also ships a `.kicad_sch` and KiCad's render of it, so
-regenerating or testing that one needs `kicad-cli` on the path. Two things in an
+regenerating or testing that one needs `kicad-cli` on the path; one named in
+`regenerate.DRAFTED` also ships copperhead's draft under `out/copperhead/`, and
+needs `copperhead` there too. Two things in an
 output are normalized before that comparison and only two: the compiler version
 and the snapshot hash, which covers provenance and so covers this checkout's
 absolute path. Add an example by adding the folder — the suite discovers it —

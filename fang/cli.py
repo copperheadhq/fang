@@ -195,7 +195,26 @@ def cmd_schematic(args) -> int:
 
     result = _elaborate(args)
     name = Path(args.program).stem
-    text = compile_schematic(result.snapshot, traits=result.traits, title=name)
+    if getattr(args, "drafter", "fang") == "copperhead":
+        from .copperhead import (
+            CopperheadDrafter,
+            DraftRefused,
+            DrafterUnavailable,
+            compile_intent,
+        )
+
+        intent = compile_intent(result.snapshot, traits=result.traits, group=name)
+        for loss in intent.losses:
+            print(f"fang: {loss}", file=sys.stderr)
+        try:
+            text = CopperheadDrafter().draft(
+                intent, workspace=Workspace(args.directory).dir / "drafts", name=name
+            )
+        except (DrafterUnavailable, DraftRefused) as exc:
+            print(f"fang: {exc}", file=sys.stderr)
+            return EXIT_FAILED
+    else:
+        text = compile_schematic(result.snapshot, traits=result.traits, title=name)
 
     if args.output:
         Path(args.output).write_text(text, encoding="utf-8")
@@ -438,6 +457,12 @@ def build_parser() -> argparse.ArgumentParser:
         "-o", "--output", help="where to write the .kicad_sch; stdout by default"
     )
     schematic.add_argument("--svg", help="also render it here, with kicad-cli")
+    schematic.add_argument(
+        "--drafter",
+        choices=("fang", "copperhead"),
+        default="fang",
+        help="who draws the sheet: fang's grid, or copperhead's placed and wired draft",
+    )
     schematic.set_defaults(handler=cmd_schematic)
 
     return parser

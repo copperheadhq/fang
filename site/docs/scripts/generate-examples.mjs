@@ -146,6 +146,9 @@ for (const { name, stem, dir, group } of await discover()) {
   // a view answers one engineering question and a schematic is the circuit.
   const pictures = views.map((v) => join("views", v));
   if (await exists(join(out, "schematic.svg"))) pictures.push("schematic.svg");
+  // copperhead's draft of the same circuit keeps its folder, so its render
+  // does not land on fang's own schematic.svg.
+  if (await exists(join(out, "copperhead", "schematic.svg"))) pictures.push("copperhead/schematic.svg");
 
   examples.push({
     name, stem, dir, out, title, body, program, views, pictures, group,
@@ -177,7 +180,11 @@ for (const [index, example] of examples.entries()) {
   if (pictures.length) {
     await mkdir(join(PUBLIC, name), { recursive: true });
     for (const picture of pictures) {
-      await copyFile(join(out, picture), join(PUBLIC, name, basename(picture)));
+      // A view is published beside the page; anything else keeps its folder,
+      // which is the path resolveLinks gives a README's link to it.
+      const published = join(PUBLIC, name, picture.replace(/^views\//, ""));
+      await mkdir(dirname(published), { recursive: true });
+      await copyFile(join(out, picture), published);
     }
   }
 

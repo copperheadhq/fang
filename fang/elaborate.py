@@ -536,6 +536,11 @@ def _part_extensions(module: Module) -> dict:
         extensions["manufacturer"] = manufacturer
     if mpn:
         extensions["mpn"] = mpn
+    # Stored under the key an imported design's symbol reference already uses,
+    # so the netlist carries an authored symbol exactly as it carries one read in.
+    symbol = getattr(module, "symbol", None)
+    if symbol:
+        extensions["libsource"] = symbol
     return extensions
 
 

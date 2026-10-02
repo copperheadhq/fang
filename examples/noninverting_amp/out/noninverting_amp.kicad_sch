@@ -7,7 +7,7 @@
 	(title_block
 		(title "noninverting_amp")
 		(comment 1 "project PRJ-EXAMPLES")
-		(comment 2 "snapshot sha256:ca5378f7c2ba74e2e336ac8164d4b12701d3d0041ee3f0df60db28b4bfccb27b")
+		(comment 2 "snapshot sha256:4eb956ccefda6be26897809b9ffd988be0aaa15f3f387bdb48efc0788e3b1699")
 	)
 	(lib_symbols
 		(symbol "fang:Box_C1"

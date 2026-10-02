@@ -627,6 +627,12 @@ class Part(Module):
     designator_prefix = "U"
     package: str | None = None
 
+    #: The KiCad symbol the part is drawn with, as `library:name`. A drawing,
+    #: not a selection: it says which pins go where on a sheet, and claims no
+    #: vendor. A drafter that draws with a library's symbols needs it for any
+    #: part its designator prefix does not already name.
+    symbol: str | None = None
+
     #: Which of its own surfaces this part conducts between, as pairs of surface
     #: names. A resistor bridges its two terminals; a connector bridges nothing.
     #: Declared, because nothing else in the graph says that what enters one

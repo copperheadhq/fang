@@ -33,6 +33,7 @@ if __name__ == "__main__" and str(ROOT.parent) not in sys.path:
     sys.path.insert(0, str(ROOT.parent))
 
 from fang.cli import cmd_check, cmd_export, cmd_graph, cmd_netlist, load_system
+from fang.copperhead import CopperheadDrafter, compile_intent
 from fang.elaborate import elaborate
 from fang.layout import PlacementSeeds, place
 from fang.render import to_svg
@@ -64,6 +65,13 @@ VIEWS: dict[str, tuple[str, ...]] = {
 SCHEMATICS: frozenset[str] = frozenset(
     {"jee_advanced/problem_1", "jee_advanced/problem_2", "noninverting_amp"}
 )
+
+#: The examples that also ship copperhead's draft of the same circuit, placed
+#: and wired rather than laid on a grid, under out/copperhead/. copperhead draws
+#: it and KiCad renders it, so regenerating one of these needs `copperhead` on
+#: the path as well as `kicad-cli`. Only the ones copperhead draws legibly: on
+#: the two resistor meshes its labels still land on symbol bodies.
+DRAFTED: frozenset[str] = frozenset({"noninverting_amp"})
 
 #: The entity kinds that carry reasoning rather than circuit. An example with
 #: none of them gets no rationale document, because it would have nothing in it.
@@ -307,6 +315,17 @@ def render(name: str) -> dict[str, str]:
         with TemporaryDirectory() as scratch:
             files["schematic.svg"] = KicadRenderer().to_svg(
                 schematic, workspace=Path(scratch), name=stem
+            )
+    if name in DRAFTED:
+        intent = compile_intent(result.snapshot, traits=result.traits, group=stem)
+        files["copperhead/schematic.intent.json"] = intent.text()
+        with TemporaryDirectory() as scratch:
+            drafted = CopperheadDrafter().draft(
+                intent, workspace=Path(scratch) / "draft", name=stem
+            )
+            files[f"copperhead/{stem}.kicad_sch"] = drafted
+            files["copperhead/schematic.svg"] = KicadRenderer().to_svg(
+                drafted, workspace=Path(scratch) / "render", name=stem
             )
     rationale = _rationale(stem, result.snapshot)
     if rationale is not None:
