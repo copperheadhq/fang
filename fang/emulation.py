@@ -700,8 +700,10 @@ _PROBE = re.compile(r"[^A-Za-z0-9_]")
 
 
 def _probe_name(text: str) -> str:
-    """A Renode identifier for a probe. Prefixed so it can never redefine one of
-    the platform's own peripherals, whose names share the namespace."""
+    """A Renode identifier for a probe, from a whole path or surface name, so
+    `a.env` and `b.env` are two probes. Prefixed so it can never redefine one
+    of the platform's own peripherals, whose names share the namespace. Two
+    names can still meet (`a.b_c` and `a_b.c`); the lowering refuses that."""
     return "fang_" + _PROBE.sub("_", text)
 
 
@@ -989,7 +991,7 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
             if low != high:
                 raise _refuse(f"the address of {_path(entities, component)} is a range", "address")
             plan_devices.append(
-                PlanDevice(component, _probe_name(_path(entities, component).rsplit(".", 1)[-1]),
+                PlanDevice(component, _probe_name(_path(entities, component)),
                            model.id, model.document["renode_type"], int(low), component in absent)
             )
             models.append(_model_record(component, model))

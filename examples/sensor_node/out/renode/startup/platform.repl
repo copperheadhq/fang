@@ -2,7 +2,7 @@ using "stm32f401re.repl"
 
 recorder: Fang.EventRecorder @ gpioPortA
 
-fang_env: Fang.I2CProbe @ i2c1 0x44
+fang_system_env: Fang.I2CProbe @ i2c1 0x44
     recorder: recorder
     model: "Antmicro.Renode.Peripherals.Sensors.HS3001"
     source: "CMP-af1a30935ce8"

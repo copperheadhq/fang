@@ -1244,3 +1244,30 @@ def test_a_model_naming_no_shipped_descriptor_is_sim_0009_through_prepare():
     with pytest.raises(NotRunnable) as refused:
         RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
     assert refused.value.code == "SIM-0009" and "system.env" in str(refused.value)
+
+
+def test_a_device_probe_is_named_by_the_devices_whole_path():
+    # Only the last segment was kept, so a.env and b.env were both fang_env,
+    # and Renode refused the second as already declared.
+    import re as _re
+
+    from fang.emulation import _probe_name, compile_plan
+
+    result, paths = _board()
+    plan_ = compile_plan(result.snapshot, _Question(_startup_data(paths)), traits=result.traits)
+    assert plan_.device(paths["system.env"]).probe == "fang_system_env"
+    assert _probe_name("system.a.env") != _probe_name("system.b.env")
+    assert _re.fullmatch(r"fang_[A-Za-z0-9_]+", _probe_name("system.a.env"))
+
+
+def test_two_probes_of_one_name_are_refused_by_the_lowering():
+    p = plan()
+    (bus,) = p.buses
+    twin = PlanDevice("env2", "env", "renode:Sensors.HS3001", "Antmicro.Renode.Peripherals.Sensors.HS3001", 0x45)
+    doubled = EmulationPlan(**{**p.__dict__, "buses": (PlanBus(bus.port, bus.instance, bus.emulator, bus.pins,
+                                                               (*bus.devices, twin)),)})
+    with pytest.raises(LoweringError, match="'env'"):
+        platform_description(doubled)
+    clash = PlanObservation("i2c1Warnings", "gpio", "mcu.status", "mcu.status", "gpioPortA", 5)
+    with pytest.raises(LoweringError, match="i2c1Warnings"):
+        platform_description(EmulationPlan(**{**p.__dict__, "observations": (clash,)}))
