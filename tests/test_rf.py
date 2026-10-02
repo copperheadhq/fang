@@ -172,6 +172,25 @@ def test_a_return_loss_is_taken_at_a_frequency_against_a_resistance():
         ReturnLoss("antenna.rf", at=2.44 * GHz, reference=50 * dB)
 
 
+def test_a_return_loss_goes_only_into_a_parameter_declared_in_decibels(tmp_path):
+    """A return loss is in dB, and a percent is as dimensionless as a dB:
+    measured into a percent parameter, 10 dB would have been 1000 percent.
+    The elaboration refuses it, as it refuses a measure of the wrong
+    dimension."""
+    model = write_model(tmp_path / "antenna.s1p", LOAD)
+
+    class Linear(matched(model)):
+        return_loss = Parameter("percent")
+
+        def constraints(self):
+            pass
+
+    result = elaborate(Linear, project_id=PROJECT)
+    assert not result.ok
+    assert result.diagnostics[0].code == diagnostics.UNIT_DIMENSION_MISMATCH
+    assert "decibels" in result.diagnostics[0].message
+
+
 def test_an_rf_question_routes_to_the_equation_level(tmp_path):
     model = write_model(tmp_path / "antenna.s1p", LOAD)
     snapshot = elaborate(matched(model), project_id=PROJECT).snapshot

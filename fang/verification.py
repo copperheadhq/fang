@@ -84,7 +84,7 @@ from .simulation import (
     spice_nodes,
     subcircuit_instance,
 )
-from .units import Dimension, Quantity, Unit
+from .units import SCALE_MISMATCH, Dimension, Quantity, Unit
 
 #: The dimensions a circuit question reasons in.
 VOLTAGE = Unit.parse("V").dimension
@@ -144,6 +144,11 @@ class Measure:
         """The dimension of what this measure produces under an analysis kind,
         or None where that depends on an analysis not yet named."""
         return VOLTAGE
+
+    def logarithmic(self) -> bool:
+        """Whether what it produces is a decibel, which no dimension says: a
+        decibel goes only into a parameter declared in decibels."""
+        return False
 
     def check(self, analysis: str | None) -> None:
         """Refuse a field whose dimension the analysis cannot give a meaning."""
@@ -527,6 +532,19 @@ class QuestionDeclaration(Verifies):
                     f"{parameter.unit}",
                     location=self._source,
                 )
+            if (
+                produced is not None
+                and produced.dimensionless
+                and measure.logarithmic() != parameter.unit.logarithmic
+            ):
+                gives = "decibels" if measure.logarithmic() else "a linear ratio"
+                raise error(
+                    UNIT_DIMENSION_MISMATCH,
+                    f"{self.attribute} measures {name} with "
+                    f"{type(measure).__name__}, which gives {gives}, but {name} is "
+                    f"declared in {parameter.unit}: {SCALE_MISMATCH}",
+                    location=self._source,
+                )
             measures.append(
                 {
                     "name": name,
@@ -722,6 +740,9 @@ class ReturnLoss(Measure):
 
     def produces(self, analysis: str | None) -> Dimension | None:
         return Unit.parse("dB").dimension
+
+    def logarithmic(self) -> bool:
+        return True
 
     def fields(self) -> dict:
         # The matching parts are a chain, so each carries its position: the

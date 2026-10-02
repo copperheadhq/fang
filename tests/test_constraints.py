@@ -76,6 +76,32 @@ def test_addition_requires_operands_of_equal_dimension():
         Arithmetic("add", (Literal.of(Quantity.scalar("1", "V")), Literal.of(Quantity.scalar("1", "A"))))
 
 
+def test_a_decibel_is_compared_and_combined_only_with_decibels():
+    """Both are dimensionless, and 10 dB >= 50 percent was accepted and
+    true. A decibel beside a linear ratio is refused where it is written."""
+    decibels = Literal.of(Quantity.scalar("10", "dB"))
+    percent = Literal.of(Quantity.scalar("50", "percent"))
+    count = Literal.of(Quantity.scalar("1", "1"))
+    for linear in (percent, count):
+        with pytest.raises(FangError) as caught:
+            compare("ge", decibels, linear)
+        assert caught.value.diagnostic.code == "UNIT-0001"
+        with pytest.raises(FangError) as caught:
+            Arithmetic("add", (decibels, linear))
+        assert caught.value.diagnostic.code == "UNIT-0001"
+    # The scale is carried through arithmetic, and through a reference whose
+    # writer knows the declared unit.
+    with pytest.raises(FangError):
+        compare("ge", Arithmetic("add", (decibels, decibels)), percent)
+    with pytest.raises(FangError):
+        compare("ge", Ref("CMP-1", "return_loss", logarithmic=True), percent)
+    assert compare("ge", decibels, Literal.of(Quantity.scalar("3", "dB"))).evaluate(
+        resolver(None)
+    ) is Truth.TRUE
+    assert compare("ge", Ref("CMP-1", "return_loss", logarithmic=True), decibels)
+    assert compare("ge", decibels, Literal.of(3))
+
+
 def test_multiplication_adds_dimension_vectors_and_division_subtracts_them():
     volts = Literal.of(Quantity.scalar("2", "V"))
     amps = Literal.of(Quantity.scalar("3", "A"))

@@ -1251,6 +1251,9 @@ class UartValueMeasure(Measure):
     def produces(self, analysis: str | None):
         return Unit.parse(self.unit).dimension
 
+    def logarithmic(self) -> bool:
+        return Unit.parse(self.unit).logarithmic
+
     def fields(self) -> dict:
         return {"prefix": self.prefix, "unit": self.unit}
 
