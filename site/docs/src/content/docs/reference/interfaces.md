@@ -171,7 +171,9 @@ i2c = I2CPort(address=0x44 * addr)
 ```
 
 `address=0x44` is refused with `UNIT-0001` naming the parameter: a bare number
-says nothing about what it counts.
+says nothing about what it counts. So is a fixed address given as a range or a
+tolerance: a device answers at one address, and one that might be any of several
+is a strap the program has not stated.
 
 Where a strap pin selects the address, `Strap` keys each address by one of the
 device's own pins, which is how a datasheet states it:
@@ -188,7 +190,9 @@ The names are the part's vendor pin names; one the part does not have is
 identifiers and carries no `address` parameter beside it.
 
 `fang.compatibility.resolve_address(snapshot, port)` reads the address. A fixed
-one comes back as recorded. A strap is resolved from the inferred nets: the one
+one comes back as recorded; a fixed address holding conflicting values comes
+back as the chosen one once the conflict is resolved, and as an unknown value
+naming the candidates' sources until then. A strap is resolved from the inferred nets: the one
 pin of its map that shares the strap pin's net selects the address, returned as
 an inferred value. A strap pin on no net, on a net none of those pins shares,
 or on a net two of them share gives an unknown value whose reason names the
@@ -196,10 +200,15 @@ strap pin, and both pins when two share it. A port with neither, such as a
 controller's, gives `None`: it is not addressed.
 
 The compatibility check's addressing rule reads every participant of a
-multi-drop bus through that function. Two devices at one address fail, naming
-both. An unresolved strap leaves the rule undecided, naming the pin. A port
-with no address is not reported. When every addressed device is known and no
-two collide, the rule passes.
+multi-drop bus through that function and compares the addresses by overlap. Two
+devices at one address fail, naming both. Addresses that overlap without being
+the same, and an unresolved strap or conflict, leave the rule undecided, naming
+the ports or the pin. A port with no address is not reported. The rule passes
+only when every addressed device is known and none overlap.
+
+Because the rule reads the strap pin's net, its scope covers that net: re-tying
+or removing the strap's connection brings the rule into the commit gate, so two
+devices cannot end up at one address without the check running.
 
 ## Roles
 

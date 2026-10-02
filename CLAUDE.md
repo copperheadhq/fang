@@ -97,7 +97,11 @@ against and carries `Operation`s (`AddEntity`, `RemoveEntity`, `Connect`, `SetPa
 `KernelGraph.propose()` applies the transaction **to a copy** and runs six gate conditions in
 order: stale-base rejection, normalization into well-formed entities, structural validation,
 every required `CheckClass` has run, no blocking check result, no undecided result over a
-must-be-decided requirement, and policy approvals satisfied. Only `commit()` advances the head.
+must-be-decided requirement, and policy approvals satisfied. Without a project policy the required
+check classes are those whose scope meets the affected entities on the head or the candidate, so a
+removal still brings in the check that covered what it removed. Condition 5 does not count a
+constraint undecided only because a declared question has not yet measured, or failed to measure,
+its parameter (RFC 12 §9.3). Only `commit()` advances the head.
 Rejection is correct by construction — the candidate is simply discarded — and a rejected
 `Proposal` still returns its diagnostics and its diff, because the explanation is the useful
 output of a rejection.
