@@ -209,7 +209,9 @@ SIM_EMULATION_STIMULUS = _allocate(
     "SIM-0012", "a stimulus names an input its model lacks, or a quantity of the wrong dimension"
 )
 SIM_EMULATION_PIN = _allocate("SIM-0013", "a pin the platform emulation model does not map")
-SIM_EMULATION_DURATION = _allocate("SIM-0014", "an emulation question names no run duration")
+SIM_EMULATION_DURATION = _allocate(
+    "SIM-0014", "an emulation question names no run duration, or one that is not positive"
+)
 SIM_EMULATION_FIRMWARE = _allocate(
     "SIM-0015", "no firmware is bound, or it was built for a target the platform does not describe"
 )

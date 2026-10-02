@@ -202,3 +202,6 @@ and recorded files the later tests read — each reviewed again as it lands.
       probe by the whole path and refuse two of one name in the lowering.
 - [x] 11.9 Report an installed Renode of an unchecked version by its version,
       not as missing, through `fang verify` and `fang emulate`.
+- [x] 11.10 Refuse a run duration that is not positive under SIM-0014 where
+      `Emulates` is written, when the plan compiles, and in the lowering;
+      verify zero and a negative duration at each.

@@ -83,7 +83,7 @@ edit nobody sees.
 
 | Field | Means |
 | --- | --- |
-| `run_until` | The run's virtual duration. There is no default. |
+| `run_until` | The run's virtual duration, a positive time. There is no default. |
 | `stimuli` | `At(time, "<device>.<input>", value)`: a model input set to one value at a virtual time within the run |
 | `faults` | `Absent(device)`: the device is not on its bus, so its address goes unanswered, and it records nothing |
 | `abstracted` | Parts in scope deliberately left without a model, each a coverage gap |
@@ -139,7 +139,7 @@ it names. A plan that cannot be resolved is refused, naming what is missing.
 | `SIM-0011` | A fault the device's model does not support |
 | `SIM-0012` | A stimulus names an input its model lacks, gives a value of the wrong dimension or more than one value, falls outside the run, or sets a device a fault removes |
 | `SIM-0013` | A pin the platform model does not map; a port is never derived from a pin's name |
-| `SIM-0014` | No run duration, or a run of no time |
+| `SIM-0014` | No run duration, or one that is not positive, which `Emulates` already refuses where it is written |
 | `SIM-0015` | No firmware is bound, or it was built for another target |
 | `SIM-0016` | A bus device's controller or address cannot be resolved, or `PinConfig` names a port that is no bus |
 

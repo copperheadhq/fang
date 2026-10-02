@@ -113,7 +113,7 @@ observation point, a signal with several loads being observed on its one pin;
 each stimulus and fault against its model's declarations, a stimulus setting an
 input to one value at a time within the run, on a device present in the run;
 each measure against what the probes can record; and the run's virtual
-duration, which has no default. A measure that would read the same whatever the
+duration, which has no default and SHALL be positive. A measure that would read the same whatever the
 firmware did SHALL be refused rather than measured: a pin-configuration measure
 over a port that is no bus in scope with pins of the target, a match naming a
 detail its measure does not filter on, a count over a window that is empty or
@@ -142,6 +142,13 @@ identified by the hash of its canonical form.
 
 - **WHEN** a question names no run duration
 - **THEN** the plan is refused rather than given a default
+
+#### Scenario: A run of no time or less is refused
+
+- **WHEN** a question names a run duration that is zero or negative
+- **THEN** the declaration is refused with the duration's `SIM` diagnostic
+- **AND** a plan carrying such a duration is neither compiled nor lowered,
+  since its script would run nothing and still finish as completed
 
 #### Scenario: A stimulus that cannot be applied is refused
 

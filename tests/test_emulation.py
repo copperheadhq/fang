@@ -450,6 +450,40 @@ def test_a_plan_without_a_duration_is_refused():
         compile_plan(result.snapshot, _Question(data), traits=result.traits)
 
 
+@pytest.mark.parametrize("duration", ["-1", "0"])
+def test_a_run_of_no_time_or_less_is_refused_where_it_is_declared(duration):
+    # A negative run_until passed the dimension check, and its lowering wrote
+    # no RunFor and still finished "completed".
+    from fang.diagnostics import FangError
+    from fang.emulation import Emulates, FirstAt, I2CRead
+    from fang.units import Quantity
+
+    with pytest.raises(FangError) as refused:
+        Emulates("sensor_ready", run_until=Quantity.scalar(Decimal(duration), "s"),
+                 measures={"first_read": FirstAt(I2CRead("env"))})
+    assert refused.value.diagnostic.code == "SIM-0014"
+    assert refused.value.diagnostic.location.file == __file__
+
+
+@pytest.mark.parametrize("duration", ["-1", "0"])
+def test_a_plan_of_no_time_or_less_is_refused_as_a_duration(duration):
+    from fang.emulation import EmulationError, compile_plan
+
+    result, paths = _board()
+    data = _startup_data(paths, stimuli=[])
+    data["scenario"]["run_until"] = _scalar(duration, "s")
+    with pytest.raises(EmulationError, match="positive time") as refused:
+        compile_plan(result.snapshot, _Question(data), traits=result.traits)
+    assert refused.value.code == "duration"
+
+
+@pytest.mark.parametrize("nanoseconds", [-1_000_000_000, 0])
+def test_a_plan_of_no_time_or_less_is_not_lowered(nanoseconds):
+    # Lowered, it would finish "completed" having run nothing.
+    with pytest.raises(LoweringError, match="no time"):
+        script(plan(run_until_ns=nanoseconds, stimuli=()))
+
+
 @needs_renode
 def test_a_plan_compiled_from_the_board_runs_and_measures():
     from fang.emulation import compile_plan

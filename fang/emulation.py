@@ -1088,7 +1088,11 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
     run_until = _quantity_from(scenario["run_until"])
     run_until_ns = _nanoseconds(run_until)
     if run_until_ns <= 0:
-        raise _refuse(f"the run lasts {run_until}, and a run observes nothing in no time", "duration")
+        raise _refuse(
+            f"the run lasts {run_until}; a run lasts a positive time, and one of no time "
+            "observes nothing",
+            "duration",
+        )
 
     stimuli = []
     assumptions = [f"the core runs at {platform.document['core_clock_hz']} Hz, as the platform model assumes"]
@@ -1500,6 +1504,16 @@ class Emulates(QuestionDeclaration):
             raise error(
                 UNIT_DIMENSION_MISMATCH,
                 f"run_until is {run_until}; a run lasts a time",
+                location=self._source,
+            )
+        # A run of no time, or of less, would be lowered with nothing to run
+        # and still end "completed", so it is refused where it is written, as
+        # the plan refuses it when it compiles.
+        if run_until is not None and not Decimal(run_until.interval()[0]) > 0:
+            raise error(
+                SIM_EMULATION_DURATION,
+                f"run_until is {run_until}; a run lasts a positive time, and one of "
+                "no time observes nothing",
                 location=self._source,
             )
         for stimulus in stimuli:
