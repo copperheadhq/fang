@@ -154,7 +154,9 @@ def _requirement_text(bounds) -> str:
 def _measure(measurement, bounds) -> Measure:
     """A measurement in its requirement's unit, and whether it meets it."""
     if not measurement.measured:
-        return Measure(measurement.name, "not measured", _requirement_text(bounds), False)
+        # Not measured is undecided, never a failure: the constraint over it
+        # stays unknown, and the gate did not fail it.
+        return Measure(measurement.name, "not measured", _requirement_text(bounds), None)
     unit = bounds[0][1].unit
     quantity, _ = measurement.quantity.converted_to(unit)
     counted = _unit(quantity) == ""
@@ -462,16 +464,20 @@ def caught(runs_: list[Run]) -> None:
             c.text(cols["measure"], y, first.name, c.mono(19), TEXT)
             c.text(cols["measured"], y, first.shown, value_font, FAIL)
             c.text(cols["required"], y, first.required, required_font, MUTED)
-            # Measured failures first, then those the run left without a value.
-            also = [f"{m.name} = {m.shown}" for m in rest if m.shown != "not measured"]
-            also += [f"{m.name} (not measured)" for m in rest if m.shown == "not measured"]
+            also = [f"{m.name} = {m.shown}" for m in rest]
+            undecided = [m.name for m in its_runs[0].measures.values() if m.met is None]
             notes = {
                 "push_pull.elf": "every I2C transaction still succeeds",
                 "no_timeout.elf": "the LED never shows the fault",
             }
-            note = " and ".join(also) if also else notes.get(build, "")
+            parts = []
+            if also:
+                parts.append("also fails " + " and ".join(also))
+            if undecided:
+                parts.append(", ".join(undecided) + " undecided, not measured")
+            note = "; ".join(parts) or notes.get(build, "")
             if note:
-                c.text(cols["measure"], y + 28, ("also fails " if also else "") + note, note_font, DIM)
+                c.text(cols["measure"], y + 28, note, note_font, DIM)
         c.verdict(c.width - margin, y, result, size=16, anchor="rs")
         if build != rows[-1][0]:
             c.rect((margin, y + 50, c.width - margin, y + 51), fill=HAIRLINE)
