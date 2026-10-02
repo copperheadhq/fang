@@ -172,6 +172,13 @@ one: it reports unsupported before Renode starts, and `TMPDIR` (`TEMP` on
 Windows) names another. A run that outlives its wall-clock limit is ended with
 every process it started, and its partial events are kept.
 
+Renode always runs from a temporary copy of the bundle. What the run leaves
+is then kept in the workspace the run is given: `fang verify --commit` keeps
+each run's bundle, its `events.jsonl`, Renode's `renode.log` and an
+`outcome.json` under `.copperhead/simulations/renode-<job>/`, a crashed run's
+log among them. Without `--commit`, and under `fang emulate`, they go to a
+scratch directory removed afterwards, so the project is left as it was.
+
 ## What a run can see
 
 Events come from probes in the emulator (what a device was asked and

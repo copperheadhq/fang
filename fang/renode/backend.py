@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Mapping
 
-from .lowering import EVENTS, SCRIPT, SUPPORTED_VERSIONS
+from .lowering import EVENTS, LOG, SCRIPT, SUPPORTED_VERSIONS
 
 
 class RenodeUnavailable(Exception):
@@ -101,7 +101,7 @@ class RenodeBackend:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(content)
             arguments = (self.executable, "--console", "--disable-gui", "-p", SCRIPT)
-            log_path = workspace / "renode.log"
+            log_path = workspace / LOG
             with open(log_path, "wb") as log:
                 process = subprocess.Popen(
                     arguments,

@@ -1204,6 +1204,82 @@ def test_emulate_fails_when_a_run_does_not_complete(monkeypatch, capsys, outcome
     assert f"the run {outcome}" in printed and "first_read: no value" in printed
 
 
+class _Logs(_Crashes):
+    """A Renode whose every run crashes having logged a line: a run worth
+    keeping, since its log is how the crash is read."""
+
+    def run(self, files, *, timeout=120):
+        from fang.renode import RenodeRun
+
+        return RenodeRun("1.17.0", "1.17.0+stand-in", 1, "crashed", b"", "the stand-in crashed\n",
+                         ("renode", "--console", "--disable-gui", "-p", "run.resc"))
+
+
+def test_a_run_keeps_its_bundle_and_what_it_left_in_its_workspace(tmp_path):
+    # The run happened in a temporary directory deleted on return, so a run
+    # made under verify --commit kept neither its bundle nor its log.
+    import json as _json
+
+    from fang.emulation import RENODE, RenodeTool
+
+    result = _elaborate(SENSOR_NODE.SensorNode)
+    job = RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
+    kept = tmp_path / "renode-run"
+    RenodeTool(backend=_Logs()).run(job, workspace=kept)
+    for name, content in job.files.items():
+        assert (kept / name).read_bytes() == (content.encode("utf-8") if isinstance(content, str) else content)
+    assert (kept / "events.jsonl").read_bytes() == b""
+    assert (kept / "renode.log").read_text(encoding="utf-8") == "the stand-in crashed\n"
+    ended = _json.loads((kept / "outcome.json").read_text(encoding="utf-8"))
+    assert ended["outcome"] == "crashed" and ended["exit_status"] == 1
+    assert ended["renode"] == {"version": "1.17.0", "build": "1.17.0+stand-in"}
+
+
+def test_a_run_that_cannot_be_made_keeps_nothing(monkeypatch, tmp_path):
+    from fang.emulation import RENODE, RenodeTool
+    from fang.verification import ToolUnavailable
+
+    class Checked(RenodeBackend):
+        def available(self):
+            return True
+
+        def identify(self):
+            return "1.17.0", "1.17.0+stand-in"
+
+    result = _elaborate(SENSOR_NODE.SensorNode)
+    job = RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
+    _spaced_tmpdir(monkeypatch, tmp_path)
+    with pytest.raises(ToolUnavailable):
+        RenodeTool(backend=Checked()).run(job, workspace=tmp_path / "renode-run")
+    assert not (tmp_path / "renode-run").exists()
+
+
+def test_verify_commit_keeps_each_run_and_verify_alone_keeps_none(monkeypatch, tmp_path, capsys):
+    import shutil as _shutil
+
+    from fang.emulation import RENODE
+
+    copy = tmp_path / "sensor_node"
+    _shutil.copytree(ROOT / "examples" / "sensor_node", copy, ignore=_shutil.ignore_patterns("out"))
+    program = str(copy / "sensor_node.py")
+    assert _cli("build", program, "-C", str(copy)) == 0
+    monkeypatch.setattr(RENODE, "backend", _Logs())
+    runs = copy / ".copperhead" / "simulations"
+
+    _cli("verify", program, "-C", str(copy))
+    assert not any(runs.iterdir())
+
+    _cli("verify", program, "-C", str(copy), "--commit")
+    logs = sorted(runs.glob("renode-*/renode.log"))
+    assert len(logs) == 2
+    for log in logs:
+        assert log.read_text(encoding="utf-8") == "the stand-in crashed\n"
+        assert {"events.jsonl", "outcome.json", "plan.json", "run.resc", "firmware.elf"} <= {
+            p.name for p in log.parent.iterdir()
+        }
+    capsys.readouterr()
+
+
 def _spaced_tmpdir(monkeypatch, tmp_path):
     """TMPDIR set to a path with a space in it, as tempfile reads it afresh."""
     import tempfile

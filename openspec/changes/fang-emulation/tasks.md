@@ -220,3 +220,8 @@ and recorded files the later tests read — each reviewed again as it lands.
 - [x] 11.14 Exit `fang emulate` non-zero when a run timed out or crashed, as
       `fang verify` does for a failed verification; verify both outcomes with
       a stand-in Renode.
+- [x] 11.15 Keep a run's bundle, `events.jsonl`, `renode.log` and
+      `outcome.json` in the workspace the tool is given, Renode still running
+      from its temporary copy; verify `verify --commit` keeps both questions'
+      runs under `.copperhead/simulations/`, `verify` alone keeps none, and a
+      run that cannot be made keeps nothing.

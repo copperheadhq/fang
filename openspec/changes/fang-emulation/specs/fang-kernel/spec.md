@@ -371,7 +371,10 @@ The evidence of every run SHALL record the emulator's version and build, the
 firmware digest, the plan hash, the seed, and the digest of every file the run
 was given. Repeated runs of one plan on one emulator build SHALL produce
 byte-identical event records; a run that cannot SHALL report the difference
-rather than choose one record.
+rather than choose one record. A run SHALL leave its bundle, its event record,
+the emulator's log and its outcome in the workspace it is given, whatever
+directory the emulator itself ran from, so that a run whose evidence is
+committed keeps them beside it.
 
 #### Scenario: Ten runs give one record
 
@@ -383,6 +386,15 @@ rather than choose one record.
 - **WHEN** a run's evidence is read
 - **THEN** it names the emulator version and build, the firmware digest, the
   plan hash, the seed and the digest of every bundle file
+
+#### Scenario: A committed run keeps its files
+
+- **WHEN** `verify --commit` runs an emulation question, whether or not the
+  run completes
+- **THEN** the workspace's simulations directory holds the run's bundle, its
+  event record, the emulator's log and its outcome
+- **AND WHEN** `verify` runs the question without `--commit`
+- **THEN** nothing is written into the workspace
 
 ### Requirement: The Emulator Is Reported, Never Substituted
 

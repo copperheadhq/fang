@@ -346,10 +346,15 @@ refuses it as unsupported, saying why, before Renode starts. `run` copies the
 bundle to a temporary workspace and runs `renode --console --disable-gui -p
 --hide-log run.resc` with no shell, in its own process group; on the wall-clock
 limit it kills the group and returns what was recorded, with `run.end`
-reporting `timeout`. The local backend isolates only this far — temporary
-copies, no source tree reachable through the bundle, a time limit and a
-recorded invocation — and the evidence says the run was local; network
-isolation and resource limits are a hosted runner's.
+reporting `timeout`. The tool's `run` then writes the bundle, `events.jsonl`,
+Renode's `renode.log` and an `outcome.json` into the workspace it was given:
+under `verify --commit` that is `.copperhead/simulations/`, beside the run's
+evidence, and otherwise a scratch directory. Renode still runs from its
+temporary copy, so a workspace whose path has a space in it is no obstacle.
+The local backend isolates only this far — temporary copies, no source tree
+reachable through the bundle, a time limit and a recorded invocation — and the
+evidence says the run was local; network isolation and resource limits are a
+hosted runner's.
 
 ### The F401 platform description
 

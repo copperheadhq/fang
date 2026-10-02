@@ -47,6 +47,11 @@ FIRMWARE = "firmware.elf"
 MANIFEST = "manifest.json"
 EVENTS = "events.jsonl"
 
+#: What a run leaves beside its bundle, in the workspace it was given:
+#: Renode's own log, and how the run ended.
+LOG = "renode.log"
+OUTCOME = "outcome.json"
+
 
 class LoweringError(ValueError):
     """The plan holds something the lowering will not write."""

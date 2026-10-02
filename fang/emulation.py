@@ -1821,13 +1821,43 @@ class RenodeTool:
         )
 
     def run(self, job: Job, *, workspace) -> RawRun:
+        """Run the bundle, and keep it and what the run left in `workspace`.
+
+        Renode runs from the temporary copy the backend makes, since its
+        monitor cannot include a script from a path with a space in it and a
+        run should reach nothing but its own copy. The bundle, the event
+        record, Renode's log and the outcome are then written into
+        `workspace`: under `fang verify --commit` that is beside the run's
+        evidence, and otherwise a scratch directory. A run that could not be
+        made writes nothing.
+        """
+        from pathlib import Path
+
         from .renode import RenodeUnavailable
+        from .renode.lowering import EVENTS, LOG, OUTCOME
+        from .serialization import canonical_bytes
 
         files = {name: (c.encode("utf-8") if isinstance(c, str) else c) for name, c in job.files.items()}
         try:
             run = self.backend.run(files, timeout=self.timeout)
         except RenodeUnavailable as exc:
             raise ToolUnavailable(str(exc)) from None
+        kept = Path(workspace)
+        kept.mkdir(parents=True, exist_ok=True)
+        for name, content in sorted(files.items()):
+            target = kept / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(content)
+        (kept / EVENTS).write_bytes(run.events)
+        (kept / LOG).write_text(run.log, encoding="utf-8")
+        ended = {
+            "outcome": run.outcome,
+            "renode": {"version": run.version, "build": run.build},
+            "arguments": list(run.arguments),
+        }
+        if run.exit_status is not None:
+            ended["exit_status"] = run.exit_status
+        (kept / OUTCOME).write_bytes(canonical_bytes(ended))
         version = f"{run.version} (build {run.build})" if run.build else run.version
         succeeded = run.outcome == "completed"
         return RawRun(
