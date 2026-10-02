@@ -323,7 +323,11 @@ A part MAY carry a Touchstone model as a trait with its provenance. An RF
 question over it SHALL be answered by reading the file and composing the named
 matching parts in closed form, at the equation level, and the measurement's
 confidence SHALL be bounded by the model's provenance. A frequency outside the
-file's range SHALL be refused rather than extrapolated.
+file's range SHALL be refused rather than extrapolated, and the file's
+frequencies SHALL be scaled and compared exactly, so that a frequency the file
+names is inside its range. A return loss is in decibels, and SHALL be measured
+only into a parameter declared in decibels; a decibel SHALL NOT convert to, or
+be compared or combined with, any other dimensionless unit.
 
 #### Scenario: A one-port file answers a return-loss question
 
@@ -348,6 +352,20 @@ file's range SHALL be refused rather than extrapolated.
 - **WHEN** the question's frequency lies outside the file's range
 - **THEN** the question is refused naming the range
 - **AND** nothing is extrapolated
+
+#### Scenario: A frequency the file names is inside its range
+
+- **WHEN** the question's frequency is the file's last point, written in the
+  file's own frequency unit
+- **THEN** the question is answered at that point and not refused
+
+#### Scenario: A return loss goes only into a decibel parameter
+
+- **WHEN** a question measures a return loss into a parameter declared in a
+  dimensionless unit other than decibels, such as percent
+- **THEN** elaboration fails with a unit diagnostic
+- **AND** a constraint comparing a decibel parameter with such a unit is refused
+  where it is written
 
 #### Scenario: The file's format options are honoured
 

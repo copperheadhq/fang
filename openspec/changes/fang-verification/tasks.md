@@ -174,6 +174,12 @@ change.
       and says so in its header and provenance; README and `out/`.
 - [x] 10.7 Add `tests/test_rf.py` covering the delta spec's Touchstone
       scenarios; verify the whole suite passes.
+- [x] 10.8 Read and compare a file's frequencies as decimals; verify a
+      question at the file's last point is answered, not refused.
+- [x] 10.9 Keep `dB` apart from every linear dimensionless unit in conversion,
+      in expressions, in parameter values and in what a measure writes; verify
+      each refusal, and that a `ReturnLoss` into a percent parameter fails
+      elaboration.
 
 ## 11. Documents
 

@@ -363,7 +363,10 @@ reason and the count excluded.
 - Every number crosses the boundary as a `Decimal` under the kernel's fixed
   context. A tool that computes in binary floats — the Touchstone reader's
   complex arithmetic — quantizes to six significant figures before the
-  boundary.
+  boundary. The reader's frequencies are not among those floats: they are read
+  from the file's text and scaled to hertz as decimals, because `2.01 * 1e9`
+  is 2009999999.9999998 and a question at a file's last point was refused as
+  outside it.
 - Tool versions are recorded on every evidence entity. Two runs on two versions
   of ngspice are two pieces of evidence, not one.
 - Seeds are recorded where a tool takes one; none of the delivered tools does.
@@ -574,8 +577,18 @@ terminated in the file's reference, and the job says so. Interpolation is
 linear in real and imaginary parts. The run re-reads the declared file and
 refuses one whose digest has changed since preparation. A perfect match is an
 infinite return loss. Decibels needed a unit: `dB` is dimensionless with a
-factor of 1, compared only with decibels, and `GHz`, `nH` and `dB` join the
-literals `fang.lang` exports. The design's sketch names `("series_l",
+factor of 1, and `GHz`, `nH` and `dB` join the literals `fang.lang` exports.
+The seven bases cannot tell a decibel from a percent, so a unit also says
+whether it is logarithmic (`units.LOGARITHMIC`), and a decibel is kept apart
+from every linear dimensionless unit with UNIT-0001 wherever the units are
+known: `converted_to` refuses the conversion either way (10 dB is not 1000
+percent), an expression node carries whether it is a decibel (a `Literal` from
+its quantity, a `Ref` from the declared unit `fang.lang` hands it, unserialized,
+`Arithmetic` from its operands) so `Comparison` and `Arithmetic` refuse a mix
+where it is written, a parameter declared in dB refuses a value in another
+dimensionless unit, and a measure into a dimensionless parameter of the other
+scale fails elaboration, a `ReturnLoss` into anything not declared in dB among
+them. A bare number stays neutral. The design's sketch names `("series_l",
 "shunt_c")`; the shipped example's antenna is below 50 Ohm, so its match puts
 the shunt part at the port, `("shunt_c", "series_l")`.
 
