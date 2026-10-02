@@ -19,6 +19,7 @@ script can rely on the exit code rather than parsing output.
 | `fang export` | Write a KiCad netlist |
 | `fang view` | Compile a view; render it to SVG with `-o` |
 | `fang sim` | Compile a simulation plan, lower it, run it |
+| `fang emulate` | Run the firmware in Renode and print what each emulation question measured |
 | `fang graph` | Summarize the kernel graph |
 | `fang diff` | Diff a program against the persisted workspace |
 
@@ -83,3 +84,23 @@ If a selected component has no compatible model and is not explicitly
 abstracted, the plan is **rejected with the reason** rather than run with a
 substitute. If ngspice is not installed, the plan still compiles and the command
 says no run was made.
+
+## Emulation
+
+```bash
+fang emulate board.py
+fang emulate board.py -o bundles
+fang emulate board.py --bundle-only -o bundles
+```
+
+| Option | Does |
+| --- | --- |
+| `-o`, `--output` | Write each question's bundle into a folder of its own here |
+| `--bundle-only` | Write the bundles and run nothing |
+
+`fang emulate` is the low-level command, as `fang sim` is for SPICE: it prints
+what each measure read and takes nothing through the gate, and it changes no
+workspace. `fang verify` answers emulation questions with every other kind and
+takes the measurements back through the gate. Without Renode 1.17.0 on the
+path, each question is reported unsupported and nothing is fabricated. See
+[Emulation](/reference/emulation/).

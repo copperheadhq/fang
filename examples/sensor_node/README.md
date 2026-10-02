@@ -4,7 +4,10 @@ An STM32F401RE reading an HS3001 humidity sensor over I2C1, with a serial
 console on USART2 and a status LED on PA5. Read it after
 [`sensor_board/`](../sensor_board/) and [`i2c_bus/`](../i2c_bus/): it adds the
 two facts those boards leave to the firmware, **which controller a port is**
-and **the address a device answers on**.
+and **the address a device answers on**. Then it runs the firmware: the board's
+own bare-metal firmware, in [`firmware/`](firmware/), executes in Renode
+against this board, and two requirements over what it does are decided by the
+run, through the commit gate.
 
 ## The program
 
@@ -72,20 +75,71 @@ not modelled. This is a board for the checks and for running firmware against,
 not one to send to fabrication. The HS3001 is modelled whole, including its VC
 capacitor and the pull-ups its application circuit requires.
 
+## The firmware, run against the board
+
+[`firmware/src/main.c`](firmware/src/main.c) is register-level C with no vendor
+HAL, running from the 16 MHz the part resets to. It prints a boot line on
+USART2, asks the HS3001 for a measurement every 100 ms and prints
+`temp=<degC>`, and toggles the LED on PA5 every 500 ms while readings succeed
+and every 100 ms while the sensor does not answer. The ELFs in
+[`firmware/elf/`](firmware/elf/) are committed, with the toolchain that built
+them in [`firmware/TOOLCHAIN`](firmware/TOOLCHAIN), so nothing rebuilds them;
+`make` does, byte for byte.
+
+The board binds the firmware to the MCU and names an emulation model for each
+part that has one: fang's F401 platform, and Renode's own HS3001 model. Two
+questions are declared beside the requirements they serve:
+
+- **startup**: at 25 degC from reset, the first sensor read comes within
+  200 ms, the printed temperature is within 0.05 degC (the sensor's 14-bit
+  quantization reads 25 degC back as 25.01), the LED rises exactly once
+  between 1 s and 2 s, and no I2C1 pin is configured otherwise than the board
+  requires.
+- **sensor missing**: with the HS3001 absent, the LED rises at least four times
+  between 1 s and 2 s, and nothing is read.
+
+Each compiles into a plan whose every bus, pin, alternate function and address
+comes from this graph, and nowhere else: I2C1 from the port, PB8 and PB9 at AF4
+and open drain from the lowered connections, 0x44 from the sensor's port, PA5
+from the status signal's connection. The pull-ups, the LED's resistor and the
+console header share nets with pins the questions touch and have no emulation
+model, so each question names them as abstracted, and the evidence lists them
+as coverage gaps.
+
+`fang verify` answers both, and both pass: the firmware reads the sensor at
+40 ms, prints 25.01 degC, blinks once in that second and sets I2C1's pins up
+right; with the sensor gone it blinks five times and reads nothing. Three
+deliberately broken builds sit beside the good one, and the suite runs each
+against the board: the wrong address fails the first read, which is observed
+not to happen before the run ends; push-pull I2C pins fail the pin check while
+every transaction succeeds, because Renode does not route I2C through the pins;
+no timeout hangs when the sensor is missing. Moving the LED to PA6 on the board,
+with the firmware unchanged, fails the blink count.
+
+What the run does not show is listed with it: the clock tree, I2C DMA and
+timing, acknowledgement beyond an absent device, the sensor's conversion time.
+A pass is a finding on models tested in emulation, at confidence 0.8. It is
+not the board working.
+
 ## What comes out
 
-11 parts, 9 nets, 132 entities, 11 checks. None failed, **three undecided**.
+11 parts, 9 nets, 143 entities, 18 checks. None failed, **ten undecided**.
 
-One is the sensor's logic levels, above. The other two are the console. The
-header passes USART2 through to a serial adapter, and the `vih_min` and
-`voh_min` on the far side of it are the adapter's. The header is this board's;
-the adapter is not, and its levels are not known.
+One is the sensor's logic levels, above. Two are the console. The header passes
+USART2 through to a serial adapter, and the `vih_min` and `voh_min` on the far
+side of it are the adapter's. The header is this board's; the adapter is not,
+and its levels are not known. The other seven are the constraints over what the
+firmware does, undecided until a run measures it.
 
 - [`out/sensor_node.net`](out/sensor_node.net), [`out/netlist.txt`](out/netlist.txt)
-- [`out/checks.txt`](out/checks.txt): 11 checks, three of them undecided
-- [`out/rationale.md`](out/rationale.md): the four lowering decisions and the
-  ten datasheet citations
-- [`out/graph.txt`](out/graph.txt): 132 entities, 34 of them pins
+- [`out/checks.txt`](out/checks.txt): 18 checks, ten of them undecided
+- [`out/verification.txt`](out/verification.txt): what `fang verify` found, both
+  questions passing
+- [`out/renode/`](out/renode/): each question's plan, Renode platform
+  description and script
+- [`out/rationale.md`](out/rationale.md): the two requirements, the four
+  lowering decisions and the datasheet citations
+- [`out/graph.txt`](out/graph.txt): 143 entities
 
 ![the interfaces view](out/views/interfaces.svg)
 
@@ -104,4 +158,7 @@ pin to ground and touches no supply pin, so this view leaves it below the rule.
 fang check   examples/sensor_node/sensor_node.py
 fang netlist examples/sensor_node/sensor_node.py
 fang view    examples/sensor_node/sensor_node.py interfaces -o interfaces.svg
+fang verify  examples/sensor_node/sensor_node.py    # needs renode 1.17.0
+fang emulate examples/sensor_node/sensor_node.py --bundle-only -o bundles
+make -C examples/sensor_node/firmware               # needs arm-none-eabi-gcc
 ```

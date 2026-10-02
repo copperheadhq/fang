@@ -63,6 +63,25 @@ tracked separately and moves only when the serialized form changes.
   HS3001 on I2C1, with a console on USART2 and an LED on PA5. Every pad number,
   alternate function and address is cited by table and page from ST's and
   Renesas's datasheets.
+- Firmware emulation in Renode (`fang.emulation`, `fang.renode`). `Emulates`
+  declares a question beside its requirement — a run's virtual duration,
+  stimuli (`At`), faults (`Absent`), abstracted parts and measures (`FirstAt`,
+  `Count`, `Latency`, `UartValue`, `PinConfig` over `I2CRead`, `I2CWrite`,
+  `Rises`, `Falls` and `UartLine`) — routed at the behavioural level to the
+  `renode` tool. Its plan resolves every bus, pin, alternate function and
+  address from the graph before anything runs; the lowering writes Renode's own
+  platform description and script; C# probes record what devices, pins and
+  UARTs were observed doing; and the measurements re-enter through the commit
+  gate. `EmulationModel` and `Firmware` bind the models and the ELF, whose
+  digest is recorded on evidence and never in the snapshot. Refusals are
+  `SIM-0009` to `SIM-0016`.
+- `fang emulate`, the low-level emulation command, with `-o` and
+  `--bundle-only`; `fang verify` reports a verification whose evidence names a
+  firmware the bound file no longer is as stale.
+- `examples/sensor_node/firmware/`: bare-metal firmware for the board, with
+  three deliberately broken builds, committed with the toolchain that builds
+  them byte for byte. The board's two requirements are decided by running it.
+- Acceptance tests AT-F1 and AT-F2, run where Renode 1.17.0 is installed.
 
 ### Changed
 
@@ -106,6 +125,10 @@ tracked separately and moves only when the serialized form changes.
 
 - `examples/sensor_board/` declared a bulk capacitor and two pull-up resistors
   and never connected them.
+- `fang sim` reported every run as failed: it handed ngspice a relative
+  workspace, and ngspice, run from inside it, looked for the deck relative to
+  itself. The
+  backend now resolves the workspace first.
 
 ## [0.1.0] - 2026-09-08
 

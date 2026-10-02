@@ -54,6 +54,7 @@ fang netlist board.py     # components and nets
 fang export  board.py -o board.net   # a KiCad netlist
 fang view    board.py ground -o ground.svg
 fang sim     board.py --analysis transient --probe "V(1)"
+fang emulate board.py     # run the board's firmware in Renode
 fang mcp     board.py     # serve the agent surface over stdio
 ```
 
@@ -70,6 +71,7 @@ fang mcp     board.py     # serve the agent surface over stdio
 | Tool plan | Handles as symbolic conditions, the tool contract, the operation phase, realizations |
 | Views | Six required views, the layout boundary, SVG rendering, placement seeds |
 | Simulation | Models as traits, explicit plans, SPICE lowering, the ngspice backend, normalized results |
+| Emulation | Compiled firmware run against the board in Renode: plans resolved from the graph, probes, measures over events, answers through the gate |
 | Rationale | Requirements, assumptions, decisions, evidence, calculations, the verification graph, impact propagation |
 | CLI | The `.copperhead/` workspace, the manifest and the commands above |
 
@@ -200,7 +202,9 @@ in [tests/test_examples.py](https://github.com/copperheadhq/fang/blob/main/tests
   MCU and an I2C sensor, showing pin lowering and recorded decisions
 - [examples/sensor_node/](https://github.com/copperheadhq/fang/tree/main/examples/sensor_node/): an STM32F401RE and an
   HS3001, with ports that name their controller, alternate functions cited from
-  ST's table on the lowered pins, and the sensor's address read by the check
+  ST's table on the lowered pins, the sensor's address read by the check, and
+  its firmware run in Renode against the board, two requirements decided by the
+  run through the commit gate
 - [examples/usb_uart_bridge/](https://github.com/copperheadhq/fang/tree/main/examples/usb_uart_bridge/): USB to serial, with
   chosen vendor parts, a crystal and a UART crossover named wire by wire
 - [examples/buck_regulator/](https://github.com/copperheadhq/fang/tree/main/examples/buck_regulator/): 12 V to 3.3 V, with the

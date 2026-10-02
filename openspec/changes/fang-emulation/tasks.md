@@ -171,9 +171,9 @@ and recorded files the later tests read — each reviewed again as it lands.
 
 ## 10. Documents
 
-- [ ] 10.1 Add the emulation reference and concepts pages and update the CLI
+- [x] 10.1 Add the emulation reference and concepts pages and update the CLI
       page; verify internal links resolve.
-- [ ] 10.2 Update `README.md`, `CLAUDE.md`, `CHANGELOG.md`, `examples/README.md`
+- [x] 10.2 Update `README.md`, `CLAUDE.md`, `CHANGELOG.md`, `examples/README.md`
       and `openspec/ROADMAP.md`; verify the quoted counts match the tree.
-- [ ] 10.3 Quote the requirement names in each new module's docstring; verify
+- [x] 10.3 Quote the requirement names in each new module's docstring; verify
       `openspec validate fang-emulation --strict` and the whole suite pass.

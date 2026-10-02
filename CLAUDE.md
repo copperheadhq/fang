@@ -18,7 +18,7 @@ it is never a persisted or public representation — and the MCP SDK, which only
 
 ```bash
 pip install -e ".[dev]"          # add ",analysis" for the NetworkX-backed queries, ",mcp" for `fang mcp`
-python -m pytest                 # whole suite (654 tests, ~16s); addopts = -q, testpaths = tests
+python -m pytest                 # whole suite (784 tests): ~22s; ~5 min where Renode runs the emulations live
 fang build examples/sensor_board/sensor_board.py   # the console script, after an editable install
 python -m pytest -rs             # also lists the acceptance tests deferred to later phases
 python -m pytest tests/test_graph.py::test_name -x
@@ -135,6 +135,28 @@ library symbols. A part is drawn with the symbol its designator prefix names, or
 declares as `symbol = "library:name"` (which also reaches the netlist as its `libsource`). A
 part with no symbol, or a net left with fewer than two drawn pins, is reported as a loss.
 
+**Firmware emulation.** [fang/emulation.py](fang/emulation.py) runs a board's compiled firmware
+against the board in Renode, as one more verification question: `Emulates` sits on the question
+base in [fang/verification.py](fang/verification.py), and importing `fang.emulation` registers the
+`emulation` method at the behavioural level and the `renode` tool after ngspice. `compile_plan`
+resolves everything from the snapshot and the traits before anything runs — the target and its
+firmware, each I2C bus's controller (the port's `peripheral`), pins and selectors (the lowered
+connections), open drain (the interface), addresses (`resolve_address`), observed pins (the
+platform descriptor's own pin table, never a pin's name) — or refuses with `SIM-0009`..`SIM-0016`.
+[fang/renode/](fang/renode/) lowers the plan to Renode's own `.repl` and `.resc` and runs it on a
+temporary copy in its own process group; its package data is the F401 platform description, the
+C# probes (`probes/fang_probes.cs`) and the model descriptors (`models/*.json`), which say what
+each model covers and which of its warnings are expected. Things learned against Renode 1.17.0
+that the code depends on: durations are written as decimal seconds (it reads `"100ms"` as 100 s),
+files are named `$ORIGIN/...` (its launcher runs from its install directory), probes are named
+`fang_*` (they share a namespace with the platform's peripherals), and the GPIO output-type
+register is judged by the firmware's writes because Renode does not store it. A measure gives an
+absent event in a completed run as the half-open range after the run's end, nothing for a run
+that timed out, and nothing over a model that warned of something its descriptor does not expect.
+The firmware's digest goes on evidence, never in the snapshot; `stale()` compares it with the file.
+Emulation models are `EmulationModel` traits, not `Simulatable`, because the trait registry holds
+one trait per protocol per entity.
+
 **Above the graph.** [fang/validation.py](fang/validation.py) checks identifier uniqueness,
 referential integrity, provenance traceability, prohibited cycles, contradictory mandatory
 constraints, and the requirement state machine. [fang/diff.py](fang/diff.py) classifies each
@@ -175,8 +197,9 @@ design was checked against go in the change's `design.md`, which is informative;
 keeps no separate RFC or design-note directory.
 
 [tests/test_acceptance.py](tests/test_acceptance.py) holds exactly one test per acceptance
-criterion, AT-R1..AT-R13 and AT-K1..AT-K10, and all 23 pass. The only skips in the suite are for
-optional binaries that may not be installed (NetworkX, ngspice, kicad-cli, copperhead); each names what is missing. If a
+criterion, AT-R1..AT-R13 and AT-K1..AT-K10, and all 23 pass; AT-V1, AT-F1 and AT-F2 come from the
+changes in flight under `openspec/changes/`. The only skips in the suite are for optional binaries
+that may not be installed (NetworkX, ngspice, kicad-cli, copperhead, renode); each names what is missing. If a
 criterion ever has to be deferred again, skip it with the reason named rather than weakening the
 assertion, so the suite reports what is actually demonstrated.
 
@@ -198,7 +221,10 @@ a committed output cannot drift from the program beside it. An example named in
 `regenerate.SCHEMATICS` also ships a `.kicad_sch` and KiCad's render of it, so
 regenerating or testing that one needs `kicad-cli` on the path; one named in
 `regenerate.DRAFTED` also ships copperhead's draft under `out/copperhead/`, and
-needs `copperhead` there too. Two things in an
+needs `copperhead` there too; one named in `regenerate.EMULATED` ships each emulation question's
+plan, platform description and script under `out/renode/`, which need no emulator. An example
+that declares a question also ships `verification.txt`, what `fang verify` found; it is compared
+only where the tools its questions route to are installed, and prints no tool version. Two things in an
 output are normalized before that comparison and only two: the compiler version
 and the snapshot hash, which covers provenance and so covers this checkout's
 absolute path. Add an example by adding the folder — the suite discovers it —

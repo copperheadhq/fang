@@ -39,7 +39,7 @@ https://fang.copperhead.sh/llms-full.txt.
 
 - [Introduction](https://fang.copperhead.sh/start/introduction/): What fang is and what it won't guess.
 - [Installation](https://fang.copperhead.sh/start/installation/): Install fang and build your first board.
-- [Examples](https://fang.copperhead.sh/start/examples/): Eleven programs in the repository, smallest first.
+- [Examples](https://fang.copperhead.sh/start/examples/): Twelve programs in the repository, smallest first.
 
 ## Concepts
 
@@ -49,10 +49,12 @@ https://fang.copperhead.sh/llms-full.txt.
 - [The commit gate](https://fang.copperhead.sh/concepts/the-commit-gate/): The six conditions every change passes before it reaches canonical state.
 - [Interfaces and lowering](https://fang.copperhead.sh/concepts/interfaces-and-lowering/): How a typed connection lowers to pins, and what that decides.
 - [Rationale](https://fang.copperhead.sh/concepts/rationale/): Why a value is what it is, as entities rather than prose.
+- [Firmware against the board](https://fang.copperhead.sh/concepts/firmware-emulation/): Why emulation is a verification question, and why the board, not a second wiring description, decides what the emulator sees.
 
 ## Examples
 
 - [divider](https://fang.copperhead.sh/examples/divider/): A voltage divider with a capacitor across its output: two resistors, one cap and nothing else. It is here to show the shape of a Fang program and no more than…
+- [rc_filter](https://fang.copperhead.sh/examples/rc_filter/): A first-order RC low-pass ahead of an ADC, and one question about it, asked twice. It is the smallest board that shows a constraint nobody can decide getting…
 - [blinky](https://fang.copperhead.sh/examples/blinky/): An MCU pin, a series resistor and an LED: the board everybody builds first. Read it after divider/, because it is the first example where the parts have…
 - [sensor_board](https://fang.copperhead.sh/examples/sensor_board/): A regulated board with an MCU and an I2C sensor on it. This is the example to read to understand lowering: what happens between a typed interface and the pads…
 - [equations](https://fang.copperhead.sh/examples/equations/): A divider written as the ratio it has to satisfy, rather than as two numbers someone computed offstage. It is then reused, by inheritance, at a different ratio.
@@ -62,6 +64,7 @@ https://fang.copperhead.sh/llms-full.txt.
 - [problem_2 — JEE (Advanced) 2015](https://fang.copperhead.sh/examples/jee_advanced/problem_2/): Ten resistors, one 6.5 V battery, and a single number. It is JEE (Advanced) 2015, question 13: \"In the following circuit, the current through the resistor R (=…
 - [noninverting_amp](https://fang.copperhead.sh/examples/noninverting_amp/): An a.c.-coupled non-inverting amplifier, and the two numbers a textbook asks of it: \"What is the input impedance in Figure 4.44? What is Av?\" Zin = 68.75 kΩ,…
 - [buck_regulator](https://fang.copperhead.sh/examples/buck_regulator/): 12 V to 3.3 V, with the reasoning kept beside the circuit. The converter itself is ordinary. What is not ordinary is that the argument for it sits in the same…
+- [sensor_node](https://fang.copperhead.sh/examples/sensor_node/): An STM32F401RE reading an HS3001 humidity sensor over I2C1, with a serial console on USART2 and a status LED on PA5. Read it after sensorboard/ and i2cbus/: it…
 - [usb_uart_bridge](https://fang.copperhead.sh/examples/usb_uart_bridge/): USB to serial: the interface board on nearly every desk. What it adds over the other examples is part selection, the difference between what the design needs…
 - [servo_drive](https://fang.copperhead.sh/examples/servo_drive/): Three half-bridges, CAN, an encoder and a shunt per phase: the board this toolchain was written for. It is the composition example, the largest program here…
 
@@ -72,6 +75,7 @@ https://fang.copperhead.sh/llms-full.txt.
 - [Interfaces](https://fang.copperhead.sh/reference/interfaces/): The shipped catalogue, its signals and its parameters.
 - [Parts](https://fang.copperhead.sh/reference/parts/): The standard library and what a generic part deliberately lacks.
 - [Views](https://fang.copperhead.sh/reference/views/): Six required views, each answering one engineering question.
+- [Emulation](https://fang.copperhead.sh/reference/emulation/): Running a board's compiled firmware in Renode, and what a run can and cannot show.
 - [Simulation](https://fang.copperhead.sh/reference/simulation/): Explicit plans and what happens when the simulator is missing.
 - [Workspace](https://fang.copperhead.sh/reference/workspace/): What `.copperhead/` holds and what may be deleted.
 - [Diagnostics](https://fang.copperhead.sh/reference/diagnostics/): Every code fang emits, by area.

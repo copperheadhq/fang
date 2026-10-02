@@ -13,7 +13,7 @@ them is a sketch that no longer works.
 | [`equations/`](equations/) | Values chosen by equation, then reused by inheritance | 7 | 6 |
 | [`sensor_board/`](sensor_board/) | Interfaces lowering to pins, a recorded decision, a check left undecided | 7 | 4 |
 | [`i2c_bus/`](i2c_bus/) | A multi-drop bus, addresses as constrained parameters | 9 | 4 |
-| [`sensor_node/`](sensor_node/) | Ports that name their controller, cited pin selectors, an address the check reads | 11 | 9 |
+| [`sensor_node/`](sensor_node/) | Ports that name their controller, cited pin selectors, an address the check reads, and its firmware run in Renode | 11 | 9 |
 | [`usb_uart_bridge/`](usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet | 17 | 11 |
 | [`buck_regulator/`](buck_regulator/) | Requirement, decision, calculation and verification beside the circuit | 12 | 9 |
 | [`servo_drive/`](servo_drive/) | Composition: one `HalfBridge` instantiated three times | 24 | 26 |

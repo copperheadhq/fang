@@ -26,6 +26,18 @@ netlist a person can open.
 | 11 | ✅ `fang-cli` | The workspace (`.copperhead/`), the manifest, and `fang build`, `check`, `view`, `sim`, `export` |
 | 12 | ✅ `fang-mcp` | The agent surface: the kernel over the Model Context Protocol, with the agent's mutation path running through the same commit gate |
 
+## In flight
+
+Changes beyond the twelve, under copperhead RFC 12 version 1.3 and RFC 3
+version 1.5 ([copperheadhq/copperhead-rfcs#6](https://github.com/copperheadhq/copperhead-rfcs/pull/6)).
+Each is implemented with its tests and is archived once the revision is
+adopted.
+
+| # | Change | Delivers |
+| --- | --- | --- |
+| — | `fang-mcu-parts` | Ports that name their peripheral instance, cited alternate-function selectors on the lowered pins, and I2C addresses — fixed or strapped — that the compatibility check reads from the board |
+| — | `fang-emulation` | A board's compiled firmware run in Renode as a verification question: plans resolved from the graph, the Renode lowering and backend, probes, measures over events, `fang emulate`, and the `sensor_node` demo with its firmware |
+
 ## The vertical slice
 
 Stages 1 to 6 close the loop that makes the toolchain real:
