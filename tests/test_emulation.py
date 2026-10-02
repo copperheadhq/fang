@@ -820,3 +820,49 @@ def test_rebuilding_the_firmware_leaves_the_snapshot_byte_identical(tmp_path):
     firmware.write_bytes(firmware.read_bytes() + b"\0")
     after = _elaborate(load_system(copy / "sensor_node.py")).snapshot
     assert after.hash == before.hash
+
+
+# -- what a plan refuses rather than measuring as nothing ------------------------
+
+
+def _with_measure(data, name, unit, measure):
+    """The startup question's data with one more measure."""
+    data["measures"] = [*data["measures"], {"name": name, "parameter": f"X.{name}", "unit": unit, "measure": measure}]
+    return data
+
+
+@pytest.mark.parametrize("surface", ["mcu.status", "mcu.usart2"])
+def test_a_pin_configuration_over_a_port_that_is_no_bus_is_refused(surface):
+    # It used to measure 0 having checked no pin, so `== 0` passed.
+    from fang.emulation import EmulationError, compile_plan
+
+    result, paths = _board()
+    data = _with_measure(_startup_data(paths), "elsewhere", "1",
+                         {"kind": "emulation.pin_config", "surface": surface})
+    with pytest.raises(EmulationError, match=surface.replace(".", r"\.")) as refused:
+        compile_plan(result.snapshot, _Question(data), traits=result.traits)
+    assert refused.value.code == "bus"
+
+
+def test_a_pin_configuration_over_an_i2c_port_with_nothing_on_it_is_refused():
+    from fang.emulation import RENODE, Emulates, PinConfig
+    from fang.lang import s
+
+    class Unwired(SENSOR_NODE.SensorNode):
+        startup = Emulates("sensor_ready", run_until=2 * s, measures={"mux_mismatches": PinConfig("mcu.i2c1")},
+                           abstracted=("series", "console"))
+        sensor_missing = None
+
+        def architecture(self):
+            self.header.dc >> self.mcu.power
+            self.header.dc >> self.env.power
+            self.mcu.usart2 >> self.console.uart
+            self.header.dc.gnd >> self.console.ground
+            self.mcu.status >> self.series.p1
+            self.series.p2 >> self.indicator.p1
+            self.indicator.p2 >> self.header.dc.gnd
+
+    result = _elaborate(Unwired)
+    with pytest.raises(NotRunnable) as refused:
+        RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
+    assert refused.value.code == "SIM-0016" and "mcu.i2c1" in str(refused.value)

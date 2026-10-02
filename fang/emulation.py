@@ -831,7 +831,7 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
     devices_named: set[str] = set()
     signal_surfaces: dict[str, str] = {}
     uart_surfaces: dict[str, str] = {}
-    bus_ports_named: set[str] = set()
+    pin_config_surfaces: dict[str, str] = {}
 
     def resolved(name: str) -> Mapping[str, Any]:
         found = surfaces.get(name)
@@ -859,11 +859,12 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
         elif kind == "emulation.uart_value":
             uart_surfaces[record["surface"]] = resolved(record["surface"])["port"]
         elif kind == "emulation.pin_config":
-            bus_ports_named.add(resolved(record["surface"])["port"])
+            pin_config_surfaces[record["surface"]] = resolved(record["surface"])["port"]
         else:
             raise _refuse(f"{entry['name']} is measured by {kind!r}, which no emulation measure is", "measure")
     for stimulus in scenario.get("stimuli", ()):
         devices_named.add(resolved(stimulus["surface"])["component"])
+    bus_ports_named = set(pin_config_surfaces.values())
     absent = set()
     declared_faults: list[tuple[str, str]] = []
     for fault in scenario.get("faults", ()):
@@ -940,6 +941,25 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
         buses.append(PlanBus(port.id, port.peripheral, emulator,
                              tuple(plan_pins[p] for p in sorted(plan_pins, key=lambda p: pins[p].vendor_name)),
                              tuple(plan_devices)))
+
+    # A pin configuration is counted over a bus's pins, so a port that is no
+    # bus the plan reaches, or a bus that reaches no pin of the target, would
+    # measure 0 having checked nothing.
+    for surface, port_id in sorted(pin_config_surfaces.items()):
+        bus = next((b for b in buses if b.port == port_id), None)
+        if bus is None:
+            raise _refuse(
+                f"PinConfig({surface!r}) names {_path(entities, port_id)}, which is no I2C "
+                f"bus of {_path(entities, target)} with a device on it; a pin "
+                "configuration is measured over a bus's pins",
+                "bus",
+            )
+        if not bus.pins:
+            raise _refuse(
+                f"PinConfig({surface!r}) names {_path(entities, port_id)}, whose lowered "
+                f"connections reach no pin of {_path(entities, target)}",
+                "bus",
+            )
 
     on_a_bus = {d.component for b in buses for d in b.devices}
     for component in sorted(devices_named - on_a_bus):
