@@ -49,7 +49,9 @@ A circuit question SHALL name every source and load applied and the analysis
 window, each source and load at a part surface a pin map resolves. The runner
 SHALL NOT supply a default source, load, or window. Every bench item SHALL be
 recorded on the run as an assumption, and every part the bench abstracts SHALL
-be recorded as a coverage gap.
+be recorded as a coverage gap. A measure's window SHALL be along the analysis's
+axis and SHALL start before it ends; a window that does not SHALL be refused
+where it is declared, and never lowered to a measurement over nothing.
 
 #### Scenario: A question without a bench does not run
 
@@ -78,6 +80,14 @@ be recorded as a coverage gap.
 - **WHEN** one load is given in amperes and another in ohms
 - **THEN** the first lowers to a current sink and the second to a resistor
 - **AND** a load of any other dimension is refused
+
+#### Scenario: A window that does not start before it ends is refused
+
+- **WHEN** a question averages a surface after 2 ms and until 1 ms, or takes
+  any statistic over a window whose start is not before its end
+- **THEN** the declaration is refused naming the statistic, the window and the
+  surface, with the code an emulation count's empty window is refused with
+- **AND** no measurement over the window is lowered
 
 ### Requirement: The Cheapest Verification Level Is Chosen And Recorded
 

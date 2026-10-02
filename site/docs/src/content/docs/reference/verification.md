@@ -92,7 +92,8 @@ A system's own surface has no pins and is refused with `SIM-0003`.
 | `ReturnLoss(surface, at=, through=, reference=)` | -20 log10 \|Gamma\| through matching parts | dB |
 
 Windows are times in a transient and frequencies in an AC sweep; a window in the
-wrong dimension is refused where it is written. A filter's corner is a
+wrong dimension is refused where it is written, and so is one whose start is not
+before its end (`SIM-0003`), as an emulation `Count`'s is. A filter's corner is a
 `Crossing` of the level 1/sqrt(2) of the drive, falling.
 
 ### Checks

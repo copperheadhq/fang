@@ -58,6 +58,7 @@ from .diagnostics import (
     error,
 )
 from .entities import Component, Verification
+from .lang import _caller_location
 from .provenance import Confidence, Provenance
 from .rationale import Verifies
 from .runtime import Status
@@ -199,10 +200,33 @@ def _check_axis(measure: Measure, name: str, quantity: Quantity | None, analysis
 
 @dataclass(frozen=True)
 class _Windowed(Measure):
-    """A statistic of the surface's voltage over a window of the analysis."""
+    """A statistic of the surface's voltage over a window of the analysis.
+
+    A window whose start is not before its end is refused where it is
+    written, as an emulation count's is: lowered, it would be a measure the
+    simulator takes over nothing, and the declaration's fault would read as
+    the run's. Bounds in two dimensions are left to `check`, which names the
+    axis each should be along.
+    """
 
     after: Quantity | None = field(default=None, kw_only=True)
     until: Quantity | None = field(default=None, kw_only=True)
+
+    def __post_init__(self) -> None:
+        if self.after is None or self.until is None or self.after.dimension != self.until.dimension:
+            return
+        try:
+            start, end = si_magnitude(self.after), si_magnitude(self.until)
+        except SimulationError:
+            return          # a bound with no one magnitude is refused where it is lowered
+        if not start < end:
+            raise error(
+                SIM_UNRESOLVED_SURFACE,
+                f"the {type(self).__name__} window ({self.after}, {self.until}) at "
+                f"{self.surface} is empty: its start is not before its end, so it "
+                "would measure nothing whatever the circuit did",
+                location=_caller_location(3),
+            )
 
     def check(self, analysis: str | None) -> None:
         _check_axis(self, "after", self.after, analysis)
