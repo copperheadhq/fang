@@ -178,7 +178,10 @@ A measurement SHALL enter canonical state only as a transaction against the
 committed head that sets each measured parameter to an inferred value whose
 source is the run's evidence, adds that evidence carrying the structured
 measurement record, and replaces the declared verification under its original
-identity. The constraint over a measured parameter SHALL be decided by the
+identity. A run already recorded for the same job and the same tool version
+SHALL NOT be run again: its recorded measurements SHALL re-enter by the same
+transaction, citing its evidence as it stands rather than adding it again, and
+the result SHALL be what the gate decides on the head now. The constraint over a measured parameter SHALL be decided by the
 gate's existing constraint check and by nothing else. A committed measurement
 SHALL be kept across re-elaboration only while it is current: while preparing
 its question afresh gives the job its evidence records.
@@ -211,6 +214,19 @@ its question afresh gives the job its evidence records.
 - **WHEN** a question is answered
 - **THEN** the verification entity has the identifier it was declared with, its
   result, the evidence, and a provenance record for the run
+
+#### Scenario: A recorded run re-enters rather than running again
+
+- **WHEN** a question is asked again with the same job on the same tool
+  version as a completed run its verification already cites, after a change
+  to the constraints over its measured parameters
+- **THEN** no tool runs and no evidence is added
+- **AND** the run's recorded measurements re-enter through the gate, and the
+  verification's result is what the gate now decides, so a failure whose
+  constraint was relaxed passes and a pass whose constraint became undecided is
+  unknown
+- **AND** the question is reported current only when the gate decides what the
+  head already holds
 
 #### Scenario: Measurements against a stale head are refused
 

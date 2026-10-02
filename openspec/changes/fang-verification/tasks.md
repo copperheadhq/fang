@@ -95,6 +95,14 @@ change.
       drops both so the question runs again, and that the installed tool is
       never consulted.
 
+- [x] 5.6 Re-enter a run already recorded for the same job and tool version
+      through the gate instead of running it again or reporting it current:
+      set the parameters from its measurement record, cite its evidence as it
+      stands, and report current only when the gate decides what the head
+      holds; verify a relaxed constraint passes a recorded failure, a
+      constraint that became undecided unseats a recorded pass, and an
+      unchanged one is current with nothing committed.
+
 ## 6. The command
 
 - [x] 6.1 Add `fang verify` with `--commit`; verify it prints level, tool,

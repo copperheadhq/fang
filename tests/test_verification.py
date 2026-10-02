@@ -1287,6 +1287,72 @@ def test_the_failure_is_recorded_as_knowledge(tmp_path):
     assert len(graph.history) == 2
 
 
+def _carried_into(system, graph):
+    """A fresh elaboration of another program, with what the graph's runs
+    measured carried in, as a rebuild into the workspace would give."""
+    return KernelGraph(
+        carry_measurements(build(system).snapshot, MeasuredFacts.of(graph.head)),
+        checks=DEFAULT_CHECKS,
+    )
+
+
+def _evidence_count(snapshot) -> int:
+    return sum(1 for e in snapshot.entities.values() if e.kind == "evidence" and "measurement" in e.extensions)
+
+
+def test_a_recorded_failure_re_enters_when_its_constraint_is_relaxed(tmp_path):
+    """The same job on the same version is not run again, and its recorded
+    measurements re-enter through the gate: the FAIL a tightened constraint
+    left stands while the constraint does, and passes once it is relaxed,
+    on the same evidence, with nothing run."""
+    graph, failed = answered(tmp_path, Tightened)
+    assert failed.status == FAILED
+    tool, tools = canned()
+    history = len(graph.history)
+
+    again = answer(graph, failed.question, tools=tools, workspace=tmp_path, record_time=FIXED_TIME)
+    assert (again.status, again.result) == ("current", "FAIL")
+    assert len(graph.history) == history and tool.backend.runs == []
+
+    relaxed = _carried_into(Filter, graph)
+    question = questions(relaxed.head)[0]
+    assert relaxed.head.entities[question.id].result == "FAIL"
+    outcome = answer(relaxed, question, tools=tools, workspace=tmp_path, record_time=FIXED_TIME)
+    assert (outcome.status, outcome.result) == (ANSWERED, "PASS")
+    assert "re-entered through the gate" in outcome.message
+    assert tool.backend.runs == []
+    assert _evidence_count(relaxed.head) == 1
+    value = relaxed.head.entities[SYSTEM].parameters["corner"]
+    assert value.source == failed.evidence and value.quantity == Quantity.scalar("1591.612", "Hz")
+    verification = relaxed.head.entities[question.id]
+    assert verification.evidence == (failed.evidence,)
+    assert verification.provenance.records[-1].activity == "verification_reentry"
+
+
+class Coupled(Filter):
+    """The filter, its corner now also held below a limit nobody has set."""
+
+    limit = Parameter("Hz", description="a limit with no value yet")
+
+    def constraints(self):
+        super().constraints()
+        require(self.corner <= self.limit)
+
+
+def test_a_recorded_pass_whose_constraint_becomes_undecided_is_not_current(tmp_path):
+    graph, passed = answered(tmp_path)
+    assert passed.result == "PASS"
+    tool, tools = canned()
+
+    coupled = _carried_into(Coupled, graph)
+    question = questions(coupled.head)[0]
+    assert coupled.head.entities[question.id].result == "PASS"
+    outcome = answer(coupled, question, tools=tools, workspace=tmp_path, record_time=FIXED_TIME)
+    assert (outcome.status, outcome.result) == (ANSWERED, "UNKNOWN")
+    assert coupled.head.entities[question.id].result == "UNKNOWN"
+    assert tool.backend.runs == [] and _evidence_count(coupled.head) == 1
+
+
 def test_an_unrelated_rejection_records_nothing(tmp_path):
     graph, outcome = answered(
         tmp_path, policy=Policy(approvals_required=frozenset({"lead engineer"}))
@@ -1577,6 +1643,26 @@ def test_a_commit_persists_and_a_rebuild_keeps_the_measured_value(tmp_path, ngsp
     output = capsys.readouterr().out
     assert "equation level, by the constraint evaluator; nothing runs" in output
     assert "nothing new to commit" in output
+    assert len(ngspice.runs) == runs
+
+
+def test_a_relaxed_constraint_re_enters_a_recorded_failure(tmp_path, ngspice, capsys):
+    """A FAIL left the corner unknown; with the constraint relaxed, verify
+    does not print the old FAIL as current forever, nor run again: the
+    recorded measurement re-enters and the gate passes it."""
+    source = program(tmp_path, upper="1.2")
+    assert main(["build", source, "-C", str(tmp_path)]) == EXIT_OK
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_FAILED
+    assert main(["verify", source, "-C", str(tmp_path)]) == EXIT_FAILED
+    assert "current: this run is already recorded" in capsys.readouterr().out
+    runs = len(ngspice.runs)
+
+    program(tmp_path, upper="2")
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_OK
+    output = capsys.readouterr().out
+    assert "current" not in output
+    assert "re-entered through the gate" in output
+    assert output.splitlines()[-2].strip() == "PASS"
     assert len(ngspice.runs) == runs
 
 

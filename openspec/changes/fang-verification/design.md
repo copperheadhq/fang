@@ -436,8 +436,17 @@ rare disagreement with the gate's check results, which decide.
 
 **Evidence identity** is derived from the verification's path and a digest of
 the job's hash, the tool and its version: the same run is the same evidence, so
-asking again with the same job and version is `current` rather than a duplicate,
-and a tightened constraint fails on the same evidence the passing run had. A
+asking again with the same job and version runs nothing and adds no duplicate,
+and a tightened constraint fails on the same evidence the passing run had. Such a
+run's recorded measurements re-enter through the gate (`reenter(...,
+recorded=evidence)`): the parameters are set from the measurement record, the
+evidence is cited as it stands, and the verification gains a
+`verification_reentry` provenance record rather than a second run record. The
+gate decides on the head as it is now, so a FAIL whose constraint has been
+relaxed passes, and a PASS whose constraint has become undecided is unknown; the
+answer is `current`, with nothing committed, only when the gate decides what the
+head already holds. A verdict is the checker's own over the same job and is not
+re-judged, so a rule check asked again is current as before. A
 run that did not complete is tried again when asked, each attempt recorded as
 evidence of its own (`run_<digest>_retryN`), so a crash does not stand in for
 an answer. A tool that turns out to be missing only when it is run is reported

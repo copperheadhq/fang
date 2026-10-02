@@ -1901,20 +1901,23 @@ def _replaced(verification: Verification, *, result: str, evidence: tuple[str, .
 
 def measurement_transaction(
     head, question: Question, evidence, measurements: Sequence[Measurement], *,
-    result: str, level: Level,
+    result: str, level: Level, record=None,
 ):
     """The transaction a run's measurements enter by, and nothing else.
 
     Three kinds of operation: each measured parameter set to an inferred value
     whose source is the evidence, the evidence added, and the declared
     verification replaced under its own identity with the result, the
-    evidence, the level and the tool.
+    evidence, the level and the tool. Evidence already on the head -- a run
+    already recorded, whose measurements re-enter -- is cited as it stands
+    and not added again, and `record` is the provenance the verification
+    gains in place of the run's own.
     """
     from .graph import AddEntity, RemoveEntity, SetParameter, Transaction
     from .values import Value
 
     verification = head.entities[question.id]
-    record = evidence.provenance.records[-1]
+    record = record or evidence.provenance.records[-1]
     operations: list = []
     for measurement in measurements:
         if not measurement.measured:
@@ -1928,7 +1931,8 @@ def measurement_transaction(
                 value=Value.inferred(measurement.quantity, evidence.id, measurement.confidence),
             )
         )
-    operations.append(AddEntity(reason=f"the evidence of {question.label}'s run", entity=evidence))
+    if evidence.id not in head.entities:
+        operations.append(AddEntity(reason=f"the evidence of {question.label}'s run", entity=evidence))
     operations.extend(
         (
             RemoveEntity(reason=f"{question.label} is answered", target=question.id),
@@ -1945,18 +1949,20 @@ def measurement_transaction(
     return Transaction(head.hash, tuple(operations), origin=record)
 
 
-def failure_transaction(head, question: Question, evidence, *, level: Level):
+def failure_transaction(head, question: Question, evidence, *, level: Level, record=None):
     """The failure, recorded as knowledge: the evidence, and the verification
     with result FAIL. It changes no parameter, so the head never holds the
-    value that failed."""
+    value that failed. Evidence already on the head is cited, not added."""
     from .graph import AddEntity, RemoveEntity, Transaction
 
     verification = head.entities[question.id]
-    record = evidence.provenance.records[-1]
+    record = record or evidence.provenance.records[-1]
+    added = () if evidence.id in head.entities else (
+        AddEntity(reason=f"the evidence of {question.label}'s failed run", entity=evidence),
+    )
     return Transaction(
         head.hash,
-        (
-            AddEntity(reason=f"the evidence of {question.label}'s failed run", entity=evidence),
+        added + (
             RemoveEntity(reason=f"{question.label} failed its verification", target=question.id),
             AddEntity(
                 reason=f"{question.label} failed by {record.actor.id}",
@@ -2047,6 +2053,7 @@ class Outcome:
 def reenter(
     graph, question: Question, job: Job, raw: RawRun, measurements: Sequence[Measurement], *,
     level: Level, route_: Route | None = None, record_time=None, verdict: Verdict | None = None,
+    recorded=None,
 ) -> Outcome:
     """Return a run's measurements through the commit gate.
 
@@ -2057,6 +2064,12 @@ def reenter(
     verification with result FAIL are recorded by a second transaction that
     sets no parameter. Rejected for any other reason, nothing is recorded.
     Measurements prepared against anything but the head are refused.
+
+    `recorded` is the evidence of a run already on the head, whose
+    measurements re-enter rather than a new run's: the evidence is cited as
+    it stands, and where the gate decides as it did before -- the same
+    result, and the measured parameters as the head holds them -- nothing is
+    committed and the answer is `current`.
     """
     from datetime import datetime, timezone
 
@@ -2072,9 +2085,12 @@ def reenter(
         )
     route_ = route_ or Route(question.id, level, job.tool, "")
     record_time = record_time or datetime.now(timezone.utc)
-    evidence = measurement_evidence(
-        head, question, job, raw, measurements, level, record_time, verdict=verdict
-    )
+    if recorded is None:
+        evidence, provenance = measurement_evidence(
+            head, question, job, raw, measurements, level, record_time, verdict=verdict
+        ), None
+    else:
+        evidence, provenance = recorded, _reentry_record(head, question, recorded, record_time)
 
     # The result written on the verification is what the gate's constraint
     # check decides. It is predicted with the same evaluator, and the proposal
@@ -2100,24 +2116,45 @@ def reenter(
             return "FAIL"
         return verdict.result if not question.parameters else result
 
+    def transaction(result: str):
+        return measurement_transaction(
+            head, question, evidence, measurements, result=result, level=level, record=provenance
+        )
+
     result = judged(constraint_statuses(head, question, resolve))
-    proposal = graph.propose(
-        measurement_transaction(head, question, evidence, measurements, result=result, level=level)
-    )
+    proposal = graph.propose(transaction(result))
     if proposal.accepted:
         decided = _gate_statuses(proposal, question)
         if decided and judged(decided) != result:
             result = judged(decided)
-            proposal = graph.propose(
-                measurement_transaction(
-                    head, question, evidence, measurements, result=result, level=level
-                )
-            )
+            proposal = graph.propose(transaction(result))
     common = dict(
         question=question, route=route_, job=job, raw=raw, measurements=tuple(measurements),
         evidence=evidence.id, verdict=verdict,
     )
+    verification = head.entities[question.id]
+    again = "" if recorded is None else (
+        "the run already recorded for this job, re-entered through the gate"
+    )
+
+    def unchanged(candidate) -> bool:
+        """Whether the gate decided what the head already says."""
+        return recorded is not None and candidate.entities[question.id].result == verification.result and all(
+            candidate.entities[entity_id].parameters.get(attr)
+            == head.entities[entity_id].parameters.get(attr)
+            for entity_id, attr in question.parameters
+        )
+
+    def current() -> Outcome:
+        return Outcome(
+            question, route_, UP_TO_DATE, verification.result,
+            message=f"this run is already recorded, on {evidence.id}",
+            job=job, evidence=evidence.id, verification=verification,
+        )
+
     if proposal.accepted:
+        if unchanged(proposal.candidate):
+            return current()
         graph.commit(proposal)
         if missing:
             message = "not measured: " + ", ".join(missing)
@@ -2126,33 +2163,81 @@ def reenter(
         else:
             message = "no constraint over its parameters decides it"
         return Outcome(
-            status=ANSWERED, result=result, message=message, proposal=proposal,
-            verification=graph.head.entities[question.id], **common,
+            status=ANSWERED, result=result,
+            message="; ".join(part for part in (again, message) if part),
+            proposal=proposal, verification=graph.head.entities[question.id], **common,
         )
 
     reasons = "; ".join(d.message for d in proposal.diagnostics if d.severity.blocking)
     if _failed_on_a_measured_constraint(proposal, question):
-        recorded = graph.propose(failure_transaction(head, question, evidence, level=level))
-        if recorded.accepted:
-            graph.commit(recorded)
+        failure = graph.propose(
+            failure_transaction(head, question, evidence, level=level, record=provenance)
+        )
+        if failure.accepted:
+            if unchanged(failure.candidate):
+                return current()
+            graph.commit(failure)
+            refused = "the gate refused the measurement" + (
+                "" if recorded is None else ", re-entered from the run already recorded"
+            )
             return Outcome(
                 status=FAILED, result="FAIL",
-                message=f"the gate refused the measurement: {reasons}",
-                proposal=proposal, recorded=recorded,
+                message=f"{refused}: {reasons}",
+                proposal=proposal, recorded=failure,
                 verification=graph.head.entities[question.id], **common,
             )
-        reasons = "; ".join(d.message for d in recorded.diagnostics if d.severity.blocking)
+        reasons = "; ".join(d.message for d in failure.diagnostics if d.severity.blocking)
         return Outcome(
-            status=REJECTED, result=head.entities[question.id].result,
+            status=REJECTED, result=verification.result,
             message=f"the failure could not be recorded: {reasons}",
-            proposal=proposal, recorded=recorded,
-            verification=head.entities[question.id], **common,
+            proposal=proposal, recorded=failure, verification=verification, **common,
         )
     return Outcome(
-        status=REJECTED, result=head.entities[question.id].result,
+        status=REJECTED, result=verification.result,
         message=f"the gate refused the measurement, and nothing is recorded: {reasons}",
-        proposal=proposal, verification=head.entities[question.id], **common,
+        proposal=proposal, verification=verification, **common,
     )
+
+
+def _reentry_record(head, question: Question, evidence, record_time):
+    """The provenance a verification gains when a recorded run's
+    measurements re-enter: the tool that measured them, the evidence they
+    come from, and no new run."""
+    from .provenance import ProvenanceOrigin, ProvenanceRecord
+
+    run = evidence.provenance.records[-1]
+    return ProvenanceRecord(
+        ProvenanceOrigin.GENERATED,
+        "verification_reentry",
+        run.actor,
+        head.revision_id,
+        record_time,
+        derived_from=(question.id, evidence.id),
+        inputs=run.inputs,
+        source_location=question.source_location,
+        confidence=Confidence.INFERRED,
+    )
+
+
+def recorded_measurements(record: Mapping) -> tuple[Measurement, ...]:
+    """The measurements a run's measurement record holds, read back: a
+    quantity in its recorded unit, or no value and the recorded reason."""
+    tool = record["tool"]
+    confidence = Decimal(str(record["confidence"]))
+    out = []
+    for entry in record.get("measures", ()):
+        quantity, reason = None, entry.get("reason")
+        if reason is None:
+            payload = {k: v for k, v in entry.items() if k not in ("name", "parameter")}
+            payload.setdefault("kind", "scalar")
+            quantity = Quantity.from_dict(payload)
+        out.append(
+            Measurement(
+                entry["name"], entry["parameter"], quantity, tool["name"], tool["version"],
+                record["job"], confidence, reason,
+            )
+        )
+    return tuple(out)
 
 
 def _decide(graph, question: Question, route_: Route, record_time) -> Outcome:
@@ -2273,13 +2358,28 @@ def answer(
     except ToolUnavailable as exc:
         return unsupported(str(exc))
 
-    # The same job on the same version is the same run: once it has completed
-    # and answered this verification, asking again changes nothing. A run that
-    # did not complete is tried again, as evidence of its own.
+    # The same job on the same version is the same run, and is not run again
+    # once it has completed and answered this verification. Its recorded
+    # measurements re-enter through the gate instead, which decides on the
+    # head as it is now: a constraint relaxed since a FAIL, or one that has
+    # become undecided, changes the result, and an unchanged one is current.
+    # A verdict is the checker's own over the same job and is not re-judged.
+    # A run that did not complete is tried again, as evidence of its own.
+    judge = getattr(tool, "verdict", None)
     recorded = _attempts(head, question, job, version)
     if recorded and recorded[-1] in verification.evidence:
         last = head.entities[recorded[-1]]
-        if last.extensions.get("measurement", {}).get("status") == Status.SUCCEEDED.value:
+        record = last.extensions.get("measurement", {})
+        if record.get("status") == Status.SUCCEEDED.value:
+            if judge is None and question.parameters:
+                raw = RawRun(
+                    record["tool"]["name"], record["tool"]["version"],
+                    int(record.get("exit_status", 0)), message=record.get("message", ""),
+                )
+                return reenter(
+                    graph, question, job, raw, recorded_measurements(record),
+                    level=route_.level, route_=route_, record_time=record_time, recorded=last,
+                )
             return Outcome(
                 question, route_, UP_TO_DATE, verification.result,
                 message=f"this run is already recorded, on {last.id}",
@@ -2292,7 +2392,6 @@ def answer(
     except Exception as exc:          # a tool's failure is data, not a crash
         raw = RawRun(tool.name, version, -1, status=Status.FAILED, message=str(exc))
     measurements = tool.read(job, raw)
-    judge = getattr(tool, "verdict", None)
     return reenter(
         graph, question, job, raw, measurements, level=route_.level, route_=route_,
         record_time=record_time, verdict=judge(job, raw) if judge is not None else None,
