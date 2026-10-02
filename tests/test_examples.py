@@ -127,3 +127,32 @@ def test_a_committed_output_still_matches_the_program(example, name):
     out = example.parent / "out"
     for relative, text in sorted(render(name).items()):
         assert stable((out / relative).read_text(encoding="utf-8")) == stable(text), relative
+
+
+def test_the_sensor_node_names_its_controllers_routes_its_pins_and_decides_its_address():
+    """What `sensor_node/README.md` says the graph holds, it holds."""
+    from fang.compatibility import compatibility_check
+    from fang.entities import Connection, Evidence, Port
+
+    snapshot = build(ROOT / "sensor_node" / "sensor_node.py").snapshot
+    entities = snapshot.entities
+    ports = {str(e.identity.path): e for e in entities.values() if isinstance(e, Port)}
+    assert ports["system.mcu.i2c1"].peripheral == "I2C1"
+    assert ports["system.mcu.usart2"].peripheral == "USART2"
+
+    def pin(entity_id):
+        return entities[entity_id].vendor_name
+
+    routed = {}
+    for connection in entities.values():
+        if isinstance(connection, Connection):
+            for pin_id, entry in connection.selectors.items():
+                assert isinstance(entities[entry["evidence"]], Evidence)
+                routed[pin(pin_id)] = entry["selector"]
+    assert routed == {"PB8": "AF4", "PB9": "AF4", "PA2": "AF7", "PA3": "AF7"}
+
+    addressing = [r for r in compatibility_check(snapshot) if "address" in r.message]
+    assert [r.status for r in addressing] == [CheckStatus.PASS]
+    assert "0x44" in addressing[0].message
+    assert ports["system.env.i2c"].id in addressing[0].message
+    assert ports["system.mcu.i2c1"].id not in addressing[0].message

@@ -56,21 +56,21 @@ version 1.5, Section 9.3
 
 ## 4. The example
 
-- [ ] 4.1 Write `STM32F401RE` in `examples/sensor_node/`: vendor names and
+- [x] 4.1 Write `STM32F401RE` in `examples/sensor_node/`: vendor names and
       LQFP64 pad numbers from ST's STM32F401xD/xE datasheet, `i2c1` (I2C1;
       PB8/PB9 then PB6/PB7, AF4), `usart2` (USART2; PA2/PA3, AF7), a `status`
       signal on PA5, power pins, a `Cites` for the alternate-function table
       and one for the pinout, and its vendor identity through `select`;
       verify every selector and pad number against the cited tables.
-- [ ] 4.2 Write `HS3001` with its fixed address 0x44 cited from Renesas's HS300x
+- [x] 4.2 Write `HS3001` with its fixed address 0x44 cited from Renesas's HS300x
       datasheet, and its pins from the same document; leave any threshold not
       read off the datasheet unknown or as an `Assumes`.
-- [ ] 4.3 Write the `SensorNode` system — MCU, sensor on I2C1 with pull-ups,
+- [x] 4.3 Write the `SensorNode` system — MCU, sensor on I2C1 with pull-ups,
       decoupling, LED and series resistor on PA5, console header on USART2,
       power header — and its README; verify it elaborates, that the
       compatibility check decides the addressing rule, and that the lowered
       I2C connections carry AF4.
-- [ ] 4.4 Run `python examples/regenerate.py sensor_node`; verify
+- [x] 4.4 Run `python examples/regenerate.py sensor_node`; verify
       `tests/test_examples.py` discovers and passes the new example and that no
       other example's outputs changed beyond their snapshot hash.
 
