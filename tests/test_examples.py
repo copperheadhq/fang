@@ -13,18 +13,25 @@ compared, because an output nobody checks is an output that quietly stops
 being true.
 """
 
+import functools
 import re
 from pathlib import Path
 
 import pytest
 
-from examples.regenerate import PROJECT, examples as example_names, render
+from examples.regenerate import (
+    PROJECT,
+    examples as example_names,
+    render as regenerate,
+    verification_tools,
+)
 from fang.checks import DEFAULT_CHECKS
 from fang.cli import load_system
 from fang.constraints import CheckStatus
 from fang.elaborate import elaborate
 from fang.kicad import emit_netlist
 from fang.netlist import compile_netlist
+from fang.verification import TOOLS, questions
 
 ROOT = Path(__file__).resolve().parent.parent / "examples"
 
@@ -48,6 +55,16 @@ def stable(text: str) -> str:
     for pattern in VOLATILE:
         text = pattern.sub("<varies by machine>", text)
     return text
+
+
+#: An example's outputs, rendered once per run: writing verification.txt runs
+#: a simulator, and three tests read the same set.
+render = functools.lru_cache(maxsize=None)(regenerate)
+
+#: The one output that depends on a tool being installed rather than on the
+#: design alone: what `fang verify` finds. It is compared where the tool its
+#: questions route to is installed, and skipped by name where it is not.
+VERIFICATION = "verification.txt"
 
 
 def build(path: Path):
@@ -126,4 +143,23 @@ def test_a_committed_output_still_matches_the_program(example, name):
     is the fix when this fails."""
     out = example.parent / "out"
     for relative, text in sorted(render(name).items()):
+        if relative == VERIFICATION:
+            continue
         assert stable((out / relative).read_text(encoding="utf-8")) == stable(text), relative
+
+
+#: The examples that declare a verification question, and so ship a listing.
+QUESTIONED = [name for name, path in zip(NAMES, EXAMPLES) if questions(build(path).snapshot)]
+
+
+@pytest.mark.parametrize("name", QUESTIONED, ids=QUESTIONED)
+def test_a_committed_verification_still_matches_the_program(name):
+    """What `fang verify` finds, compared where its tool is installed."""
+    result = build(ROOT / name / f"{Path(name).name}.py")
+    missing = sorted(
+        tool for tool in verification_tools(result) if not TOOLS.get(tool).available()
+    )
+    if missing:
+        pytest.skip(f"{', '.join(missing)} is not installed here, so {VERIFICATION} is not compared")
+    committed = (ROOT / name / "out" / VERIFICATION).read_text(encoding="utf-8")
+    assert stable(committed) == stable(render(name)[VERIFICATION])

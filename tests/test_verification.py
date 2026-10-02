@@ -664,6 +664,22 @@ def test_a_missing_tool_reports_unsupported_by_name_and_nothing_stands_in(tmp_pa
     assert graph.head.hash == before
 
 
+def test_preparation_refuses_a_surface_that_resolves_to_no_pins():
+    """Elaboration refuses such a surface first; a question built any other
+    way meets the same refusal when it is prepared."""
+    from dataclasses import replace
+
+    result = build()
+    question = questions(result.snapshot)[0]
+    surfaces = dict(question.data["surfaces"])
+    del surfaces["outlet.line"]
+    broken = replace(question, data={**question.data, "surfaces": surfaces})
+    with pytest.raises(NotRunnable) as raised:
+        NGSPICE.prepare(result.snapshot, broken, traits=result.traits)
+    assert raised.value.code == diagnostics.SIM_UNRESOLVED_SURFACE
+    assert "'outlet.line'" in str(raised.value)
+
+
 def test_bench_items_are_assumptions_and_abstracted_parts_are_coverage_gaps():
     class Loaded(Filter):
         by_simulation = corner_question(loads={"outlet.line": 10 * kOhm})

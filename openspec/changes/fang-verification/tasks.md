@@ -97,17 +97,17 @@ change.
 
 ## 7. The spine's examples and acceptance test
 
-- [ ] 7.1 Add `examples/rc_filter/`: a corner-frequency question answered once
+- [x] 7.1 Add `examples/rc_filter/`: a corner-frequency question answered once
       at the equation level and once by ngspice AC; README and `out/`.
-- [ ] 7.2 Extend `examples/buck_regulator/`: `ripple` and `output` parameters,
+- [x] 7.2 Extend `examples/buck_regulator/`: `ripple` and `output` parameters,
       their constraints, a `Simulates` question under full load with an
       `ideal_buck.sub` model of assumed provenance, replacing the hand-asserted
       `Verifies`; update its README.
-- [ ] 7.3 Add `verification.txt` to `examples/regenerate.py` for examples that
+- [x] 7.3 Add `verification.txt` to `examples/regenerate.py` for examples that
       declare a question, at three significant figures and without versions;
       teach `tests/test_examples.py` to skip that file by name where the tool is
       absent; regenerate and verify the examples suite passes.
-- [ ] 7.4 Add `tests/test_verification.py` covering every scenario in the delta
+- [x] 7.4 Add `tests/test_verification.py` covering every scenario in the delta
       spec that the spine delivers, and `test_at_v1_*` in
       `tests/test_acceptance.py`; verify the whole suite passes, and passes with
       `PATH` stripped of ngspice (skips named, nothing failing).

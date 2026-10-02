@@ -3,7 +3,7 @@
   (design
     (source "buck_regulator.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:cebfeecc1779259fa3e1012844cd2bee3d11a7257b14751e16bc08838f59deb0")
+    (snapshot "sha256:9df90f2afc6f350c55b266b5e0a1dbc1ca45925ddd758c2717fb3d4b7d3b5dbf")
     (project "PRJ-EXAMPLES")
   )
   (components

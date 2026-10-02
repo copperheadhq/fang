@@ -1,0 +1,7 @@
+C1     10 nF            Package:C_0603
+J1     AdcInput         Package:PinHeader_1x02_P2.54mm
+J2     SignalIn         Package:PinHeader_1x02_P2.54mm
+R1     10 kOhm          Package:R_0603
+Net-(C1-Pad1)            C1.1 J1.SIG R1.2
+Net-(C1-Pad2)            C1.2 J1.GND J2.SLEEVE
+Net-(J2-PadTIP)          J2.TIP R1.1

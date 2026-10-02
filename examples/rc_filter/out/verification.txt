@@ -1,0 +1,20 @@
+On the elaborated program:
+
+system.corner_check (VER-ebeff65dcd46)
+  circuit level, ngspice
+  corner = 1590 Hz
+  assumption: a 1 V supply at source.line
+  assumption: each supply is also the AC stimulus, at its own magnitude
+  assumption: ac analysis: ac dec 100 10 1meg
+  assumption: solver options abstol=1e-12 method=gear reltol=1e-3 vntol=1e-6
+  coverage gap: system.adc is abstracted, not modelled
+  coverage gap: system.source is abstracted, not modelled
+  confidence 1
+  PASS
+
+Again, on the head that run committed:
+
+system.corner_check (VER-ebeff65dcd46)
+  equation level, by the constraint evaluator; nothing runs
+  current: already answered at the circuit level by ngspice
+  PASS

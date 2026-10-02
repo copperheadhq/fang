@@ -37,7 +37,7 @@
 <path d="M174.0,967.5 C265.0,967.5 265.0,791.5 174.0,791.5" fill="none" stroke="#5f6368" stroke-width="1.5" stroke-linecap="round" opacity="0.85"><title>electrical: NET-b6046db85658</title></path>
 <path d="M174.0,1048.5 C397.0,1048.5 397.0,344.5 174.0,344.5" fill="none" stroke="#1b1b1f" stroke-width="2" stroke-linecap="round" opacity="0.85"><title>ground: NET-5df90129db60</title></path>
 <path d="M174.0,1055.5 C397.0,1055.5 397.0,351.5 174.0,351.5" fill="none" stroke="#5f6368" stroke-width="1.5" stroke-linecap="round" opacity="0.85"><title>electrical: NET-82b4c9d825d9</title></path>
-<g><rect x="42" y="54" width="132" height="60" rx="8" fill="#f1f3f4" stroke="#c4c7cc" stroke-width="1"/><text x="108" y="80" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">Rail3V3</text><text x="108" y="97" text-anchor="middle" font-size="10.5" fill="#5f6368">block</text><title>BLK-42978eb8675a</title></g>
+<g><rect x="42" y="54" width="132" height="60" rx="8" fill="#f1f3f4" stroke="#b3261e" stroke-dasharray="4 3" stroke-width="1"/><text x="108" y="80" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">Rail3V3</text><text x="108" y="97" text-anchor="middle" font-size="10.5" fill="#5f6368">block</text><title>BLK-42978eb8675a — unknown: output, ripple</title></g>
 <g><rect x="42" y="142" width="132" height="60" rx="8" fill="#ffffff" stroke="#b3261e" stroke-dasharray="4 3" stroke-width="1"/><text x="108" y="168" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">input_bulk</text><text x="108" y="185" text-anchor="middle" font-size="10.5" fill="#5f6368">Capacitor</text><title>CMP-11a1f46732b5 — unknown: tolerance_pct</title></g>
 <g><rect x="42" y="230" width="132" height="60" rx="8" fill="#ffffff" stroke="#b3261e" stroke-dasharray="4 3" stroke-width="1"/><text x="108" y="256" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">fb_top</text><text x="108" y="273" text-anchor="middle" font-size="10.5" fill="#5f6368">Resistor</text><title>CMP-427611a561a7 — unknown: tolerance_pct</title></g>
 <g><rect x="42" y="318" width="132" height="60" rx="8" fill="#ffffff" stroke="#c4c7cc" stroke-width="1"/><text x="108" y="344" text-anchor="middle" font-size="13" font-weight="500" fill="#1b1b1f">rail_out</text><text x="108" y="361" text-anchor="middle" font-size="10.5" fill="#5f6368">RailHeader</text><title>CMP-4ad80a6dc0e4</title></g>
@@ -55,5 +55,5 @@
 <text x="158" y="1114" font-size="11" fill="#5f6368">ground</text>
 <line x1="212" y1="1110" x2="232" y2="1110" stroke="#b3261e" stroke-width="2" stroke-linecap="round"/>
 <text x="238" y="1114" font-size="11" fill="#5f6368">power</text>
-<text x="28" y="1138" font-size="11" fill="#b3261e">5 node(s) carry unknown parameters; a dashed border marks them</text>
+<text x="28" y="1138" font-size="11" fill="#b3261e">6 node(s) carry unknown parameters; a dashed border marks them</text>
 </svg>
