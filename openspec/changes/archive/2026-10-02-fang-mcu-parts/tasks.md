@@ -105,6 +105,6 @@ version 1.5, Section 9.3
 
 ## 7. Archive
 
-- [ ] 7.1 When archiving, change the main spec's Project Root block to
+- [x] 7.1 When archiving, change the main spec's Project Root block to
       `schema_version: 1.2` by hand: the block is outside every requirement,
       so the MODIFIED requirement cannot carry it.

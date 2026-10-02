@@ -2,7 +2,8 @@
 
 One test per acceptance criterion. AT-R1 to AT-R13 are the representation tests;
 AT-K1 to AT-K10 are the kernel tests; AT-V1 is the verification test, which
-needs ngspice and is skipped, naming it, where ngspice is not installed. A criterion whose subject is not built yet
+needs ngspice, and AT-F1 and AT-F2 the emulation tests, which need Renode 1.17.0;
+each is skipped, naming its tool, where that tool is not installed. A criterion whose subject is not built yet
 is skipped with the delivery phase that owns it named, so the suite reports what
 is actually demonstrated rather than implying more.
 """

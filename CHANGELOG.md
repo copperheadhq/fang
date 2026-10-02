@@ -165,6 +165,10 @@ tracked separately and moves only when the serialized form changes.
 
 ### Changed
 
+- `fang-verification`, `fang-mcu-parts` and `fang-emulation` are archived now
+  that copperhead RFC 12 1.3 is adopted: the combined spec gains 24
+  requirements, the commit gate's two changes, the Project Root's
+  `schema_version: 1.2`, and the acceptance tests AT-V1, AT-F1 and AT-F2.
 - The gate takes a check class's scope over the head as well as the candidate
   when deciding which checks a transaction requires, so a removal still brings
   in the check that covered what it removed. Condition 5 does not count a

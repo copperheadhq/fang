@@ -22,7 +22,7 @@ python -m pytest                 # whole suite (1639 tests): ~85s; ~7 min where 
 fang build examples/sensor_board/sensor_board.py   # the console script, after an editable install
 python -m pytest -rs             # also lists the acceptance tests deferred to later phases
 python -m pytest tests/test_graph.py::test_name -x
-python -m pytest -k "at_k7"      # acceptance criteria are named test_at_r*/test_at_k*, and test_at_v*/test_at_f* in flight
+python -m pytest -k "at_k7"      # acceptance criteria are named test_at_r*/test_at_k*/test_at_v*/test_at_f*
 openspec list                    # OpenSpec CLI (v1.12) drives the change workflow
 python -m build                  # dist/*.whl and dist/*.tar.gz; twine check --strict them
 ```
@@ -231,7 +231,7 @@ construct a more permissive `Policy` here than the project's**.
 
 The working contract is [openspec/specs/fang-kernel/spec.md](openspec/specs/fang-kernel/spec.md),
 a self-contained normative document: terminology, design principles, layers of representation,
-kernel architecture, and the project root, then 87 requirements over 238 scenarios and 23
+kernel architecture, and the project root, then 111 requirements over 373 scenarios and 26
 acceptance tests. There is no other standards document in this repository — the spec is the whole
 contract. Read the relevant requirement before changing kernel behaviour. Module docstrings quote
 the requirement they implement by name (e.g. `Spec: "The Commit Gate"`) — keep that link intact.
@@ -246,8 +246,7 @@ design was checked against go in the change's `design.md`, which is informative;
 keeps no separate RFC or design-note directory.
 
 [tests/test_acceptance.py](tests/test_acceptance.py) holds exactly one test per acceptance
-criterion, AT-R1..AT-R13 and AT-K1..AT-K10, and all 23 pass; AT-V1, AT-F1 and AT-F2 come from the
-changes in flight under `openspec/changes/`. The only skips in the suite are for optional binaries
+criterion, AT-R1..AT-R13, AT-K1..AT-K10, AT-V1, AT-F1 and AT-F2, and all 26 pass. The only skips in the suite are for optional binaries
 that may not be installed (NetworkX, the MCP SDK, ngspice, Xyce, kicad-cli, copperhead, renode); each names what is missing. If a
 criterion ever has to be deferred again, skip it with the reason named rather than weakening the
 assertion, so the suite reports what is actually demonstrated.
@@ -295,9 +294,9 @@ change with a proposal, a delta spec, and tasks. All twelve are archived under
 `openspec/changes/archive/<date>-<id>/`; a new stage starts with `/opsx:propose`. The ordering is a
 product ordering: stages 1–6 close the loop from a Fang program to a KiCad netlist. **All twelve
 stages are delivered**, and every acceptance criterion in the spec is demonstrated rather than
-deferred. Every stage ships working code and tests; nothing is a placeholder. Three changes are
-in flight under copperhead RFC 12 version 1.3, `fang-verification`, `fang-mcu-parts` and
-`fang-emulation`, each built and tested, and archived once that revision is adopted.
+deferred. Every stage ships working code and tests; nothing is a placeholder. Three changes beyond
+the twelve, `fang-verification`, `fang-mcu-parts` and `fang-emulation`, implement copperhead RFC 12
+version 1.3, now adopted, and are archived beside them.
 
 Use the `/opsx:*` skills (propose, apply, update, sync, archive, explore) for that workflow rather
 than editing `openspec/` artifacts ad hoc. `openspec/config.yaml` carries project context that
