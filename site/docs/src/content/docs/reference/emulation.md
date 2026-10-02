@@ -47,10 +47,12 @@ ship today.
 | `renode:Sensors.HS3001` | Renesas's HS3001, on Renode's own model | tested in emulation |
 
 `Firmware` names an ELF relative to the program that declares the part, and
-the target it was built for. Its digest is not part of the snapshot, because
+the target it was built for; a question's own `firmware` is relative to the
+question's program. Its digest is not part of the snapshot, because
 rebuilding firmware is not a design change; every run records the digest on
 its evidence, and `fang verify` reports a verification whose evidence names a
-different digest as stale.
+different digest as stale. The staleness check reads the same file the run
+read, wherever the question is declared.
 
 ## Declaring a question
 
@@ -82,8 +84,8 @@ edit nobody sees.
 | Field | Means |
 | --- | --- |
 | `run_until` | The run's virtual duration. There is no default. |
-| `stimuli` | `At(time, "<device>.<input>", value)`: a model input set at a virtual time |
-| `faults` | `Absent(device)`: the device is not on its bus, so its address goes unanswered |
+| `stimuli` | `At(time, "<device>.<input>", value)`: a model input set to one value at a virtual time within the run |
+| `faults` | `Absent(device)`: the device is not on its bus, so its address goes unanswered, and it records nothing |
 | `abstracted` | Parts in scope deliberately left without a model, each a coverage gap |
 | `firmware` | An ELF for this question only, in place of the part's binding |
 | `seed` | The emulator's random seed; `0` unless named |
@@ -98,9 +100,25 @@ edit nobody sees.
 | `UartValue(uart, prefix=, unit=)` | The number after `prefix` on the first matching line | the stated unit |
 | `PinConfig(port)` | Pins configured otherwise than the board requires | dimensionless |
 
-The matches are `I2CRead(device)`, `I2CWrite(device)`, `Rises(surface)`,
-`Falls(surface)` and `UartLine(uart, contains=)`. An ordering requirement is a
-latency.
+The matches are `I2CRead(device)`, `I2CWrite(device, data=)`,
+`Rises(surface)`, `Falls(surface)` and `UartLine(uart, contains=)`. An
+ordering requirement is a latency.
+
+A measure that would read the same whatever the firmware did is refused, not
+measured:
+
+- A `Count` window is two times, its start before its end. `(2 * s, 1 * s)`
+  would count nothing and `(1 * V, 2 * V)` is no window; both are refused
+  where `Count` is declared.
+- `I2CRead` matches a read by its device alone. The probes record a read's
+  bytes, not the register it follows, so a plan refuses `register=` rather
+  than count every read as that register's.
+- `PinConfig` names an I2C port of the target with a device on it. Over the
+  status signal, a UART or an unconnected I2C port there would be no pin to
+  count.
+- A read or write of a device a fault makes absent is refused, and so is a
+  stimulus on it: an absent device has no probe, so a count of its reads is 0
+  whatever the firmware does.
 
 ## The plan
 
@@ -115,14 +133,15 @@ it names. A plan that cannot be resolved is refused, naming what is missing.
 
 | Code | Refused because |
 | --- | --- |
-| `SIM-0009` | A model names a descriptor fang does not ship |
+| `SIM-0003` | A surface that resolves to nothing, or a measure that would read the same whatever the firmware did: a match detail no measure filters on, an empty count window, a read or write of an absent device |
+| `SIM-0009` | A part's model names a descriptor fang does not ship; the refusal names the part |
 | `SIM-0010` | A component in scope has neither a model nor an abstraction |
 | `SIM-0011` | A fault the device's model does not support |
-| `SIM-0012` | A stimulus names an input its model lacks, or a value of the wrong dimension |
+| `SIM-0012` | A stimulus names an input its model lacks, gives a value of the wrong dimension or more than one value, falls outside the run, or sets a device a fault removes |
 | `SIM-0013` | A pin the platform model does not map; a port is never derived from a pin's name |
-| `SIM-0014` | No run duration |
+| `SIM-0014` | No run duration, or a run of no time |
 | `SIM-0015` | No firmware is bound, or it was built for another target |
-| `SIM-0016` | A bus device's controller or address cannot be resolved |
+| `SIM-0016` | A bus device's controller or address cannot be resolved, or `PinConfig` names a port that is no bus |
 
 The plan is canonical JSON, identified by the hash of its own canonical form,
 so two machines preparing the same question produce the same plan.
@@ -140,10 +159,14 @@ cd bundles/startup && renode --console --disable-gui run.resc
 
 The script fixes the seed first, applies every stimulus at its virtual time
 from inside the script, writes every duration as decimal seconds, and takes no
-input once the run starts. Renode 1.17.0 is the version the lowering was
-checked against; another reports unsupported. A run that outlives its
-wall-clock limit is ended with every process it started, and its partial
-events are kept.
+input once the run starts. Each probe is named from the whole path of what it
+observes, and a plan that would give two probes one name is refused. Renode
+1.17.0 is the version the lowering was checked against; another installed
+version reports unsupported, naming itself. Renode's monitor splits a path at
+a space, so a run cannot be made from a temporary directory whose path has
+one: it reports unsupported before Renode starts, and `TMPDIR` (`TEMP` on
+Windows) names another. A run that outlives its wall-clock limit is ended with
+every process it started, and its partial events are kept.
 
 ## What a run can see
 
