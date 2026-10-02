@@ -83,8 +83,33 @@ fang schematic board.py --drafter copperhead -o board.kicad_sch
 fang's own sheet needs no tool; `--svg` needs `kicad-cli`. A copperhead draft
 needs `copperhead` and `kicad-cli`: the sheet is read back with KiCad and
 returned only if its nets are exactly the design's, and refused, naming the
-difference, otherwise. A part with no KiCad symbol, or a net left with fewer
-than two drawn pins, is reported as a loss rather than dropped silently.
+difference, otherwise.
+
+copperhead draws with KiCad's library symbols, and fang picks each part's in
+this order:
+
+1. The symbol the part names itself, `symbol = "library:name"`, on the pins
+   its own numbers name.
+2. The symbol its type is drawn with, where one prefix does not pick it out:
+   an `OpAmp` is KiCad's generic `Simulation_SPICE:OPAMP`, a `Zener` is
+   `Device:D_Zener`.
+3. For a ground marker, a part whose every pin is a ground pin, KiCad's
+   `power:GND`; its net is declared a ground net.
+4. The symbol its designator prefix names: `R`, `C`, `L`, `D`, `TP` and the
+   rest.
+
+Where a symbol numbers its pins differently from the part, fang places each
+pin by name: a diode's cathode goes on pin 1 of KiCad's diode, and an op amp's
+`IN+`, `IN-` and `OUT` on 1, 2 and 5. A part with no KiCad symbol, a part with
+a pin its symbol has no place for, or a net left with fewer than two drawn
+pins, is reported as a loss rather than dropped silently.
+
+The textbook figures under `examples/` are drafted from the same lowering,
+`fang.copperhead.compile_intent`, called from Python with options that change
+only the labels: the ground net's name, terminals labelled with their names in
+the program, values printed short (`10k` for `10 kOhm`), and the title
+block's date. The command passes none of them, so it keeps the netlist's names
+and values and leaves the date empty.
 
 ## Agent surface
 
