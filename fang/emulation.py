@@ -609,18 +609,47 @@ def _measure_one(name: str, spec: Mapping[str, Any], plan: EmulationPlan, record
                 return Measured(name, Quantity.scalar(Decimal(number.group(0)), spec["unit"]), None, True)
         return Measured(name, None, f"no line beginning {prefix!r} was printed before the run's end", True)
     if kind == "pin_config":
+        unread = _unread_selectors(plan, spec["entity"])
+        if unread:
+            vendor, selector = unread[0]
+            return Measured(
+                name, None,
+                f"the selector {selector!r} on {vendor} is not one the platform model reads, "
+                "so the pin's alternate function cannot be compared",
+            )
         return Measured(name, Quantity.scalar(pin_mismatches(plan, record, spec["entity"]), "1"))
     raise ValueError(f"no measure of kind {kind!r}")
 
 
 _MODE_ALTERNATE = 0b10
 
+#: How the platform's GPIO reads a selector: an alternate function, AF0 to
+#: AF15, the value of the pin's four-bit field in AFRL or AFRH.
+_ALTERNATE = re.compile(r"AF(\d+)")
+
 
 def _selector_number(selector: str | None) -> int | None:
+    """The alternate function a selector names, or None for one the platform
+    does not read. A plan refuses a selector this cannot read, and a pin
+    configuration over one has no value, so a pin is never let through
+    unchecked."""
     if selector is None:
         return None
-    found = re.fullmatch(r"AF(\d+)", selector)
-    return int(found.group(1)) if found else None
+    found = _ALTERNATE.fullmatch(selector)
+    if found is None or int(found.group(1)) > 0xF:
+        return None
+    return int(found.group(1))
+
+
+def _unread_selectors(plan: EmulationPlan, port: str) -> list[tuple[str, str]]:
+    """A bus's pins whose selector the platform does not read, with it."""
+    return [
+        (pin.vendor, pin.selector)
+        for bus in plan.buses
+        if bus.port == port
+        for pin in bus.pins
+        if pin.selector is not None and _selector_number(pin.selector) is None
+    ]
 
 
 def register_values(plan: EmulationPlan, record: RunRecord) -> dict[tuple[str, str], int]:
@@ -975,6 +1004,14 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
                 signal = str(connection.identity.path).rsplit(".", 1)[-1]
                 emulator_port, index = mapped(pin)
                 selector = connection.selectors.get(pin, {}).get("selector")
+                if selector is not None and _selector_number(selector) is None:
+                    # The pin configuration would skip the comparison it
+                    # cannot make, and count a wrong mux as right.
+                    raise _refuse(
+                        f"the selector {selector!r} on {pins[pin].vendor_name} is not one the "
+                        "platform model reads: it reads an alternate function, AF0 to AF15",
+                        "pin",
+                    )
                 plan_pins[pin] = PlanPin(
                     pin, pins[pin].vendor_name, signal, selector,
                     spec.signal(signal).open_drain, emulator_port, index,

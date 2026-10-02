@@ -1331,6 +1331,45 @@ def test_an_address_that_is_no_whole_number_refuses_the_plan():
     assert "system.env" in str(refused.value) and "72.5" in str(refused.value)
 
 
+def test_a_selector_the_platform_does_not_read_refuses_the_plan():
+    # "AF_4" read as no alternate function, so PinConfig skipped the AFR
+    # comparison and measured 0 whatever the firmware wrote there.
+    from fang.emulation import RENODE
+    from fang.interfaces import AF, PinMap, Selector
+
+    class Misspelt(SENSOR_NODE.STM32F401RE):
+        peripherals = PinMap(
+            {
+                "i2c1.scl": {"PB8": Selector("AF_4"), "PB6": AF(4)},
+                "i2c1.sda": {"PB9": AF(4), "PB7": AF(4)},
+                "usart2.tx": {"PA2": AF(7)},
+                "usart2.rx": {"PA3": AF(7)},
+            },
+            evidence="af_table",
+        )
+
+    class Board(SENSOR_NODE.SensorNode):
+        mcu = Misspelt(package="LQFP-64")
+
+    result = _elaborate(Board)
+    with pytest.raises(NotRunnable) as refused:
+        RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
+    assert refused.value.code == "SIM-0013"
+    assert "PB8" in str(refused.value) and "'AF_4'" in str(refused.value)
+
+
+@pytest.mark.parametrize("selector", ["AF_4", "AF16"])
+def test_a_pin_configuration_over_a_selector_the_platform_does_not_read_has_no_value(selector):
+    p = plan()
+    (bus,) = p.buses
+    scl, sda = bus.pins
+    misspelt = PlanPin(scl.pin, scl.vendor, scl.signal, selector, scl.open_drain, scl.port, scl.index)
+    unread = EmulationPlan(**{**p.__dict__, "buses": (PlanBus(bus.port, bus.instance, bus.emulator,
+                                                              (misspelt, sda), bus.devices),)})
+    mux = measured(unread, recorded("startup"))["mux_mismatches"]
+    assert mux.quantity is None and selector in mux.reason and "PB8" in mux.reason
+
+
 def test_a_model_naming_no_shipped_descriptor_is_sim_0009_through_prepare():
     from fang.emulation import RENODE, EmulationModel
 

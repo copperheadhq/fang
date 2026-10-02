@@ -107,8 +107,8 @@ Compiling an emulation question SHALL resolve, or refuse naming what is
 missing: the target component with its platform model and firmware; the scope,
 being the target and every component sharing a net with a pin the question
 touches, each carrying a peripheral model or listed as abstracted; each bus in
-scope with its controller instance, its chosen pins and their selectors, the
-electrical requirements of its signals, and each device's address, a whole
+scope with its controller instance, its chosen pins and their selectors, each
+a selector the platform descriptor reads, the electrical requirements of its signals, and each device's address, a whole
 number the emulator is given as the graph holds it; each
 observation point, a signal with several loads being observed on its one pin;
 each stimulus and fault against its model's declarations, a stimulus setting an
@@ -282,7 +282,10 @@ and a measure SHALL compare the result with the mode, selector and output type
 the board requires, measuring the number of pins that differ. A register the
 model accepts without storing SHALL be judged by the firmware's writes to it,
 never by a read-back. A probe SHALL NOT read a register that has read side
-effects.
+effects. A selector the platform cannot read SHALL refuse the plan, and a
+pin-configuration measure over a pin whose selector it cannot read SHALL
+produce no value, so that no pin is counted as configured with its selector
+unchecked.
 
 #### Scenario: Correctly configured pins measure zero
 
@@ -301,6 +304,14 @@ effects.
 - **WHEN** the model accepts writes to the output-type register without storing
   them, and the firmware writes open drain for both I2C pins
 - **THEN** the measure counts neither pin, although the register reads back 0
+
+#### Scenario: A selector the platform does not read is refused
+
+- **WHEN** a bus pin's selector is not one the platform descriptor reads, such
+  as `AF_4` on a platform that reads `AF0` to `AF15`
+- **THEN** the plan is refused naming the pin and the selector
+- **AND** a pin-configuration measure over such a pin has no value, rather
+  than a count that skipped its selector
 
 ### Requirement: Absence Is An Observation; An Incomplete Run Is Not
 

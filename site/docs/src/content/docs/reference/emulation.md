@@ -138,7 +138,7 @@ it names. A plan that cannot be resolved is refused, naming what is missing.
 | `SIM-0010` | A component in scope has neither a model nor an abstraction |
 | `SIM-0011` | A fault the device's model does not support |
 | `SIM-0012` | A stimulus names an input its model lacks, gives a value of the wrong dimension or more than one value, falls outside the run, or sets a device a fault removes |
-| `SIM-0013` | A pin the platform model does not map; a port is never derived from a pin's name |
+| `SIM-0013` | A pin the platform model does not map, a port never being derived from a pin's name, or a pin selector it does not read: the F401 reads `AF0` to `AF15` |
 | `SIM-0014` | No run duration, or one that is not positive, which `Emulates` already refuses where it is written |
 | `SIM-0015` | No firmware is bound, or it was built for another target |
 | `SIM-0016` | A bus device's controller or address cannot be resolved, its address is a range or no whole number, or `PinConfig` names a port that is no bus |
@@ -193,7 +193,9 @@ Three rules keep a measure honest:
   consult the pins' configuration, so firmware with the wrong pin setup would
   pass every bus measure. `PinConfig` reads what the firmware wrote to the
   mode, alternate-function and output-type registers, judging the output-type
-  register by its writes because Renode does not store it.
+  register by its writes because Renode does not store it. A selector the
+  platform does not read refuses the plan, so a pin's alternate function is
+  never left unchecked.
 
 ## Evidence
 

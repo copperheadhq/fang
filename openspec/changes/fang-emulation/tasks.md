@@ -213,3 +213,7 @@ and recorded files the later tests read — each reviewed again as it lands.
 - [x] 11.12 Refuse a device address that is no whole number under SIM-0016,
       naming the device and the address, rather than truncating it; verify
       with the sensor at `72.5 * addr`.
+- [x] 11.13 Refuse a pin selector the platform does not read under SIM-0013,
+      naming the pin and the selector, and give a pin configuration over one
+      no value; verify `Selector("AF_4")` on the board and `AF_4` and `AF16`
+      in a plan.
