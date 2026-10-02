@@ -1,7 +1,7 @@
     1  block
    11  component
    40  connection
-    8  constraint
+    7  constraint
     4  decision
    10  evidence
     7  interface
@@ -9,5 +9,5 @@
    24  port
     2  requirement
     2  verification
-  143  total
-snapshot sha256:d9e5d95fd62a578d6eab5ca4efdae36a223fbce9b8e5a6457ff8cc0a09fcda5b
+  142  total
+snapshot sha256:5577f83332d222b286bf881b13db321946f4958a3076b89f2065e4feead94614

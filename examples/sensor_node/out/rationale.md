@@ -8,7 +8,7 @@ design; it is the design.
 
 ### system.survives_missing_sensor (`REQ-a2382492c60d`)
 
-> With the HS3001 missing the firmware keeps running and blinks the status LED fast, and makes no read
+> With the HS3001 missing the firmware keeps running and blinks the status LED fast
 
 MUST, state KNOWN, validation by emulation.
 

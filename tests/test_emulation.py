@@ -1024,3 +1024,42 @@ def test_a_signal_with_two_loads_is_observed_on_its_one_pin():
 
     (gpio,) = [o for o in _json.loads(job.files["plan.json"])["observations"] if o["kind"] == "gpio"]
     assert (gpio["emulator"], gpio["index"]) == ("gpioPortA", 5)
+
+
+def test_a_read_of_a_device_a_fault_removes_is_refused():
+    # An absent device gets no probe, so a count of its reads was 0 and a
+    # first read was never, whatever the firmware did.
+    from fang.emulation import RENODE, Count, Emulates, I2CRead
+
+    original = SENSOR_NODE.SensorNode.sensor_missing
+
+    class CountsReads(SENSOR_NODE.SensorNode):
+        missing_reads = SENSOR_NODE.Parameter("", description="reads of the sensor while it is missing")
+        sensor_missing = Emulates(
+            "survives_missing_sensor", run_until=original.run_until, faults=original.faults,
+            measures={**original.measures, "missing_reads": Count(I2CRead("env"))},
+            abstracted=original.abstracted,
+        )
+
+    result = _elaborate(CountsReads)
+    with pytest.raises(NotRunnable) as refused:
+        RENODE.prepare(result.snapshot, _question(result.snapshot, "sensor_missing"), traits=result.traits)
+    assert refused.value.code == "SIM-0003"
+    assert "missing_reads" in str(refused.value) and "absent" in str(refused.value)
+
+
+def test_a_stimulus_on_a_device_a_fault_removes_is_refused():
+    from fang.emulation import EmulationError, compile_plan
+
+    result, paths = _board()
+    data = _startup_data(paths, faults=[{"kind": "absent", "surface": "env"}])
+    data["measures"] = [m for m in data["measures"] if m["name"] != "first_read"]
+    with pytest.raises(EmulationError, match="absent") as refused:
+        compile_plan(result.snapshot, _Question(data), traits=result.traits)
+    assert refused.value.code == "stimulus"
+
+
+def test_the_missing_sensor_question_measures_only_what_the_firmware_does():
+    result = _elaborate(SENSOR_NODE.SensorNode)
+    question = _question(result.snapshot, "sensor_missing")
+    assert [entry.name for entry in question.measures] == ["fast_blinks"]

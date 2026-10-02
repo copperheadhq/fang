@@ -888,6 +888,34 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
         if fault["kind"] == "absent":
             absent.add(component)
 
+    # An absent device has no probe: nothing it is asked is recorded, so a
+    # match over it would read the same whatever the firmware did, and a
+    # stimulus on it would have nothing to set. Both are refused rather than
+    # measured as an observation that cannot happen.
+    for name, entry in sorted(records.items()):
+        record = entry["measure"]
+        if record["kind"] in ("emulation.first_at", "emulation.count"):
+            matches = [record["match"]]
+        elif record["kind"] == "emulation.latency":
+            matches = [record["from"], record["to"]]
+        else:
+            matches = []
+        for match in matches:
+            if match["kind"] in ("i2c.read", "i2c.write") and resolved(match["surface"])["component"] in absent:
+                raise _refuse(
+                    f"{name} matches {match['kind']} on {match['surface']}, which the question's "
+                    "fault makes absent: an absent device has no probe, so the measure would "
+                    "read the same whatever the firmware did",
+                    "measure",
+                )
+    for stimulus in scenario.get("stimuli", ()):
+        if resolved(stimulus["surface"])["component"] in absent:
+            raise _refuse(
+                f"the stimulus on {stimulus['surface']}.{stimulus['input']} has nothing to set: "
+                f"the question's fault makes {stimulus['surface']} absent",
+                "stimulus",
+            )
+
     # -- buses ---------------------------------------------------------------
     buses: list[PlanBus] = []
     models: list[dict] = [_model_record(target, platform)]
