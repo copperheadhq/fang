@@ -70,6 +70,15 @@ change.
 - [x] 4.4 Parse ngspice's `name = value` measurement lines and failed-measure
       lines into `Decimal`; verify against output captured from the installed
       ngspice 45.2, and that a failed or absent measure yields no measurement.
+- [x] 4.5 Name each file a run reads by its relative path, and under its own
+      digest's first twelve hex digits where two different files share one
+      (SPICE models and Touchstone files alike), and refuse two different files
+      declaring one subcircuit; verify two folders' files at one path stay two,
+      the same file twice is one entry, and the refusal names both parts.
+- [x] 4.6 Refuse pins on different nodes landing on one model port under
+      SIM-0006, naming the part, the port and the nets, and reach a port
+      through a pin on a net; verify the refusal, and that pins sharing a node
+      and a pin on no net are one terminal.
 
 ## 5. Re-entry through the gate
 
@@ -111,8 +120,16 @@ change.
       questions, and leaves the workspace untouched without `--commit`.
 - [x] 6.2 Gate what `verify --commit` writes as `build` gates what it writes,
       the whole design proposed against an empty snapshot with the default
-      checks; verify a design holding a measurement that breaks a tightened
-      constraint is refused with the gate's diagnostics and nothing written.
+      checks; verify a design the gate refuses is reported with the gate's
+      diagnostics and nothing written.
+- [x] 6.3 Refuse `--commit`, before anything runs, where the program's design
+      differs from the persisted one, comparing the persisted records with the
+      fresh elaboration carrying every committed run whatever its currency;
+      verify a retuned part and a tightened constraint are refused naming
+      `build`, that a model edited outside the program runs again and is
+      committed, and that a retried run's leftover evidence is no change.
+- [x] 6.4 Judge `stale:` on the committed runs laid over the fresh
+      elaboration; verify every elaborated entity is in what is judged.
 
 ## 7. The spine's examples and acceptance test
 
@@ -153,6 +170,10 @@ change.
       errors fail, warnings do not, and excluded rules do neither.
 - [x] 9.4 Add `tests/test_rulecheck.py` covering the delta spec's rule-check
       scenarios; verify it passes with `PATH` stripped of kicad-cli.
+- [x] 9.5 Require the report's `erc.v1` schema and every field the reader
+      reads, and fail the run with the reason otherwise; verify a changed
+      schema and a report with no sheets leave the verification unknown, never
+      an empty pass.
 
 ## 10. Touchstone
 
@@ -180,6 +201,10 @@ change.
       in expressions, in parameter values and in what a measure writes; verify
       each refusal, and that a `ReturnLoss` into a percent parameter fails
       elaboration.
+- [x] 10.10 Refuse matching parts that do not form the named ladder from the
+      port to the model, naming the part that breaks the chain; verify parts in
+      the wrong order, a part named off the chain and a part named twice are
+      refused, and that `antenna_match` still answers.
 
 ## 11. Documents
 

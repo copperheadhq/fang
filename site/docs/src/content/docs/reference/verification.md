@@ -113,6 +113,12 @@ reason is refused with `SIM-0008`. On a sheet fang draws, the two rules above
 fire on every symbol, which is why a question names them rather than the tool
 hiding them.
 
+The report is read as kicad-cli 10.0.6 writes it, schema `erc.v1`. A report of
+another schema, or one missing a field the reader reads (the sheets, their
+violations, and each violation's rule, severity, description and items), fails
+the run with the reason: no verdict is drawn and the verification stays
+unknown, where read as empty it would have passed.
+
 ### Evaluates
 
 ```python
@@ -129,8 +135,12 @@ matched = Evaluates(
 `through` names the matching parts in order from the port toward the model.
 Each is a shunt element when a terminal is on ground and a series element
 otherwise, and its value is the one the graph holds; a part with no value
-leaves the question unanswered, naming the part. A frequency outside the file is
-refused naming its range (`SIM-0007`).
+leaves the question unanswered, naming the part. The parts must be the ladder
+the graph connects: counted back from the model's port 1, each shunt part
+joins the node reached so far to ground and each series part joins it to the
+next node toward the port. The first part that does not, named out of order or
+off the chain, is refused by name with `SIM-0003`. A frequency outside the file
+is refused naming its range (`SIM-0007`).
 
 ## Routing
 
@@ -174,7 +184,15 @@ nothing the output did not contain.
 
 A SPICE deck instantiates each modelled part as an `X` device in its model's
 port order, through the trait's `pin_map`, and includes the model by path rather
-than inlining it. ngspice measures through a `.control` block, because in batch
+than inlining it. Several pins may land on one port, as a part's ground pins
+do; pins on different nets are refused with `SIM-0006`, naming the part, the
+port and the nets, because an instance reaches a port through one node. A
+model is named in the run's bundle by its path relative to the program that
+declared the part. Where two different files would share that name, from parts
+declared in different folders, each is named under the first twelve hex digits
+of its own digest instead, and Touchstone files are named the same way; two
+different files declaring one subcircuit are refused, since a deck holds one
+definition of it. ngspice measures through a `.control` block, because in batch
 mode it ignores `.print op` and reports a deck-level `.meas ac` as a real part.
 Xyce gets the same circuit with deck-level `.MEASURE` lines, and is read from
 the measure file it writes.
@@ -227,3 +245,11 @@ existing workspace, keeping each run's files under `.copperhead/simulations/`.
 `fang build`, `fang diff` and `fang verify` keep what earlier runs measured: a
 program declares a measured parameter without a value, so elaborating it again
 does not withdraw the measurement.
+
+`--commit` persists measurements and nothing else. If the program has changed
+since its design was built, a part retuned or a constraint tightened, it
+refuses before anything runs and says to run `fang build` first, which is the
+command that persists an edit through its gate and its tool plan. A
+measurement made stale by a file the program reads but does not hold, an
+edited model or a rebuilt firmware image, is not an edit: its question runs
+again and the answer is committed.
