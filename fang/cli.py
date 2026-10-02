@@ -144,6 +144,50 @@ def _with_measurements(snapshot: Snapshot, workspace: Workspace, traits=None) ->
     return carried.with_entities(carried.entities, workspace.read_manifest().revision_id)
 
 
+def _changed_since_build(snapshot: Snapshot, workspace: Workspace) -> list[str]:
+    """The entities in which a fresh elaboration's design differs from the
+    one persisted in the workspace, by identifier.
+
+    What runs committed is carried onto the elaboration whether or not it is
+    still current, so the files a program reads (a model, a firmware image)
+    do not count, only the program: unchanged, it gives back the persisted
+    design entity for entity. The entities are compared as records, so a
+    newer compiler that elaborates the same design is not a change. Run
+    evidence no verification cites any more is set aside, since a run left
+    it rather than the program, and the next build drops it.
+    """
+    from .serialization import canonical_dumps
+    from .verification import carry_measurements
+
+    facts = _measured_facts(workspace)
+    if facts is not None:
+        snapshot = carry_measurements(snapshot, facts, current=lambda evidence: True)
+    records = workspace.read_records()
+    cited = {
+        ref
+        for record in records
+        if record.get("kind") == "verification"
+        for ref in record.get("evidence", ())
+    }
+    persisted = {
+        record["id"]: canonical_dumps(record)
+        for record in records
+        if not (
+            record.get("kind") == "evidence"
+            and "measurement" in record.get("extensions", {})
+            and record["id"] not in cited
+        )
+    }
+    elaborated = {
+        entity.id: canonical_dumps(entity.as_dict()) for entity in snapshot.entities.values()
+    }
+    return sorted(
+        entity_id
+        for entity_id in persisted.keys() | elaborated.keys()
+        if persisted.get(entity_id) != elaborated.get(entity_id)
+    )
+
+
 def _gated(snapshot: Snapshot, reason: str):
     """The gate's verdict on a whole design about to be persisted.
 
@@ -452,7 +496,9 @@ def cmd_verify(args) -> int:
     Each question is printed with its level, its tool, its measurements and
     its result, or the reason it did not run. A failed verification exits
     non-zero, as does a question the program left unrunnable; a tool that is
-    not installed is reported and is not by itself a failure.
+    not installed is reported and is not by itself a failure. --commit
+    persists measurements and nothing else, so it refuses, before anything
+    runs, a program whose design has changed since it was built.
     """
     from tempfile import TemporaryDirectory
 
@@ -467,6 +513,22 @@ def cmd_verify(args) -> int:
             file=sys.stderr,
         )
         return EXIT_FAILED
+    if args.commit:
+        # The head below is the fresh elaboration, and committing it would
+        # persist an edit to the program that build's gate and tool plan never
+        # saw. A measurement gone stale with a model or a firmware image is
+        # not an edit: it runs again, and its answer is committed.
+        changed = _changed_since_build(result.snapshot, workspace)
+        if changed:
+            print(
+                f"fang: --commit persists measurements and nothing else, and "
+                f"{Path(args.program).name} no longer elaborates to the design in "
+                f"{workspace.dir} ({len(changed)} "
+                f"entit{'y differs' if len(changed) == 1 else 'ies differ'}); "
+                "run 'fang build' first",
+                file=sys.stderr,
+            )
+            return EXIT_FAILED
 
     head = _with_measurements(result.snapshot, workspace, result.traits)
     from .emulation import stale

@@ -1682,9 +1682,61 @@ class Filter(System):
 '''
 
 
-def program(tmp_path, *, upper: str = "2", supplies: str = '{"inlet.line": 1 * V}') -> str:
+#: The same filter with a modelled buffer in front of it, appended to the
+#: program and named with --system; its model is follower.sub beside it.
+BUFFERED = '''
+
+from fang.interfaces import AnalogIn
+from fang.traits import Simulatable
+
+
+class Follower(Part):
+    designator_prefix = "U"
+    signal_in = AnalogIn()
+    signal_out = AnalogOut()
+    IN = Pin("IN", role="analog", number="1")
+    OUT = Pin("OUT", role="analog", number="2")
+    GND = Pin("GND", role="ground", number="3")
+    pinmap = PinMap(
+        {
+            "signal_in.signal": "IN", "signal_in.ref": "GND",
+            "signal_out.signal": "OUT", "signal_out.ref": "GND",
+        }
+    )
+
+
+class Buffered(Filter):
+    buffer = Follower()
+
+    def __init__(self, **overrides):
+        super().__init__(**overrides)
+        self.buffer.add_trait(
+            Simulatable(
+                backends=("ngspice",),
+                source="follower.sub",
+                pin_map={"IN": "in", "OUT": "out", "GND": "gnd"},
+            )
+        )
+
+    def architecture(self):
+        self.inlet.line.signal >> self.buffer.signal_in.signal
+        self.inlet.line.ref >> self.buffer.signal_in.ref
+        self.buffer.signal_out.signal >> self.r.p1
+        self.r.p2 >> self.c.p1
+        self.c.p2 >> self.buffer.signal_out.ref
+        self.outlet.line.signal >> self.c.p1
+        self.outlet.line.ref >> self.c.p2
+'''
+
+#: The system block of a program the command elaborates, under its default project.
+LOCAL_SYSTEM = derive("PRJ-LOCAL", "block", "system").id
+
+
+def program(
+    tmp_path, *, upper: str = "2", supplies: str = '{"inlet.line": 1 * V}', extra: str = ""
+) -> str:
     path = tmp_path / "filter.py"
-    path.write_text(PROGRAM.replace("@UPPER@", upper).replace("@SUPPLIES@", supplies))
+    path.write_text(PROGRAM.replace("@UPPER@", upper).replace("@SUPPLIES@", supplies) + extra)
     return str(path)
 
 
@@ -1787,12 +1839,44 @@ def test_a_commit_persists_and_a_rebuild_keeps_the_measured_value(tmp_path, ngsp
     assert len(ngspice.runs) == runs
 
 
-def test_verify_commits_only_what_the_gate_accepts(tmp_path, ngspice, capsys):
+def test_verify_commit_refuses_a_program_changed_since_its_build(tmp_path, ngspice, capsys):
+    """--commit persists measurements and nothing else. A resistor retuned
+    since the last build is an edit to the design, which verify committed
+    with its new measurement, past build's tool plan; it is refused before
+    anything runs, naming build, and after a build the commit goes through."""
+    source = program(tmp_path)
+    workspace = Workspace(tmp_path)
+    assert main(["build", source, "-C", str(tmp_path)]) == EXIT_OK
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_OK
+    committed = snapshot_of(workspace.dir)
+    runs = len(ngspice.runs)
+    capsys.readouterr()
+
+    # A different length as well as a different value: a program rewritten
+    # within the second at the same size could be read from stale bytecode.
+    path = Path(source)
+    path.write_text(path.read_text().replace("10 * kOhm)", "22 * kOhm)  # retuned"))
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_FAILED
+    captured = capsys.readouterr()
+    assert "--commit persists measurements and nothing else" in captured.err
+    assert "filter.py no longer elaborates to the design in" in captured.err
+    assert "run 'fang build' first" in captured.err
+    assert captured.out == ""
+    assert snapshot_of(workspace.dir) == committed
+    assert len(ngspice.runs) == runs
+
+    assert main(["build", source, "-C", str(tmp_path)]) == EXIT_OK
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_OK
+    assert len(ngspice.runs) == runs + 1
+    assert "22k" in ngspice.runs[-1] or "22000" in ngspice.runs[-1]
+
+
+def test_a_tightened_constraint_is_for_build_to_gate(tmp_path, ngspice, capsys):
     """A PASS committed at 1.59 kHz under a 2 kHz limit, and the limit then
-    tightened to 1.2 kHz. The measurement is still current, so the head
-    verify starts from holds a value that breaks a hard constraint; that head
-    was never proposed, and --commit refuses to write it, with the gate's
-    diagnostics, as build does."""
+    tightened to 1.2 kHz. The tightening is an edit, so verify --commit
+    refuses it and writes nothing; build is what persists an edit, and its
+    gate rejects this one, since the measurement is still current and breaks
+    the new limit."""
     source = program(tmp_path)
     workspace = Workspace(tmp_path)
     assert main(["build", source, "-C", str(tmp_path)]) == EXIT_OK
@@ -1802,20 +1886,100 @@ def test_verify_commits_only_what_the_gate_accepts(tmp_path, ngspice, capsys):
 
     program(tmp_path, upper="1.2")
     assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_FAILED
-    captured = capsys.readouterr()
-    assert captured.out.rstrip().endswith("FAIL")
-    assert "TXN-0002" in captured.err
-    assert "the commit gate rejected the verified design; nothing is committed" in captured.err
+    assert "run 'fang build' first" in capsys.readouterr().err
     assert snapshot_of(workspace.dir) == committed
-    # What verify refused, build refuses too: the two persist through one gate.
     assert main(["build", source, "-C", str(tmp_path)]) == EXIT_FAILED
     assert "TXN-0002" in capsys.readouterr().err
+    assert snapshot_of(workspace.dir) == committed
+
+
+def test_verify_commits_only_what_the_gate_accepts(tmp_path, ngspice, capsys, monkeypatch):
+    """What --commit persists passes the gate whole first, as what build
+    persists does: a design the gate refuses is reported with the gate's
+    diagnostics and not written."""
+    import fang.cli
+    from fang.diagnostics import Diagnostic, Severity
+
+    source = program(tmp_path)
+    workspace = Workspace(tmp_path)
+    assert main(["build", source, "-C", str(tmp_path)]) == EXIT_OK
+    built = snapshot_of(workspace.dir)
+    capsys.readouterr()
+
+    @dataclass
+    class Refused:
+        rejected: bool = True
+        diagnostics: tuple = (
+            Diagnostic(diagnostics.TXN_GATE_BLOCKED, Severity.ERROR, "the gate says no"),
+        )
+
+    seen = []
+    monkeypatch.setattr(fang.cli, "_gated", lambda snapshot, reason: seen.append(snapshot) or Refused())
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_FAILED
+    captured = capsys.readouterr()
+    assert f"{diagnostics.TXN_GATE_BLOCKED}: the gate says no" in captured.err
+    assert "the commit gate rejected the verified design; nothing is committed" in captured.err
+    assert len(seen) == 1 and seen[0].entities[LOCAL_SYSTEM].parameters["corner"].known
+    assert snapshot_of(workspace.dir) == built
+
+
+def test_a_stale_model_runs_again_and_its_answer_is_committed(tmp_path, ngspice, capsys):
+    """A model file is read by the program and is not the program: the
+    measurement made on the old file is no longer current, and --commit runs
+    the question again and commits its answer rather than asking for a build."""
+    source = program(tmp_path, extra=BUFFERED)
+    model = tmp_path / "follower.sub"
+    model.write_bytes(FOLLOWER.encode())
+    workspace = Workspace(tmp_path)
+    command = [source, "--system", "Buffered", "-C", str(tmp_path)]
+    assert main(["build", *command]) == EXIT_OK
+    assert main(["verify", *command, "--commit"]) == EXIT_OK
+    first = workspace.read_manifest().snapshot
+    runs = len(ngspice.runs)
+    capsys.readouterr()
+
+    changed = FOLLOWER.replace("Rin in gnd 1e9", "Rin in gnd 1e6").encode()
+    model.write_bytes(changed)
+    assert main(["verify", *command, "--commit"]) == EXIT_OK
+    captured = capsys.readouterr()
+    assert "run 'fang build' first" not in captured.err
+    assert "  circuit level, ngspice (ngspice-45.2)" in captured.out
+    assert len(ngspice.runs) == runs + 1
+    assert workspace.read_manifest().snapshot != first
+    digest = "sha256:" + hashlib.sha256(changed).hexdigest()
+    (evidence,) = [
+        record for record in workspace.read_records()
+        if record["kind"] == "evidence" and "measurement" in record.get("extensions", {})
+    ]
+    assert evidence["extensions"]["measurement"]["inputs"] == [{"path": "follower.sub", "hash": digest}]
+
+
+def test_evidence_a_retried_run_left_behind_is_not_a_change(tmp_path, ngspice, capsys):
+    """A run that did not complete is tried again as evidence of its own, and
+    the first attempt's evidence stays on the head uncited. That is a run's
+    leftover, not an edit to the program, so the next --commit goes through."""
+    source = program(tmp_path)
+    assert main(["build", source, "-C", str(tmp_path)]) == EXIT_OK
+    ngspice.exit_status = 1
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_OK
+    ngspice.exit_status = 0
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_OK
+    records = Workspace(tmp_path).read_records()
+    runs = [r for r in records if r["kind"] == "evidence" and "measurement" in r.get("extensions", {})]
+    assert len(runs) == 2
+    capsys.readouterr()
+
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_OK
+    captured = capsys.readouterr()
+    assert "run 'fang build' first" not in captured.err
+    assert "equation level, by the constraint evaluator; nothing runs" in captured.out
 
 
 def test_a_relaxed_constraint_re_enters_a_recorded_failure(tmp_path, ngspice, capsys):
-    """A FAIL left the corner unknown; with the constraint relaxed, verify
-    does not print the old FAIL as current forever, nor run again: the
-    recorded measurement re-enters and the gate passes it."""
+    """A FAIL left the corner unknown; with the constraint relaxed and the
+    program built again, verify does not print the old FAIL as current
+    forever, nor run again: the recorded measurement re-enters and the gate
+    passes it."""
     source = program(tmp_path, upper="1.2")
     assert main(["build", source, "-C", str(tmp_path)]) == EXIT_OK
     assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_FAILED
@@ -1824,6 +1988,8 @@ def test_a_relaxed_constraint_re_enters_a_recorded_failure(tmp_path, ngspice, ca
     runs = len(ngspice.runs)
 
     program(tmp_path, upper="2")
+    assert main(["build", source, "-C", str(tmp_path)]) == EXIT_OK
+    capsys.readouterr()
     assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_OK
     output = capsys.readouterr().out
     assert "current" not in output
