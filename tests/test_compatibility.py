@@ -742,6 +742,145 @@ def test_a_controller_with_no_address_is_not_reported():
     assert not any(host in r.message for r in results)
 
 
+# -- an address is compared by overlap, and an unknown one is never dropped ---
+
+
+def two_devices():
+    class Bus(System):
+        host = Host()
+        first = Fixed48()
+        second = Fixed48()
+
+        def architecture(self):
+            self.host.i2c >> self.first.i2c
+            self.host.i2c >> self.second.i2c
+
+    return snapshot_of(Bus)
+
+
+def with_address(snapshot, path, value):
+    """The snapshot with one port's address replaced, as a transaction could."""
+    port = port_at(snapshot, path)
+    entities = dict(snapshot.entities)
+    entities[port.id] = port.with_parameter("address", value)
+    return snapshot.with_entities(entities, snapshot.revision_id)
+
+
+def dimensionless(low, high=None):
+    if high is None:
+        return Value.explicit(Quantity.scalar(str(low), "1"))
+    return Value.explicit(Quantity.range(Decimal(low), Decimal(high), "1"))
+
+
+def test_a_range_address_is_refused_at_elaboration():
+    from fang.lang import between
+
+    class Ranged(Part):
+        i2c = I2CPort(address=between(0x48 * addr, 0x4B * addr), voltage=3.3 * V)
+
+    class One(System):
+        device = Ranged()
+
+    result = elaborate(One, project_id=PROJECT)
+    assert not result.ok and result.snapshot is None
+    assert result.diagnostics[0].code == "UNIT-0001"
+    assert "address" in result.diagnostics[0].message
+    assert "range" in result.diagnostics[0].message
+
+
+def test_a_range_overlapping_another_address_is_undecided_not_distinct():
+    snapshot = with_address(two_devices(), "system.first.i2c", dimensionless(0x48, 0x4B))
+    results = addressing(compatibility_check(snapshot))
+    assert [r.status for r in results] == [CheckStatus.UNKNOWN]
+    assert "address" in results[0].missing
+    assert "0x48..0x4B" in results[0].message and "overlaps 0x48" in results[0].message
+    for path in ("system.first.i2c", "system.second.i2c"):
+        assert port_at(snapshot, path).id in results[0].message
+
+
+def test_equal_ranges_are_undecided_because_each_may_answer_elsewhere():
+    snapshot = two_devices()
+    for path in ("system.first.i2c", "system.second.i2c"):
+        snapshot = with_address(snapshot, path, dimensionless(0x48, 0x4B))
+    assert [r.status for r in addressing(compatibility_check(snapshot))] == [CheckStatus.UNKNOWN]
+
+
+def test_a_range_clear_of_every_other_address_passes():
+    snapshot = with_address(two_devices(), "system.first.i2c", dimensionless(0x50, 0x53))
+    results = addressing(compatibility_check(snapshot))
+    assert [r.status for r in results] == [CheckStatus.PASS]
+    assert "0x50..0x53" in results[0].message and "0x48" in results[0].message
+
+
+def test_equal_scalars_still_fail_beside_an_overlapping_range():
+    class Bus(System):
+        host = Host()
+        first = Fixed48()
+        second = Fixed48()
+        third = Fixed48()
+
+        def architecture(self):
+            for device in (self.first, self.second, self.third):
+                self.host.i2c >> device.i2c
+
+    snapshot = with_address(snapshot_of(Bus), "system.third.i2c", dimensionless(0x40, 0x4F))
+    results = addressing(compatibility_check(snapshot))
+    # One clash between the two scalars, and the range undecided against each.
+    assert sorted(r.status.name for r in results) == ["FAIL", "UNKNOWN", "UNKNOWN"]
+    assert not any(r.status is CheckStatus.PASS for r in results)
+
+
+def conflicting(*addresses):
+    from fang.values import Candidate, ConflictingValue
+
+    return ConflictingValue(
+        tuple(
+            Candidate(dimensionless(address), f"EVD-{index}")
+            for index, address in enumerate(addresses)
+        )
+    )
+
+
+def test_an_unresolved_conflicting_address_is_unknown_not_absent():
+    snapshot = with_address(two_devices(), "system.second.i2c", conflicting(0x48, 0x49))
+    port = port_at(snapshot, "system.second.i2c")
+    value = resolve_address(snapshot, port)
+    assert value is not None and not value.known
+    assert "EVD-0" in value.rationale and "EVD-1" in value.rationale
+
+    results = addressing(compatibility_check(snapshot))
+    assert [r.status for r in results] == [CheckStatus.UNKNOWN]
+    assert port.id in results[0].message and "EVD-0" in results[0].message
+
+
+def test_a_resolved_conflicting_address_is_compared_as_its_choice():
+    clash = conflicting(0x48, 0x49).resolve("EVD-0", "DEC-pick")
+    snapshot = with_address(two_devices(), "system.second.i2c", clash)
+    assert [r.status for r in addressing(compatibility_check(snapshot))] == [CheckStatus.FAIL]
+
+    clear = conflicting(0x48, 0x49).resolve("EVD-1", "DEC-pick")
+    snapshot = with_address(two_devices(), "system.second.i2c", clear)
+    assert [r.status for r in addressing(compatibility_check(snapshot))] == [CheckStatus.PASS]
+
+
+def test_a_conflicting_address_set_through_the_gate_does_not_pass():
+    from fang.checks import DEFAULT_CHECKS
+    from fang.graph import KernelGraph, SetParameter, Transaction
+
+    snapshot = two_devices()
+    port = port_at(snapshot, "system.second.i2c")
+    graph = KernelGraph(snapshot, checks=DEFAULT_CHECKS)
+    proposal = graph.propose(
+        Transaction(
+            snapshot.hash,
+            (SetParameter(target=port.id, name="address", value=conflicting(0x48, 0x49)),),
+        )
+    )
+    results = addressing(proposal.checks)
+    assert results and not any(r.status is CheckStatus.PASS for r in results)
+    assert [r.status for r in results] == [CheckStatus.UNKNOWN]
+
+
 # -- the gate brings the addressing rule in when a strap's net changes --------
 
 

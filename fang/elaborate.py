@@ -479,6 +479,9 @@ def _port_parameters(surface: Surface) -> dict[str, Value]:
 
     A bare number is refused naming the parameter, as `Parameter` refuses one:
     `address=0x44` says nothing about what 0x44 counts, and `0x44 * addr` does.
+    A fixed address is one scalar, as each address of a strap is: a device
+    answers on one address, so a range is no address, and one the board selects
+    is written as a `Strap`.
     """
     if not isinstance(surface, InterfacePort):
         return {}
@@ -486,6 +489,8 @@ def _port_parameters(surface: Surface) -> dict[str, Value]:
     parameters: dict[str, Value] = {}
     for name, quantity in sorted(surface.parameter_values.items()):
         if isinstance(quantity, Value):
+            if name == "address" and quantity.quantity is not None:
+                _refuse_non_scalar_address(surface, quantity.quantity)
             parameters[name] = quantity
             continue
         expected = declared.get(name)
@@ -509,8 +514,25 @@ def _port_parameters(surface: Surface) -> dict[str, Value]:
                     f"but was given {quantity.unit}",
                     location=surface._source,
                 )
+        if name == "address":
+            _refuse_non_scalar_address(surface, quantity)
         parameters[name] = Value.explicit(quantity)
     return parameters
+
+
+def _refuse_non_scalar_address(surface: Surface, quantity: Quantity) -> None:
+    """Refuse a fixed address that is a range or a tolerance, under the code
+    that already refuses a strap's non-scalar address."""
+    if quantity.kind == "scalar":
+        return
+    low, high = (_decimal_str(bound) for bound in quantity.interval())
+    raise error(
+        UNIT_DIMENSION_MISMATCH,
+        f"{surface.interface.name}.address takes one dimensionless quantity, not a "
+        f"{quantity.kind} from {low} to {high}; a device answers on one address, and "
+        "an address the board selects is written as a Strap",
+        location=surface._source,
+    )
 
 
 def _check_selector_evidence(module: Module) -> None:

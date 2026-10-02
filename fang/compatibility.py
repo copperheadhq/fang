@@ -35,7 +35,7 @@ from .diagnostics import Severity
 from .entities import Connection, Entity, Evidence, Interface, Pin, Port
 from .interfaces import CATALOGUE, InterfaceType
 from .units import Quantity
-from .values import Value, ValueStatus
+from .values import ConflictingValue, Value, ValueStatus
 
 #: The noise margin applied to a logic-level comparison. Zero by default: a
 #: margin is an engineering choice, and inventing one would hide a real
@@ -576,13 +576,19 @@ def _check_addresses(link, ports, subject, undecided, entities):
 
     Every participant's address is read through `resolve_address`. A port that
     declares none, such as the controller's, is not addressed and is not
-    reported; one whose strap resolves to nothing is undecided, naming the pin.
+    reported; one whose address is unknown, a strap that resolves to nothing or
+    a conflict nobody has resolved, is undecided, naming why.
+
+    Addresses are compared by overlap, not by equality. Two equal scalars clash
+    and fail. Two overlapping intervals that are not one scalar, such as a range
+    beside an address inside it, may or may not clash, so the pair is undecided.
+    The rule passes only when every address is known and no two overlap.
     """
     from .graph import CheckResult
 
     results = []
     nets: dict[str, frozenset[str]] | None = None
-    addresses: dict[tuple[Decimal, Decimal], list[tuple[str, Value]]] = {}
+    known: list[tuple[tuple[Decimal, Decimal], str, Value]] = []
     unresolved = False
     for port in sorted(ports, key=lambda p: p.id):
         if port.address_strap is not None and nets is None:
@@ -596,10 +602,15 @@ def _check_addresses(link, ports, subject, undecided, entities):
             reason = f": {value.rationale}" if value.rationale else ""
             results.append(undecided("addressing", ["address"], f"on {port.id}{reason}"))
             continue
-        addresses.setdefault(interval, []).append((port.id, value))
+        known.append((interval, port.id, value))
+    known.sort(key=lambda held: (held[0], held[1]))
 
+    scalars: dict[Decimal, list[tuple[str, Value]]] = {}
+    for (low, high), port_id, value in known:
+        if low == high:
+            scalars.setdefault(low, []).append((port_id, value))
     clashes = False
-    for interval, holders in sorted(addresses.items()):
+    for address, holders in sorted(scalars.items()):
         if len(holders) > 1:
             clashes = True
             results.append(
@@ -608,16 +619,33 @@ def _check_addresses(link, ports, subject, undecided, entities):
                     CheckStatus.FAIL,
                     subject,
                     message=(
-                        f"address {_address_text(interval)} is claimed by more than "
-                        f"one participant: {', '.join(sorted(p for p, _ in holders))}"
+                        f"address {_address_text((address, address))} is claimed by "
+                        f"more than one participant: {', '.join(sorted(p for p, _ in holders))}"
                     ),
                     evidence=_cited(entities, (v for _, v in holders)),
                 )
             )
-    if addresses and not clashes and not unresolved:
+
+    overlaps = False
+    for index, (left, left_port, _) in enumerate(known):
+        for right, right_port, _ in known[index + 1:]:
+            if left[0] == left[1] == right[0] == right[1]:
+                continue                    # one scalar: a clash, reported above
+            if left[0] <= right[1] and right[0] <= left[1]:
+                overlaps = True
+                results.append(
+                    undecided(
+                        "addressing",
+                        ["address"],
+                        f"{_address_text(left)} ({left_port}) overlaps "
+                        f"{_address_text(right)} ({right_port}), so whether they "
+                        "clash depends on which address each answers on",
+                    )
+                )
+
+    if known and not clashes and not overlaps and not unresolved:
         held = ", ".join(
-            f"{_address_text(interval)} ({holders[0][0]})"
-            for interval, holders in sorted(addresses.items())
+            f"{_address_text(interval)} ({port_id})" for interval, port_id, _ in known
         )
         results.append(
             CheckResult(
@@ -625,9 +653,7 @@ def _check_addresses(link, ports, subject, undecided, entities):
                 CheckStatus.PASS,
                 subject,
                 message=f"addresses on {link.interface.name} are distinct: {held}",
-                evidence=_cited(
-                    entities, (v for holders in addresses.values() for _, v in holders)
-                ),
+                evidence=_cited(entities, (v for _, _, v in known)),
             )
         )
     return results
@@ -644,11 +670,16 @@ def _cited(entities: Mapping[str, Entity], values) -> tuple[str, ...]:
 
 
 def _address_text(interval: tuple[Decimal, Decimal]) -> str:
-    """An address as a datasheet writes it: 0x44, not 68."""
+    """An address as a datasheet writes it: 0x44, not 68, and 0x48..0x4B for a
+    range."""
+
+    def one(value: Decimal) -> str:
+        if value == value.to_integral_value() and value >= 0:
+            return f"0x{int(value):02X}"
+        return str(value)
+
     low, high = interval
-    if low == high and low == low.to_integral_value() and low >= 0:
-        return f"0x{int(low):02X}"
-    return f"{low}..{high}" if low != high else str(low)
+    return one(low) if low == high else f"{one(low)}..{one(high)}"
 
 
 def _nets_by_pin(entities: Mapping[str, Entity]) -> dict[str, frozenset[str]]:
@@ -672,13 +703,15 @@ def _pin_label(entities: Mapping[str, Entity], pin_id: str) -> str:
 def resolve_address(snapshot, port: Port) -> Value | None:
     """The address a bus device's port answers on, read from the board.
 
-    A fixed `address` parameter is returned as it is recorded. A strap is
-    resolved from the inferred nets: the one pin of its strap map that shares
-    the strap pin's net selects the address, returned as an inferred value whose
-    source is that pin. A strap pin on no net, on a net no pin of its map
-    shares, or on a net two of them share, gives an unknown value whose reason
-    names the strap pin, and both pins when two share it. A port with neither a
-    fixed address nor a strap is not addressed, and gives None.
+    A fixed `address` parameter is returned as it is recorded. A conflicting one
+    gives the value its resolution chose or, while unresolved, an unknown value
+    whose reason names the candidates' sources. A strap is resolved from the
+    inferred nets: the one pin of its strap map that shares the strap pin's net
+    selects the address, returned as an inferred value whose source is that
+    pin. A strap pin on no net, on a net no pin of its map shares, or on a net
+    two of them share, gives an unknown value whose reason names the strap pin,
+    and both pins when two share it. A port with neither a fixed address nor a
+    strap is not addressed, and gives None.
 
     `snapshot` is a snapshot or its entity mapping.
     """
@@ -693,6 +726,16 @@ def _resolve_address(
     fixed = port.parameters.get("address")
     if isinstance(fixed, Value):
         return fixed
+    if isinstance(fixed, ConflictingValue):
+        # Competing evidence is an address not yet known, never no address: the
+        # port is still addressed, and dropping it would let the rule pass.
+        if fixed.resolved:
+            return fixed.chosen
+        return Value.unknown(
+            "the address has conflicting candidates from "
+            + " and ".join(sorted(candidate.source for candidate in fixed.candidates))
+            + ", and no decision has chosen one"
+        )
     strap = port.address_strap
     if strap is None:
         return None
