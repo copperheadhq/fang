@@ -66,6 +66,8 @@ from .simulation import (
     NgspiceDialect,
     SimulationError,
     SpiceDialect,
+    XyceBackend,
+    XyceDialect,
     analysis_from_dict,
     compile_plan,
     load_model,
@@ -1426,6 +1428,7 @@ class SpiceTool:
             raw.version,
             raw.exit_status,
             stdout=raw.stdout,
+            outputs=dict(getattr(raw, "outputs", {}) or {}),
             status=status,
             message="" if raw.exit_status == 0 else f"{self.name} exited with status {raw.exit_status}",
         )
@@ -1435,7 +1438,11 @@ class SpiceTool:
         analysis = analysis_from_dict(job.question.bench["analysis"]).kind
         entries = job.question.measures
         slots = [DeckMeasure(f"fang_m{index}", entry.measure.kind, "") for index, entry in enumerate(entries)]
-        found = self.dialect.parse(raw.stdout, slots) if raw.status is Status.SUCCEEDED else {}
+        found = (
+            self.dialect.parse(raw.stdout, slots, outputs=raw.outputs)
+            if raw.status is Status.SUCCEEDED
+            else {}
+        )
         out = []
         for slot, entry in zip(slots, entries):
             value = found.get(slot.slot)
@@ -1467,10 +1474,15 @@ def _label(snapshot, entity_id: str) -> str:
 #: ngspice, the first tool on the spine.
 NGSPICE = SpiceTool("ngspice", NgspiceDialect(), NgspiceBackend())
 
+#: Xyce, the same circuit through a second SPICE dialect. It comes after
+#: ngspice, so it answers a question that names it, or one ngspice does not
+#: cover; where it is not installed such a question is reported unsupported.
+XYCE = SpiceTool("xyce", XyceDialect(), XyceBackend())
+
 
 def default_tools() -> ToolRegistry:
-    """The tools a project starts with, in routing order: ngspice."""
-    return ToolRegistry((NGSPICE,))
+    """The tools a project starts with, in routing order: ngspice, xyce."""
+    return ToolRegistry((NGSPICE, XYCE))
 
 
 #: The registry `route` and the runner use unless handed another. A module
@@ -1481,8 +1493,9 @@ TOOLS = default_tools()
 def register_tool(tool: Tool, *, before: str | None = None, registry: ToolRegistry | None = None) -> Tool:
     """Make a tool available to routing, after the tools already registered.
 
-    The documented order is the built-ins first -- ngspice -- and then each
-    tool in the order it registers; `before` names a tool to precede instead.
+    The documented order is the built-ins first -- ngspice, then xyce -- and
+    then each tool in the order it registers; `before` names a tool to
+    precede instead.
     """
     return (TOOLS if registry is None else registry).register(tool, before=before)
 

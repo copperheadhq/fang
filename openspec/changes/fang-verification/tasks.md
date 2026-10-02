@@ -114,12 +114,12 @@ change.
 
 ## 8. Xyce
 
-- [ ] 8.1 Add the Xyce dialect (`.measure` lines) behind the dialect seam;
+- [x] 8.1 Add the Xyce dialect (`.measure` lines) behind the dialect seam;
       verify the ngspice and Xyce decks differ only in analysis and measurement
       lines.
-- [ ] 8.2 Parse Xyce's measure file into `Decimal`; verify against a captured
+- [x] 8.2 Parse Xyce's measure file into `Decimal`; verify against a captured
       measure file, and that a failed or absent measure yields no measurement.
-- [ ] 8.3 Add `XyceBackend` beside `NgspiceBackend`; verify it reports
+- [x] 8.3 Add `XyceBackend` beside `NgspiceBackend`; verify it reports
       unsupported by name where Xyce is absent.
 
 ## 9. Rule checks

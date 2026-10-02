@@ -70,6 +70,8 @@ from fang.simulation import (
     SimulationError,
     Subcircuit,
     Transient,
+    XyceBackend,
+    XyceDialect,
     bench_device,
     read_subcircuit,
 )
@@ -88,6 +90,7 @@ from fang.verification import (
     REJECTED,
     UNROUTABLE,
     UNSUPPORTED,
+    XYCE,
     Average,
     Crossing,
     Job,
@@ -435,18 +438,24 @@ class CannedBackend:
     installed: bool = True
     exit_status: int = 0
     runs: list = field(default_factory=list)
+    name: str = "ngspice"
+    release: str = "ngspice-45.2"
+    outputs: dict = field(default_factory=dict)
 
     def available(self) -> bool:
         return self.installed
 
     def version(self) -> str:
         if not self.installed:
-            raise BackendUnavailable("ngspice is not installed")
-        return "ngspice-45.2"
+            raise BackendUnavailable(f"{self.name} is not installed")
+        return self.release
 
     def run(self, netlist, *, workspace, timeout=60):
         self.runs.append(netlist)
-        return RawResult("ngspice", "ngspice-45.2", self.stdout, self.exit_status, netlist)
+        return RawResult(
+            self.name, self.release, self.stdout, self.exit_status, netlist,
+            outputs=dict(self.outputs),
+        )
 
 
 def canned(stdout: str = FILTER_OUTPUT, **kwargs):
@@ -510,7 +519,7 @@ def answered(tmp_path, system=Filter, stdout=FILTER_OUTPUT, **kwargs):
 
 
 def test_the_default_registry_holds_its_tools_in_routing_order():
-    assert default_tools().names() == ["ngspice"]
+    assert default_tools().names() == ["ngspice", "xyce"]
     assert isinstance(NGSPICE, Tool)
     assert isinstance(Spy("spy"), Tool)
 
@@ -519,9 +528,9 @@ def test_a_tool_registers_after_the_built_ins_or_before_a_tool_it_names():
     registry = default_tools()
     register_tool(Spy("late"), registry=registry)
     register_tool(Spy("early"), before="ngspice", registry=registry)
-    assert registry.names() == ["early", "ngspice", "late"]
+    assert registry.names() == ["early", "ngspice", "xyce", "late"]
     register_tool(Spy("late", level=Level.EXTERNAL), registry=registry)
-    assert registry.names() == ["early", "ngspice", "late"]
+    assert registry.names() == ["early", "ngspice", "xyce", "late"]
     assert registry.get("late").level is Level.EXTERNAL
 
 
@@ -611,9 +620,16 @@ def test_a_question_naming_a_tool_routes_only_to_that_tool():
     class Named(Filter):
         by_simulation = corner_question(tool="xyce")
 
+    class Unknown(Filter):
+        by_simulation = corner_question(tool="spectre")
+
     snapshot = build(Named).snapshot
     routed = route(snapshot, questions(snapshot)[0])
-    assert not routed.routed and "xyce" in routed.reason
+    assert (routed.level, routed.tool) == (Level.CIRCUIT, "xyce")
+
+    snapshot = build(Unknown).snapshot
+    routed = route(snapshot, questions(snapshot)[0])
+    assert not routed.routed and "spectre" in routed.reason
 
 
 def test_method_routing_is_extended_by_registering_a_method(monkeypatch):
@@ -853,7 +869,7 @@ def test_a_peak_to_peak_lowers_to_a_measurement_between_node_and_return():
     measure = DeckMeasure(
         "fang_m0", "peak_to_peak", "5", "4", after=Decimal("0.001"), until=Decimal("0.0012")
     )
-    lines = NgspiceDialect().control(Transient(stop="1.2ms", step="10ns"), [measure])
+    lines = NgspiceDialect().analysis_lines(Transient(stop="1.2ms", step="10ns"), [measure])
     assert lines == [
         ".control",
         "tran 10ns 1.2ms",
@@ -862,7 +878,7 @@ def test_a_peak_to_peak_lowers_to_a_measurement_between_node_and_return():
         ".endc",
     ]
     held = DeckMeasure("fang_m0", "value_at", "5")
-    assert NgspiceDialect().control(OperatingPoint(), [held])[2:4] == [
+    assert NgspiceDialect().analysis_lines(OperatingPoint(), [held])[2:4] == [
         "let fang_m0 = v(5)", "print fang_m0",
     ]
 
@@ -974,6 +990,114 @@ def test_the_installed_ngspice_measures_the_corner_and_fails_the_floor(tmp_path)
     assert raw.version.startswith("ngspice")
     assert Decimal("1580") < corner.quantity.value < Decimal("1600")
     assert floor.quantity is None
+
+
+# -- Xyce ----------------------------------------------------------------------
+
+#: A measure file in the form the Xyce Reference Guide documents for `.MEASURE`
+#: output: one `NAME = value` line per measure, `FAILED` for one that could not
+#: be taken. Xyce is not installed where this was written, so it is written from
+#: the guide rather than captured from a run.
+XYCE_MEASURE_FILE = """FANG_M0 = 1.591550e+03
+FANG_M1 = FAILED
+"""
+
+
+def xyce(**kwargs):
+    backend = CannedBackend(
+        "", name="xyce", release="Xyce Release 7.8",
+        outputs={"deck.cir.ma0": XYCE_MEASURE_FILE}, **kwargs,
+    )
+    tool = SpiceTool("xyce", XyceDialect(), backend)
+    return tool, ToolRegistry((NGSPICE, tool))
+
+
+def test_the_ngspice_and_xyce_decks_share_their_circuit():
+    """Devices, instances and bench are identical; only each simulator's own
+    options, analysis and measurement lines differ."""
+    class Loaded(Filter):
+        by_simulation = corner_question(loads={"outlet.line": 10 * kOhm})
+
+    result = build(Loaded)
+    question = questions(result.snapshot)[0]
+    spice = NGSPICE.prepare(result.snapshot, question, traits=result.traits).input.splitlines()
+    other = XYCE.prepare(result.snapshot, question, traits=result.traits).input.splitlines()
+
+    def circuit(lines):
+        return lines[: next(i for i, line in enumerate(lines) if line.lower().startswith(".options"))]
+
+    assert circuit(spice) == circuit(other)
+    assert any(line.startswith("Rfang_load0 ") for line in circuit(spice))
+    assert spice[len(circuit(spice)):] != other[len(circuit(other)):]
+    assert other[-1] == ".end"
+
+
+def test_the_xyce_dialect_writes_deck_level_measure_lines():
+    window = DeckMeasure(
+        "fang_m0", "peak_to_peak", "5", "4", after=Decimal("0.001"), until=Decimal("0.0012")
+    )
+    assert XyceDialect().analysis_lines(Transient(stop="1.2ms", step="10ns"), [window]) == [
+        ".tran 10ns 1.2ms",
+        ".MEASURE TRAN fang_m0 PP V(5,4) FROM=0.001 TO=0.0012",
+    ]
+    corner = DeckMeasure("fang_m0", "crossing", "1", level=Decimal("0.7071"), edge="falling")
+    sweep = ACSweep(variation="dec", points=100, start="10", stop="1meg")
+    assert XyceDialect().analysis_lines(sweep, [corner])[1] == (
+        ".MEASURE AC fang_m0 WHEN VM(1)=0.7071 FALL=1"
+    )
+    assert XyceDialect().options({"reltol": "1e-3", "abstol": "1e-12", "method": "gear", "vntol": "1e-6"}) == [
+        ".OPTIONS TIMEINT ABSTOL=1e-12 METHOD=gear RELTOL=1e-3",
+        "* vntol=1e-6 has no Xyce option and is not written",
+    ]
+    with pytest.raises(SimulationError, match="operating_point"):
+        XyceDialect().analysis_lines(OperatingPoint(), [DeckMeasure("fang_m0", "value_at", "5")])
+
+
+def test_the_xyce_measure_file_is_read_into_decimals_and_nothing_else():
+    slots = [DeckMeasure(f"fang_m{i}", "crossing", "") for i in range(3)]
+    found = XyceDialect().parse("", slots, outputs={"deck.cir.ma0": XYCE_MEASURE_FILE})
+    assert found["fang_m0"] == Decimal("1591.550")
+    assert found["fang_m1"] == "Xyce reported the measure as failed"
+    assert found["fang_m2"] == "Xyce's measure file does not report it"
+    # What Xyce prints is not where it reports measures.
+    printed = XyceDialect().parse("FANG_M0 = 2", slots[:1], outputs={})
+    assert printed["fang_m0"] == "Xyce's measure file does not report it"
+
+
+def test_a_xyce_run_is_read_into_measurements_with_its_version(tmp_path):
+    result = build(Floored)
+    tool, _ = xyce()
+    question = questions(result.snapshot)[0]
+    job = tool.prepare(result.snapshot, question, traits=result.traits)
+    corner, floor = tool.read(job, tool.run(job, workspace=tmp_path))
+    assert corner.quantity == Quantity.scalar("1591.55", "Hz")
+    assert (corner.tool, corner.version) == ("xyce", "Xyce Release 7.8")
+    assert floor.quantity is None and "failed" in floor.reason
+
+
+def test_xyce_reports_unsupported_by_name_where_it_is_absent(tmp_path):
+    class Named(Filter):
+        by_simulation = corner_question(tool="xyce")
+
+    result, graph = graph_of(Named)
+    absent = SpiceTool("xyce", XyceDialect(), XyceBackend(executable="definitely-not-xyce"))
+    outcome = answer(
+        graph, questions(graph.head)[0], traits=result.traits,
+        tools=ToolRegistry((NGSPICE, absent)), workspace=tmp_path,
+    )
+    assert outcome.status == UNSUPPORTED
+    assert "xyce is not installed" in outcome.message
+    with pytest.raises(BackendUnavailable, match="definitely-not-xyce"):
+        absent.backend.run("* deck", workspace=tmp_path)
+    assert not absent.covers(replace_bench(questions(graph.head)[0], "operating_point"))
+
+
+def replace_bench(question, kind):
+    """The same question over another kind of analysis."""
+    from dataclasses import replace
+
+    bench = dict(question.data["bench"], analysis={"kind": kind, "probes": []})
+    return replace(question, data={**question.data, "bench": bench})
 
 
 # ==========================================================================

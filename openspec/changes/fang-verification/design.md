@@ -488,6 +488,20 @@ peak-to-peak would measure it rather than the ripple. The rail header is
 abstracted beside the input parts, because a connector has no SPICE device and
 the load is applied at its surface. `ripple` is declared in mV.
 
+**Xyce** is the second dialect on the same seam, `XyceDialect` with
+`XyceBackend`, registered after ngspice; it answers a question that names it
+(`tool="xyce"`) or one ngspice does not cover, and covers transient and AC
+questions, not operating points. Its deck is the ngspice deck up to the solver
+options: the options are each simulator's own form -- Xyce's tolerances and
+integration method are `TIMEINT` options, and `vntol`, which has no Xyce
+counterpart, is named in a comment -- so "only the analysis and measurement
+conventions differ" counts the options among those conventions. An AC measure
+reads `VM`. Xyce is not installed here, so its lowering and its measure-file
+reader are written from the Xyce Reference Guide and tested on preparation and
+on a measure file written in the guide's documented form, not one captured from
+a run; `RawResult` gains `outputs` so a backend can return the files a run
+wrote. The first run on a machine with Xyce is the check this cannot make.
+
 **Infinity.** A quantity bound may be infinite; it serializes as `Infinity`,
 which `Decimal` reads back, and compares under interval semantics. A NaN is
 refused.
