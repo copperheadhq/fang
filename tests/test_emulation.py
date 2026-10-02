@@ -714,3 +714,70 @@ def test_emulate_prints_what_the_run_measured(capsys):
     assert _cli("emulate", str(ROOT / "examples" / "sensor_node" / "sensor_node.py")) == 0
     printed = capsys.readouterr().out
     assert "first_read = 0.0400 s" in printed and "fast_blinks = 5" in printed
+
+
+def test_the_evidence_names_every_file_the_run_is_given():
+    from fang.emulation import RENODE
+
+    result = _elaborate(SENSOR_NODE.SensorNode)
+    job = RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
+    named = dict(entry.split(" ") for entry in job.extra["bundle"].split(", "))
+    assert set(named) == set(job.files)
+    assert all(digest.startswith("sha256:") for digest in named.values())
+
+
+def test_an_emulator_of_an_unchecked_version_reports_unsupported():
+    from fang.emulation import RenodeTool
+    from fang.renode import RenodeBackend
+    from fang.verification import ToolUnavailable
+
+    class Newer(RenodeBackend):
+        def available(self):
+            return True
+
+        def identify(self):
+            return "1.18.0", "1.18.0+20270101gitdeadbeef"
+
+    tool = RenodeTool(backend=Newer())
+    assert not tool.available()
+    with pytest.raises(ToolUnavailable, match="1.18.0"):
+        tool.version()
+
+
+def test_a_missing_emulator_is_reported_unsupported_through_verify(tmp_path):
+    from fang.emulation import RenodeTool
+    from fang.renode import RenodeBackend
+    from fang.verification import ToolRegistry
+
+    result = _elaborate(SENSOR_NODE.SensorNode)
+    graph = KernelGraph(result.snapshot, checks=DEFAULT_CHECKS)
+    tools = ToolRegistry((RenodeTool(backend=RenodeBackend(executable="renode-is-not-here")),))
+    outcome = answer(graph, _question(graph.head, "startup"), traits=result.traits, tools=tools, workspace=tmp_path)
+    assert outcome.status == "unsupported" and "renode" in outcome.message
+    assert graph.head.hash == result.snapshot.hash
+
+
+def test_a_pin_the_platform_model_does_not_map_refuses_the_plan(monkeypatch):
+    from fang.emulation import EmulationError, compile_plan, descriptor
+
+    result, paths = _board()
+    platform = descriptor("fang:stm32f401re")
+    pins = {k: v for k, v in platform.document["pins"].items() if k != "PB8"}
+    monkeypatch.setitem(platform.document, "pins", pins)
+    with pytest.raises(EmulationError, match="PB8") as refused:
+        compile_plan(result.snapshot, _Question(_startup_data(paths)), traits=result.traits)
+    assert refused.value.code == "pin"
+
+
+def test_rebuilding_the_firmware_leaves_the_snapshot_byte_identical(tmp_path):
+    import shutil as _shutil
+
+    from fang.cli import load_system
+
+    copy = tmp_path / "sensor_node"
+    _shutil.copytree(ROOT / "examples" / "sensor_node", copy, ignore=_shutil.ignore_patterns("out"))
+    before = _elaborate(load_system(copy / "sensor_node.py")).snapshot
+    firmware = copy / "firmware" / "elf" / "sensor_node.elf"
+    firmware.write_bytes(firmware.read_bytes() + b"\0")
+    after = _elaborate(load_system(copy / "sensor_node.py")).snapshot
+    assert after.hash == before.hash

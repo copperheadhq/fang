@@ -1582,6 +1582,10 @@ class RenodeTool:
         }
         if reports:
             extra["firmware_reports"] = ", ".join(reports)
+        # Every file the run is given, by its digest, as the manifest lists them.
+        extra["bundle"] = ", ".join(
+            f"{name} sha256:{hashlib.sha256(content).hexdigest()}" for name, content in sorted(files.items())
+        )
         confidence = min(
             (QUALIFICATION_CONFIDENCE.get(m["qualification"], Decimal("0.5")) for m in plan.models),
             default=Decimal(1),

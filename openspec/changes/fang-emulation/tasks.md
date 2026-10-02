@@ -42,130 +42,131 @@ and recorded files the later tests read — each reviewed again as it lands.
 
 ## 2. Bindings and descriptors
 
-- [ ] 2.1 Add the `EmulationModel` (source) and `Firmware` (path, target) traits
+- [x] 2.1 Add the `EmulationModel` (source) and `Firmware` (path, target) traits
       in `fang/emulation.py`; verify they register and enumerate like
       `Simulatable`, that `Firmware` carries no digest, and that
       rebuilding the bound file leaves the snapshot byte-identical.
-- [ ] 2.2 Add the descriptor schema and registry in `fang/emulation.py`, loading
+- [x] 2.2 Add the descriptor schema and registry in `fang/emulation.py`, loading
       `fang/renode/models/*.json` as package data; verify a `source` with no
       descriptor is refused naming the part and the descriptor.
-- [ ] 2.3 Write the `fang:stm32f401re` platform descriptor — the platform file,
+- [x] 2.3 Write the `fang:stm32f401re` platform descriptor — the platform file,
       the core clock assumed, the port and pin mapping, the GPIO register
       addresses, what it does not model — and the `renode:Sensors.HS3001`
       peripheral descriptor — its inputs with units, the absent-device fault,
       its events, its provenance — both at *tested in emulation* once group 1
       passes; verify each loads and every unmodelled item becomes a coverage
       gap.
-- [ ] 2.4 Allocate the `SIM` codes named in design.md after `fang-verification`'s;
+- [x] 2.4 Allocate the `SIM` codes named in design.md after `fang-verification`'s;
       verify the registry tests pass and no code was reused.
 
 ## 3. The question
 
-- [ ] 3.1 Add the matches (`I2CRead`, `I2CWrite`, `Rises`, `Falls`,
+- [x] 3.1 Add the matches (`I2CRead`, `I2CWrite`, `Rises`, `Falls`,
       `UartLine`), the measures (`FirstAt`, `Count`, `Latency`, `UartValue`,
       `PinConfig`), `At`, `Absent` and the `Emulates` declaration, refusing a
       `result`; verify a declaration with a result fails with its `SIM` code.
-- [ ] 3.2 Elaborate an emulation question into a `Verification` with method
+- [x] 3.2 Elaborate an emulation question into a `Verification` with method
       `emulation`, result `UNKNOWN` and `extensions["question"]`, every surface
       resolved at elaboration time; verify two elaborations are byte-identical.
-- [ ] 3.3 Route method `emulation` to the behavioural level and the `renode`
+- [x] 3.3 Route method `emulation` to the behavioural level and the `renode`
       tool in the spine's registry; verify an undecided question routes there
       and an already-decided one answers at the equation level.
 
 ## 4. The plan
 
-- [ ] 4.1 Compile the target and scope: the platform model, the firmware (the
+- [x] 4.1 Compile the target and scope: the platform model, the firmware (the
       question's own, else the binding), and every component sharing a net with
       a touched pin, each modelled or abstracted; verify a component with
       neither is refused by name and each abstraction is a coverage gap.
-- [ ] 4.2 Resolve each bus in scope from the port's `peripheral`, the lowered
+- [x] 4.2 Resolve each bus in scope from the port's `peripheral`, the lowered
       connections' selectors, the interface's open-drain signals and
       `resolve_address`; verify the demo's plan names I2C1, the chosen pins with
       AF4, open drain on both, and 0x44.
-- [ ] 4.3 Resolve observation points through the pin assignment and the
+- [x] 4.3 Resolve observation points through the pin assignment and the
       platform descriptor, refusing a pin the descriptor does not map; verify
       `Rises("mcu.status")` resolves to port A pin 5 and an unmapped pin is
       refused.
-- [ ] 4.4 Check stimuli and faults against the descriptor, and require
+- [x] 4.4 Check stimuli and faults against the descriptor, and require
       `run_until`; verify a wrong-dimension stimulus, an unsupported fault and a
       missing duration are each refused by name.
-- [ ] 4.5 Write the plan as canonical `fang.emulation/v1` JSON identified by its
+- [x] 4.5 Write the plan as canonical `fang.emulation/v1` JSON identified by its
       own hash; verify two compilations are byte-identical and that the plan
       hash does not depend on the checkout's path.
 
 ## 5. The lowering
 
-- [ ] 5.1 Ship `platforms/stm32f401re.repl` and `probes/*.cs` as package data
+- [x] 5.1 Ship `platforms/stm32f401re.repl` and `probes/*.cs` as package data
       from group 1, with Renode's notice; verify they install with the package
       and that `MANIFEST.in` and `pyproject.toml` carry them.
-- [ ] 5.2 Lower a plan to `platform.repl` and `run.resc` — seed first, the
+- [x] 5.2 Lower a plan to `platform.repl` and `run.resc` — seed first, the
       stimulus segments in decimal seconds, the probes, the register snapshot,
       `quit` — and `manifest.json` with every digest; verify against the golden
       files of 1.9 byte for byte, and that lowering twice is byte-identical.
-- [ ] 5.3 Verify a stimulus at 100 ms is written as `0.1`, and that a surface or
+- [x] 5.3 Verify a stimulus at 100 ms is written as `0.1`, and that a surface or
       string carrying monitor syntax is refused at the plan or never reaches the
       script.
 
 ## 6. Events and measures
 
-- [ ] 6.1 Read `events.jsonl` into typed events, converting integer
+- [x] 6.1 Read `events.jsonl` into typed events, converting integer
       nanoseconds to `Decimal` seconds; verify against the recorded fixtures.
-- [ ] 6.2 Implement the five measures over events; verify each against the
+- [x] 6.2 Implement the five measures over events; verify each against the
       startup fixture.
-- [ ] 6.3 Measure an absent event in a completed run as
+- [x] 6.3 Measure an absent event in a completed run as
       `Quantity.range(run_end, Infinity)`; verify it serializes canonically,
       that `first_read <= 200 ms` fails after a two-second run and stays
       undecided after a 100 ms one, and that a missing `UartValue` line gives no
       value.
-- [ ] 6.4 Produce no measurement from a run that ended `timeout` or `crashed`,
+- [x] 6.4 Produce no measurement from a run that ended `timeout` or `crashed`,
       and withdraw every measure over a model that warned, naming the warning on
       the evidence; verify both against crafted event records.
-- [ ] 6.5 Compare `register.snapshot` events with the board's required mode,
+- [x] 6.5 Compare `register.snapshot` events with the board's required mode,
       selector and output type in `PinConfig`; verify the startup fixture
       measures zero and the push-pull fixture measures two.
 
 ## 7. The backend and the tool
 
-- [ ] 7.1 Add `RenodeBackend`: `available`, `version` checked against the
+- [x] 7.1 Add `RenodeBackend`: `available`, `version` checked against the
       supported set, and `run` on a temporary copy, without a shell, in its own
       process group, killing the group at the wall-clock limit and keeping the
       partial events; verify unsupported is reported by name when Renode is
       absent or its version is unchecked, and, where Renode is installed, that a
       hung run leaves no process behind.
-- [ ] 7.2 Add the `renode` tool implementing the spine's protocol — `covers`,
+- [x] 7.2 Add the `renode` tool implementing the spine's protocol — `covers`,
       `available`, `version`, `prepare` (plan and bundle), `run`, `read` — and
       register it at the behavioural level; verify `prepare` is byte-identical
       twice and `read` produces nothing the events did not contain.
-- [ ] 7.3 Record on each run's evidence the Renode version and build, the
+- [x] 7.3 Record on each run's evidence the Renode version and build, the
       firmware digest, the plan hash, the seed, every bundle digest, the
       assumptions and the coverage gaps, and that the run was local; verify the
       record.
-- [ ] 7.4 Report a verification stale in `fang verify` when its evidence names a
+- [x] 7.4 Report a verification stale in `fang verify` when its evidence names a
       firmware digest other than the bound file's current one; verify by
       rebuilding a fixture file.
 
 ## 8. The command
 
-- [ ] 8.1 Add `fang emulate` and `--bundle-only`; verify the bundle is written
+- [x] 8.1 Add `fang emulate` and `--bundle-only`; verify the bundle is written
       without Renode, measures are printed with it, and no workspace changes.
 
 ## 9. The demo
 
-- [ ] 9.1 Commit the firmware source, Makefile, ELFs and toolchain record from
+- [x] 9.1 Commit the firmware source, Makefile, ELFs and toolchain record from
       group 1 under `examples/sensor_node/firmware/`, and add the traits and the
       two questions to the program with their parameters and constraints;
       update its README.
-- [ ] 9.2 Teach `examples/regenerate.py` an `EMULATED` set writing
-      `out/renode/` (plan, platform description, script) everywhere and
-      `events.jsonl` and `verification.txt` where Renode is installed, and teach
-      `tests/test_examples.py` to skip the latter two by name without it and to
-      normalize the Renode build line; verify the examples suite passes with and
-      without Renode on the path.
-- [ ] 9.3 Add `tests/test_emulation.py` covering every scenario of the delta
+- [x] 9.2 Teach `examples/regenerate.py` an `EMULATED` set writing
+      `out/renode/` (plan, platform description, script) everywhere, with
+      `verification.txt` written where Renode is installed by the spine's own
+      listing, which prints no tool version and is compared only where its tool
+      is installed; the event records live with the tests as fixtures rather
+      than in `out/`; verify the examples suite passes with and without Renode
+      on the path.
+- [x] 9.3 Add `tests/test_emulation.py` covering every scenario of the delta
       spec, the three defective builds and the PA6 board variant each failing
       on the measure design.md names, and a ten-run determinism test; verify it
       passes where Renode is installed and skips by name where it is not.
-- [ ] 9.4 Add `test_at_f1_*` and `test_at_f2_*` to `tests/test_acceptance.py`;
+- [x] 9.4 Add `test_at_f1_*` and `test_at_f2_*` to `tests/test_acceptance.py`;
       verify both pass with Renode installed and skip by name without it.
 
 ## 10. Documents

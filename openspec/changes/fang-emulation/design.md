@@ -355,11 +355,14 @@ the wrong-address build fails `first_read`; the push-pull build fails
 write only to the pin the firmware configured; the no-timeout build fails the
 sensor-missing question.
 
-The example's `out/renode/` carries the plan, the platform description and the
-script, regenerated and compared everywhere; `events.jsonl` and
-`verification.txt` are regenerated and compared where Renode is installed and
-skipped by name where it is not, with the Renode build line normalized as the
-compiler version is.
+The example's `out/renode/` carries each question's plan, platform
+description and script, regenerated and compared everywhere, because lowering
+needs no emulator. Its `verification.txt` is the spine's listing of what
+`fang verify` found, written where Renode is installed and compared only
+there; it prints no tool version, so nothing machine-specific reaches it. The
+event records are not shipped in `out/`: a reader learns what was measured from
+`verification.txt`, and the recorded events live with the tests as fixtures,
+where the measures are tested against them without Renode.
 
 ### Where copperhead takes over
 
