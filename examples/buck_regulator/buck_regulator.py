@@ -141,6 +141,11 @@ class Rail3V3(System):
         document="SRC-DS-TPS62130",
         locator="section 9.2.2.1, inductor selection",
     )
+    enable_input = Cites(
+        "EN must be set externally High or Low; High starts the converter, Low shuts it down",
+        document="SRC-DS-TPS62130",
+        locator="section 8.3.1, enable / shutdown (EN), page 9",
+    )
 
     # -- the two numbers that were computed, and from what ------------------
     inductor_value = Calculates(
@@ -264,6 +269,12 @@ class Rail3V3(System):
 
         self.controller.vin.vcc >> self.input_bulk.p1
         self.controller.vin.gnd >> self.input_bulk.p2
+
+        # The rail is always on, and EN may not float: it is tied to the
+        # input net, as the datasheet's typical application ties it (figure
+        # 9-1, page 13), which its VIN + 0.3 V maximum allows. It lands on the
+        # input capacitor's pin, since a logic input is no power surface.
+        self.controller.enable >> self.input_bulk.p1
 
         # The switching node: the one net on this board whose loop area matters
         # more than its schematic.
