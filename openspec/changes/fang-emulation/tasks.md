@@ -210,3 +210,6 @@ and recorded files the later tests read — each reviewed again as it lands.
       descriptor; verify a sensor warning the platform expects withdraws the
       sensor's measures, and a bus warning the sensor expects withdraws the
       bus's; regenerate `sensor_node`'s plans.
+- [x] 11.12 Refuse a device address that is no whole number under SIM-0016,
+      naming the device and the address, rather than truncating it; verify
+      with the sensor at `72.5 * addr`.

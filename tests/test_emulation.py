@@ -1310,6 +1310,27 @@ def test_a_model_naming_no_shipped_descriptor_refuses_the_plan_naming_the_part(p
     assert part in str(refused.value) and "renode:Sensors.Generic" in str(refused.value)
 
 
+def test_an_address_that_is_no_whole_number_refuses_the_plan():
+    # 72.5 was made 72 by int(), so Renode answered at an address the graph
+    # does not hold.
+    from fang.emulation import RENODE
+    from fang.interfaces import I2CPort
+    from fang.lang import V, kHz, kOhm
+
+    class HalfAddressed(SENSOR_NODE.HS3001):
+        i2c = I2CPort(address=72.5 * SENSOR_NODE.addr, voltage=3.3 * V, bit_rate=400 * kHz,
+                      pull_up_resistance=2.2 * kOhm, pull_up_supply=3.3 * V)
+
+    class Board(SENSOR_NODE.SensorNode):
+        env = HalfAddressed(package="LGA-6")
+
+    result = _elaborate(Board)
+    with pytest.raises(NotRunnable) as refused:
+        RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
+    assert refused.value.code == "SIM-0016"
+    assert "system.env" in str(refused.value) and "72.5" in str(refused.value)
+
+
 def test_a_model_naming_no_shipped_descriptor_is_sim_0009_through_prepare():
     from fang.emulation import RENODE, EmulationModel
 

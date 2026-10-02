@@ -141,7 +141,7 @@ it names. A plan that cannot be resolved is refused, naming what is missing.
 | `SIM-0013` | A pin the platform model does not map; a port is never derived from a pin's name |
 | `SIM-0014` | No run duration, or one that is not positive, which `Emulates` already refuses where it is written |
 | `SIM-0015` | No firmware is bound, or it was built for another target |
-| `SIM-0016` | A bus device's controller or address cannot be resolved, or `PinConfig` names a port that is no bus |
+| `SIM-0016` | A bus device's controller or address cannot be resolved, its address is a range or no whole number, or `PinConfig` names a port that is no bus |
 
 The plan is canonical JSON, identified by the hash of its own canonical form,
 so two machines preparing the same question produce the same plan.

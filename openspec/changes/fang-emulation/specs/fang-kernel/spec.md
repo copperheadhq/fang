@@ -108,7 +108,8 @@ missing: the target component with its platform model and firmware; the scope,
 being the target and every component sharing a net with a pin the question
 touches, each carrying a peripheral model or listed as abstracted; each bus in
 scope with its controller instance, its chosen pins and their selectors, the
-electrical requirements of its signals, and each device's address; each
+electrical requirements of its signals, and each device's address, a whole
+number the emulator is given as the graph holds it; each
 observation point, a signal with several loads being observed on its one pin;
 each stimulus and fault against its model's declarations, a stimulus setting an
 input to one value at a time within the run, on a device present in the run;
@@ -187,6 +188,13 @@ identified by the hash of its canonical form.
 
 - **WHEN** an edge is measured on a signal of the target that drives two loads
 - **THEN** the plan observes the one pin the signal lands on
+
+#### Scenario: An address that is no whole number is refused
+
+- **WHEN** a device on a bus in scope declares an address that is not a whole
+  number
+- **THEN** the plan is refused naming the device and the address, rather than
+  giving the emulator another address in its place
 
 #### Scenario: The plan carries the board's facts
 

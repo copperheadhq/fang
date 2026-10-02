@@ -1000,6 +1000,16 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
             low, high = address.quantity.interval()
             if low != high:
                 raise _refuse(f"the address of {_path(entities, component)} is a range", "address")
+            if Decimal(low) != Decimal(low).to_integral_value():
+                # Made whole, the emulator would put the device at an
+                # address the graph does not hold.
+                raise _refuse(
+                    f"the address of {_path(entities, component)} is "
+                    f"{format(Decimal(low).normalize(), 'f')}, not a whole number; a device "
+                    "answers on an integer address, and no other is given to the emulator "
+                    "in its place",
+                    "address",
+                )
             plan_devices.append(
                 PlanDevice(component, _probe_name(_path(entities, component)),
                            model.id, model.document["renode_type"], int(low), component in absent)
