@@ -179,8 +179,9 @@ than deleted** — add new ones via `_allocate` at the bottom of the relevant ar
 a decided one without a second way in. A question (`Simulates`, `Checks`, `Evaluates`, all on
 `QuestionDeclaration`) is a `Verification` entity whose result is `UNKNOWN`, carrying the
 canonical question in `extensions["question"]` with every surface resolved to pins at elaboration;
-a program cannot state its result. `route()` answers at the equation level when the constraints
-over the measured parameters are already decided, and otherwise picks the first registered tool at
+a program cannot state its result, nor give a measured parameter a value (`SIM-0002`). `route()`
+answers at the equation level only when every measured parameter holds a value and every constraint
+over them is decided, and otherwise picks the first registered tool at
 the level the method names (`METHOD_LEVELS`), installed or not, so a missing tool is reported
 unsupported rather than replaced. Tools sit behind the `Tool` protocol (`covers`, `available`,
 `version`, `prepare`, `run`, `read`, optionally `verdict`) and trade in a `Job` bundle, a `RawRun`
@@ -191,8 +192,14 @@ re-enter as one transaction (inferred `SetParameter`s sourced from the run's `Ev
 evidence with the measurement record, the verification replaced under its own identifier) and the
 gate's constraint check decides; a measured value that fails a hard constraint never reaches the
 head and is recorded as a `FAIL` by a second transaction that sets no parameter.
-`carry_measurements` keeps a measurement across re-elaboration, which `fang build`, `diff` and
-`verify` rely on. `fang verify` writes nothing without `--commit`.
+`carry_measurements` keeps a measurement across re-elaboration only while it is current, meaning
+preparing the question again gives the job hash its record names; the job covers bundle files and
+input digests (firmware, models) and never the snapshot or the installed tool version, so currency
+is the same on every machine. A run already recorded for the same job and version re-enters from its
+record through the gate instead of running. `fang verify` writes nothing without `--commit`, and
+`--commit` persists measurements only: it refuses a program whose design no longer matches the
+persisted records, which is `fang build`'s to persist. A run's bundle names a model by its relative
+path, or by `<digest12>/<path>` where two different files would share one.
 
 **The agent surface.** [fang/mcp.py](fang/mcp.py) serves the kernel over the Model Context Protocol,
 as `fang mcp`. It is two layers, and the split is load-bearing: everything above `build_server` is a

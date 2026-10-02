@@ -16,32 +16,46 @@ tracked separately and moves only when the serialized form changes.
   question beside the requirement it serves: the parameters it measures into,
   the measures that produce them, and for a circuit question the bench in full.
   Each elaborates to a `Verification` whose result is `UNKNOWN`, and none
-  accepts a result. `route()` answers at the equation level when the
-  constraints over the measured parameters are already decided and otherwise
-  picks the first registered tool at the level the method names; a missing
-  tool is reported unsupported, by name, and nothing stands in for it.
+  accepts a result; a program that gives a measured parameter a value is
+  refused (`SIM-0002`). `route()` answers at the equation level only when every
+  measured parameter holds a value and every constraint over them is decided,
+  and otherwise picks the first registered tool at the level the method names;
+  a missing tool is reported unsupported, by name, and nothing stands in for
+  it.
 - Measurements re-enter through the commit gate: each measured parameter set to
   an inferred value whose source is the run's `Evidence`, that evidence
   carrying the measurement record of RFC 3 version 1.5 Section 14, and the
   verification replaced under its own identifier with its result, level and
   tool. A measured value that fails a hard constraint never reaches the head;
   the failure is recorded as evidence and a `FAIL` verification instead.
-  Re-elaborating a program keeps what runs measured.
+  Re-elaborating a program keeps what runs measured while it is current, that
+  is while preparing the same question again gives the same job: a changed
+  circuit, model file or firmware drops the measurement and the question runs
+  again. A run already recorded for the same job and tool version is not run
+  again; its recorded measurements go back through the gate, so a relaxed or
+  tightened constraint is judged afresh. Every record says where it ran.
 - Four tools behind one protocol: ngspice (operating point, transient and AC,
   measured through a `.control` block), Xyce (the same circuit with `.MEASURE`
   lines, unsupported where not installed), KiCad's electrical rules check over
   the schematic fang draws, with exclusions declared and recorded with their
   reasons, and Touchstone models read in-tree for return loss through a
-  matching network, in closed form.
+  matching network, in closed form. Model and Touchstone files are named in a
+  run's bundle by their relative path, or by their content where two different
+  files share one; two models declaring one subcircuit, pins on different nets
+  reaching one model port (`SIM-0006`), an ERC report of another schema, and
+  matching parts that do not form the ladder a return loss names are refused
+  rather than run.
 - `fang verify`, which routes and runs every declared question and persists
-  the measurements only with `--commit`.
+  the measurements only with `--commit`, through the gate; `--commit` refuses a
+  program changed since its last build, which is `fang build`'s to persist.
 - `examples/rc_filter/` and `examples/antenna_match/`, and `verification.txt`
   among the outputs an example with a question ships. `buck_regulator/`'s
   hand-asserted `Verifies(..., result="PASS")` is now a question ngspice
   answers under full load, on an ideal power stage whose provenance is an
   assumption.
 - Diagnostic codes `SIM-0001` to `SIM-0008`, a `dB` unit, and the `GHz`, `nH`
-  and `dB` literals.
+  and `dB` literals. A decibel compares and converts only with decibels, and a
+  return loss measures only into a parameter declared in dB (`UNIT-0001`).
 
 - Six worked examples beyond the divider and the sensor board: `blinky/`, `equations/`,
   `i2c_bus/`, `usb_uart_bridge/`, `buck_regulator/`, and `servo_drive/`,
