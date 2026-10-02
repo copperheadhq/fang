@@ -223,3 +223,9 @@ change.
       `PeakToPeak`, `Average`, `Maximum` or `Minimum` is written, under
       SIM-0003 and in the words an emulation `Count` is refused in; verify a
       reversed, an empty and a reversed-across-units window for each.
+- [x] 12.2 Carry a current measurement that a hard constraint the program now
+      states fails as the failure RFC 12 section 12.9 records: the
+      verification FAIL with its evidence, the parameter without a value,
+      record for record what `failure_transaction` leaves; verify through the
+      CLI that a PASS whose constraint is tightened builds, reads FAIL with
+      the corner unknown, runs nothing again, and passes once relaxed.

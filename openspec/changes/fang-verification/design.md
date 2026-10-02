@@ -545,6 +545,18 @@ of its own the next time the question is asked. A program cannot state a measure
 assignment on a measured parameter fails elaboration with SIM-0002, the code a
 stated result gets, since the value would be the question's answer and would let
 the evaluator answer it with nothing run.
+A carried value is judged against the constraints the fresh elaboration states,
+as the gate's constraint check judges it, in identifier order with what is
+carried before it. One that a constraint tightened since now fails is not
+carried: its verification is carried with result FAIL and its evidence, and the
+parameter left without a value. That is what the failure-recording transaction
+leaves when the same run re-enters under the tightened constraint, record for
+record, so RFC 12 section 12.9's rule (a failing value never reaches the head,
+and the failure is recorded) holds for a rebuild too. Before, the carried value
+reached the design, `build`'s gate refused it, and `verify --commit` refused the
+edit, so the workspace could not move until the design changed; now `build`
+persists the edit and reports the failure, and a relaxed constraint lets the
+recorded run re-enter and pass with nothing run again.
 `reelaboration(head, elaborated)` is the transaction, empty for an unchanged
 program. `build`, `diff` and `verify` rebuild the head around the facts read
 back from the workspace's record stream (`MeasuredFacts.from_records`, with
