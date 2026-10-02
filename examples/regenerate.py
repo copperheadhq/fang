@@ -374,6 +374,21 @@ def verification_tools(result) -> set[str]:
     }
 
 
+def answerable(tool) -> bool:
+    """Whether a tool can answer here: installed, at a version it accepts.
+    An installed Renode of a version the lowering was not checked against
+    reports unsupported, and a listing written there would say only that."""
+    from fang.verification import ToolUnavailable
+
+    if not tool.available():
+        return False
+    try:
+        tool.version()
+    except ToolUnavailable:
+        return False
+    return True
+
+
 def _verification(result) -> str | None:
     """What `fang verify` finds, run twice: on the elaborated program, and on
     the head the first run's measurements were committed to.
@@ -489,12 +504,12 @@ def render(name: str, *, with_render: bool = True, with_draft: bool = True) -> d
 
 
 def _missing_tools(name: str) -> list[str]:
-    """The tools an example's questions route to that are not installed."""
+    """The tools an example's questions route to that cannot answer here."""
     from fang.verification import TOOLS
 
     result = elaborate(load_system(_program(name)), project_id=PROJECT)
     return sorted(
-        tool for tool in verification_tools(result) if not TOOLS.get(tool).available()
+        tool for tool in verification_tools(result) if not answerable(TOOLS.get(tool))
     )
 
 

@@ -778,9 +778,34 @@ def test_an_emulator_of_an_unchecked_version_reports_unsupported():
             return "1.18.0", "1.18.0+20270101gitdeadbeef"
 
     tool = RenodeTool(backend=Newer())
-    assert not tool.available()
-    with pytest.raises(ToolUnavailable, match="1.18.0"):
+    # Installed, so not reported missing; its version is what it is refused for.
+    assert tool.available()
+    with pytest.raises(ToolUnavailable, match="1.18.0.*1.17.0"):
         tool.version()
+
+
+def test_an_unchecked_version_is_reported_unsupported_by_version_through_verify(tmp_path):
+    # available() used to fold the version in, so `answer` said "renode is
+    # not installed" and never reached the version it was refused for.
+    from fang.emulation import RenodeTool
+    from fang.renode import RenodeBackend
+    from fang.verification import ToolRegistry
+
+    class Newer(RenodeBackend):
+        def available(self):
+            return True
+
+        def identify(self):
+            return "1.18.0", "1.18.0+20270101gitdeadbeef"
+
+    result = _elaborate(SENSOR_NODE.SensorNode)
+    graph = KernelGraph(result.snapshot, checks=DEFAULT_CHECKS)
+    tools = ToolRegistry((RenodeTool(backend=Newer()),))
+    outcome = answer(graph, _question(graph.head, "startup"), traits=result.traits, tools=tools, workspace=tmp_path)
+    assert outcome.status == "unsupported"
+    assert "1.18.0" in outcome.message and "1.17.0" in outcome.message
+    assert "not installed" not in outcome.message
+    assert graph.head.hash == result.snapshot.hash
 
 
 def test_a_missing_emulator_is_reported_unsupported_through_verify(tmp_path):
@@ -820,3 +845,430 @@ def test_rebuilding_the_firmware_leaves_the_snapshot_byte_identical(tmp_path):
     firmware.write_bytes(firmware.read_bytes() + b"\0")
     after = _elaborate(load_system(copy / "sensor_node.py")).snapshot
     assert after.hash == before.hash
+
+
+# -- what a plan refuses rather than measuring as nothing ------------------------
+
+
+def _with_measure(data, name, unit, measure):
+    """The startup question's data with one more measure."""
+    data["measures"] = [*data["measures"], {"name": name, "parameter": f"X.{name}", "unit": unit, "measure": measure}]
+    return data
+
+
+@pytest.mark.parametrize("surface", ["mcu.status", "mcu.usart2"])
+def test_a_pin_configuration_over_a_port_that_is_no_bus_is_refused(surface):
+    # It used to measure 0 having checked no pin, so `== 0` passed.
+    from fang.emulation import EmulationError, compile_plan
+
+    result, paths = _board()
+    data = _with_measure(_startup_data(paths), "elsewhere", "1",
+                         {"kind": "emulation.pin_config", "surface": surface})
+    with pytest.raises(EmulationError, match=surface.replace(".", r"\.")) as refused:
+        compile_plan(result.snapshot, _Question(data), traits=result.traits)
+    assert refused.value.code == "bus"
+
+
+def test_a_pin_configuration_over_an_i2c_port_with_nothing_on_it_is_refused():
+    from fang.emulation import RENODE, Emulates, PinConfig
+    from fang.lang import s
+
+    class Unwired(SENSOR_NODE.SensorNode):
+        startup = Emulates("sensor_ready", run_until=2 * s, measures={"mux_mismatches": PinConfig("mcu.i2c1")},
+                           abstracted=("series", "console"))
+        sensor_missing = None
+
+        def architecture(self):
+            self.header.dc >> self.mcu.power
+            self.header.dc >> self.env.power
+            self.mcu.usart2 >> self.console.uart
+            self.header.dc.gnd >> self.console.ground
+            self.mcu.status >> self.series.p1
+            self.series.p2 >> self.indicator.p1
+            self.indicator.p2 >> self.header.dc.gnd
+
+    result = _elaborate(Unwired)
+    with pytest.raises(NotRunnable) as refused:
+        RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
+    assert refused.value.code == "SIM-0016" and "mcu.i2c1" in str(refused.value)
+
+
+@pytest.mark.parametrize(
+    "match",
+    [
+        {"kind": "i2c.read", "surface": "env", "detail": {"register": 0}},
+        {"kind": "uart.line", "surface": "mcu.usart2", "detail": {"starts": "temp="}},
+    ],
+)
+def test_a_match_detail_no_measure_reads_is_refused(match):
+    # I2CRead("env", register=0) matched every read of the sensor, whatever
+    # register it named: the plan carried the detail and nothing read it.
+    from fang.emulation import EmulationError, compile_plan
+
+    result, paths = _board()
+    data = _with_measure(_startup_data(paths), "filtered", "1",
+                         {"kind": "emulation.count", "surface": match["surface"], "match": match})
+    detail = next(iter(match["detail"]))
+    with pytest.raises(EmulationError, match=detail) as refused:
+        compile_plan(result.snapshot, _Question(data), traits=result.traits)
+    assert refused.value.code == "measure"
+
+
+def test_the_details_a_measure_reads_still_compile():
+    from fang.emulation import compile_plan
+
+    result, paths = _board()
+    data = _with_measure(_startup_data(paths), "temps", "1", {
+        "kind": "emulation.count", "surface": "mcu.usart2",
+        "match": {"kind": "uart.line", "surface": "mcu.usart2", "detail": {"contains": "temp="}},
+    })
+    plan = compile_plan(result.snapshot, _Question(data), traits=result.traits)
+    assert plan.measures["temps"]["matches"][0]["detail"] == {"contains": "temp="}
+
+
+def test_a_reversed_count_window_is_refused_where_it_is_declared():
+    # (2 s, 1 s) counted nothing, and `== 0` passed over an empty window.
+    from fang.diagnostics import FangError
+    from fang.emulation import Count, Rises
+    from fang.lang import s
+
+    with pytest.raises(FangError) as refused:
+        Count(Rises("mcu.status"), within=(2 * s, 1 * s))
+    assert refused.value.diagnostic.code == "SIM-0003" and "2 s" in str(refused.value)
+    assert refused.value.diagnostic.location.file == __file__
+    with pytest.raises(FangError):
+        Count(Rises("mcu.status"), within=(1 * s, 1 * s))
+
+
+def test_a_count_window_bounded_by_anything_but_times_is_refused():
+    # (1 V, 2 V) was read as one second to two.
+    from fang.diagnostics import FangError
+    from fang.emulation import Count, Rises
+    from fang.lang import V, s
+
+    with pytest.raises(FangError) as refused:
+        Count(Rises("mcu.status"), within=(1 * V, 2 * V))
+    assert refused.value.diagnostic.code == "UNIT-0001" and "1 V" in str(refused.value)
+    with pytest.raises(FangError):
+        Count(Rises("mcu.status"), within=(1 * s, 2 * V))
+
+
+def test_a_reversed_window_in_a_question_is_refused_when_it_compiles():
+    from fang.emulation import EmulationError, compile_plan
+
+    result, paths = _board()
+    data = _startup_data(paths)
+    blinks = next(m for m in data["measures"] if m["name"] == "slow_blinks")
+    blinks["measure"]["within_ns"] = [2_000_000_000, 1_000_000_000]
+    with pytest.raises(EmulationError, match="slow_blinks") as refused:
+        compile_plan(result.snapshot, _Question(data), traits=result.traits)
+    assert refused.value.code == "measure"
+
+
+class _Crashes(RenodeBackend):
+    """A Renode that reports 1.17.0 and whose every run crashes at once: enough
+    for a run's evidence to be recorded, with no emulator installed."""
+
+    def available(self):
+        return True
+
+    def identify(self):
+        return "1.17.0", "1.17.0+stand-in"
+
+    def run(self, files, *, timeout=120):
+        from fang.renode import RenodeRun
+
+        return RenodeRun("1.17.0", "1.17.0+stand-in", 1, "crashed", b"", "", ())
+
+
+def _stand_in_tools(backend=None):
+    from fang.emulation import RenodeTool
+    from fang.verification import ToolRegistry
+
+    return ToolRegistry((RenodeTool(backend=backend or _Crashes()),))
+
+
+def test_staleness_resolves_the_firmware_where_the_run_does(tmp_path):
+    """A run reads the bound firmware relative to the program that declares
+    the part; staleness used to read it relative to the question's program,
+    so a question redeclared in another directory read as stale at once and
+    then missed a rebuild."""
+    import shutil as _shutil
+
+    from fang.cli import load_system
+    from fang.emulation import Emulates, stale
+
+    copy = tmp_path / "sensor_node"
+    _shutil.copytree(ROOT / "examples" / "sensor_node", copy, ignore=_shutil.ignore_patterns("out"))
+    board = load_system(copy / "sensor_node.py")
+    original = board.startup
+
+    class Elsewhere(board):          # declared here, in tests/, not beside the part
+        startup = Emulates(
+            "sensor_ready", run_until=original.run_until, stimuli=original.stimuli,
+            measures=original.measures, abstracted=original.abstracted,
+        )
+
+    result = _elaborate(Elsewhere)
+    graph = KernelGraph(result.snapshot, checks=DEFAULT_CHECKS)
+    question = _question(graph.head, "startup")
+    answer(graph, question, traits=result.traits, tools=_stand_in_tools(), workspace=tmp_path / "runs")
+    assert graph.head.entities[question.id].evidence
+    assert stale(graph.head) == ()
+
+    firmware = copy / "firmware" / "elf" / "sensor_node.elf"
+    firmware.write_bytes(firmware.read_bytes() + b"\0")
+    ((label, path, recorded, current),) = stale(graph.head)
+    assert label.endswith("startup") and path == "firmware/elf/sensor_node.elf"
+    assert current.startswith("sha256:") and current != recorded
+
+
+def test_a_signal_with_two_loads_is_observed_on_its_one_pin():
+    # Each port link listed PA5 again, so the plan refused the status signal
+    # as landing on 2 pins of the target.
+    from fang.emulation import RENODE, Emulates
+    from fang.lang import kOhm
+    from fang.parts import Resistor
+
+    original = SENSOR_NODE.SensorNode.startup
+
+    class TwoLoads(SENSOR_NODE.SensorNode):
+        probe_load = Resistor(resistance=10 * kOhm, package="R_0402")
+        startup = Emulates(
+            "sensor_ready", run_until=original.run_until, stimuli=original.stimuli,
+            measures=original.measures, abstracted=(*original.abstracted, "probe_load"),
+        )
+
+        def architecture(self):
+            super().architecture()
+            self.mcu.status >> self.probe_load.p1
+            self.probe_load.p2 >> self.header.dc.gnd
+
+    result = _elaborate(TwoLoads)
+    job = RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
+    import json as _json
+
+    (gpio,) = [o for o in _json.loads(job.files["plan.json"])["observations"] if o["kind"] == "gpio"]
+    assert (gpio["emulator"], gpio["index"]) == ("gpioPortA", 5)
+
+
+def test_a_read_of_a_device_a_fault_removes_is_refused():
+    # An absent device gets no probe, so a count of its reads was 0 and a
+    # first read was never, whatever the firmware did.
+    from fang.emulation import RENODE, Count, Emulates, I2CRead
+
+    original = SENSOR_NODE.SensorNode.sensor_missing
+
+    class CountsReads(SENSOR_NODE.SensorNode):
+        missing_reads = SENSOR_NODE.Parameter("", description="reads of the sensor while it is missing")
+        sensor_missing = Emulates(
+            "survives_missing_sensor", run_until=original.run_until, faults=original.faults,
+            measures={**original.measures, "missing_reads": Count(I2CRead("env"))},
+            abstracted=original.abstracted,
+        )
+
+    result = _elaborate(CountsReads)
+    with pytest.raises(NotRunnable) as refused:
+        RENODE.prepare(result.snapshot, _question(result.snapshot, "sensor_missing"), traits=result.traits)
+    assert refused.value.code == "SIM-0003"
+    assert "missing_reads" in str(refused.value) and "absent" in str(refused.value)
+
+
+def test_a_stimulus_on_a_device_a_fault_removes_is_refused():
+    from fang.emulation import EmulationError, compile_plan
+
+    result, paths = _board()
+    data = _startup_data(paths, faults=[{"kind": "absent", "surface": "env"}])
+    data["measures"] = [m for m in data["measures"] if m["name"] != "first_read"]
+    with pytest.raises(EmulationError, match="absent") as refused:
+        compile_plan(result.snapshot, _Question(data), traits=result.traits)
+    assert refused.value.code == "stimulus"
+
+
+def test_the_missing_sensor_question_measures_only_what_the_firmware_does():
+    result = _elaborate(SENSOR_NODE.SensorNode)
+    question = _question(result.snapshot, "sensor_missing")
+    assert [entry.name for entry in question.measures] == ["fast_blinks"]
+
+
+def test_emulate_reports_an_unchecked_version_and_runs_nothing(monkeypatch, capsys):
+    from fang.emulation import RENODE
+
+    class Newer(RenodeBackend):
+        def available(self):
+            return True
+
+        def identify(self):
+            return "1.18.0", "1.18.0+20270101gitdeadbeef"
+
+        def run(self, files, *, timeout=120):
+            raise AssertionError("nothing runs on an unchecked version")
+
+    monkeypatch.setattr(RENODE, "backend", Newer())
+    assert _cli("emulate", str(ROOT / "examples" / "sensor_node" / "sensor_node.py")) == 0
+    printed = capsys.readouterr().out
+    assert "unsupported: Renode 1.18.0 is installed" in printed
+
+
+def _spaced_tmpdir(monkeypatch, tmp_path):
+    """TMPDIR set to a path with a space in it, as tempfile reads it afresh."""
+    import tempfile
+
+    spaced = tmp_path / "with space"
+    spaced.mkdir()
+    monkeypatch.setenv("TMPDIR", str(spaced))
+    monkeypatch.setattr(tempfile, "tempdir", None)
+    return spaced
+
+
+def test_a_scratch_path_with_a_space_is_reported_before_anything_runs(monkeypatch, tmp_path):
+    # Renode's monitor splits `i $CWD/run.resc` at the space and the run
+    # crashed with no events; it is now refused by name before Renode starts.
+    from fang.renode import RenodeUnavailable
+
+    class Checked(RenodeBackend):
+        def available(self):
+            return True
+
+        def identify(self):
+            return "1.17.0", "1.17.0+stand-in"
+
+    def never(*args, **kwargs):
+        raise AssertionError("Renode was started")
+
+    _spaced_tmpdir(monkeypatch, tmp_path)
+    monkeypatch.setattr(subprocess, "Popen", never)
+    with pytest.raises(RenodeUnavailable, match="renode.*space"):
+        Checked().run(bundle(plan(), b"\0"), timeout=5)
+
+
+def test_a_scratch_path_with_a_space_is_reported_unsupported_through_verify(monkeypatch, tmp_path):
+    class Checked(RenodeBackend):
+        def available(self):
+            return True
+
+        def identify(self):
+            return "1.17.0", "1.17.0+stand-in"
+
+    result = _elaborate(SENSOR_NODE.SensorNode)
+    graph = KernelGraph(result.snapshot, checks=DEFAULT_CHECKS)
+    _spaced_tmpdir(monkeypatch, tmp_path)
+    outcome = answer(graph, _question(graph.head, "startup"), traits=result.traits,
+                     tools=_stand_in_tools(Checked()), workspace=tmp_path / "runs")
+    assert outcome.status == "unsupported" and "space" in outcome.message
+    assert graph.head.hash == result.snapshot.hash
+
+
+@pytest.mark.parametrize(
+    "quantity",
+    [
+        {"kind": "range", "unit": "degC", "min": "20", "max": "30"},
+        {"kind": "tolerance", "unit": "degC", "nominal": "25", "tolerance": {"kind": "relative", "value": "1"}},
+    ],
+)
+def test_a_stimulus_of_more_than_one_value_is_refused(quantity):
+    # The conversion's value was None, and the plan raised AttributeError.
+    from fang.emulation import EmulationError, compile_plan
+
+    result, paths = _board()
+    stimuli = [{"at": _scalar("0", "ms"), "surface": "env", "input": "temperature", "quantity": quantity}]
+    with pytest.raises(EmulationError, match="temperature") as refused:
+        compile_plan(result.snapshot, _Question(_startup_data(paths, stimuli=stimuli)), traits=result.traits)
+    assert refused.value.code == "stimulus"
+
+
+def test_a_ranged_stimulus_leaves_verify_standing(tmp_path):
+    # answer() catches only NotRunnable, so the AttributeError ended fang verify.
+    from fang.emulation import At, Emulates
+    from fang.units import Quantity
+    from fang.verification import NOT_RUNNABLE
+
+    original = SENSOR_NODE.SensorNode.startup
+
+    class Ranged(SENSOR_NODE.SensorNode):
+        startup = Emulates(
+            "sensor_ready", run_until=original.run_until,
+            stimuli=[At(0 * SENSOR_NODE.ms, "env.temperature", Quantity.range(20, 30, "degC"))],
+            measures=original.measures, abstracted=original.abstracted,
+        )
+
+    result = _elaborate(Ranged)
+    graph = KernelGraph(result.snapshot, checks=DEFAULT_CHECKS)
+    outcome = answer(graph, _question(graph.head, "startup"), traits=result.traits,
+                     tools=_stand_in_tools(), workspace=tmp_path)
+    assert outcome.status == NOT_RUNNABLE and "temperature" in outcome.message
+
+
+@pytest.mark.parametrize("at", [_scalar("3", "s"), _scalar("-1", "ms")])
+def test_a_stimulus_outside_the_run_is_refused_as_a_stimulus(at):
+    # One after the run's end was refused by the lowering, as SIM-0003 "a
+    # surface or part that resolves to no pins".
+    from fang.emulation import RENODE, At, Emulates
+    from fang.units import Quantity
+
+    original = SENSOR_NODE.SensorNode.startup
+
+    class Late(SENSOR_NODE.SensorNode):
+        startup = Emulates(
+            "sensor_ready", run_until=original.run_until,
+            stimuli=[At(Quantity.from_dict(at), "env.temperature", 25 * SENSOR_NODE.degC)],
+            measures=original.measures, abstracted=original.abstracted,
+        )
+
+    result = _elaborate(Late)
+    with pytest.raises(NotRunnable) as refused:
+        RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
+    assert refused.value.code == "SIM-0012" and "env.temperature" in str(refused.value)
+
+
+@pytest.mark.parametrize("part", ["system.env", "system.mcu"])
+def test_a_model_naming_no_shipped_descriptor_refuses_the_plan_naming_the_part(part):
+    from fang.emulation import EmulationError, EmulationModel, compile_plan
+
+    result, paths = _board()
+    result.traits.attach(paths[part], EmulationModel(source="renode:Sensors.Generic"))
+    with pytest.raises(EmulationError) as refused:
+        compile_plan(result.snapshot, _Question(_startup_data(paths)), traits=result.traits)
+    assert refused.value.code == "model"
+    assert part in str(refused.value) and "renode:Sensors.Generic" in str(refused.value)
+
+
+def test_a_model_naming_no_shipped_descriptor_is_sim_0009_through_prepare():
+    from fang.emulation import RENODE, EmulationModel
+
+    class Generic(SENSOR_NODE.SensorNode):
+        def __init__(self, **overrides):
+            super().__init__(**overrides)
+            self.env.add_trait(EmulationModel(source="renode:Sensors.Generic"))
+
+    result = _elaborate(Generic)
+    with pytest.raises(NotRunnable) as refused:
+        RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
+    assert refused.value.code == "SIM-0009" and "system.env" in str(refused.value)
+
+
+def test_a_device_probe_is_named_by_the_devices_whole_path():
+    # Only the last segment was kept, so a.env and b.env were both fang_env,
+    # and Renode refused the second as already declared.
+    import re as _re
+
+    from fang.emulation import _probe_name, compile_plan
+
+    result, paths = _board()
+    plan_ = compile_plan(result.snapshot, _Question(_startup_data(paths)), traits=result.traits)
+    assert plan_.device(paths["system.env"]).probe == "fang_system_env"
+    assert _probe_name("system.a.env") != _probe_name("system.b.env")
+    assert _re.fullmatch(r"fang_[A-Za-z0-9_]+", _probe_name("system.a.env"))
+
+
+def test_two_probes_of_one_name_are_refused_by_the_lowering():
+    p = plan()
+    (bus,) = p.buses
+    twin = PlanDevice("env2", "env", "renode:Sensors.HS3001", "Antmicro.Renode.Peripherals.Sensors.HS3001", 0x45)
+    doubled = EmulationPlan(**{**p.__dict__, "buses": (PlanBus(bus.port, bus.instance, bus.emulator, bus.pins,
+                                                               (*bus.devices, twin)),)})
+    with pytest.raises(LoweringError, match="'env'"):
+        platform_description(doubled)
+    clash = PlanObservation("i2c1Warnings", "gpio", "mcu.status", "mcu.status", "gpioPortA", 5)
+    with pytest.raises(LoweringError, match="i2c1Warnings"):
+        platform_description(EmulationPlan(**{**p.__dict__, "observations": (clash,)}))

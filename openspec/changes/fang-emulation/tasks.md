@@ -177,3 +177,28 @@ and recorded files the later tests read — each reviewed again as it lands.
       and `openspec/ROADMAP.md`; verify the quoted counts match the tree.
 - [x] 10.3 Quote the requirement names in each new module's docstring; verify
       `openspec validate fang-emulation --strict` and the whole suite pass.
+
+## 11. What review found
+
+- [x] 11.1 Refuse `PinConfig` over a port that is no bus in scope, or a bus
+      with no pins of the target, under SIM-0016; verify the status signal,
+      USART2 and an unconnected I2C1 are each refused.
+- [x] 11.2 Refuse a match detail no measure filters on, the `I2CRead`
+      register among them; verify against the plan, and that `contains` and
+      `data` still compile.
+- [x] 11.3 Refuse a `Count` window that is empty or not bounded by times,
+      where it is declared and again when the plan compiles.
+- [x] 11.4 Resolve a firmware path for staleness exactly as the run does,
+      recording the part the firmware ran on; verify with a question
+      redeclared in another directory, before and after a rebuild.
+- [x] 11.5 Observe a signal with several loads on its one pin.
+- [x] 11.6 Refuse a bus match over a device a fault removes, and a stimulus
+      on one; drop `missing_reads` from `sensor_node` and regenerate its
+      outputs.
+- [x] 11.7 Report a temporary directory whose path has a space as
+      unsupported before Renode starts; verify with `TMPDIR` set to one.
+- [x] 11.8 Refuse a ranged stimulus and one outside the run under SIM-0012;
+      refuse a model naming no shipped descriptor naming the part; name each
+      probe by the whole path and refuse two of one name in the lowering.
+- [x] 11.9 Report an installed Renode of an unchecked version by its version,
+      not as missing, through `fang verify` and `fang emulate`.

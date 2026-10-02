@@ -27,8 +27,9 @@ for one demo board before any second part is supported.
 
 ## What Changes
 
-- A firmware binding: a trait naming an ELF relative to the project root and
-  the target it was built for. Its digest is recorded on each run's evidence,
+- A firmware binding: a trait naming an ELF relative to the program that
+  declares the part, as a SPICE model's path is, and the target it was built
+  for. Its digest is recorded on each run's evidence,
   never in the snapshot, and a verification whose evidence names a different
   digest from the file's current one is reported stale.
 - Emulation models: `EmulationModel` traits naming a

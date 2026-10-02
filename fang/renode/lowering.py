@@ -82,8 +82,22 @@ def _package_text(*parts: str) -> str:
     return resources.files("fang.renode").joinpath(*parts).read_text(encoding="utf-8")
 
 
+def _distinct_probes(plan: "EmulationPlan") -> None:
+    """Refuse two probes of one name: Renode would refuse the second as
+    already declared, after the run had started."""
+    names = [device.probe for bus in plan.buses for device in bus.devices if not device.absent]
+    names += [watch.probe for watch in plan.watched]
+    names += [observation.probe for observation in plan.observations]
+    seen: set[str] = set()
+    for name in names:
+        if name in seen:
+            raise LoweringError(f"two probes are named {name!r}; each probe needs a name of its own")
+        seen.add(name)
+
+
 def platform_description(plan: "EmulationPlan") -> str:
     """The board overlay: the shipped platform, then each probe the plan names."""
+    _distinct_probes(plan)
     recorder_port = _identifier(plan.recorder_port, "the recorder's port")
     lines = [f'using "{plan.platform_file.rsplit("/", 1)[-1]}"', ""]
     lines += [f"recorder: Fang.EventRecorder @ {recorder_port}", ""]

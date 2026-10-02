@@ -3,7 +3,6 @@ On the elaborated program:
 system.sensor_missing (VER-607ca20f775b)
   behavioural level, renode
   fast_blinks = 5
-  missing_reads = 0
   assumption: the core runs at 16000000 Hz, as the platform model assumes
   coverage gap: I2C DMA
   coverage gap: I2C acknowledgement bits beyond an absent target

@@ -4,8 +4,7 @@ UNDECIDED constraint: declared on BLK-42978eb8675a
 UNDECIDED constraint: declared on BLK-42978eb8675a
 UNDECIDED constraint: declared on BLK-42978eb8675a
 UNDECIDED constraint: declared on BLK-42978eb8675a
-UNDECIDED constraint: declared on BLK-42978eb8675a
 UNDECIDED interface_compatibility: logic high margin is undecided on i2c: voh_min unknown
 UNDECIDED interface_compatibility: logic high margin is undecided on uart: vih_min unknown
 UNDECIDED interface_compatibility: logic high margin is undecided on uart: voh_min unknown
-18 checks, 0 failed, 10 undecided
+17 checks, 0 failed, 9 undecided

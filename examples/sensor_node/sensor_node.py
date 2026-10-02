@@ -273,7 +273,7 @@ class SensorNode(System):
     )
     survives_missing_sensor = Requires(
         "With the HS3001 missing the firmware keeps running and blinks the "
-        "status LED fast, and makes no read",
+        "status LED fast",
         validation="emulation",
     )
 
@@ -282,7 +282,6 @@ class SensorNode(System):
     slow_blinks = Parameter("", description="status LED rises between 1 s and 2 s, sensor present")
     mux_mismatches = Parameter("", description="I2C1 pins configured otherwise than the board requires")
     fast_blinks = Parameter("", description="status LED rises between 1 s and 2 s, sensor missing")
-    missing_reads = Parameter("", description="reads of the sensor while it is missing")
 
     # The sensor is at 25 degC from reset. The pull-ups, the LED's resistor and
     # the console header share nets with the pins the question touches and
@@ -303,10 +302,7 @@ class SensorNode(System):
         "survives_missing_sensor",
         run_until=2 * s,
         faults=[Absent("env")],
-        measures={
-            "fast_blinks": Count(Rises("mcu.status"), within=(1 * s, 2 * s)),
-            "missing_reads": Count(I2CRead("env")),
-        },
+        measures={"fast_blinks": Count(Rises("mcu.status"), within=(1 * s, 2 * s))},
         abstracted=("scl_pullup", "sda_pullup", "series"),
     )
 
@@ -386,4 +382,3 @@ class SensorNode(System):
         require(self.slow_blinks == 1 * count)
         require(self.mux_mismatches == 0 * count)
         require(self.fast_blinks >= 4 * count)
-        require(self.missing_reads == 0 * count)

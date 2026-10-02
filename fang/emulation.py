@@ -422,6 +422,9 @@ class Match:
 
 
 def I2CRead(device: str, register: int | None = None) -> Match:
+    """A read of a device, matched by the device alone. The probes record a
+    read's bytes and not the register it follows, so a plan refuses a match
+    that names one rather than counting every read as that register's."""
     return Match("i2c.read", device, {"register": register} if register is not None else {})
 
 
@@ -441,18 +444,16 @@ def UartLine(uart: str, contains: str | None = None) -> Match:
     return Match("uart.line", uart, {"contains": contains} if contains is not None else {})
 
 
-def _window_ns(within: Sequence[Quantity] | None) -> tuple[int, int] | None:
-    if within is None:
-        return None
-    start, end = within
-    return (_to_ns(start), _to_ns(end))
-
-
-def _to_ns(quantity: Quantity) -> int:
-    low, high = quantity.interval()
-    if low != high:
-        raise EmulationError(f"a window bound is a single time, not {quantity}")
-    return int((Decimal(low) * _NS).to_integral_value())
+#: The details each kind of match is filtered by. A detail outside these
+#: would be carried into the plan and read by nothing, so the match would
+#: count every event of its kind; the plan refuses it instead.
+_DETAILS: Mapping[str, frozenset[str]] = {
+    "i2c.read": frozenset(),
+    "i2c.write": frozenset({"data"}),
+    "gpio.rise": frozenset(),
+    "gpio.fall": frozenset(),
+    "uart.line": frozenset({"contains"}),
+}
 
 
 # --------------------------------------------------------------------------
@@ -681,9 +682,10 @@ class EmulationModel(Trait):
 
 @dataclass
 class Firmware(Trait):
-    """The firmware a component runs: a file relative to the project root, and
-    the target it was built for. Its digest is never part of the snapshot;
-    each run records it on its evidence."""
+    """The firmware a component runs: a file relative to the program that
+    declares the part, as a SPICE model's path is, and the target it was
+    built for. Its digest is never part of the snapshot; each run records it
+    on its evidence."""
 
     protocol = "firmware"
     path: str = ""
@@ -698,8 +700,10 @@ _PROBE = re.compile(r"[^A-Za-z0-9_]")
 
 
 def _probe_name(text: str) -> str:
-    """A Renode identifier for a probe. Prefixed so it can never redefine one of
-    the platform's own peripherals, whose names share the namespace."""
+    """A Renode identifier for a probe, from a whole path or surface name, so
+    `a.env` and `b.env` are two probes. Prefixed so it can never redefine one
+    of the platform's own peripherals, whose names share the namespace. Two
+    names can still meet (`a.b_c` and `a_b.c`); the lowering refuses that."""
     return "fang_" + _PROBE.sub("_", text)
 
 
@@ -750,10 +754,23 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
     scenario = data.get("scenario", {})
     surfaces = data.get("surfaces", {})
 
+    def model_of(component: str) -> Descriptor:
+        """The descriptor a part's model names, or a refusal naming the part."""
+        source = traits.get(component, "emulation_model").source
+        try:
+            return descriptor(source)
+        except EmulationError:
+            raise _refuse(
+                f"the emulation model of {_path(entities, component)} names {source!r}, a "
+                "descriptor fang does not ship; a part with no descriptor is refused rather "
+                "than given a generic model",
+                "model",
+            ) from None
+
     # -- the target --------------------------------------------------------
     platforms = []
-    for entity_id in traits.entities_with("emulation_model"):
-        model = descriptor(traits.get(entity_id, "emulation_model").source)
+    for entity_id in sorted(traits.entities_with("emulation_model")):
+        model = model_of(entity_id)
         if model.kind == "renode_platform":
             platforms.append(entity_id)
     bound = set(traits.entities_with("firmware"))
@@ -767,7 +784,7 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
             "target",
         )
     target = candidates[0]
-    platform = descriptor(traits.get(target, "emulation_model").source)
+    platform = model_of(target)
     binding = traits.get(target, "firmware")
     firmware_path = scenario.get("firmware") or (binding.path if binding else None)
     if not firmware_path:
@@ -814,15 +831,17 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
         return where["port"], int(where["index"])
 
     def lowered_target_pins(port_id: str) -> list[tuple[str, str]]:
-        found = []
+        """The target's pins a port's links lower onto, each once: a signal
+        with two loads is two links onto the same pin."""
+        found: dict[str, str] = {}
         for link in port_links:
             if port_id not in (link.source, link.target):
                 continue
             for connection in lowered.get(link.id, ()):
                 pin = target_pin(connection)
                 if pin is not None:
-                    found.append((pin, str(connection.identity.path).rsplit(".", 1)[-1]))
-        return found
+                    found.setdefault(pin, str(connection.identity.path).rsplit(".", 1)[-1])
+        return list(found.items())
 
     abstracted = {entry["component"]: entry["name"] for entry in data.get("abstracted", ())}
 
@@ -831,7 +850,7 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
     devices_named: set[str] = set()
     signal_surfaces: dict[str, str] = {}
     uart_surfaces: dict[str, str] = {}
-    bus_ports_named: set[str] = set()
+    pin_config_surfaces: dict[str, str] = {}
 
     def resolved(name: str) -> Mapping[str, Any]:
         found = surfaces.get(name)
@@ -840,6 +859,16 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
         return found
 
     def note_match(match: Mapping[str, Any]) -> None:
+        if match["kind"] not in _DETAILS:
+            raise _refuse(f"{match['kind']!r} is no kind of emulation match", "measure")
+        unread = sorted(set(match.get("detail", {})) - _DETAILS[match["kind"]])
+        if unread:
+            raise _refuse(
+                f"the {match['kind']} match on {match['surface']} names {', '.join(unread)}, "
+                f"which no measure filters on: it would count every {match['kind']} on "
+                f"{match['surface']}, so it is refused rather than ignored",
+                "measure",
+            )
         where = resolved(match["surface"])
         if match["kind"] in ("i2c.read", "i2c.write"):
             devices_named.add(where["component"])
@@ -859,11 +888,12 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
         elif kind == "emulation.uart_value":
             uart_surfaces[record["surface"]] = resolved(record["surface"])["port"]
         elif kind == "emulation.pin_config":
-            bus_ports_named.add(resolved(record["surface"])["port"])
+            pin_config_surfaces[record["surface"]] = resolved(record["surface"])["port"]
         else:
             raise _refuse(f"{entry['name']} is measured by {kind!r}, which no emulation measure is", "measure")
     for stimulus in scenario.get("stimuli", ()):
         devices_named.add(resolved(stimulus["surface"])["component"])
+    bus_ports_named = set(pin_config_surfaces.values())
     absent = set()
     declared_faults: list[tuple[str, str]] = []
     for fault in scenario.get("faults", ()):
@@ -872,6 +902,34 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
         declared_faults.append((component, fault["kind"]))
         if fault["kind"] == "absent":
             absent.add(component)
+
+    # An absent device has no probe: nothing it is asked is recorded, so a
+    # match over it would read the same whatever the firmware did, and a
+    # stimulus on it would have nothing to set. Both are refused rather than
+    # measured as an observation that cannot happen.
+    for name, entry in sorted(records.items()):
+        record = entry["measure"]
+        if record["kind"] in ("emulation.first_at", "emulation.count"):
+            matches = [record["match"]]
+        elif record["kind"] == "emulation.latency":
+            matches = [record["from"], record["to"]]
+        else:
+            matches = []
+        for match in matches:
+            if match["kind"] in ("i2c.read", "i2c.write") and resolved(match["surface"])["component"] in absent:
+                raise _refuse(
+                    f"{name} matches {match['kind']} on {match['surface']}, which the question's "
+                    "fault makes absent: an absent device has no probe, so the measure would "
+                    "read the same whatever the firmware did",
+                    "measure",
+                )
+    for stimulus in scenario.get("stimuli", ()):
+        if resolved(stimulus["surface"])["component"] in absent:
+            raise _refuse(
+                f"the stimulus on {stimulus['surface']}.{stimulus['input']} has nothing to set: "
+                f"the question's fault makes {stimulus['surface']} absent",
+                "stimulus",
+            )
 
     # -- buses ---------------------------------------------------------------
     buses: list[PlanBus] = []
@@ -923,7 +981,7 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
                     "model and is not listed as abstracted",
                     "scope",
                 )
-            model = descriptor(trait.source)
+            model = model_of(component)
             device_descriptors[component] = model
             address = resolve_address(snapshot, other)
             if address is None or not address.known or address.quantity is None:
@@ -933,13 +991,32 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
             if low != high:
                 raise _refuse(f"the address of {_path(entities, component)} is a range", "address")
             plan_devices.append(
-                PlanDevice(component, _probe_name(_path(entities, component).rsplit(".", 1)[-1]),
+                PlanDevice(component, _probe_name(_path(entities, component)),
                            model.id, model.document["renode_type"], int(low), component in absent)
             )
             models.append(_model_record(component, model))
         buses.append(PlanBus(port.id, port.peripheral, emulator,
                              tuple(plan_pins[p] for p in sorted(plan_pins, key=lambda p: pins[p].vendor_name)),
                              tuple(plan_devices)))
+
+    # A pin configuration is counted over a bus's pins, so a port that is no
+    # bus the plan reaches, or a bus that reaches no pin of the target, would
+    # measure 0 having checked nothing.
+    for surface, port_id in sorted(pin_config_surfaces.items()):
+        bus = next((b for b in buses if b.port == port_id), None)
+        if bus is None:
+            raise _refuse(
+                f"PinConfig({surface!r}) names {_path(entities, port_id)}, which is no I2C "
+                f"bus of {_path(entities, target)} with a device on it; a pin "
+                "configuration is measured over a bus's pins",
+                "bus",
+            )
+        if not bus.pins:
+            raise _refuse(
+                f"PinConfig({surface!r}) names {_path(entities, port_id)}, whose lowered "
+                f"connections reach no pin of {_path(entities, target)}",
+                "bus",
+            )
 
     on_a_bus = {d.component for b in buses for d in b.devices}
     for component in sorted(devices_named - on_a_bus):
@@ -1006,6 +1083,13 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
                 )
     watched = tuple(PlanWatch(_probe_name(f"{b.emulator}_warnings"), b.emulator, b.port) for b in buses)
 
+    if "run_until" not in scenario:
+        raise _refuse("the question names no run duration, and none is assumed", "duration")
+    run_until = _quantity_from(scenario["run_until"])
+    run_until_ns = _nanoseconds(run_until)
+    if run_until_ns <= 0:
+        raise _refuse(f"the run lasts {run_until}, and a run observes nothing in no time", "duration")
+
     stimuli = []
     assumptions = [f"the core runs at {platform.document['core_clock_hz']} Hz, as the platform model assumes"]
     for stimulus in scenario.get("stimuli", ()):
@@ -1015,6 +1099,12 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
         if model is None or name not in model.inputs:
             raise _refuse(f"the model of {_path(entities, component)} accepts no input {name!r}", "stimulus")
         quantity = _quantity_from(stimulus["quantity"])
+        if quantity.kind != "scalar":
+            raise _refuse(
+                f"{stimulus['surface']}.{name} is set to {quantity}, a {quantity.kind}: a "
+                "stimulus sets the model's input to one value",
+                "stimulus",
+            )
         try:
             converted, _ = quantity.converted_to(model.inputs[name]["unit"])
         except Exception as exc:
@@ -1023,13 +1113,15 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
             ) from exc
         device = next(d for b in buses for d in b.devices if d.component == component)
         at = _nanoseconds(_quantity_from(stimulus["at"]))
+        if not 0 <= at <= run_until_ns:
+            raise _refuse(
+                f"the stimulus on {stimulus['surface']}.{name} at {_quantity_from(stimulus['at'])} "
+                f"falls outside the run, from 0 to {run_until}, so it would never be applied",
+                "stimulus",
+            )
         stimuli.append(PlanStimulus(at, component, device.probe, name, model.inputs[name]["property"],
                                     format(converted.value.normalize(), "f"), model.inputs[name]["unit"]))
         assumptions.append(f"{stimulus['surface']}.{name} is {quantity} from {_quantity_from(stimulus['at'])}")
-
-    if "run_until" not in scenario:
-        raise _refuse("the question names no run duration, and none is assumed", "duration")
-    run_until_ns = _nanoseconds(_quantity_from(scenario["run_until"]))
 
     # -- measures ------------------------------------------------------------
     def match_record(match: Mapping[str, Any]) -> dict:
@@ -1047,7 +1139,14 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
         if kind in ("first_at", "count"):
             out = {"kind": kind, "matches": [match_record(record["match"])]}
             if record.get("within_ns"):
-                out["within_ns"] = list(record["within_ns"])
+                start, end = (int(bound) for bound in record["within_ns"])
+                if not start < end:
+                    raise _refuse(
+                        f"{name} counts over [{start} ns, {end} ns), an empty window: "
+                        "it would count 0 whatever the firmware did",
+                        "measure",
+                    )
+                out["within_ns"] = [start, end]
         elif kind == "latency":
             out = {"kind": kind, "matches": [match_record(record["from"]), match_record(record["to"])]}
         elif kind == "uart_value":
@@ -1127,6 +1226,7 @@ from .diagnostics import (  # noqa: E402 - the question layer sits on the plan a
     UNIT_DIMENSION_MISMATCH,
     error,
 )
+from .lang import _caller_location  # noqa: E402
 from .runtime import Status  # noqa: E402
 from .simulation import Level  # noqa: E402
 from .units import Unit  # noqa: E402
@@ -1137,6 +1237,7 @@ from .verification import (  # noqa: E402
     Measure,
     Measurement,
     NotRunnable,
+    Question,
     QuestionDeclaration,
     RawRun,
     ToolUnavailable,
@@ -1278,9 +1379,45 @@ def FirstAt(match: Match) -> FirstAtMeasure:
     return FirstAtMeasure(match.surface, match)
 
 
+def _window_ns(within: Sequence[Quantity] | None, location=None) -> tuple[int, int] | None:
+    """A count's window as integer nanoseconds: two single times, the start
+    before the end. Anything else is refused where it is declared, because
+    an empty window counts 0 whatever the firmware does, and a window in
+    volts would be read as seconds."""
+    if within is None:
+        return None
+    bounds = tuple(within)
+    if len(bounds) != 2:
+        raise error(
+            SIM_UNRESOLVED_SURFACE,
+            f"a Count window is a start and an end, not {len(bounds)} values",
+            location=location,
+        )
+    for bound in bounds:
+        if not isinstance(bound, Quantity) or bound.dimension != _TIME:
+            raise error(
+                UNIT_DIMENSION_MISMATCH,
+                f"a Count window is bounded by times, and {bound} is not one",
+                location=location,
+            )
+        low, high = bound.interval()
+        if low != high:
+            raise error(
+                SIM_UNRESOLVED_SURFACE, f"a Count window's bound is one time, not {bound}", location=location
+            )
+    start, end = (int((Decimal(b.interval()[0]) * _NS).to_integral_value()) for b in bounds)
+    if not start < end:
+        raise error(
+            SIM_UNRESOLVED_SURFACE,
+            f"the Count window ({bounds[0]}, {bounds[1]}) is empty: its start is not "
+            "before its end, so it would count 0 whatever the firmware did",
+            location=location,
+        )
+    return (start, end)
+
+
 def Count(match: Match, *, within: Sequence[Quantity] | None = None) -> CountMeasure:
-    window = _window_ns(within)
-    return CountMeasure(match.surface, match, window)
+    return CountMeasure(match.surface, match, _window_ns(within, _caller_location(2)))
 
 
 def Latency(from_: Match, to: Match) -> LatencyMeasure:
@@ -1497,16 +1634,22 @@ def plan_from_dict(payload: Mapping[str, Any]) -> EmulationPlan:
     )
 
 
-def _firmware_location(snapshot, question, plan: EmulationPlan):
+def _firmware_location(snapshot, question, path: str, target: str | None):
     """Where the firmware is on this machine: relative to the program that
-    names it, the question's own if it names one, else the target's."""
+    names it, which is the question's if the question names its own build,
+    and otherwise the program that declares the part it runs on, as a SPICE
+    model's path is. A run and the staleness check both read it here, so the
+    two cannot disagree about which file the evidence's digest is of."""
     from pathlib import Path
 
-    written = Path(plan.firmware_path)
+    written = Path(path)
     if written.is_absolute():
         return written
-    named_by_question = bool(question.data.get("scenario", {}).get("firmware"))
-    origin = question.source_location if named_by_question else snapshot.entities[plan.target].source_location
+    if question.data.get("scenario", {}).get("firmware"):
+        origin = question.source_location
+    else:
+        part = snapshot.entities.get(target) if target else None
+        origin = part.source_location if part is not None else None
     if origin is None:
         return Path.cwd() / written
     return Path(origin.file).parent / written
@@ -1531,15 +1674,10 @@ class RenodeTool:
         return question.method == "emulation"
 
     def available(self) -> bool:
-        from .renode import RenodeUnavailable
-
-        if not self.backend.available():
-            return False
-        try:
-            self.backend.check()
-        except RenodeUnavailable:
-            return False
-        return True
+        """Whether Renode is installed. A version the lowering was not checked
+        against is installed, and `version` refuses it naming the version, so
+        a question is reported unsupported for the reason it is."""
+        return self.backend.available()
 
     def version(self) -> str:
         from .renode import RenodeUnavailable
@@ -1560,7 +1698,7 @@ class RenodeTool:
             plan = compile_plan(snapshot, question, traits=traits or TraitRegistry())
         except EmulationError as exc:
             raise NotRunnable(f"{question.label}: {exc}", code=_CODES.get(exc.code or "")) from None
-        location = _firmware_location(snapshot, question, plan)
+        location = _firmware_location(snapshot, question, plan.firmware_path, plan.target)
         if not location.is_file():
             raise NotRunnable(
                 f"{question.label}: the firmware {plan.firmware_path} is not a file at {location}",
@@ -1579,6 +1717,10 @@ class RenodeTool:
             "firmware": f"{plan.firmware_path} {digest}",
             "platform": plan.platform,
             "ran": "local",
+            # The part the firmware runs on: a bound firmware's path is read
+            # relative to the program that declares it, here and when the
+            # evidence is checked for staleness.
+            "target": plan.target,
         }
         if reports:
             extra["firmware_reports"] = ", ".join(reports)
@@ -1664,7 +1806,6 @@ def stale(snapshot) -> tuple[tuple[str, str, str, str], ...]:
     when the file does; the evidence's digest is how the change is seen.
     """
     import hashlib
-    from pathlib import Path
 
     from .entities import Evidence, Verification
 
@@ -1674,16 +1815,17 @@ def stale(snapshot) -> tuple[tuple[str, str, str, str], ...]:
     ):
         if verification.method != "emulation":
             continue
+        question = Question.of(verification)
+        if question is None:
+            continue
         for evidence_id in verification.evidence:
             evidence = snapshot.entities.get(evidence_id)
             if not isinstance(evidence, Evidence):
                 continue
             record = evidence.extensions.get("measurement", {})
             for entry in record.get("inputs", ()):
-                origin = verification.source_location
-                location = Path(entry["path"])
-                if not location.is_absolute() and origin is not None:
-                    location = Path(origin.file).parent / location
+                # Resolved exactly as the run resolved it.
+                location = _firmware_location(snapshot, question, entry["path"], record.get("target"))
                 current = (
                     "sha256:" + hashlib.sha256(location.read_bytes()).hexdigest()
                     if location.is_file()

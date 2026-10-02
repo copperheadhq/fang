@@ -5,7 +5,7 @@
 See [proposal.md](proposal.md) for motivation. The normative text is copperhead
 RFC 12 version 1.3, Sections 12.11 to 12.14, with RFC 3 version 1.5, Sections
 5, 8.2 and 14 ([copperheadhq/copperhead-rfcs#6](https://github.com/copperheadhq/copperhead-rfcs/pull/6));
-this document is informative. It depends on two changes that are not yet built:
+this document is informative. It builds on two changes, both built before it:
 the spine of `fang-verification` (the `Tool` protocol, `route`, the measurement
 transaction and `fang verify`) and `fang-mcu-parts` (ports as peripheral
 instances, selectors on lowered connections, `resolve_address`, and the
@@ -158,8 +158,12 @@ rather than kept beside it.
 An emulation model is an `EmulationModel` trait whose `source` names a
 descriptor (`"fang:stm32f401re"`, `"renode:Sensors.HS3001"`); the descriptor
 says whether it is a platform or a peripheral model. `Firmware(path, target=)`
-is a trait on the component that runs it, and carries no digest. Both live in
-`fang/emulation.py`.
+is a trait on the component that runs it, and carries no digest. Its path is
+relative to the program that declares the part, as a SPICE model's path is; a
+question's own build is relative to the question's program. A run resolves the
+path once, through `_firmware_location`, and records the part it ran on beside
+the digest, so `stale()` resolves the same file from the snapshot alone. Both
+traits live in `fang/emulation.py`.
 
 *Alternative considered, and first planned:* `Simulatable` traits with
 `model_kind="renode_platform"`. The trait registry holds one trait per protocol
@@ -199,7 +203,7 @@ startup = Emulates(
         "slow_blinks": Count(Rises("mcu.status"), within=(1 * s, 2 * s)),
         "mux_mismatches": PinConfig("mcu.i2c1"),
     },
-    abstracted=("scl_pullup", "sda_pullup", "series", "indicator", "bypass"),
+    abstracted=("scl_pullup", "sda_pullup", "series", "console"),
 )
 ```
 
@@ -218,6 +222,21 @@ the duration. It is written as canonical JSON, `fang.emulation/v1`, through
 integer nanoseconds. Its identity is its own content hash; the snapshot hash is
 recorded beside it but is not its identity, because the snapshot hash covers
 provenance and so the checkout's absolute path.
+
+A measure that would read the same whatever the firmware did is refused when
+the plan compiles, never measured: `PinConfig` over a port that is no I2C bus
+of the target with a device on it, or whose bus reaches no pin of the target;
+a match naming a detail its measure does not filter on (an `I2CRead` register,
+since the probes record a read's bytes and not the register it follows); a
+`Count` window that is empty, refused already where `Count` is declared, with
+a bound that is not a time refused there too; and a read or write match over a
+device a fault makes absent, which has no probe and records nothing. A stimulus
+is refused if it sets an input to a range or a tolerance, falls outside the
+run, or sets an input of an absent device. These reuse the codes of the
+refusals they sit beside: SIM-0016 for a pin configuration over no bus, the
+measure refusal SIM-0003 for a detail, a window or an absent device's match,
+and SIM-0012 for a stimulus. A signal with several loads is observed on its
+one pin.
 
 A bundle is the plan lowered: `plan.json`, `platform.repl` (using the platform
 file, then each peripheral model wrapped in its probe at its address, and the
@@ -260,7 +279,10 @@ GPIO probe is a receiver connected to a port pin's output. The UART probe
 listens to the UART's transmitter and records each line. The recorder writes
 `events.jsonl`, each line `{seq, t_ns, source, type, payload}`, with `source`
 an entity identifier the lowering writes into the probe, and each event stamped
-after synchronizing the CPU that caused it. The types are `run.start`,
+after synchronizing the CPU that caused it. A probe is named from the whole
+path of what it observes (`fang_system_env`), so two devices whose paths end
+alike are two probes, and the lowering refuses two probes of one name, which
+Renode would refuse only once the run had started. The types are `run.start`,
 `stimulus`, `uart.line`, `gpio.edge`, `i2c.write`, `i2c.read`, `i2c.stop`,
 `i2c.nack`, `register.write`, `register.snapshot`, `model.warning` and
 `run.end`, whose payload gives `completed`; a run without `run.end` ended on a
@@ -280,9 +302,12 @@ the recorder's log backend receives on the CPU thread that caused it.
 | `UartValue(uart, prefix=, unit=)` | the number after `prefix` on the first matching line | the stated unit |
 | `PinConfig(port)` | pins configured otherwise than the board requires | dimensionless |
 
-The matches are `I2CRead(device, register=None)`, `I2CWrite(device,
-data=None)`, `Rises(surface)`, `Falls(surface)` and `UartLine(uart,
-contains=)`. An ordering requirement is a latency.
+The matches are `I2CRead(device)`, `I2CWrite(device, data=None)`,
+`Rises(surface)`, `Falls(surface)` and `UartLine(uart, contains=)`. An
+ordering requirement is a latency. `I2CRead` takes a `register` that the plan
+refuses: the probes record a read's bytes, not the register it follows, and
+none of the recorded runs carries one to test a filter against. A `Count`
+window is two times, its start before its end.
 
 **An absent event is the half-open range after the run's end.** RFC 12 leaves
 the representation to the implementation, provided interval comparison decides
@@ -297,14 +322,22 @@ there is no range of temperatures to fail — so presence is a `Count` of the
 line, measured beside it.
 
 A run that ended `timeout` or `crashed` produces no measurement. A
-`model.warning` from a model withdraws every measure over that model's events,
-and the evidence names the warning.
+`model.warning` its descriptor does not expect withdraws every measure over
+that model's events, and the evidence names the warning. A warning the
+descriptor expects, such as the I2C controller's on every write to CCR and
+TRISE, withdraws nothing and is recorded as the coverage gap the descriptor
+names for it; a recorded run that completes carries 22 or 23 of them.
 
 ### `RenodeBackend`
 
-It follows `NgspiceBackend`. `available()` finds `renode` on the path;
-`version()` reads the first line and checks it against the versions the
-lowering was checked against, reporting unsupported otherwise. `run` copies the
+It follows `NgspiceBackend`. `available()` finds `renode` on the path, and
+the tool's `available()` says only that, so an installed Renode of another
+version is not reported missing; `version()` reads the first line and checks it
+against the versions the lowering was checked against, reporting unsupported
+naming the version otherwise. Renode's launcher includes the script as
+`i $CWD/run.resc` and its monitor splits a path at a space, so a run from a
+temporary directory whose path has one would crash with no events; `run`
+refuses it as unsupported, saying why, before Renode starts. `run` copies the
 bundle to a temporary workspace and runs `renode --console --disable-gui -p
 --hide-log run.resc` with no shell, in its own process group; on the wall-clock
 limit it kills the group and returns what was recorded, with `run.end`
@@ -345,8 +378,10 @@ the suite never rebuilds them.
 Two questions: **startup** — at 25 °C the first read is within 200 ms, the
 reported temperature is within 0.05 °C, between 1 s and 2 s the LED rises
 exactly once, and no I2C pin is misconfigured; and **sensor missing** — with
-the sensor absent, between 1 s and 2 s the LED rises at least four times, and
-nothing is read.
+the sensor absent, between 1 s and 2 s the LED rises at least four times. The
+sensor-missing question does not count reads: an absent device has no probe,
+so a count of its reads would be 0 whatever the firmware did, and the plan
+refuses it.
 
 The negative cases live in the suite, each failing on the measure it should:
 the wrong-address build fails `first_read`; the push-pull build fails

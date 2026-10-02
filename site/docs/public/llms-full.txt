@@ -961,6 +961,11 @@ the measures that rest on it. And where the emulator does not route a
 peripheral through its pins' configuration, the configuration is measured from
 what the firmware wrote, instead of trusted.
 
+A measure that could only ever read one way is refused before anything runs:
+a count over an empty window, a read of a device the question has removed, a
+pin configuration over a port that carries no bus. Each would pass its
+constraint by construction, which is a pass nobody observed.
+
 ## A finding, not a proof
 
 Every run lists what its models do not cover, and its confidence is bounded by
@@ -27192,50 +27197,57 @@ questions are declared beside the requirements they serve:
   between 1 s and 2 s, and no I2C1 pin is configured otherwise than the board
   requires.
 - **sensor missing**: with the HS3001 absent, the LED rises at least four times
-  between 1 s and 2 s, and nothing is read.
+  between 1 s and 2 s.
+
+The second question does not count reads of the sensor. An absent device has
+no probe, so nothing it is asked is recorded, and a count of its reads would be
+0 whatever the firmware did; a plan refuses a read or write match over a device
+its fault removes, rather than letting `== 0` pass by construction.
 
 Each compiles into a plan whose every bus, pin, alternate function and address
 comes from this graph, and nowhere else: I2C1 from the port, PB8 and PB9 at AF4
 and open drain from the lowered connections, 0x44 from the sensor's port, PA5
-from the status signal's connection. The pull-ups, the LED's resistor and the
-console header share nets with pins the questions touch and have no emulation
-model, so each question names them as abstracted, and the evidence lists them
-as coverage gaps.
+from the status signal's connection. The pull-ups and the LED's resistor share
+nets with pins both questions touch, and the console header shares USART2's,
+which only startup reads. None has an emulation model, so each question names
+the ones it touches as abstracted, the console header in startup alone, and
+the evidence lists them as coverage gaps.
 
 `fang verify` answers both, and both pass: the firmware reads the sensor at
 40 ms, prints 25.01 degC, blinks once in that second and sets I2C1's pins up
-right; with the sensor gone it blinks five times and reads nothing. Three
-deliberately broken builds sit beside the good one, and the suite runs each
-against the board: the wrong address fails the first read, which is observed
-not to happen before the run ends; push-pull I2C pins fail the pin check while
-every transaction succeeds, because Renode does not route I2C through the pins;
-no timeout hangs when the sensor is missing. Moving the LED to PA6 on the board,
-with the firmware unchanged, fails the blink count.
+right; with the sensor gone it blinks five times. Three deliberately broken
+builds sit beside the good one, and the suite runs each against the board: the
+wrong address fails the first read, which is observed not to happen before the
+run ends; push-pull I2C pins fail the pin check while every transaction
+succeeds, because Renode does not route I2C through the pins; no timeout hangs
+when the sensor is missing. Moving the LED to PA6 on the board, with the
+firmware unchanged, fails the blink count.
 
 What the run does not show is listed with it: the clock tree, I2C DMA and
 timing, acknowledgement beyond an absent device, the sensor's conversion time.
-A pass is a finding on models tested in emulation, at confidence 0.8. It is
-not the board working.
+Nor does the missing-sensor run show how often the firmware asks for a sensor
+that is not there, since an absent device records nothing. A pass is a finding
+on models tested in emulation, at confidence 0.8. It is not the board working.
 
 ## What comes out
 
-11 parts, 9 nets, 143 entities, 18 checks. None failed, **ten undecided**.
+11 parts, 9 nets, 142 entities, 17 checks. None failed, **nine undecided**.
 
 One is the sensor's logic levels, above. Two are the console. The header passes
 USART2 through to a serial adapter, and the `vih_min` and `voh_min` on the far
 side of it are the adapter's. The header is this board's; the adapter is not,
-and its levels are not known. The other seven are the constraints over what the
+and its levels are not known. The other six are the constraints over what the
 firmware does, undecided until a run measures it.
 
 - [`out/sensor_node.net`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_node/out/sensor_node.net), [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_node/out/netlist.txt)
-- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_node/out/checks.txt): 18 checks, ten of them undecided
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_node/out/checks.txt): 17 checks, nine of them undecided
 - [`out/verification.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_node/out/verification.txt): what `fang verify` found, both
   questions passing
 - [`out/renode/`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_node/out/renode): each question's plan, Renode platform
   description and script
 - [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_node/out/rationale.md): the two requirements, the four
   lowering decisions and the datasheet citations
-- [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_node/out/graph.txt): 143 entities
+- [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_node/out/graph.txt): 142 entities
 
 The MCU's three links: I2C1 to the sensor, USART2 to the console header, and
 the status signal to the LED's series resistor.
@@ -27535,7 +27547,7 @@ class SensorNode(System):
     )
     survives_missing_sensor = Requires(
         "With the HS3001 missing the firmware keeps running and blinks the "
-        "status LED fast, and makes no read",
+        "status LED fast",
         validation="emulation",
     )
 
@@ -27544,7 +27556,6 @@ class SensorNode(System):
     slow_blinks = Parameter("", description="status LED rises between 1 s and 2 s, sensor present")
     mux_mismatches = Parameter("", description="I2C1 pins configured otherwise than the board requires")
     fast_blinks = Parameter("", description="status LED rises between 1 s and 2 s, sensor missing")
-    missing_reads = Parameter("", description="reads of the sensor while it is missing")
 
     # The sensor is at 25 degC from reset. The pull-ups, the LED's resistor and
     # the console header share nets with the pins the question touches and
@@ -27565,10 +27576,7 @@ class SensorNode(System):
         "survives_missing_sensor",
         run_until=2 * s,
         faults=[Absent("env")],
-        measures={
-            "fast_blinks": Count(Rises("mcu.status"), within=(1 * s, 2 * s)),
-            "missing_reads": Count(I2CRead("env")),
-        },
+        measures={"fast_blinks": Count(Rises("mcu.status"), within=(1 * s, 2 * s))},
         abstracted=("scl_pullup", "sda_pullup", "series"),
     )
 
@@ -27648,7 +27656,6 @@ class SensorNode(System):
         require(self.slow_blinks == 1 * count)
         require(self.mux_mismatches == 0 * count)
         require(self.fast_blinks >= 4 * count)
-        require(self.missing_reads == 0 * count)
 ```
 
 ## The files it writes
@@ -27687,11 +27694,10 @@ UNDECIDED constraint: declared on BLK-42978eb8675a
 UNDECIDED constraint: declared on BLK-42978eb8675a
 UNDECIDED constraint: declared on BLK-42978eb8675a
 UNDECIDED constraint: declared on BLK-42978eb8675a
-UNDECIDED constraint: declared on BLK-42978eb8675a
 UNDECIDED interface_compatibility: logic high margin is undecided on i2c: voh_min unknown
 UNDECIDED interface_compatibility: logic high margin is undecided on uart: vih_min unknown
 UNDECIDED interface_compatibility: logic high margin is undecided on uart: voh_min unknown
-18 checks, 0 failed, 10 undecided
+17 checks, 0 failed, 9 undecided
 ```
 
 What the elaborated graph contains, by entity kind.
@@ -27700,7 +27706,7 @@ What the elaborated graph contains, by entity kind.
     1  block
    11  component
    40  connection
-    8  constraint
+    7  constraint
     4  decision
    10  evidence
     7  interface
@@ -27708,8 +27714,8 @@ What the elaborated graph contains, by entity kind.
    24  port
     2  requirement
     2  verification
-  143  total
-snapshot sha256:d9e5d95fd62a578d6eab5ca4efdae36a223fbce9b8e5a6457ff8cc0a09fcda5b
+  142  total
+snapshot sha256:5577f83332d222b286bf881b13db321946f4958a3076b89f2065e4feead94614
 ```
 
 All of it, including the KiCad netlist, is in
@@ -30625,10 +30631,12 @@ ship today.
 | `renode:Sensors.HS3001` | Renesas's HS3001, on Renode's own model | tested in emulation |
 
 `Firmware` names an ELF relative to the program that declares the part, and
-the target it was built for. Its digest is not part of the snapshot, because
+the target it was built for; a question's own `firmware` is relative to the
+question's program. Its digest is not part of the snapshot, because
 rebuilding firmware is not a design change; every run records the digest on
 its evidence, and `fang verify` reports a verification whose evidence names a
-different digest as stale.
+different digest as stale. The staleness check reads the same file the run
+read, wherever the question is declared.
 
 ## Declaring a question
 
@@ -30660,8 +30668,8 @@ edit nobody sees.
 | Field | Means |
 | --- | --- |
 | `run_until` | The run's virtual duration. There is no default. |
-| `stimuli` | `At(time, "<device>.<input>", value)`: a model input set at a virtual time |
-| `faults` | `Absent(device)`: the device is not on its bus, so its address goes unanswered |
+| `stimuli` | `At(time, "<device>.<input>", value)`: a model input set to one value at a virtual time within the run |
+| `faults` | `Absent(device)`: the device is not on its bus, so its address goes unanswered, and it records nothing |
 | `abstracted` | Parts in scope deliberately left without a model, each a coverage gap |
 | `firmware` | An ELF for this question only, in place of the part's binding |
 | `seed` | The emulator's random seed; `0` unless named |
@@ -30676,9 +30684,25 @@ edit nobody sees.
 | `UartValue(uart, prefix=, unit=)` | The number after `prefix` on the first matching line | the stated unit |
 | `PinConfig(port)` | Pins configured otherwise than the board requires | dimensionless |
 
-The matches are `I2CRead(device)`, `I2CWrite(device)`, `Rises(surface)`,
-`Falls(surface)` and `UartLine(uart, contains=)`. An ordering requirement is a
-latency.
+The matches are `I2CRead(device)`, `I2CWrite(device, data=)`,
+`Rises(surface)`, `Falls(surface)` and `UartLine(uart, contains=)`. An
+ordering requirement is a latency.
+
+A measure that would read the same whatever the firmware did is refused, not
+measured:
+
+- A `Count` window is two times, its start before its end. `(2 * s, 1 * s)`
+  would count nothing and `(1 * V, 2 * V)` is no window; both are refused
+  where `Count` is declared.
+- `I2CRead` matches a read by its device alone. The probes record a read's
+  bytes, not the register it follows, so a plan refuses `register=` rather
+  than count every read as that register's.
+- `PinConfig` names an I2C port of the target with a device on it. Over the
+  status signal, a UART or an unconnected I2C port there would be no pin to
+  count.
+- A read or write of a device a fault makes absent is refused, and so is a
+  stimulus on it: an absent device has no probe, so a count of its reads is 0
+  whatever the firmware does.
 
 ## The plan
 
@@ -30693,14 +30717,15 @@ it names. A plan that cannot be resolved is refused, naming what is missing.
 
 | Code | Refused because |
 | --- | --- |
-| `SIM-0009` | A model names a descriptor fang does not ship |
+| `SIM-0003` | A surface that resolves to nothing, or a measure that would read the same whatever the firmware did: a match detail no measure filters on, an empty count window, a read or write of an absent device |
+| `SIM-0009` | A part's model names a descriptor fang does not ship; the refusal names the part |
 | `SIM-0010` | A component in scope has neither a model nor an abstraction |
 | `SIM-0011` | A fault the device's model does not support |
-| `SIM-0012` | A stimulus names an input its model lacks, or a value of the wrong dimension |
+| `SIM-0012` | A stimulus names an input its model lacks, gives a value of the wrong dimension or more than one value, falls outside the run, or sets a device a fault removes |
 | `SIM-0013` | A pin the platform model does not map; a port is never derived from a pin's name |
-| `SIM-0014` | No run duration |
+| `SIM-0014` | No run duration, or a run of no time |
 | `SIM-0015` | No firmware is bound, or it was built for another target |
-| `SIM-0016` | A bus device's controller or address cannot be resolved |
+| `SIM-0016` | A bus device's controller or address cannot be resolved, or `PinConfig` names a port that is no bus |
 
 The plan is canonical JSON, identified by the hash of its own canonical form,
 so two machines preparing the same question produce the same plan.
@@ -30718,10 +30743,14 @@ cd bundles/startup && renode --console --disable-gui run.resc
 
 The script fixes the seed first, applies every stimulus at its virtual time
 from inside the script, writes every duration as decimal seconds, and takes no
-input once the run starts. Renode 1.17.0 is the version the lowering was
-checked against; another reports unsupported. A run that outlives its
-wall-clock limit is ended with every process it started, and its partial
-events are kept.
+input once the run starts. Each probe is named from the whole path of what it
+observes, and a plan that would give two probes one name is refused. Renode
+1.17.0 is the version the lowering was checked against; another installed
+version reports unsupported, naming itself. Renode's monitor splits a path at
+a space, so a run cannot be made from a temporary directory whose path has
+one: it reports unsupported before Renode starts, and `TMPDIR` (`TEMP` on
+Windows) names another. A run that outlives its wall-clock limit is ended with
+every process it started, and its partial events are kept.
 
 ## What a run can see
 

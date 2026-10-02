@@ -3,11 +3,14 @@
 ### Requirement: Firmware Is Bound And Its Digest Is Evidence
 
 A Fang program SHALL be able to bind a firmware file, named relative to the
-project root, and the target it was built for, to the component that runs it,
-as a trait of that component. The binding SHALL NOT carry the file's digest. Every emulation run SHALL record the digest of the firmware it
-ran on its evidence, and a verification whose evidence names a digest other
-than the bound file's current one SHALL be reported stale. A question SHALL be
-able to name a firmware file of its own.
+program that declares the component, and the target it was built for, to the
+component that runs it, as a trait of that component. The binding SHALL NOT
+carry the file's digest. Every emulation run SHALL record the digest of the
+firmware it ran on its evidence, and a verification whose evidence names a
+digest other than the current digest of the file the run resolved SHALL be
+reported stale, the file being resolved for that check exactly as it was for
+the run. A question SHALL be able to name a firmware file of its own, relative
+to the program that declares the question.
 
 #### Scenario: Rebuilding firmware does not change the snapshot
 
@@ -27,6 +30,15 @@ able to name a firmware file of its own.
 - **THEN** the verify command reports the verification as stale and names the
   file
 
+#### Scenario: Staleness reads the file the run read
+
+- **WHEN** a question is declared in a program in another directory from the
+  one that declares the component, and names no firmware of its own
+- **THEN** the run and the staleness check both resolve the bound firmware
+  relative to the program that declares the component
+- **AND** a rebuild of that file reports the verification stale, and nothing
+  else does
+
 #### Scenario: A question names its own build
 
 - **WHEN** a question names a firmware file other than the component's binding
@@ -37,9 +49,10 @@ able to name a firmware file of its own.
 The component that runs firmware and the devices around it SHALL reach the
 emulator through models naming a descriptor the toolchain ships. A descriptor
 SHALL state the part it stands for, the inputs it accepts with their units, the
-faults it supports, the events it can produce, what it does not model, its
-provenance and its qualification state — experimental, tested in emulation, or
-hardware-correlated. A platform descriptor SHALL map the component's ports and
+faults it supports, the events it can produce, what it does not model, the
+warnings the model is expected to report with the coverage gap each stands for,
+its provenance and its qualification state: experimental, tested in
+emulation, or hardware-correlated. A platform descriptor SHALL map the component's ports and
 pins to the emulator's. A model naming no descriptor SHALL be refused, and no
 part SHALL fall back to a generic model.
 
@@ -96,10 +109,17 @@ being the target and every component sharing a net with a pin the question
 touches, each carrying a peripheral model or listed as abstracted; each bus in
 scope with its controller instance, its chosen pins and their selectors, the
 electrical requirements of its signals, and each device's address; each
-observation point; each stimulus and fault against its model's declarations;
-and the run's virtual duration, which has no default. Every abstracted part
-SHALL be a coverage gap. The plan SHALL be canonical and identified by the hash
-of its canonical form.
+observation point, a signal with several loads being observed on its one pin;
+each stimulus and fault against its model's declarations, a stimulus setting an
+input to one value at a time within the run, on a device present in the run;
+each measure against what the probes can record; and the run's virtual
+duration, which has no default. A measure that would read the same whatever the
+firmware did SHALL be refused rather than measured: a pin-configuration measure
+over a port that is no bus in scope with pins of the target, a match naming a
+detail its measure does not filter on, a count over a window that is empty or
+not bounded by times, and a bus match over a device a fault removes. Every
+abstracted part SHALL be a coverage gap. The plan SHALL be canonical and
+identified by the hash of its canonical form.
 
 #### Scenario: A component with no model and no abstraction refuses the plan
 
@@ -123,6 +143,44 @@ of its canonical form.
 - **WHEN** a question names no run duration
 - **THEN** the plan is refused rather than given a default
 
+#### Scenario: A stimulus that cannot be applied is refused
+
+- **WHEN** a stimulus sets an input to a range or a tolerance, falls before the
+  run starts or after it ends, or sets an input of a device a fault removes
+- **THEN** the plan is refused naming the input
+
+#### Scenario: A pin configuration over no bus is refused
+
+- **WHEN** a pin-configuration measure names a port that is not an I2C bus of
+  the target with a device on it
+- **THEN** the plan is refused naming the port, rather than measuring zero
+  having checked no pin
+
+#### Scenario: A match detail no measure reads is refused
+
+- **WHEN** a match names a detail its measure does not filter on, such as a
+  register for an I2C read
+- **THEN** the plan is refused naming the detail, rather than counting every
+  event of the match's kind
+
+#### Scenario: An empty or untimed count window is refused
+
+- **WHEN** a count's window ends before it starts, or is bounded by anything
+  but times
+- **THEN** the declaration is refused
+
+#### Scenario: A bus match over an absent device is refused
+
+- **WHEN** a measure matches reads or writes of a device the question's fault
+  makes absent
+- **THEN** the plan is refused naming the measure, because an absent device
+  records nothing and the measure would read the same whatever the firmware did
+
+#### Scenario: A signal with several loads is observed on its one pin
+
+- **WHEN** an edge is measured on a signal of the target that drives two loads
+- **THEN** the plan observes the one pin the signal lands on
+
 #### Scenario: The plan carries the board's facts
 
 - **WHEN** the demo board's startup question is compiled
@@ -142,7 +200,9 @@ emulator's random seed before anything else, SHALL apply every stimulus at its
 virtual time from within the script, and SHALL take no input from the host once
 the run starts. No text from a Fang program SHALL reach the emulator's monitor
 or scripting language. Every duration SHALL be written in a form the emulator
-reads as the duration the plan means.
+reads as the duration the plan means. Every probe SHALL have a name of its own,
+derived from the whole path of the entity it observes, and a lowering that
+would give two probes one name SHALL be refused.
 
 #### Scenario: The seed comes first
 
@@ -160,6 +220,12 @@ reads as the duration the plan means.
 - **WHEN** a program names a surface or a string containing characters the
   monitor would interpret
 - **THEN** the plan is refused, or the text never appears in the script
+
+#### Scenario: Two devices whose paths end alike get two probes
+
+- **WHEN** a plan holds two devices whose paths share their last segment
+- **THEN** their probes have different names, and a plan in which two probes
+  would share a name is refused by the lowering
 
 #### Scenario: Lowering is deterministic
 
@@ -226,8 +292,11 @@ effects.
 In a run that completed, an event that did not occur SHALL be measured as not
 having occurred before the run's end, so that a constraint bounding its time
 from above is decided. In a run that ended on a timeout or a crash, a measure
-SHALL produce no value. A measure over a model that reported a warning during
-the run SHALL produce no value, and the evidence SHALL name the warning.
+SHALL produce no value. A measure over a model that reported a warning its
+descriptor does not expect SHALL produce no value, and the evidence SHALL name
+the warning. A warning the model's descriptor expects SHALL NOT withdraw a
+measure; it SHALL be recorded on the evidence as the coverage gap the
+descriptor says it stands for.
 
 #### Scenario: A read that never happens fails its bound
 
@@ -247,11 +316,19 @@ the run SHALL produce no value, and the evidence SHALL name the warning.
 - **THEN** none of its measures has a value and their constraints stay
   undecided
 
-#### Scenario: A model warning withdraws its measures
+#### Scenario: An unexpected model warning withdraws its measures
 
-- **WHEN** the sensor's model reports an access it does not implement
+- **WHEN** the sensor's model reports an access it does not implement, and its
+  descriptor does not expect that warning
 - **THEN** every measure over the sensor's events has no value
 - **AND** the evidence names the warning
+
+#### Scenario: An expected warning is a coverage gap
+
+- **WHEN** the I2C controller's model warns of a write to a timing register its
+  descriptor lists as an expected warning
+- **THEN** the measures over the bus keep their values
+- **AND** the evidence lists the coverage gap the descriptor names for it
 
 ### Requirement: Emulation Runs Are Deterministic And Identified
 
@@ -275,7 +352,11 @@ rather than choose one record.
 ### Requirement: The Emulator Is Reported, Never Substituted
 
 A missing emulator, or one outside the versions the lowering was checked
-against, SHALL report unsupported naming what is missing. A run that exceeds
+against, SHALL report unsupported naming what is missing: an installed
+emulator of another version SHALL be reported by its version, not as missing.
+A run that the emulator cannot make on the host, such as from a temporary
+directory whose path it cannot read, SHALL be reported unsupported naming the
+reason before the emulator starts, never as a crashed run. A run that exceeds
 its wall-clock limit SHALL be ended with its whole process group, its partial
 events kept, and the run reported failed with the verification left unknown.
 
@@ -289,7 +370,15 @@ events kept, and the run reported failed with the verification left unknown.
 
 - **WHEN** the installed emulator reports a version the lowering was not
   checked against
-- **THEN** the question is reported unsupported naming the version
+- **THEN** the question is reported unsupported naming that version and the
+  versions the lowering was checked against
+
+#### Scenario: A temporary path the emulator cannot read reports unsupported
+
+- **WHEN** the temporary directory a run would be made in has a space in its
+  path
+- **THEN** the question is reported unsupported naming the directory, and the
+  emulator is not started
 
 #### Scenario: A hung run is ended whole
 

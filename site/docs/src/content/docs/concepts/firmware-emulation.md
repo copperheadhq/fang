@@ -53,6 +53,11 @@ the measures that rest on it. And where the emulator does not route a
 peripheral through its pins' configuration, the configuration is measured from
 what the firmware wrote, instead of trusted.
 
+A measure that could only ever read one way is refused before anything runs:
+a count over an empty window, a read of a device the question has removed, a
+pin configuration over a port that carries no bus. Each would pass its
+constraint by construction, which is a pass nobody observed.
+
 ## A finding, not a proof
 
 Every run lists what its models do not cover, and its confidence is bounded by
