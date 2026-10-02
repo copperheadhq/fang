@@ -368,7 +368,7 @@ def test_a_question_reads_back_from_its_record_without_the_program():
     assert Value.from_dict(json.loads(canonical_dumps(value.as_dict()))) == value
 
 
-def test_a_verification_by_inspection_elaborates_exactly_as_before():
+def test_a_verification_by_inspection_elaborates_exactly_as_before(tmp_path):
     class Inspected(Filter):
         looked_at = Verifies("corner_spec", method="inspection", result="PASS")
 
@@ -384,7 +384,7 @@ def test_a_verification_by_inspection_elaborates_exactly_as_before():
     assert inspected.id not in {q.id for q in questions(result.snapshot)}
     graph = KernelGraph(result.snapshot, checks=DEFAULT_CHECKS)
     tool, tools = canned()
-    outcomes = verify(graph, traits=result.traits, tools=tools, workspace=Path("unused"))
+    outcomes = verify(graph, traits=result.traits, tools=tools, workspace=tmp_path)
     assert [o.question.id for o in outcomes] == [verification_of(result.snapshot).id]
     assert graph.head.entities[inspected.id].as_dict() == inspected.as_dict()
 
