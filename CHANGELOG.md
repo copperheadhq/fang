@@ -126,14 +126,19 @@ tracked separately and moves only when the serialized form changes.
   against the program that declares the part. Refusals are `SIM-0009` to
   `SIM-0016`, among them a pin configuration over a port with no bus, a match
   detail nothing reads, a window that is not a time or is reversed, an
-  observation of a device a fault removes, a stimulus outside the run, a model
-  descriptor fang does not ship (naming the part), and two probes that would
-  share a name. A Renode installed at a version the lowering was not checked
+  observation of a device a fault removes, a stimulus outside the run, a run of
+  no time or less, an address that is not a whole number, a pin selector the
+  platform does not read, a model descriptor fang does not ship (naming the
+  part), and two probes that would share a name. A model warning is matched
+  only against the expected warnings of the descriptor of the model that
+  raised it. A Renode installed at a version the lowering was not checked
   against, or a temporary directory whose path has a space, is reported
   unsupported, by reason.
 - `fang emulate`, the low-level emulation command, with `-o` and
-  `--bundle-only`; `fang verify` reports a verification whose evidence names a
-  firmware the bound file no longer is as stale, and runs it again.
+  `--bundle-only`, which fails when a run times out or crashes; `fang verify` reports a verification whose evidence names a
+  firmware the bound file no longer is as stale, and runs it again. Under
+  `fang verify --commit` each run keeps its bundle, events, log and outcome in
+  the workspace.
 - `fang schematic --drafter copperhead`, a second schematic lowering:
   `fang.copperhead` writes copperhead's netlist intent from a snapshot and runs
   `copperhead draft schematic` across a process boundary, and the sheet is read

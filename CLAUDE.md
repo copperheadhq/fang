@@ -158,7 +158,11 @@ are named `fang_` plus the device's full path (they share a namespace with the p
 peripherals, and two that would collide are refused), and the GPIO output-type register is judged
 by the firmware's writes because Renode does not store it. A measure gives an
 absent event in a completed run as the half-open range after the run's end, nothing for a run
-that timed out, and nothing over a model that warned of something its descriptor does not expect.
+that timed out, and nothing over a model that warned of something its descriptor does not expect;
+a warning is matched only against the descriptor of the model that raised it. An address must be a
+whole number and a selector one the platform reads (AF0 to AF15 on the F401). A run keeps its
+bundle, events, log and outcome in the workspace it is given, and `fang emulate` fails on a run that
+did not complete.
 The firmware's digest goes on evidence, never in the snapshot; `stale()` resolves the bound path
 exactly as a run does (`_firmware_location`, against the program that declares the part) and
 compares the digest with the file.
