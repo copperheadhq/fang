@@ -580,11 +580,27 @@ options: the options are each simulator's own form -- Xyce's tolerances and
 integration method are `TIMEINT` options, and `vntol`, which has no Xyce
 counterpart, is named in a comment -- so "only the analysis and measurement
 conventions differ" counts the options among those conventions. An AC measure
-reads `VM`. Xyce is not installed here, so its lowering and its measure-file
-reader are written from the Xyce Reference Guide and tested on preparation and
-on a measure file written in the guide's documented form, not one captured from
-a run; `RawResult` gains `outputs` so a backend can return the files a run
-wrote. The first run on a machine with Xyce is the check this cannot make.
+reads `VM`. Xyce was not installed when this was built, so its lowering and its
+measure-file reader were written from the Xyce Reference Guide and tested on
+preparation and on a measure file written in the guide's documented form;
+`RawResult` gains `outputs` so a backend can return the files a run wrote.
+
+That first run has since been made, against a Xyce development build
+(`7.10.0-172-g67790c60`) installed without root by micromamba from the
+`unic-cass` conda channel, with `fftw` from conda-forge added because the
+package omits it; Xyce is in no Ubuntu 26.04 archive or conda-forge. The
+measure files are as the guide documents them, `<deck>.ma0` and `<deck>.mt0`
+with one `NAME = value` line each and `NAME = FAILED` for a measure not taken,
+which is the fixture's form, and the RC filter's corner reads 1591.612 Hz,
+ngspice's figure. One thing the guide did not say: Xyce aborts a deck whose AC
+sweep sets `TIMEINT METHOD` ("METHOD is not a recognized time integration
+option"), so every AC question on Xyce failed to run. An AC deck now writes the
+tolerances and names the method in a comment, and a transient deck keeps it.
+The buck regulator's transient ran too, with its model's ngspice `SW` switch
+rewritten as Xyce's `VSWITCH` in a scratch copy (the shipped model is for
+ngspice, and its trait says so): 3.28 V and 1.88 mV against ngspice's 3.29 V
+and 1.90 mV, the two switch models' thresholds differing. A test runs the
+corner question on Xyce where it is installed and skips by name where not.
 
 **Rule checks answer with a verdict, not a measurement.** A rule check writes
 no parameter, so its result cannot come from a constraint. A tool may define
@@ -666,9 +682,11 @@ refused.
 - [ERC on a generated sheet is mostly about the drawing] → accepted and stated
   in the survey: its value is establishing the rule-check path and checking the
   artifact fang ships.
-- [Xyce cannot be run here] → its dialect is tested on preparation and on
-  parsing a captured measure file; its `run` is tested only for reporting
-  unsupported.
+- [Xyce could not be run here] → its dialect was tested on preparation and on
+  parsing a measure file in the guide's form, and its `run` only for reporting
+  unsupported. A run against a Xyce build has since confirmed the measure
+  files and found the AC `METHOD` abort, recorded under the implementation
+  notes; the live test skips where Xyce is absent, as CI's runners are.
 - [KiCad moved from 9.0.8 to 10.0.6 on this machine] → the ERC parser is
   written against JSON captured from the installed version when the rule-check
   group is built, not against the 9.0.8 output this survey saw.

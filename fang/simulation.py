@@ -867,8 +867,9 @@ class SpiceDialect:
     #: The analysis kinds the dialect can lower a measure over.
     analyses: frozenset[str] = frozenset()
 
-    def options(self, options: Mapping[str, str]) -> list[str]:
-        """The solver options, in the simulator's own form."""
+    def options(self, options: Mapping[str, str], *, analysis: str | None = None) -> list[str]:
+        """The solver options, in the simulator's own form, for the analysis
+        the deck runs where a simulator's options depend on it."""
         return [f".options {name}={value}" for name, value in sorted(options.items())]
 
     def analysis_lines(self, analysis: Analysis, measures: Sequence[DeckMeasure]) -> list[str]:
@@ -1020,15 +1021,17 @@ _XYCE_TIMEINT = ("abstol", "method", "reltol")
 class XyceDialect(SpiceDialect):
     """Xyce: deck-level `.MEASURE` lines, read back from its measure file.
 
-    Written from the Xyce Reference Guide, not against a binary, because Xyce
-    is not installed where this was built: Xyce takes `.MEASURE` at the deck
-    level and writes each result to a measure file beside the netlist --
-    `<netlist>.mt0` for a transient, `<netlist>.ma0` for an AC sweep -- one
-    `NAME = value` line per measure, with `FAILED` in place of a value for a
-    measure that could not be taken. An AC measure reads the magnitude, `VM`.
-    Solver options belong to packages; the tolerances and the integration
-    method are `TIMEINT` options, and an option with no Xyce counterpart is
-    named in a comment rather than written as something it is not.
+    Written from the Xyce Reference Guide, and checked against a Xyce 7.10
+    development build: Xyce takes `.MEASURE` at the deck level and writes
+    each result to a measure file beside the netlist -- `<netlist>.mt0` for
+    a transient, `<netlist>.ma0` for an AC sweep -- one `NAME = value` line
+    per measure, with `FAILED` in place of a value for a measure that could
+    not be taken. An AC measure reads the magnitude, `VM`. Solver options
+    belong to packages; the tolerances and the integration method are
+    `TIMEINT` options, and an option with no Xyce counterpart is named in a
+    comment rather than written as something it is not. An AC sweep has no
+    time integration, and Xyce aborts a deck whose AC sweep names a
+    `METHOD`, so the method is written only for a transient.
     """
 
     name = "xyce"
@@ -1037,18 +1040,22 @@ class XyceDialect(SpiceDialect):
     _MEASURED = re.compile(r"^\s*(fang_m\d+)\s*=\s*(\S+)", re.MULTILINE | re.IGNORECASE)
     _MEASURE_FILE = re.compile(r"\.m[a-z]\d+$")
 
-    def options(self, options: Mapping[str, str]) -> list[str]:
+    def options(self, options: Mapping[str, str], *, analysis: str | None = None) -> list[str]:
+        timed = analysis != "ac"
         timeint = [
             f"{name.upper()}={value}"
             for name, value in sorted(options.items())
-            if name in _XYCE_TIMEINT
+            if name in _XYCE_TIMEINT and (timed or name != "method")
         ]
         lines = [".OPTIONS TIMEINT " + " ".join(timeint)] if timeint else []
-        lines += [
-            f"* {name}={value} has no Xyce option and is not written"
-            for name, value in sorted(options.items())
-            if name not in _XYCE_TIMEINT
-        ]
+        for name, value in sorted(options.items()):
+            if name not in _XYCE_TIMEINT:
+                lines.append(f"* {name}={value} has no Xyce option and is not written")
+            elif name == "method" and not timed:
+                lines.append(
+                    f"* {name}={value} integrates time, which an AC sweep does not, "
+                    "and is not written"
+                )
         return lines
 
     @staticmethod
@@ -1145,7 +1152,7 @@ def lower_question(
         lines.extend(bench_device(item, index, ac=ac) for index, item in enumerate(items))
     for path in sorted({model.path for model in models}):
         lines.append(f".include {path}")
-    lines.extend(dialect.options(options))
+    lines.extend(dialect.options(options, analysis=analysis.kind))
     lines.extend(dialect.analysis_lines(analysis, measures))
     lines.append(".end")
     return "\n".join(lines) + "\n"

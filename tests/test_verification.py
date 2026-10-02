@@ -1237,8 +1237,8 @@ def test_the_installed_ngspice_measures_the_corner_and_fails_the_floor(tmp_path)
 
 #: A measure file in the form the Xyce Reference Guide documents for `.MEASURE`
 #: output: one `NAME = value` line per measure, `FAILED` for one that could not
-#: be taken. Xyce is not installed where this was written, so it is written from
-#: the guide rather than captured from a run.
+#: be taken. Written from the guide, and the form a Xyce 7.10 development build
+#: writes for this corner and floor.
 XYCE_MEASURE_FILE = """FANG_M0 = 1.591550e+03
 FANG_M1 = FAILED
 """
@@ -1303,6 +1303,38 @@ def test_the_xyce_measure_file_is_read_into_decimals_and_nothing_else():
     # What Xyce prints is not where it reports measures.
     printed = XyceDialect().parse("FANG_M0 = 2", slots[:1], outputs={})
     assert printed["fang_m0"] == "Xyce's measure file does not report it"
+
+
+def test_an_ac_deck_for_xyce_names_no_integration_method():
+    """Xyce aborts a deck whose AC sweep sets `TIMEINT METHOD`, found by
+    running one: an AC sweep integrates no time. The tolerances stay, the
+    method is named in a comment, and a transient deck keeps it."""
+    result = build(Filter)
+    deck = XYCE.prepare(result.snapshot, questions(result.snapshot)[0], traits=result.traits).input
+    assert ".OPTIONS TIMEINT ABSTOL=1e-12 RELTOL=1e-3" in deck.splitlines()
+    assert "METHOD=" not in deck
+    assert "* method=gear integrates time, which an AC sweep does not, and is not written" in deck
+    options = {"reltol": "1e-3", "abstol": "1e-12", "method": "gear"}
+    assert XyceDialect().options(options, analysis="transient") == [
+        ".OPTIONS TIMEINT ABSTOL=1e-12 METHOD=gear RELTOL=1e-3",
+    ]
+
+
+@pytest.mark.skipif(not XYCE.available(), reason="Xyce is not installed here")
+def test_xyce_answers_the_corner_question_live(tmp_path):
+    """Run against a Xyce binary: its measure file is read as the reference
+    guide documents it, a crossing that never happens reads as failed, and
+    the corner agrees with ngspice's 1591.612 Hz."""
+    result = build(Floored)
+    question = questions(result.snapshot)[0]
+    job = XYCE.prepare(result.snapshot, question, traits=result.traits)
+    raw = XYCE.run(job, workspace=tmp_path)
+    assert raw.status.value == "succeeded", raw.message
+    assert "xyce" in raw.version.lower()
+    corner, floor = XYCE.read(job, raw)
+    assert Decimal("1590") < corner.quantity.value < Decimal("1593")
+    assert corner.quantity.unit.symbol == "Hz"
+    assert floor.quantity is None and floor.reason == "Xyce reported the measure as failed"
 
 
 def test_a_xyce_run_is_read_into_measurements_with_its_version(tmp_path):

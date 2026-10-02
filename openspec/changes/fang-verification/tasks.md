@@ -236,3 +236,7 @@ change.
       `tool`, for a measurement, a failure, a re-entry and an equation-level
       answer; carry the value-setting record with the value across
       re-elaboration; verify each, and that the record reads back.
+- [x] 12.4 Run the Xyce dialect against a Xyce binary (a 7.10 development
+      build, installed without root from a conda channel); leave
+      `TIMEINT METHOD` out of an AC deck, which Xyce aborts on; verify the
+      deck, and run the corner question on Xyce where it is installed.
