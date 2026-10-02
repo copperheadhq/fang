@@ -214,8 +214,8 @@ program that has since changed.
 | [`sensor_board/`](/examples/sensor_board/) | Interfaces lowering to pins, a recorded decision, a check left undecided |
 | [`i2c_bus/`](/examples/i2c_bus/) | A multi-drop bus, addresses as constrained parameters |
 | [`sensor_node/`](/examples/sensor_node/) | Ports that name their controller, cited pin selectors, an address the check reads |
-| [`usb_uart_bridge/`](/examples/usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet |
 | [`buck_regulator/`](/examples/buck_regulator/) | Requirement, decision, calculations, and a question ngspice answers under load |
+| [`usb_uart_bridge/`](/examples/usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet |
 | [`servo_drive/`](/examples/servo_drive/) | Composition: one `HalfBridge` block instantiated three times |
 | [`jee_advanced/problem_1/`](/examples/jee_advanced/problem_1/) | Not a board: four claimed currents, all four decided |
 | [`jee_advanced/problem_2/`](/examples/jee_advanced/problem_2/) | Not a board either: one claimed current, and the two branches that carry none |
@@ -568,11 +568,16 @@ rejected rather than merged.
 4. **Required checks have run.** Every `CheckClass` the policy requires has
    actually produced a result. Absent a project policy, the required set is
    structural validation plus every check class whose scope intersects the
-   affected entities. A check class is therefore defined by its scope as well as
-   by what it evaluates.
+   affected entities, taken over the head as well as the candidate, so that a
+   removal still brings in the checks whose scope held what it removed. A check
+   class is therefore defined by its scope as well as by what it evaluates.
 5. **No blocking result.** No check reported a blocking severity, or `TXN-0002`.
 6. **No undecided over a must-be-decided requirement**, or `TXN-0003`, and
-   policy approvals satisfied, or `TXN-0004`.
+   policy approvals satisfied, or `TXN-0004`. A constraint left undecided only
+   because a [verification question](/concepts/verification/) has not yet
+   measured its parameter, or because its measurement failed, does not block
+   here: the requirement's verification state already says so. A run that
+   answers and still leaves the constraint undecided does block.
 
 Only `commit()` advances the head. Rejection is correct by construction: the
 candidate copy is discarded, and canonical state was never touched.
@@ -27715,7 +27720,7 @@ What the elaborated graph contains, by entity kind.
     2  requirement
     2  verification
   142  total
-snapshot sha256:5577f83332d222b286bf881b13db321946f4958a3076b89f2065e4feead94614
+snapshot sha256:aca66030ef6b081a28f85f582734528421ac3f66be5be80ceba982f30a319bea
 ```
 
 All of it, including the KiCad netlist, is in
@@ -29515,11 +29520,13 @@ script can rely on the exit code rather than parsing output.
 | `fang netlist` | Print the compiled components and nets |
 | `fang export` | Write a KiCad netlist |
 | `fang view` | Compile a view; render it to SVG with `-o` |
+| `fang schematic` | Compile a KiCad schematic; render it with `--svg`, or have copperhead draft it |
 | `fang sim` | Compile a simulation plan, lower it, run it |
 | `fang verify` | Route and run every declared question; persist only with `--commit` |
 | `fang emulate` | Run the firmware in Renode and print what each emulation question measured |
 | `fang graph` | Summarize the kernel graph |
 | `fang diff` | Diff a program against the persisted workspace |
+| `fang mcp` | Serve the kernel to an agent over the Model Context Protocol, on stdio |
 
 ## Options
 
@@ -29561,6 +29568,36 @@ The six views are `system`, `interconnect`, `power`, `ground`, `interfaces` and
 Each answers one engineering question and is generated only from facts in the
 graph. Each also reports its own incompleteness rather than hiding it: a node
 carrying unknown parameters is drawn with a dashed border.
+
+## Schematic
+
+```bash
+fang schematic board.py -o board.kicad_sch --svg board.svg
+fang schematic board.py --drafter copperhead -o board.kicad_sch
+```
+
+| Option | Default | Does |
+| --- | --- | --- |
+| `-o`, `--output` | stdout | Where to write the `.kicad_sch` |
+| `--svg` | none | Also render the sheet here, with `kicad-cli` |
+| `--drafter` | `fang` | Who draws the sheet: `fang`, a grid joined by labels, or `copperhead`, placed and wired |
+
+fang's own sheet needs no tool; `--svg` needs `kicad-cli`. A copperhead draft
+needs `copperhead` and `kicad-cli`: the sheet is read back with KiCad and
+returned only if its nets are exactly the design's, and refused, naming the
+difference, otherwise. A part with no KiCad symbol, or a net left with fewer
+than two drawn pins, is reported as a loss rather than dropped silently.
+
+## Agent surface
+
+```bash
+fang mcp board.py
+```
+
+Serves the kernel over the Model Context Protocol on stdio, bound to the
+project directory, with the agent's changes going through the same commit gate
+as everything else. It needs the `mcp` extra, `pip install "copperhead-fang[mcp]"`,
+and refuses with `MCP-0005` without it.
 
 ## Simulation
 
@@ -29606,7 +29643,11 @@ unsupported, by name, and is not by itself a failure. A program with no
 question says there is nothing to verify and exits `0`.
 
 Without `--commit` nothing is written, not even a scratch deck. `--commit`
-needs a workspace, so run `fang build` first. See
+needs a workspace, so run `fang build` first. It persists measurements and
+nothing else: where the program has changed since that build, it refuses
+before anything runs and exits `1`, saying to run `fang build` again. A model
+or firmware file changed since a run is not a change to the program, and its
+question runs again and is committed. See
 [Verification](/reference/verification/).
 
 ## Emulation
@@ -29625,9 +29666,11 @@ fang emulate board.py --bundle-only -o bundles
 `fang emulate` is the low-level command, as `fang sim` is for SPICE: it prints
 what each measure read and takes nothing through the gate, and it changes no
 workspace. `fang verify` answers emulation questions with every other kind and
-takes the measurements back through the gate. Without Renode 1.17.0 on the
-path, each question is reported unsupported and nothing is fabricated. See
-[Emulation](/reference/emulation/).
+takes the measurements back through the gate. A question the program left
+unrunnable exits `1`, and so does a run that timed out or crashed, whose
+measures have no value. Without Renode 1.17.0 on the path, each question is
+reported unsupported and nothing is fabricated, which is not by itself a
+failure. See [Emulation](/reference/emulation/).
 
 
 ---
@@ -29988,7 +30031,9 @@ i2c = I2CPort(address=0x44 * addr)
 ```
 
 `address=0x44` is refused with `UNIT-0001` naming the parameter: a bare number
-says nothing about what it counts.
+says nothing about what it counts. So is a fixed address given as a range or a
+tolerance: a device answers at one address, and one that might be any of several
+is a strap the program has not stated.
 
 Where a strap pin selects the address, `Strap` keys each address by one of the
 device's own pins, which is how a datasheet states it:
@@ -30005,7 +30050,9 @@ The names are the part's vendor pin names; one the part does not have is
 identifiers and carries no `address` parameter beside it.
 
 `fang.compatibility.resolve_address(snapshot, port)` reads the address. A fixed
-one comes back as recorded. A strap is resolved from the inferred nets: the one
+one comes back as recorded; a fixed address holding conflicting values comes
+back as the chosen one once the conflict is resolved, and as an unknown value
+naming the candidates' sources until then. A strap is resolved from the inferred nets: the one
 pin of its map that shares the strap pin's net selects the address, returned as
 an inferred value. A strap pin on no net, on a net none of those pins shares,
 or on a net two of them share gives an unknown value whose reason names the
@@ -30013,10 +30060,15 @@ strap pin, and both pins when two share it. A port with neither, such as a
 controller's, gives `None`: it is not addressed.
 
 The compatibility check's addressing rule reads every participant of a
-multi-drop bus through that function. Two devices at one address fail, naming
-both. An unresolved strap leaves the rule undecided, naming the pin. A port
-with no address is not reported. When every addressed device is known and no
-two collide, the rule passes.
+multi-drop bus through that function and compares the addresses by overlap. Two
+devices at one address fail, naming both. Addresses that overlap without being
+the same, and an unresolved strap or conflict, leave the rule undecided, naming
+the ports or the pin. A port with no address is not reported. The rule passes
+only when every addressed device is known and none overlap.
+
+Because the rule reads the strap pin's net, its scope covers that net: re-tying
+or removing the strap's connection brings the rule into the commit gate, so two
+devices cannot end up at one address without the check running.
 
 ## Roles
 
@@ -30468,6 +30520,12 @@ reason is refused with `SIM-0008`. On a sheet fang draws, the two rules above
 fire on every symbol, which is why a question names them rather than the tool
 hiding them.
 
+The report is read as kicad-cli 10.0.6 writes it, schema `erc.v1`. A report of
+another schema, or one missing a field the reader reads (the sheets, their
+violations, and each violation's rule, severity, description and items), fails
+the run with the reason: no verdict is drawn and the verification stays
+unknown, where read as empty it would have passed.
+
 ### Evaluates
 
 ```python
@@ -30484,8 +30542,12 @@ matched = Evaluates(
 `through` names the matching parts in order from the port toward the model.
 Each is a shunt element when a terminal is on ground and a series element
 otherwise, and its value is the one the graph holds; a part with no value
-leaves the question unanswered, naming the part. A frequency outside the file is
-refused naming its range (`SIM-0007`).
+leaves the question unanswered, naming the part. The parts must be the ladder
+the graph connects: counted back from the model's port 1, each shunt part
+joins the node reached so far to ground and each series part joins it to the
+next node toward the port. The first part that does not, named out of order or
+off the chain, is refused by name with `SIM-0003`. A frequency outside the file
+is refused naming its range (`SIM-0007`).
 
 ## Routing
 
@@ -30529,7 +30591,15 @@ nothing the output did not contain.
 
 A SPICE deck instantiates each modelled part as an `X` device in its model's
 port order, through the trait's `pin_map`, and includes the model by path rather
-than inlining it. ngspice measures through a `.control` block, because in batch
+than inlining it. Several pins may land on one port, as a part's ground pins
+do; pins on different nets are refused with `SIM-0006`, naming the part, the
+port and the nets, because an instance reaches a port through one node. A
+model is named in the run's bundle by its path relative to the program that
+declared the part. Where two different files would share that name, from parts
+declared in different folders, each is named under the first twelve hex digits
+of its own digest instead, and Touchstone files are named the same way; two
+different files declaring one subcircuit are refused, since a deck holds one
+definition of it. ngspice measures through a `.control` block, because in batch
 mode it ignores `.print op` and reports a deck-level `.meas ac` as a real part.
 Xyce gets the same circuit with deck-level `.MEASURE` lines, and is read from
 the measure file it writes.
@@ -30583,6 +30653,14 @@ existing workspace, keeping each run's files under `.copperhead/simulations/`.
 program declares a measured parameter without a value, so elaborating it again
 does not withdraw the measurement.
 
+`--commit` persists measurements and nothing else. If the program has changed
+since its design was built, a part retuned or a constraint tightened, it
+refuses before anything runs and says to run `fang build` first, which is the
+command that persists an edit through its gate and its tool plan. A
+measurement made stale by a file the program reads but does not hold, an
+edited model or a rebuilt firmware image, is not an edit: its question runs
+again and the answer is committed.
+
 
 ---
 
@@ -30604,6 +30682,10 @@ fang emulate board.py                # run the firmware and print what it measur
 fang emulate board.py -o bundles     # also write each question's bundle
 fang emulate board.py --bundle-only -o bundles   # write the bundles, run nothing
 ```
+
+`fang emulate` exits non-zero when a question is not runnable or a run timed
+out or crashed; Renode not being installed is reported, and is not by itself
+a failure.
 
 A pass says the declared behaviour was observed on models whose limits the
 evidence lists. It does not say the fabricated board works.
@@ -30667,7 +30749,7 @@ edit nobody sees.
 
 | Field | Means |
 | --- | --- |
-| `run_until` | The run's virtual duration. There is no default. |
+| `run_until` | The run's virtual duration, a positive time. There is no default. |
 | `stimuli` | `At(time, "<device>.<input>", value)`: a model input set to one value at a virtual time within the run |
 | `faults` | `Absent(device)`: the device is not on its bus, so its address goes unanswered, and it records nothing |
 | `abstracted` | Parts in scope deliberately left without a model, each a coverage gap |
@@ -30722,10 +30804,10 @@ it names. A plan that cannot be resolved is refused, naming what is missing.
 | `SIM-0010` | A component in scope has neither a model nor an abstraction |
 | `SIM-0011` | A fault the device's model does not support |
 | `SIM-0012` | A stimulus names an input its model lacks, gives a value of the wrong dimension or more than one value, falls outside the run, or sets a device a fault removes |
-| `SIM-0013` | A pin the platform model does not map; a port is never derived from a pin's name |
-| `SIM-0014` | No run duration, or a run of no time |
+| `SIM-0013` | A pin the platform model does not map, a port never being derived from a pin's name, or a pin selector it does not read: the F401 reads `AF0` to `AF15` |
+| `SIM-0014` | No run duration, or one that is not positive, which `Emulates` already refuses where it is written |
 | `SIM-0015` | No firmware is bound, or it was built for another target |
-| `SIM-0016` | A bus device's controller or address cannot be resolved, or `PinConfig` names a port that is no bus |
+| `SIM-0016` | A bus device's controller or address cannot be resolved, its address is a range or no whole number, or `PinConfig` names a port that is no bus |
 
 The plan is canonical JSON, identified by the hash of its own canonical form,
 so two machines preparing the same question produce the same plan.
@@ -30752,6 +30834,13 @@ one: it reports unsupported before Renode starts, and `TMPDIR` (`TEMP` on
 Windows) names another. A run that outlives its wall-clock limit is ended with
 every process it started, and its partial events are kept.
 
+Renode always runs from a temporary copy of the bundle. What the run leaves
+is then kept in the workspace the run is given: `fang verify --commit` keeps
+each run's bundle, its `events.jsonl`, Renode's `renode.log` and an
+`outcome.json` under `.copperhead/simulations/renode-<job>/`, a crashed run's
+log among them. Without `--commit`, and under `fang emulate`, they go to a
+scratch directory removed afterwards, so the project is left as it was.
+
 ## What a run can see
 
 Events come from probes in the emulator (what a device was asked and
@@ -30770,12 +30859,16 @@ Three rules keep a measure honest:
   descriptor does not expect means the firmware did something the model does
   not cover; every measure over that model has no value, and the evidence
   names the warning. A warning the descriptor expects is the coverage gap it
-  stands for.
+  stands for. A warning is matched only against the descriptor of the model
+  that raised it, so text the platform expects from its I2C controller still
+  withdraws the measures over the sensor when the sensor's model reports it.
 - **Pin configuration is measured.** Renode's I2C and UART controllers do not
   consult the pins' configuration, so firmware with the wrong pin setup would
   pass every bus measure. `PinConfig` reads what the firmware wrote to the
   mode, alternate-function and output-type registers, judging the output-type
-  register by its writes because Renode does not store it.
+  register by its writes because Renode does not store it. A selector the
+  platform does not read refuses the plan, so a pin's alternate function is
+  never left unchecked.
 
 ## Evidence
 
@@ -30897,7 +30990,7 @@ Diagnostic codes are stable. They are **allocated, never reused and retired
 rather than deleted**, so a code in an old log means today what it meant then,
 and searching for one never lands on a different problem.
 
-Seven areas exist: `ELAB`, `IFACE`, `TOPO`, `UNIT`, `TXN`, `SIM`, `IMPORT`.
+Eight areas exist: `ELAB`, `IFACE`, `TOPO`, `UNIT`, `TXN`, `SIM`, `IMPORT`, `MCP`.
 
 ## UNIT: units and dimensions
 
@@ -30982,12 +31075,13 @@ its code, its message and the diff it would have applied.
 | `SIM-0011` | A fault the device's emulation model does not support |
 | `SIM-0012` | A stimulus names an input its model lacks, or a value of the wrong dimension |
 | `SIM-0013` | A pin the emulation platform does not map |
-| `SIM-0014` | An emulation names no run duration |
+| `SIM-0014` | An emulation names no run duration, or one that is not positive |
 | `SIM-0015` | No firmware is bound, or it was built for another target |
 | `SIM-0016` | A bus device's controller or address cannot be resolved |
 
 `SIM-0001`, `SIM-0002`, `SIM-0003`, `SIM-0005` and `SIM-0008` fail where the
-question is written or elaborated. The others are a question
+question is written or elaborated, and so does `SIM-0014` for a run that is not
+positive. The others are a question
 [`fang verify`](/reference/verification/) reports as not runnable, naming what
 is missing, rather than running it with something assumed in its place.
 `SIM-0009` to `SIM-0016` are an emulation plan refused before anything runs;
@@ -31002,6 +31096,20 @@ is missing, rather than running it with something assumed in its place.
 Reported in `import-report.json` rather than raised, because an import that
 stopped at the first unrepresentable construct would be less useful than one
 that says what it could not carry.
+
+## MCP: the agent surface
+
+| Code | Means |
+| --- | --- |
+| `MCP-0001` | A path outside the bound project root was named |
+| `MCP-0002` | No tool by that name is exposed |
+| `MCP-0003` | An argument did not parse |
+| `MCP-0004` | Commit named a proposal the gate did not accept |
+| `MCP-0005` | The protocol dependency is not installed |
+| `MCP-0006` | The operation kind is not one the commit gate evaluates |
+
+A refusal at the protocol boundary is its own area: it describes the boundary,
+not the transaction the boundary was asked about.
 
 ## Adding a code
 
