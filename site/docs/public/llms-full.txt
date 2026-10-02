@@ -24461,6 +24461,12 @@ The output voltage is deliberately not a parameter of the controller. The
 feedback divider on the board sets it, which is why the divider carries the
 constraint that produces it.
 
+The controller's EN pin is tied to the input, because the rail is always on and
+the datasheet says EN must be set high or low rather than left open: an
+`enable_input` citation records where (section 8.3.1, page 9), and the
+datasheet's typical application ties EN to VIN the same way. KiCad's rules
+check reported the pin unconnected while it floated.
+
 ## The question
 
 The requirement used to be closed by a `Verifies(..., result="PASS")` whose
@@ -24488,7 +24494,7 @@ and the constraints over them are decided by the gate's own constraint check.
 
 ## What comes out
 
-11 parts, 9 nets, 121 entities, 18 checks. None failed and four undecided:
+11 parts, 9 nets, 124 entities, 18 checks. None failed and four undecided:
 three are the rail's own numbers, until `fang verify` measures them.
 
 [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/rationale.md) is the file to read. It is the whole
@@ -24662,6 +24668,11 @@ class Rail3V3(System):
         document="SRC-DS-TPS62130",
         locator="section 9.2.2.1, inductor selection",
     )
+    enable_input = Cites(
+        "EN must be set externally High or Low; High starts the converter, Low shuts it down",
+        document="SRC-DS-TPS62130",
+        locator="section 8.3.1, enable / shutdown (EN), page 9",
+    )
 
     # -- the two numbers that were computed, and from what ------------------
     inductor_value = Calculates(
@@ -24786,6 +24797,12 @@ class Rail3V3(System):
         self.controller.vin.vcc >> self.input_bulk.p1
         self.controller.vin.gnd >> self.input_bulk.p2
 
+        # The rail is always on, and EN may not float: it is tied to the
+        # input net, as the datasheet's typical application ties it (figure
+        # 9-1, page 13), which its VIN + 0.3 V maximum allows. It lands on the
+        # input capacitor's pin, since a logic input is no power surface.
+        self.controller.enable >> self.input_bulk.p1
+
         # The switching node: the one net on this board whose loop area matters
         # more than its schematic.
         self.controller.sw >> self.inductor.p1
@@ -24848,7 +24865,7 @@ R2     200 kOhm         Package:R_0402
 U1     BuckController   Package:VQFN-16
 Net-(C1-Pad1)            C1.1 L1.1 U1.SW
 Net-(C1-Pad2)            C1.2 U1.BOOT
-Net-(C2-Pad1)            C2.1 D1.K U1.VIN
+Net-(C2-Pad1)            C2.1 D1.K U1.EN U1.VIN
 Net-(C2-Pad2)            C2.2 J1.GND U1.GND
 Net-(C3-Pad1)            C3.1 J2.3V3 L1.2 R2.1
 Net-(C3-Pad2)            C3.2 J2.GND R1.2
@@ -24873,17 +24890,17 @@ What the elaborated graph contains, by entity kind.
     1  block
     2  calculation
    11  component
-   34  connection
+   36  connection
    12  constraint
     1  decision
-    2  evidence
+    3  evidence
     5  interface
    26  pin
    25  port
     1  requirement
     1  verification
-  121  total
-snapshot sha256:3a9b864feec14285d6a823110179d06344a0d3cc43b0f6566ca15acbc4fa99ee
+  124  total
+snapshot sha256:bfbf58b58b08d039bc8dde706efbd861f5d15f35e60c2fee4b47fa54301ffb74
 ```
 
 All of it, including the KiCad netlist, is in
@@ -30534,7 +30551,8 @@ A system's own surface has no pins and is refused with `SIM-0003`.
 | `ReturnLoss(surface, at=, through=, reference=)` | -20 log10 \|Gamma\| through matching parts | dB |
 
 Windows are times in a transient and frequencies in an AC sweep; a window in the
-wrong dimension is refused where it is written. A filter's corner is a
+wrong dimension is refused where it is written, and so is one whose start is not
+before its end (`SIM-0003`), as an emulation `Count`'s is. A filter's corner is a
 `Crossing` of the level 1/sqrt(2) of the drive, falling.
 
 ### Checks
@@ -30637,7 +30655,8 @@ different files declaring one subcircuit are refused, since a deck holds one
 definition of it. ngspice measures through a `.control` block, because in batch
 mode it ignores `.print op` and reports a deck-level `.meas ac` as a real part.
 Xyce gets the same circuit with deck-level `.MEASURE` lines, and is read from
-the measure file it writes.
+the measure file it writes. Its solver options are `TIMEINT` options, and an
+AC deck leaves out the integration method, which Xyce refuses in an AC sweep.
 
 ## Re-entry
 
@@ -30651,6 +30670,14 @@ An answer enters as one transaction against the committed head:
   file the snapshot does not hold;
 - the declared `Verification`, replaced under its own identifier with its
   result, the evidence, the level and the tool.
+
+The run's provenance record is appended to each entity the transaction changes,
+with a `fields` list naming what it set there (RFC 3 section 14): the measured
+value on the part that holds it, as `parameters.corner.value`, which is a fact
+apart from the parameter the program declares, and `evidence`, `level`,
+`result` and `tool` on the verification. A failure and an answer at the
+equation level name the verification's four the same way, and a rebuild that
+keeps a measured value keeps the record that set it.
 
 The gate's constraint check decides the constraint. If a hard constraint over a
 measured value fails, the head does not move; the evidence and the verification
@@ -30686,7 +30713,12 @@ the workspace is left as it was. `--commit` persists the new head into an
 existing workspace, keeping each run's files under `.copperhead/simulations/`.
 `fang build`, `fang diff` and `fang verify` keep what earlier runs measured: a
 program declares a measured parameter without a value, so elaborating it again
-does not withdraw the measurement.
+does not withdraw the measurement. A measurement that a constraint tightened
+since breaks is kept as the failure it now is: the verification reads `FAIL`
+with the run's evidence and the parameter has no value, exactly as if the run
+had met the tightened constraint when it re-entered, so `fang build` persists
+the edit and reports the failure instead of refusing the design. Relax the
+constraint and the recorded run re-enters and passes, with nothing run again.
 
 `--commit` persists measurements and nothing else. If the program has changed
 since its design was built, a part retuned or a constraint tightened, it
@@ -30845,7 +30877,11 @@ it names. A plan that cannot be resolved is refused, naming what is missing.
 | `SIM-0016` | A bus device's controller or address cannot be resolved, its address is a range or no whole number, or `PinConfig` names a port that is no bus |
 
 The plan is canonical JSON, identified by the hash of its own canonical form,
-so two machines preparing the same question produce the same plan.
+so two machines preparing the same question produce the same plan. It names no
+snapshot: the snapshot's hash moves with every entity and with the checkout's
+path, so a plan carrying it would make an unrelated edit look like a new run.
+The job names its snapshot beside its hash instead, and a measurement stays
+current until something the run reads changes.
 
 ## The run
 
