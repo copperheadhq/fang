@@ -170,6 +170,25 @@ IFACE_MEMBERSHIP_DISAGREEMENT = _allocate(
     "IFACE-0002", "two interfaces disagree on membership"
 )
 
+# Simulation and verification conditions. A question is refused here, by name,
+# rather than run with something assumed in place of what it left out.
+SIM_UNDECLARED_PARAMETER = _allocate(
+    "SIM-0001", "a question measures into a parameter its module does not declare"
+)
+SIM_QUESTION_RESULT = _allocate("SIM-0002", "a question states its own result")
+SIM_UNRESOLVED_SURFACE = _allocate(
+    "SIM-0003", "a question names a surface or part that resolves to no pins"
+)
+SIM_MISSING_BENCH = _allocate("SIM-0004", "a circuit question names no bench")
+SIM_LOAD_DIMENSION = _allocate("SIM-0005", "a load is neither a current nor a resistance")
+SIM_MODEL_PORT_UNREACHED = _allocate(
+    "SIM-0006", "a model port the part's pin map does not reach"
+)
+SIM_OUTSIDE_MODEL_RANGE = _allocate("SIM-0007", "a frequency outside a model's range")
+SIM_EXCLUSION_WITHOUT_REASON = _allocate(
+    "SIM-0008", "a rule-check exclusion gives no reason"
+)
+
 # Import conditions.
 IMPORT_LOSSY = _allocate("IMPORT-0001", "adapter could not represent a construct")
 

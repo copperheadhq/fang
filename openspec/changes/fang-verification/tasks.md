@@ -10,10 +10,10 @@ change.
 
 ## 1. Diagnostics and entity fields
 
-- [ ] 1.1 Allocate the `SIM` codes named in design.md with `_allocate`, at the
+- [x] 1.1 Allocate the `SIM` codes named in design.md with `_allocate`, at the
       bottom of a new `SIM` block; verify the registry tests still pass and no
       code was reused.
-- [ ] 1.2 Add optional `level` and `tool` fields to `Verification`, omitted from
+- [x] 1.2 Add optional `level` and `tool` fields to `Verification`, omitted from
       `as_dict()` when absent; verify an existing snapshot's hash is unchanged
       (the examples' committed outputs still match before any example is edited).
 

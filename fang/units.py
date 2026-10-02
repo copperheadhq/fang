@@ -513,7 +513,16 @@ def _decimal_str(value: Decimal) -> str:
 
     Normalizes away exponent notation for ordinary magnitudes so that the same
     number always serializes the same way, without changing its value.
+
+    An infinite bound is a magnitude too: an event observed not to occur before
+    a run's end is the range from that end to infinity, and it serializes as
+    ``Infinity`` so that ``Decimal`` reads it back unchanged. A NaN is not a
+    magnitude of anything and has no canonical form.
     """
+    if value.is_nan():
+        raise ValueError("NaN is not a magnitude and has no canonical form")
+    if value.is_infinite():
+        return "Infinity" if value > 0 else "-Infinity"
     if value == value.to_integral_value() and abs(value.as_tuple().exponent) < 20:
         text = str(value.quantize(Decimal(1)))
     else:
