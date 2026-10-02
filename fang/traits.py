@@ -82,7 +82,14 @@ class DatasheetEvidence(Trait):
 
 @dataclass
 class Simulatable(Trait):
-    """A component carries a model. The model is data; the backend is not here."""
+    """A component carries a model. The model is data; the backend is not here.
+
+    `pin_map` maps each of the part's vendor pins onto the model's port it
+    lands on. `not_modelled` lists what the model leaves out -- "the control
+    loop; duty is fixed" -- and each item becomes a coverage gap on every run
+    that rests on the model. The provenance bounds the confidence of such a
+    run: a model whose provenance is unverified is an assumption.
+    """
 
     protocol = "simulatable"
     model_kind: str = "spice_subckt"
@@ -92,6 +99,7 @@ class Simulatable(Trait):
     conditions: Mapping[str, str] = field(default_factory=dict)
     distribution_restricted: bool = False
     provenance: Provenance = field(default_factory=Provenance)
+    not_modelled: tuple[str, ...] = ()
 
 
 @dataclass

@@ -31,57 +31,57 @@ change.
 - [x] 2.3 Fail elaboration with a `SIM` diagnostic when a measure names an
       undeclared parameter or a surface with no pins; verify each names what is
       wrong.
-- [ ] 2.4 Verify a plain `Verifies(..., method="inspection", result="PASS")`
+- [x] 2.4 Verify a plain `Verifies(..., method="inspection", result="PASS")`
       elaborates exactly as before and is never routed.
 
 ## 3. The protocol, routing and the runner
 
-- [ ] 3.1 Define `Tool`, `Question`, `Job`, `RawRun` and `Measurement`, and the
+- [x] 3.1 Define `Tool`, `Question`, `Job`, `RawRun` and `Measurement`, and the
       default tool registry in its documented order; verify `Job.input` hashes
       identically across two preparations.
-- [ ] 3.2 Implement `route()`: equation level when every constraint over the
+- [x] 3.2 Implement `route()`: equation level when every constraint over the
       measured parameters is already decided, else the first covering tool at
       the method's level, else unroutable; verify all three, and that no tool is
       prepared for an equation-level answer.
-- [ ] 3.3 Report a question with no supply as not runnable naming what is
+- [x] 3.3 Report a question with no supply as not runnable naming what is
       missing, and a missing tool as unsupported by name with nothing
       substituted; verify both.
-- [ ] 3.4 Record bench items as assumptions and abstracted parts as coverage
+- [x] 3.4 Record bench items as assumptions and abstracted parts as coverage
       gaps on the job; verify.
-- [ ] 3.5 Bound confidence by model provenance; verify a run over an assumed
+- [x] 3.5 Bound confidence by model provenance; verify a run over an assumed
       model reports lower confidence than one over primitives.
 
 ## 4. SPICE lowering for a real run, on ngspice
 
-- [ ] 4.1 Instantiate a modelled part as an `X` device, reading the port order
+- [x] 4.1 Instantiate a modelled part as an `X` device, reading the port order
       from the model's `.subckt` line and mapping pins through the trait's
       `pin_map`; verify the device line, that the model is `.include`d not
       inlined, that an unreached port is refused by name, and that the model
       file's digest is recorded among the job's inputs.
-- [ ] 4.2 Lower bench supplies and loads to `V`, `I` and `R` devices at the
+- [x] 4.2 Lower bench supplies and loads to `V`, `I` and `R` devices at the
       resolved nodes, refusing a load of any other dimension; verify each
       device line and the refusal.
-- [ ] 4.3 Lower measures to the ngspice dialect (a `.control` block) behind the
+- [x] 4.3 Lower measures to the ngspice dialect (a `.control` block) behind the
       dialect seam the Xyce dialect will share; verify that preparation is
       byte-identical twice.
-- [ ] 4.4 Parse ngspice's `name = value` measurement lines and failed-measure
+- [x] 4.4 Parse ngspice's `name = value` measurement lines and failed-measure
       lines into `Decimal`; verify against output captured from the installed
       ngspice 45.2, and that a failed or absent measure yields no measurement.
 
 ## 5. Re-entry through the gate
 
-- [ ] 5.1 Build the measurement transaction — inferred `SetParameter`s sourced
+- [x] 5.1 Build the measurement transaction — inferred `SetParameter`s sourced
       from the evidence, the structured `Evidence` with its input digests, the
       replaced `Verification` with result, evidence, level, tool and a
       provenance record; verify each against a `KernelGraph`, and that the
       verification keeps its identifier.
-- [ ] 5.2 Verify the previously undecided constraint is decided by the gate's
+- [x] 5.2 Verify the previously undecided constraint is decided by the gate's
       constraint check on the accepted proposal.
-- [ ] 5.3 On a rejection caused by a failed hard constraint over a measured
+- [x] 5.3 On a rejection caused by a failed hard constraint over a measured
       parameter, record evidence and a `FAIL` verification in a second
       transaction that sets no parameter; verify the head holds both and the
       parameter is still unknown.
-- [ ] 5.4 Verify a rejection for any other reason records nothing, and that
+- [x] 5.4 Verify a rejection for any other reason records nothing, and that
       measurements prepared against a stale head are refused.
 - [ ] 5.5 When a program is elaborated again into a workspace whose head holds a
       measured value for a parameter the program declares without one, keep
