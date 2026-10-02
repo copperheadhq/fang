@@ -630,6 +630,68 @@ def model_path(component: Component, source: str) -> tuple[str, Path]:
     return relative.as_posix(), location
 
 
+def bundle_paths(files: Iterable[tuple[str, str]]) -> dict[tuple[str, str], str]:
+    """How a run's bundle names each file it reads, by (path, digest).
+
+    A file keeps the path `model_path` gives it, relative to the program that
+    declared it, which is the same on every machine. Two different files
+    declared at one relative path, by parts in different folders, would share
+    that name, and one part would be given the other's file: each is then
+    named under a folder of its own digest's first twelve hex digits, which
+    is as machine-independent and differs exactly when the files do. The same
+    file named twice is one entry.
+    """
+    from pathlib import PurePosixPath
+
+    digests: dict[str, set[str]] = {}
+    for path, digest in files:
+        digests.setdefault(path, set()).add(digest)
+    named: dict[tuple[str, str], str] = {}
+    for path, found in digests.items():
+        for digest in found:
+            named[(path, digest)] = path if len(found) == 1 else (
+                PurePosixPath(digest.partition(":")[2][:12]) / path
+            ).as_posix()
+    return named
+
+
+def bundle_models(
+    models: Mapping[str, ModelFile], names: Mapping[str, str] | None = None
+) -> dict[str, ModelFile]:
+    """The models one deck includes, by component, each under a name of its own.
+
+    Named by `bundle_paths`, so two different files never share an include.
+    Two different files declaring one subcircuit are refused, naming the
+    parts: a deck includes both, and SPICE keeps one definition for every
+    instance (ngspice warns of the redefinition and ignores it), so one part
+    would run the other's model. `names` gives each component's designator
+    for the refusal.
+    """
+    from dataclasses import replace
+
+    named = bundle_paths((model.path, model.digest) for model in models.values())
+    out = {
+        component: replace(model, path=named[(model.path, model.digest)])
+        for component, model in models.items()
+    }
+    declared: dict[str, dict[str, list[str]]] = {}
+    for component, model in sorted(out.items()):
+        declared.setdefault(model.subcircuit.name.lower(), {}).setdefault(model.path, []).append(
+            (names or {}).get(component, component)
+        )
+    for subcircuit, files in sorted(declared.items()):
+        if len(files) > 1:
+            which = "; ".join(
+                f"{', '.join(parts)} from {path}" for path, parts in sorted(files.items())
+            )
+            raise SimulationError(
+                f"two different model files declare subcircuit {subcircuit} ({which}); "
+                "a deck holds one definition of a subcircuit, so one part would run "
+                "the other's model"
+            )
+    return out
+
+
 def load_model(component: Component, trait: Simulatable) -> ModelFile:
     """Find, digest and read the subcircuit model a part's trait names."""
     import hashlib

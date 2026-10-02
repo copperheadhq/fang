@@ -872,6 +872,98 @@ def test_a_model_port_no_pin_reaches_is_refused_by_name(tmp_path):
     assert "vcc" in str(raised.value)
 
 
+def declared_in(folder: Path, part: type) -> Part:
+    """An instance of a part declared by a program in another folder, as a
+    module of that folder's would declare it: its model's relative path is
+    resolved there."""
+    import importlib.util
+
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / "stage.py"
+    path.write_text("def instance(part):\n    return part()\n")
+    spec = importlib.util.spec_from_file_location(f"stage_{folder.name}", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.instance(part)
+
+
+def two_buffers(tmp_path, first: str, second: str):
+    """The filter behind two buffers declared in folders a and b, each with
+    its model at follower.sub beside it, holding the texts given."""
+    (tmp_path / "a").mkdir()
+    (tmp_path / "b").mkdir()
+    (tmp_path / "a" / "follower.sub").write_bytes(first.encode())
+    (tmp_path / "b" / "follower.sub").write_bytes(second.encode())
+
+    class Twice(Filter):
+        left = declared_in(tmp_path / "a", Follower)
+        right = declared_in(tmp_path / "b", Follower)
+        by_simulation = corner_question()
+
+        def __init__(self, **overrides):
+            super().__init__(**overrides)
+            for part in (self.left, self.right):
+                part.add_trait(
+                    Simulatable(
+                        backends=("ngspice",), source="follower.sub",
+                        pin_map={"IN": "in", "OUT": "out", "GND": "gnd"},
+                    )
+                )
+
+        def architecture(self):
+            self.inlet.line.signal >> self.left.signal_in.signal
+            self.inlet.line.ref >> self.left.signal_in.ref
+            self.left.signal_out.signal >> self.right.signal_in.signal
+            self.left.signal_out.ref >> self.right.signal_in.ref
+            self.right.signal_out.signal >> self.r.p1
+            self.r.p2 >> self.c.p1
+            self.c.p2 >> self.right.signal_out.ref
+            self.outlet.line.signal >> self.c.p1
+            self.outlet.line.ref >> self.c.p2
+
+    return build(Twice)
+
+
+def test_two_folders_naming_one_model_path_each_bring_their_own_file(tmp_path):
+    """Two buffers declared in different folders name their models by one
+    relative path, and the files differ. Named by the path alone they shared
+    one bundle entry and one include, so one buffer ran the other's model;
+    each is now named under its own digest, never under a machine's path."""
+    other = FOLLOWER.replace("follower", "follower_b").replace("1e9", "1e6")
+    result = two_buffers(tmp_path, FOLLOWER, other)
+    job = NGSPICE.prepare(result.snapshot, questions(result.snapshot)[0], traits=result.traits)
+
+    def digest(text: str) -> str:
+        return "sha256:" + hashlib.sha256(text.encode()).hexdigest()
+
+    named = {f"{digest(text)[7:19]}/follower.sub": digest(text) for text in (FOLLOWER, other)}
+    assert job.inputs == named
+    for path in named:
+        assert f".include {path}" in job.input
+        assert job.sources[path] == str(tmp_path / ("a" if named[path] == digest(FOLLOWER) else "b") / "follower.sub")
+    instances = sorted(line.split()[-1] for line in job.input.splitlines() if line.startswith("XU"))
+    assert instances == ["follower", "follower_b"]
+    assert str(tmp_path) not in job.input and str(tmp_path) not in canonical_dumps(job.manifest())
+
+
+def test_one_model_file_named_twice_is_one_entry(tmp_path):
+    result = two_buffers(tmp_path, FOLLOWER, FOLLOWER)
+    job = NGSPICE.prepare(result.snapshot, questions(result.snapshot)[0], traits=result.traits)
+    assert job.inputs == {"follower.sub": "sha256:" + hashlib.sha256(FOLLOWER.encode()).hexdigest()}
+    assert job.input.count(".include") == 1
+
+
+def test_two_model_files_declaring_one_subcircuit_are_refused(tmp_path):
+    """A deck holds one definition of a subcircuit: ngspice warns of the
+    second and ignores it, so both parts would run the first file's model."""
+    result = two_buffers(tmp_path, FOLLOWER, FOLLOWER.replace("1e9", "1e6"))
+    with pytest.raises(NotRunnable) as raised:
+        NGSPICE.prepare(result.snapshot, questions(result.snapshot)[0], traits=result.traits)
+    message = str(raised.value)
+    assert "two different model files declare subcircuit follower" in message
+    assert "U1 from " in message and "U2 from " in message
+
+
 def test_a_subcircuit_line_is_read_in_its_declared_order():
     assert read_subcircuit(FOLLOWER) == Subcircuit("follower", ("in", "out", "gnd"))
     with pytest.raises(SimulationError, match="no .subckt"):

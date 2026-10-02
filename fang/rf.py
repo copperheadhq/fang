@@ -34,7 +34,15 @@ from typing import Sequence
 from .diagnostics import SIM_OUTSIDE_MODEL_RANGE, SIM_UNRESOLVED_SURFACE
 from .runtime import Status
 from .serialization import canonical_dumps
-from .simulation import Level, SimulationError, model_path, si_magnitude, spice_nodes, spice_number
+from .simulation import (
+    Level,
+    SimulationError,
+    bundle_paths,
+    model_path,
+    si_magnitude,
+    spice_nodes,
+    spice_number,
+)
 from .units import Quantity
 from .values import Value
 from .verification import (
@@ -306,7 +314,7 @@ class TouchstoneTool:
             for part in question.data.get("evaluation", {}).get("parts", ())
         }
 
-        measures, inputs, sources, confidences = [], {}, {}, []
+        measures, read, confidences = [], [], []
         assumptions, gaps = [], set()
         for entry in question.measures:
             measure = entry.measure
@@ -348,8 +356,8 @@ class TouchstoneTool:
                 elements.append(
                     self._element(snapshot, position, name, parts, designator_of, nodes, pins_of)
                 )
-            inputs[path] = "sha256:" + hashlib.sha256(data).hexdigest()
-            sources[path] = str(location)
+            digest = "sha256:" + hashlib.sha256(data).hexdigest()
+            read.append((len(measures), path, digest, str(location)))
             confidences.append(model_confidence(trait.provenance))
             measures.append(
                 {
@@ -378,6 +386,15 @@ class TouchstoneTool:
                     "each matching part is an ideal element: no parasitic resistance, "
                     "no self-resonance, and no trace or pad between them"
                 )
+
+        # Two carriers in different folders may name their files by one
+        # relative path; each measure reads its own file, under its own name.
+        inputs, sources = {}, {}
+        named = bundle_paths((path, digest) for _, path, digest, _ in read)
+        for index, path, digest, location in read:
+            measures[index]["model"] = named[(path, digest)]
+            inputs[named[(path, digest)]] = digest
+            sources[named[(path, digest)]] = location
 
         return Job.single(
             self.name,

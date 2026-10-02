@@ -76,6 +76,7 @@ from .simulation import (
     XyceBackend,
     XyceDialect,
     analysis_from_dict,
+    bundle_models,
     compile_plan,
     load_model,
     lower_question,
@@ -1484,13 +1485,16 @@ class SpiceTool:
                 back = resolved.get("return")
                 return node(resolved["signal"]), node(back) if back else "0"
 
-            models = {
-                use.component: load_model(
-                    snapshot.entities[use.component], traits.get(use.component, "simulatable")
-                )
-                for use in plan.models
-                if use.source
-            }
+            models = bundle_models(
+                {
+                    use.component: load_model(
+                        snapshot.entities[use.component], traits.get(use.component, "simulatable")
+                    )
+                    for use in plan.models
+                    if use.source
+                },
+                designator_of,
+            )
             devices = self._devices(snapshot, plan, netlist, nodes, models, traits)
 
             items = [

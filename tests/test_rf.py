@@ -339,3 +339,60 @@ def test_preparation_is_deterministic_and_records_the_model_digest(tmp_path):
     again = TOUCHSTONE.prepare(result.snapshot, question, traits=result.traits)
     assert first.input == again.input and first.hash == again.hash
     assert '"kind":"shunt"' in first.input and '"kind":"series"' in first.input
+
+
+def test_two_antennas_naming_one_model_path_each_read_their_own_file(tmp_path):
+    """Two antennas declared in different folders name their files by one
+    relative path, and the files differ. Named by the path alone they shared
+    one bundle entry, so both measures read one file; each is now named
+    under its own digest."""
+    import importlib.util
+
+    def declared_in(folder: Path):
+        folder.mkdir(parents=True, exist_ok=True)
+        stage = folder / "stage.py"
+        stage.write_text("def instance(part):\n    return part()\n")
+        spec = importlib.util.spec_from_file_location(f"stage_{folder.name}", stage)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module.instance(Antenna)
+
+    class Pair(System):
+        match_spec = Requires("At least 6 dB of return loss at 2.44 GHz at either antenna")
+        near_loss = Parameter("dB")
+        far_loss = Parameter("dB")
+
+        near_feed = Feed()
+        far_feed = Feed()
+        near = declared_in(tmp_path / "a")
+        far = declared_in(tmp_path / "b")
+
+        rl = Evaluates(
+            "match_spec",
+            measures={
+                "near_loss": ReturnLoss("near.rf", at=2.44 * GHz),
+                "far_loss": ReturnLoss("far.rf", at=2.44 * GHz),
+            },
+        )
+
+        def __init__(self, **overrides):
+            super().__init__(**overrides)
+            for antenna in (self.near, self.far):
+                antenna.add_trait(Touchstone(source="antenna.s1p", ports=("FEED",)))
+
+        def architecture(self):
+            for feed, antenna in ((self.near_feed, self.near), (self.far_feed, self.far)):
+                feed.rf.signal >> antenna.rf.signal
+                feed.rf.ref >> antenna.rf.ref
+
+    write_model(tmp_path / "a" / "antenna.s1p", complex(100, 0))   # a third: 9.54243 dB
+    write_model(tmp_path / "b" / "antenna.s1p", complex(150, 0))   # a half: 6.0206 dB
+    graph, outcome = evaluate(tmp_path / "runs", Pair)
+    measured = {m.name: m.quantity for m in outcome.measurements}
+    assert measured == {
+        "near_loss": Quantity.scalar("9.54243", "dB"),
+        "far_loss": Quantity.scalar("6.0206", "dB"),
+    }
+    assert len(outcome.job.inputs) == 2
+    assert all(path.endswith("/antenna.s1p") and len(path) == 12 + len("/antenna.s1p")
+               for path in outcome.job.inputs)
