@@ -937,3 +937,61 @@ def test_a_reversed_window_in_a_question_is_refused_when_it_compiles():
     with pytest.raises(EmulationError, match="slow_blinks") as refused:
         compile_plan(result.snapshot, _Question(data), traits=result.traits)
     assert refused.value.code == "measure"
+
+
+class _Crashes(RenodeBackend):
+    """A Renode that reports 1.17.0 and whose every run crashes at once: enough
+    for a run's evidence to be recorded, with no emulator installed."""
+
+    def available(self):
+        return True
+
+    def identify(self):
+        return "1.17.0", "1.17.0+stand-in"
+
+    def run(self, files, *, timeout=120):
+        from fang.renode import RenodeRun
+
+        return RenodeRun("1.17.0", "1.17.0+stand-in", 1, "crashed", b"", "", ())
+
+
+def _stand_in_tools(backend=None):
+    from fang.emulation import RenodeTool
+    from fang.verification import ToolRegistry
+
+    return ToolRegistry((RenodeTool(backend=backend or _Crashes()),))
+
+
+def test_staleness_resolves_the_firmware_where_the_run_does(tmp_path):
+    """A run reads the bound firmware relative to the program that declares
+    the part; staleness used to read it relative to the question's program,
+    so a question redeclared in another directory read as stale at once and
+    then missed a rebuild."""
+    import shutil as _shutil
+
+    from fang.cli import load_system
+    from fang.emulation import Emulates, stale
+
+    copy = tmp_path / "sensor_node"
+    _shutil.copytree(ROOT / "examples" / "sensor_node", copy, ignore=_shutil.ignore_patterns("out"))
+    board = load_system(copy / "sensor_node.py")
+    original = board.startup
+
+    class Elsewhere(board):          # declared here, in tests/, not beside the part
+        startup = Emulates(
+            "sensor_ready", run_until=original.run_until, stimuli=original.stimuli,
+            measures=original.measures, abstracted=original.abstracted,
+        )
+
+    result = _elaborate(Elsewhere)
+    graph = KernelGraph(result.snapshot, checks=DEFAULT_CHECKS)
+    question = _question(graph.head, "startup")
+    answer(graph, question, traits=result.traits, tools=_stand_in_tools(), workspace=tmp_path / "runs")
+    assert graph.head.entities[question.id].evidence
+    assert stale(graph.head) == ()
+
+    firmware = copy / "firmware" / "elf" / "sensor_node.elf"
+    firmware.write_bytes(firmware.read_bytes() + b"\0")
+    ((label, path, recorded, current),) = stale(graph.head)
+    assert label.endswith("startup") and path == "firmware/elf/sensor_node.elf"
+    assert current.startswith("sha256:") and current != recorded

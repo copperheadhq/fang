@@ -682,9 +682,10 @@ class EmulationModel(Trait):
 
 @dataclass
 class Firmware(Trait):
-    """The firmware a component runs: a file relative to the project root, and
-    the target it was built for. Its digest is never part of the snapshot;
-    each run records it on its evidence."""
+    """The firmware a component runs: a file relative to the program that
+    declares the part, as a SPICE model's path is, and the target it was
+    built for. Its digest is never part of the snapshot; each run records it
+    on its evidence."""
 
     protocol = "firmware"
     path: str = ""
@@ -1175,6 +1176,7 @@ from .verification import (  # noqa: E402
     Measure,
     Measurement,
     NotRunnable,
+    Question,
     QuestionDeclaration,
     RawRun,
     ToolUnavailable,
@@ -1566,16 +1568,22 @@ def plan_from_dict(payload: Mapping[str, Any]) -> EmulationPlan:
     )
 
 
-def _firmware_location(snapshot, question, plan: EmulationPlan):
+def _firmware_location(snapshot, question, path: str, target: str | None):
     """Where the firmware is on this machine: relative to the program that
-    names it, the question's own if it names one, else the target's."""
+    names it, which is the question's if the question names its own build,
+    and otherwise the program that declares the part it runs on, as a SPICE
+    model's path is. A run and the staleness check both read it here, so the
+    two cannot disagree about which file the evidence's digest is of."""
     from pathlib import Path
 
-    written = Path(plan.firmware_path)
+    written = Path(path)
     if written.is_absolute():
         return written
-    named_by_question = bool(question.data.get("scenario", {}).get("firmware"))
-    origin = question.source_location if named_by_question else snapshot.entities[plan.target].source_location
+    if question.data.get("scenario", {}).get("firmware"):
+        origin = question.source_location
+    else:
+        part = snapshot.entities.get(target) if target else None
+        origin = part.source_location if part is not None else None
     if origin is None:
         return Path.cwd() / written
     return Path(origin.file).parent / written
@@ -1629,7 +1637,7 @@ class RenodeTool:
             plan = compile_plan(snapshot, question, traits=traits or TraitRegistry())
         except EmulationError as exc:
             raise NotRunnable(f"{question.label}: {exc}", code=_CODES.get(exc.code or "")) from None
-        location = _firmware_location(snapshot, question, plan)
+        location = _firmware_location(snapshot, question, plan.firmware_path, plan.target)
         if not location.is_file():
             raise NotRunnable(
                 f"{question.label}: the firmware {plan.firmware_path} is not a file at {location}",
@@ -1648,6 +1656,10 @@ class RenodeTool:
             "firmware": f"{plan.firmware_path} {digest}",
             "platform": plan.platform,
             "ran": "local",
+            # The part the firmware runs on: a bound firmware's path is read
+            # relative to the program that declares it, here and when the
+            # evidence is checked for staleness.
+            "target": plan.target,
         }
         if reports:
             extra["firmware_reports"] = ", ".join(reports)
@@ -1733,7 +1745,6 @@ def stale(snapshot) -> tuple[tuple[str, str, str, str], ...]:
     when the file does; the evidence's digest is how the change is seen.
     """
     import hashlib
-    from pathlib import Path
 
     from .entities import Evidence, Verification
 
@@ -1743,16 +1754,17 @@ def stale(snapshot) -> tuple[tuple[str, str, str, str], ...]:
     ):
         if verification.method != "emulation":
             continue
+        question = Question.of(verification)
+        if question is None:
+            continue
         for evidence_id in verification.evidence:
             evidence = snapshot.entities.get(evidence_id)
             if not isinstance(evidence, Evidence):
                 continue
             record = evidence.extensions.get("measurement", {})
             for entry in record.get("inputs", ()):
-                origin = verification.source_location
-                location = Path(entry["path"])
-                if not location.is_absolute() and origin is not None:
-                    location = Path(origin.file).parent / location
+                # Resolved exactly as the run resolved it.
+                location = _firmware_location(snapshot, question, entry["path"], record.get("target"))
                 current = (
                     "sha256:" + hashlib.sha256(location.read_bytes()).hexdigest()
                     if location.is_file()

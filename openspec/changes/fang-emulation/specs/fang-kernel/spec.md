@@ -3,11 +3,14 @@
 ### Requirement: Firmware Is Bound And Its Digest Is Evidence
 
 A Fang program SHALL be able to bind a firmware file, named relative to the
-project root, and the target it was built for, to the component that runs it,
-as a trait of that component. The binding SHALL NOT carry the file's digest. Every emulation run SHALL record the digest of the firmware it
-ran on its evidence, and a verification whose evidence names a digest other
-than the bound file's current one SHALL be reported stale. A question SHALL be
-able to name a firmware file of its own.
+program that declares the component, and the target it was built for, to the
+component that runs it, as a trait of that component. The binding SHALL NOT
+carry the file's digest. Every emulation run SHALL record the digest of the
+firmware it ran on its evidence, and a verification whose evidence names a
+digest other than the current digest of the file the run resolved SHALL be
+reported stale, the file being resolved for that check exactly as it was for
+the run. A question SHALL be able to name a firmware file of its own, relative
+to the program that declares the question.
 
 #### Scenario: Rebuilding firmware does not change the snapshot
 
@@ -26,6 +29,15 @@ able to name a firmware file of its own.
   now has a different one
 - **THEN** the verify command reports the verification as stale and names the
   file
+
+#### Scenario: Staleness reads the file the run read
+
+- **WHEN** a question is declared in a program in another directory from the
+  one that declares the component, and names no firmware of its own
+- **THEN** the run and the staleness check both resolve the bound firmware
+  relative to the program that declares the component
+- **AND** a rebuild of that file reports the verification stale, and nothing
+  else does
 
 #### Scenario: A question names its own build
 
