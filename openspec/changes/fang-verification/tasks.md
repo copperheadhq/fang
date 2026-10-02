@@ -88,8 +88,12 @@ change.
       measurements prepared against a stale head are refused.
 - [x] 5.5 When a program is elaborated again into a workspace whose head holds a
       measured value for a parameter the program declares without one, keep
-      the measured value and its evidence; verify an unchanged re-elaboration
-      leaves both in place and records no change to the parameter.
+      the measured value and its evidence while the measurement is current
+      (preparing its question afresh gives the job its evidence records);
+      verify an unchanged re-elaboration leaves both in place and records no
+      change to the parameter, that a changed part, model file or firmware
+      drops both so the question runs again, and that the installed tool is
+      never consulted.
 
 ## 6. The command
 

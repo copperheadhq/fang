@@ -473,10 +473,23 @@ another reason, since the work the command names did not happen. Unsupported
 and unroutable are zero. Runs go to a scratch directory, and only `--commit`
 writes, into `.copperhead/simulations` and the record stream.
 
-**Re-elaboration keeps a measurement.** `carry_measurements` keeps an answered
-verification, its evidence and the values that evidence is the source of,
-wherever the fresh elaboration declares the same question; a changed question is
-answered afresh. A program cannot state a measured value: a default or an
+**Re-elaboration keeps a measurement while it is current.** `carry_measurements`
+keeps an answered verification, its evidence and the values that evidence is the
+source of, wherever the fresh elaboration declares the same question and every
+run it rests on is still current; a changed question is answered afresh. The
+question's own description covers neither the circuit nor a model file nor the
+firmware, so it cannot say whether a run is still current; preparing the
+question afresh can. A run is current while routing its question on the fresh
+elaboration and preparing it with the program's traits gives the job hash the
+measurement record names (`Currency`). The hash covers the native input, the
+digest of every input the snapshot does not hold and the question, and not the
+snapshot's hash, so a 10 kOhm resistor changed to 22 kOhm, an edited model or a
+rebuilt firmware image drops the measurement, and `verify` runs the question
+again instead of reporting the old PASS current at the equation level. Whether
+the tool is installed, and which version, is not consulted: it is machine state,
+and letting it decide what a rebuild keeps would make `fang build` give
+different snapshots on different machines. A run on another version is evidence
+of its own the next time the question is asked. A program cannot state a measured value: a default or an
 assignment on a measured parameter fails elaboration with SIM-0002, the code a
 stated result gets, since the value would be the question's answer and would let
 the evaluator answer it with nothing run.

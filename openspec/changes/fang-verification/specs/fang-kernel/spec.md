@@ -179,7 +179,9 @@ committed head that sets each measured parameter to an inferred value whose
 source is the run's evidence, adds that evidence carrying the structured
 measurement record, and replaces the declared verification under its original
 identity. The constraint over a measured parameter SHALL be decided by the
-gate's existing constraint check and by nothing else.
+gate's existing constraint check and by nothing else. A committed measurement
+SHALL be kept across re-elaboration only while it is current: while preparing
+its question afresh gives the job its evidence records.
 
 #### Scenario: A measured parameter is an inferred value with its evidence
 
@@ -221,6 +223,19 @@ gate's existing constraint check and by nothing else.
   source
 - **AND** the program, which declared the parameter without a value, is not
   recorded as having changed it
+
+#### Scenario: A measurement is kept only while it is current
+
+- **WHEN** a program whose measured parameter holds a committed measurement is
+  elaborated again with a change to anything the run rested on, such as a part
+  in the circuit, a model file, or the firmware image, while the question
+  itself is unchanged
+- **THEN** preparing the question again gives a job other than the one the
+  evidence records, and the measured value and the verification answered from
+  it are not kept
+- **AND** the question is answered again rather than reported current
+- **AND** whether a measurement is kept does not depend on whether the tool is
+  installed, or which version is
 
 #### Scenario: Confidence is bounded by model provenance
 

@@ -2415,18 +2415,91 @@ class MeasuredFacts:
         return cls(verifications, evidence, values)
 
 
-def carry_measurements(elaborated, facts: MeasuredFacts):
-    """A fresh elaboration, with what runs measured kept in place.
+def _answers(evidence) -> str | None:
+    """The question a run's evidence answers, from the record of its run."""
+    for record in reversed(evidence.provenance.records):
+        if record.activity == "verification_run" and record.derived_from:
+            return record.derived_from[0]
+    return None
+
+
+class Currency:
+    """Whether what a run measured is still what the design would measure.
+
+    A run is current while preparing the same question afresh, on a fresh
+    elaboration, gives the job its measurement record names: the question
+    is routed there and prepared by the tool it routes to, and the job's
+    hash must be the recorded one. The hash covers the native input the
+    snapshot lowers to, the digest of every file the run read that the
+    snapshot does not hold (a model, a firmware image) and the question, and
+    not the snapshot's own hash, so it moves exactly when what the run rested
+    on does. A question that no longer routes to the run's tool, or that the
+    tool refuses to prepare, is not current.
+
+    Nothing about the machine enters: whether the tool is installed here, or
+    which version is, does not decide what a rebuild keeps, so the same
+    program and workspace rebuild to the same snapshot everywhere. A run on
+    another version is evidence of its own when the question is next asked
+    (`answer`), not a reason to drop this one.
+    """
+
+    def __init__(self, snapshot, *, traits=None, tools: ToolRegistry | None = None) -> None:
+        self.snapshot = snapshot
+        self.traits = traits
+        self.tools = TOOLS if tools is None else tools
+        self._jobs: dict[str, tuple[str | None, str | None]] = {}
+
+    def job(self, question: Question) -> tuple[str | None, str | None]:
+        """The tool the question routes to here, and the hash of its job."""
+        if question.id not in self._jobs:
+            routed = route(self.snapshot, question, tools=self.tools)
+            found: tuple[str | None, str | None] = (None, None)
+            if routed.routed and not routed.decided:
+                try:
+                    prepared = self.tools.get(routed.tool).prepare(
+                        self.snapshot, question, traits=self.traits
+                    )
+                    found = (routed.tool, prepared.hash)
+                except NotRunnable:
+                    found = (routed.tool, None)
+            self._jobs[question.id] = found
+        return self._jobs[question.id]
+
+    def __call__(self, evidence) -> bool:
+        record = evidence.extensions.get("measurement")
+        if record is None:
+            return True                       # not a run; nothing to repeat
+        declared = self.snapshot.entities.get(_answers(evidence) or "")
+        question = Question.of(declared) if declared is not None else None
+        if question is None:
+            return False
+        tool, job = self.job(question)
+        return (
+            tool is not None
+            and job is not None
+            and tool == record.get("tool", {}).get("name")
+            and job == record.get("job")
+        )
+
+
+def carry_measurements(elaborated, facts: MeasuredFacts, *, traits=None, tools: ToolRegistry | None = None):
+    """A fresh elaboration, with what runs measured kept in place while it is
+    still current.
 
     The program declared each measured parameter without a value, so
     elaborating it again says nothing about the value and must not withdraw
     it. An answered verification is kept, with its evidence and the values
     that evidence is the source of, wherever the program still declares the
-    same question; a question the program has changed is answered afresh. A
-    program cannot give a measured parameter a value of its own (elaboration
-    refuses one), so the value carried is always the measurement's.
+    same question and every run it rests on is still current (`Currency`):
+    the same question prepared afresh gives the same job. A changed circuit,
+    model file or firmware changes the job, and the question is answered
+    afresh rather than reported current on a measurement of something else;
+    so is a question the program has changed. A program cannot give a
+    measured parameter a value of its own (elaboration refuses one), so the
+    value carried is always the measurement's.
     """
     entities = dict(elaborated.entities)
+    current = Currency(elaborated, traits=traits, tools=tools)
     for verification_id, answered in sorted(facts.verifications.items()):
         declared = entities.get(verification_id)
         if not isinstance(declared, Verification):
@@ -2434,6 +2507,8 @@ def carry_measurements(elaborated, facts: MeasuredFacts):
         if declared.extensions.get("question") != answered.extensions.get("question"):
             continue
         if any(ref not in facts.evidence and ref not in entities for ref in answered.evidence):
+            continue
+        if not all(current(facts.evidence[ref]) for ref in answered.evidence if ref in facts.evidence):
             continue
         entities[verification_id] = answered
         for ref in answered.evidence:
@@ -2448,17 +2523,17 @@ def carry_measurements(elaborated, facts: MeasuredFacts):
     return elaborated.with_entities(entities, elaborated.revision_id)
 
 
-def reelaboration(head, elaborated):
+def reelaboration(head, elaborated, *, traits=None, tools: ToolRegistry | None = None):
     """The transaction that moves a head to a fresh elaboration of its program.
 
-    It keeps what runs measured (`carry_measurements`), so an unchanged
-    program elaborated again is an empty transaction: the measured value and
-    its evidence stay, and the program is not recorded as having changed a
-    parameter it never gave a value.
+    It keeps what runs measured while it is current (`carry_measurements`),
+    so an unchanged program elaborated again is an empty transaction: the
+    measured value and its evidence stay, and the program is not recorded as
+    having changed a parameter it never gave a value.
     """
     from .graph import AddEntity, RemoveEntity, Transaction
 
-    target = carry_measurements(elaborated, MeasuredFacts.of(head))
+    target = carry_measurements(elaborated, MeasuredFacts.of(head), traits=traits, tools=tools)
     operations: list = []
     for entity_id in sorted(set(head.entities) - set(target.entities)):
         operations.append(RemoveEntity(reason="no longer elaborated", target=entity_id))

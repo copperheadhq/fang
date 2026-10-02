@@ -1325,6 +1325,75 @@ def test_a_changed_question_is_answered_afresh(tmp_path):
     assert not rebuilt.entities[SYSTEM].parameters["corner"].known
 
 
+class Retuned(Filter):
+    """The same filter and question, with a 22 kOhm resistor: its corner is
+    723 Hz, not the 1.59 kHz measured on the 10 kOhm one."""
+
+    r = Resistor(resistance=22 * kOhm)
+
+
+def test_a_measurement_of_a_changed_circuit_is_not_carried(tmp_path):
+    """The question is the same, so its description is too; the circuit it
+    lowers to is not. Preparing it afresh gives another job, so the old
+    measurement is not current and the question is answered again."""
+    graph, outcome = answered(tmp_path)
+    facts = MeasuredFacts.of(graph.head)
+
+    kept = carry_measurements(build().snapshot, facts)
+    assert verification_of(kept).result == "PASS"
+    assert kept.entities[SYSTEM].parameters["corner"].known
+
+    rebuilt = carry_measurements(build(Retuned).snapshot, facts)
+    assert verification_of(rebuilt).result == "UNKNOWN"
+    assert not rebuilt.entities[SYSTEM].parameters["corner"].known
+    assert outcome.evidence not in rebuilt.entities
+    # Routed on the carried head, the question runs rather than being decided.
+    assert not route(rebuilt, questions(rebuilt)[0]).decided
+
+
+def test_a_changed_model_file_makes_its_measurement_stale(tmp_path, follower):
+    """A model file is not in the snapshot; its digest is in the job."""
+    graph, outcome = answered(tmp_path, buffered(follower))
+    facts = MeasuredFacts.of(graph.head)
+    result = build(buffered(follower))
+    kept = carry_measurements(result.snapshot, facts, traits=result.traits)
+    assert kept.entities[SYSTEM].parameters["corner"].known
+
+    follower.write_bytes(FOLLOWER.replace("Rin in gnd 1e9", "Rin in gnd 1e6").encode())
+    result = build(buffered(follower))
+    rebuilt = carry_measurements(result.snapshot, facts, traits=result.traits)
+    assert verification_of(rebuilt).result == "UNKNOWN"
+    assert not rebuilt.entities[SYSTEM].parameters["corner"].known
+
+
+@dataclass
+class Untouchable:
+    """A backend that fails the test if anything asks it a question."""
+
+    name: str = "ngspice"
+
+    def available(self) -> bool:
+        raise AssertionError("currency consulted whether the tool is installed")
+
+    def version(self) -> str:
+        raise AssertionError("currency consulted the installed version")
+
+    def run(self, netlist, *, workspace, timeout=60):
+        raise AssertionError("currency ran the tool")
+
+
+def test_currency_rests_on_the_job_and_not_on_this_machine(tmp_path):
+    """Whether a measurement is kept is the same on every machine: it is the
+    job's hash, which preparation gives, and never whether the tool is
+    installed here or which version is."""
+    graph, outcome = answered(tmp_path)
+    untouchable = ToolRegistry((SpiceTool("ngspice", NgspiceDialect(), Untouchable()),))
+    kept = carry_measurements(build().snapshot, MeasuredFacts.of(graph.head), tools=untouchable)
+    assert kept.hash == carry_measurements(build().snapshot, MeasuredFacts.of(graph.head)).hash
+    assert kept.entities[SYSTEM].parameters["corner"].known
+    assert verification_of(kept).result == "PASS"
+
+
 # ==========================================================================
 # The command
 # ==========================================================================
@@ -1484,3 +1553,25 @@ def test_a_commit_persists_and_a_rebuild_keeps_the_measured_value(tmp_path, ngsp
     assert "equation level, by the constraint evaluator; nothing runs" in output
     assert "nothing new to commit" in output
     assert len(ngspice.runs) == runs
+
+
+def test_a_changed_circuit_is_answered_again_and_not_reported_current(tmp_path, ngspice, capsys):
+    """The committed corner was measured on a 10 kOhm resistor. With 22 kOhm
+    the question is the same and the circuit is not: the measurement is not
+    carried, so the question runs again instead of reporting the old PASS."""
+    source = program(tmp_path)
+    assert main(["build", source, "-C", str(tmp_path)]) == EXIT_OK
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_OK
+    capsys.readouterr()
+    runs = len(ngspice.runs)
+
+    # A different length as well as a different value: a program rewritten
+    # within the second at the same size could be read from stale bytecode.
+    path = Path(source)
+    path.write_text(path.read_text().replace("10 * kOhm)", "22 * kOhm)  # retuned"))
+    main(["verify", source, "-C", str(tmp_path)])
+    output = capsys.readouterr().out
+    assert "current" not in output
+    assert "  circuit level, ngspice (ngspice-45.2)" in output
+    assert len(ngspice.runs) == runs + 1
+    assert "22k" in ngspice.runs[-1] or "22000" in ngspice.runs[-1]
