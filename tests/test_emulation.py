@@ -866,3 +866,36 @@ def test_a_pin_configuration_over_an_i2c_port_with_nothing_on_it_is_refused():
     with pytest.raises(NotRunnable) as refused:
         RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
     assert refused.value.code == "SIM-0016" and "mcu.i2c1" in str(refused.value)
+
+
+@pytest.mark.parametrize(
+    "match",
+    [
+        {"kind": "i2c.read", "surface": "env", "detail": {"register": 0}},
+        {"kind": "uart.line", "surface": "mcu.usart2", "detail": {"starts": "temp="}},
+    ],
+)
+def test_a_match_detail_no_measure_reads_is_refused(match):
+    # I2CRead("env", register=0) matched every read of the sensor, whatever
+    # register it named: the plan carried the detail and nothing read it.
+    from fang.emulation import EmulationError, compile_plan
+
+    result, paths = _board()
+    data = _with_measure(_startup_data(paths), "filtered", "1",
+                         {"kind": "emulation.count", "surface": match["surface"], "match": match})
+    detail = next(iter(match["detail"]))
+    with pytest.raises(EmulationError, match=detail) as refused:
+        compile_plan(result.snapshot, _Question(data), traits=result.traits)
+    assert refused.value.code == "measure"
+
+
+def test_the_details_a_measure_reads_still_compile():
+    from fang.emulation import compile_plan
+
+    result, paths = _board()
+    data = _with_measure(_startup_data(paths), "temps", "1", {
+        "kind": "emulation.count", "surface": "mcu.usart2",
+        "match": {"kind": "uart.line", "surface": "mcu.usart2", "detail": {"contains": "temp="}},
+    })
+    plan = compile_plan(result.snapshot, _Question(data), traits=result.traits)
+    assert plan.measures["temps"]["matches"][0]["detail"] == {"contains": "temp="}

@@ -422,6 +422,9 @@ class Match:
 
 
 def I2CRead(device: str, register: int | None = None) -> Match:
+    """A read of a device, matched by the device alone. The probes record a
+    read's bytes and not the register it follows, so a plan refuses a match
+    that names one rather than counting every read as that register's."""
     return Match("i2c.read", device, {"register": register} if register is not None else {})
 
 
@@ -439,6 +442,18 @@ def Falls(surface: str) -> Match:
 
 def UartLine(uart: str, contains: str | None = None) -> Match:
     return Match("uart.line", uart, {"contains": contains} if contains is not None else {})
+
+
+#: The details each kind of match is filtered by. A detail outside these
+#: would be carried into the plan and read by nothing, so the match would
+#: count every event of its kind; the plan refuses it instead.
+_DETAILS: Mapping[str, frozenset[str]] = {
+    "i2c.read": frozenset(),
+    "i2c.write": frozenset({"data"}),
+    "gpio.rise": frozenset(),
+    "gpio.fall": frozenset(),
+    "uart.line": frozenset({"contains"}),
+}
 
 
 def _window_ns(within: Sequence[Quantity] | None) -> tuple[int, int] | None:
@@ -840,6 +855,16 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
         return found
 
     def note_match(match: Mapping[str, Any]) -> None:
+        if match["kind"] not in _DETAILS:
+            raise _refuse(f"{match['kind']!r} is no kind of emulation match", "measure")
+        unread = sorted(set(match.get("detail", {})) - _DETAILS[match["kind"]])
+        if unread:
+            raise _refuse(
+                f"the {match['kind']} match on {match['surface']} names {', '.join(unread)}, "
+                f"which no measure filters on: it would count every {match['kind']} on "
+                f"{match['surface']}, so it is refused rather than ignored",
+                "measure",
+            )
         where = resolved(match["surface"])
         if match["kind"] in ("i2c.read", "i2c.write"):
             devices_named.add(where["component"])
