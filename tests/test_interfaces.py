@@ -1,19 +1,23 @@
-"""Spec: The Shipped Interface Catalogue; The Pin Model."""
+"""Spec: The Shipped Interface Catalogue; The Pin Model; A Port May Be One
+Peripheral Instance."""
 
 import pytest
 
 from fang.diagnostics import FangError
 from fang.entities import ConnectionKind
 from fang.interfaces import (
+    AF,
     CATALOGUE,
     I2C,
     SPI,
     UART,
+    I2CPort,
     InterfaceCatalogue,
     InterfacePort,
     InterfaceType,
     Pin,
     PinMap,
+    Selector,
     SignalSpec,
     default_catalogue,
 )
@@ -130,3 +134,70 @@ def test_an_interface_port_reports_its_type_and_signals():
     assert port.signals == ("scl", "sda")
     assert port.connection_kind is ConnectionKind.SIGNAL
     assert port.parameter_values["voh_min"] is not None
+
+
+# -- peripheral instances, selectors and straps ----------------------------
+
+
+def test_the_new_interface_codes_are_allocated_in_their_own_area():
+    from fang.diagnostics import (
+        IFACE_SELECTOR_WITHOUT_EVIDENCE,
+        IFACE_STRAP_UNKNOWN_PIN,
+        REGISTRY,
+    )
+
+    codes = [code.code for code in REGISTRY if code.area == "IFACE"]
+    assert codes == ["IFACE-0001", "IFACE-0002", "IFACE-0003", "IFACE-0004"]
+    assert IFACE_SELECTOR_WITHOUT_EVIDENCE == "IFACE-0003"
+    assert IFACE_STRAP_UNKNOWN_PIN == "IFACE-0004"
+    # Allocating a code again for another condition is refused, so neither
+    # number can have been taken from an existing one.
+    with pytest.raises(ValueError):
+        REGISTRY.allocate("IFACE-0003", "something else")
+
+
+def test_a_port_names_its_instance_and_the_instance_is_not_a_parameter():
+    port = I2CPort(peripheral="I2C1", voltage=3.3 * V)
+    assert port.peripheral == "I2C1"
+    assert "peripheral" not in port.parameter_values
+    assert I2CPort().peripheral is None
+    with pytest.raises(ValueError):
+        I2CPort(peripheral="")
+
+
+def test_an_alternate_function_is_a_selector():
+    assert AF(4) == Selector("AF4")
+    assert str(AF(7)) == "AF7"
+    for bad in (-1, True, "4"):
+        with pytest.raises(ValueError):
+            AF(bad)
+    with pytest.raises(ValueError):
+        Selector("")
+
+
+def test_both_pin_map_forms_give_the_same_candidates_in_the_same_order():
+    listed = PinMap({"i2c1.scl": ["PB8", "PB6"], "i2c1.sda": ["PB9", "PB7"]})
+    routed = PinMap(
+        {
+            "i2c1.scl": {"PB8": AF(4), "PB6": AF(4)},
+            "i2c1.sda": {"PB9": AF(4), "PB7": AF(4)},
+        },
+        evidence="af_table",
+    )
+    for signal in ("scl", "sda"):
+        assert routed.candidates("i2c1", signal) == listed.candidates("i2c1", signal)
+    assert routed.as_dict() == listed.as_dict()
+    assert routed.selector("i2c1", "scl", "PB6") == "AF4"
+    assert listed.selector("i2c1", "scl", "PB6") is None
+    assert routed.evidence == "af_table" and listed.evidence is None
+
+
+def test_a_selector_is_written_as_one():
+    with pytest.raises(ValueError, match="Selector"):
+        PinMap({"i2c1.scl": {"PB8": "AF4"}}, evidence="af_table")
+
+
+def test_a_candidate_in_the_mapping_form_may_carry_no_selector():
+    mapping = PinMap({"i2c1.scl": {"PB8": AF(4), "PB6": None}}, evidence="af_table")
+    assert mapping.candidates("i2c1", "scl") == ("PB8", "PB6")
+    assert mapping.selector("i2c1", "scl", "PB6") is None

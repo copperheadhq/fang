@@ -1,12 +1,18 @@
 """Lowering a typed interface connection to pin connections.
 
 Spec: "Deterministic Interface Lowering to Pins", "Deterministic Pin
-Assignment", "A Pin Choice Is A Recorded Decision", and "An Incomplete Lowering
-Fails Explicitly".
+Assignment", "A Pin Choice Is A Recorded Decision", "An Incomplete Lowering
+Fails Explicitly", and "A Port May Be One Peripheral Instance".
 
 The assignment is a pure function of the graph state and the part selection, so
 the same design lowers identically every time. Where a choice existed it becomes
 a decision entity; where none can be made the lowering fails whole.
+
+Every signal of one connection is drawn from the candidates of the one port the
+connection names, so a port that is one peripheral instance lowers onto that
+instance's pins and no other. Where the chosen candidate declares the selector
+that routes the signal to it, the pin connection carries the selector and the
+evidence the part cited for it.
 """
 
 from __future__ import annotations
@@ -33,6 +39,8 @@ class PinChoice:
     owner: str            # the module entity carrying the pin
     pin: str              # the vendor pin name
     alternatives: tuple[str, ...] = ()
+    selector: str | None = None   # what routes the signal to this pin, if declared
+    evidence: str | None = None   # the canonical path of the evidence it cites
 
     @property
     def was_a_choice(self) -> bool:
@@ -48,11 +56,13 @@ class SignalAssignment:
     right: PinChoice
 
     def as_dict(self) -> dict:
-        return {
-            "signal": self.signal,
-            "left": {"owner": self.left.owner, "pin": self.left.pin},
-            "right": {"owner": self.right.owner, "pin": self.right.pin},
-        }
+        def side(choice: PinChoice) -> dict:
+            out = {"owner": choice.owner, "pin": choice.pin}
+            if choice.selector is not None:
+                out["selector"] = choice.selector
+            return out
+
+        return {"signal": self.signal, "left": side(self.left), "right": side(self.right)}
 
 
 @dataclass(frozen=True)
@@ -179,8 +189,8 @@ def lower(
         assignments.append(
             SignalAssignment(
                 spec.name,
-                PinChoice(left_owner._entity_id, left_pin, left_alternatives),
-                PinChoice(right_owner._entity_id, right_pin, right_alternatives),
+                _pin_choice(left, left_map, spec.name, left_pin, left_alternatives),
+                _pin_choice(right, right_map, spec.name, right_pin, right_alternatives),
             )
         )
 
@@ -189,6 +199,30 @@ def lower(
 
 def _pin_map_of(module):
     return getattr(module, "_pin_map", None)
+
+
+def _pin_choice(surface, pin_map, signal: str, pin: str, alternatives) -> PinChoice:
+    """The chosen pin, with the selector its candidate declared, if any.
+
+    The selector is looked up under the same port and signal the candidates
+    were, so it is the routing for this assignment and not for some other port
+    the same pin also serves.
+    """
+    owner = surface.owner
+    routed = None
+    lookup = getattr(pin_map, "selector", None)
+    if lookup is not None:
+        routed = lookup(*surface.pin_lookup(signal), pin)
+    if routed is None:
+        return PinChoice(owner._entity_id, pin, alternatives)
+    selector, evidence = routed
+    return PinChoice(
+        owner._entity_id,
+        pin,
+        alternatives,
+        selector=selector,
+        evidence=f"{owner._path}.{evidence}" if evidence else None,
+    )
 
 
 def emit(
@@ -214,12 +248,27 @@ def emit(
         # an identifier is not a path segment and would not parse as one.
         base = lowering.path or lowering.interface_connection
         identity = derive_id("net", f"{base}.{assignment.signal}")
+
+        # Only the side whose chosen pin declared a selector appears; a pin with
+        # no selector is not given an invented one.
+        selectors = {
+            pin_id: {
+                "selector": choice.selector,
+                "evidence": derive_id("evidence", choice.evidence).id,
+            }
+            for choice, pin_id in (
+                (assignment.left, left_pin_id),
+                (assignment.right, right_pin_id),
+            )
+            if choice.selector is not None and choice.evidence is not None
+        }
         connection = Connection(
             identity,
             connection_kind=CATALOGUE.get(lowering.interface).connection_kind,
             source=left_pin_id,
             target=right_pin_id,
             derived_from_interface=lowering.interface_connection,
+            selectors=selectors,
             provenance=provenance,
             source_location=source_location,
         )

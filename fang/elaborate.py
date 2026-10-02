@@ -1,6 +1,7 @@
 """Elaboration: a Fang program becomes a graph snapshot and a tool plan.
 
-Spec: "Deterministic Sandboxed Elaboration" and "The Elaboration Result".
+Spec: "Deterministic Sandboxed Elaboration", "The Elaboration Result", and "A
+Port May Be One Peripheral Instance".
 
 Elaboration builds a graph. It never mutates geometry and never calls a tool.
 Its output is data: the Python object graph is not reachable from the snapshot
@@ -17,10 +18,12 @@ from . import SCHEMA_VERSION, __version__
 from .constraints import Constraint, ConstraintClass, Enforcement, Node
 from .diagnostics import (
     ELAB_UNTYPED_CONNECTION,
+    IFACE_SELECTOR_WITHOUT_EVIDENCE,
     Diagnostic,
     FangError,
     Severity,
     SourceLocation,
+    error,
 )
 from .entities import (
     Assumption,
@@ -301,6 +304,10 @@ def _build_entities(
         for trait in module.traits:
             traits.attach(entity.id, trait)
 
+        # A selector is read off a table, so the table has to be cited before
+        # anything is lowered onto the pins it routes.
+        _check_selector_evidence(module)
+
         # One interface entity per surface type in use; a port instance per
         # declared surface. Stage 3 replaces these with the full catalogue.
         for name, surface in sorted(module.surfaces().items(), key=lambda kv: kv[1]._order):
@@ -334,6 +341,7 @@ def _build_entities(
                 provenance=_provenance(revision_id, built_at, surface._source),
                 source_location=surface._source,
                 direction=surface.direction,
+                peripheral=getattr(surface, "peripheral", None),
             )
             entities[port.id] = port
 
@@ -474,6 +482,47 @@ def _port_parameters(surface: Surface) -> dict[str, Value]:
                 )
         parameters[name] = Value.explicit(quantity)
     return parameters
+
+
+def _check_selector_evidence(module: Module) -> None:
+    """Refuse a pin map whose selectors cite nothing the part declares.
+
+    A selector copied wrongly from a datasheet is a board that does not work, so
+    each one names the `Cites` declaration on the same part it was read from.
+    """
+    declared = module.rationale()
+    part = type(module).__name__
+    for pin_map in sorted(type(module)._pin_maps.values(), key=lambda m: m._order):
+        selectors = getattr(pin_map, "selectors", None)
+        evidence = getattr(pin_map, "evidence", None)
+        if not selectors and evidence is None:
+            continue
+        cited = declared.get(evidence) if evidence else None
+        if cited is not None and cited.entity_kind == "evidence":
+            continue
+        if evidence is None:
+            message = (
+                f"{part} ({module._path}) declares pin selectors and names no "
+                "evidence for them; a PinMap with selectors names the Cites "
+                "declaration they were read from, as evidence=..."
+            )
+        elif cited is None:
+            message = (
+                f"{part} ({module._path}) names {evidence!r} as the evidence for "
+                "its pin selectors and declares nothing by that name"
+            )
+        else:
+            message = (
+                f"{part} ({module._path}) names {evidence!r} as the evidence for "
+                f"its pin selectors, and that is an {cited.entity_kind}, not a "
+                "citation"
+            )
+        raise error(
+            IFACE_SELECTOR_WITHOUT_EVIDENCE,
+            message,
+            entities=[module._entity_id],
+            location=pin_map._source,
+        )
 
 
 def _build_lowerings(

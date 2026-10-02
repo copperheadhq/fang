@@ -18,21 +18,21 @@ version 1.5, Section 9.3
 
 ## 2. Peripheral instances and selectors
 
-- [ ] 2.1 Give `InterfacePort` a `peripheral` keyword consumed before the
+- [x] 2.1 Give `InterfacePort` a `peripheral` keyword consumed before the
       parameter catch-all, and elaborate it onto the `Port` entity; verify a
       port declared as `I2C1` names it in the snapshot and that `peripheral`
       never appears among the port's parameters.
-- [ ] 2.2 Add `Selector` and `AF`, and let `PinMap` take a candidate-to-selector
+- [x] 2.2 Add `Selector` and `AF`, and let `PinMap` take a candidate-to-selector
       mapping and an `evidence` name; keep the list form; verify both forms
       give the same candidates in the same order.
-- [ ] 2.3 Refuse at elaboration a `PinMap` with selectors that names no
+- [x] 2.3 Refuse at elaboration a `PinMap` with selectors that names no
       evidence, or names one the part does not declare; verify the diagnostic
       names the part.
-- [ ] 2.4 Carry the chosen pin's selector and evidence id onto the `Connection`
+- [x] 2.4 Carry the chosen pin's selector and evidence id onto the `Connection`
       the lowering emits; verify a lowered `i2c1.scl` connection records `AF4`
       for the MCU's pin and the evidence id, and that a part without selectors
       lowers byte-identically to before.
-- [ ] 2.5 Verify that with two I2C ports on one part, a connection to one of
+- [x] 2.5 Verify that with two I2C ports on one part, a connection to one of
       them assigns only that port's candidates.
 
 ## 3. Addresses

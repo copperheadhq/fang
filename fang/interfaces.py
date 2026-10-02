@@ -1,11 +1,15 @@
 """Typed interfaces, the shipped catalogue, and the pin model.
 
 Spec: "Typed Interfaces, Ports, Buses, and Domains", "The Shipped Interface
-Catalogue", and "The Pin Model".
+Catalogue", "The Pin Model", and "A Port May Be One Peripheral Instance".
 
 System-level authoring operates on interfaces. Pin assignment is a lowering
 result, which is what makes late assignment, part substitution, and honest
 compatibility checking tractable.
+
+A port may name the peripheral instance it is, and a candidate pin may carry the
+selector that routes the port's signal to it, cited from the part's own
+evidence.
 """
 
 from __future__ import annotations
@@ -356,6 +360,11 @@ class InterfacePort(Surface):
     Declared as `i2c = InterfacePort(I2C)`, or through the shorthand classes
     below. Connecting two ports records an interface connection, which the
     lowering turns into pin connections.
+
+    `peripheral` names the instance the port is, such as ``"I2C1"``: a part
+    whose I2C is available on two controllers declares two ports, so that one
+    connection cannot land on both. It is consumed here, before the parameter
+    catch-all, because it is a fact about the port and not an electrical value.
     """
 
     def __init__(
@@ -365,11 +374,17 @@ class InterfacePort(Surface):
         role: str = "peer",
         name: str = "",
         direction: str | None = None,
+        peripheral: str | None = None,
         **parameters,
     ) -> None:
         super().__init__(name=name, direction=direction)
+        if peripheral is not None and (not isinstance(peripheral, str) or not peripheral):
+            raise ValueError(
+                f"a peripheral instance is named by a string, not {peripheral!r}"
+            )
         self.interface = interface
         self.role = role
+        self.peripheral = peripheral
         self.parameter_values = dict(parameters)
 
     @property
@@ -506,17 +521,59 @@ class Pin(Declared):
         return f"<Pin {self.name} ({self.role})>"
 
 
+@dataclass(frozen=True)
+class Selector:
+    """What routes a peripheral's signal to one candidate pin.
+
+    Vendors spell it differently — an alternate-function number, a mux mode, a
+    pin-select register value — so the general form is the vendor's own text.
+    It is part data, taken from a table the part cites, never inferred from a
+    pin's name.
+    """
+
+    text: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.text, str) or not self.text:
+            raise ValueError(f"a selector is a non-empty string, not {self.text!r}")
+
+    def __str__(self) -> str:
+        return self.text
+
+
+def AF(number: int) -> Selector:
+    """An STM32-family alternate function: `AF(4)` is `Selector("AF4")`."""
+    if isinstance(number, bool) or not isinstance(number, int) or number < 0:
+        raise ValueError(
+            f"an alternate function is a non-negative integer, not {number!r}"
+        )
+    return Selector(f"AF{number}")
+
+
 class PinMap(Declared):
     """Which pins can carry which interface signal.
 
     A signal may name several candidates; choosing between them is a decision the
     lowering records, not an implicit result.
+
+    Candidates are a pin name, a list of them in preference order, or a mapping
+    from each pin name to the `Selector` that routes the signal to it:
+    `PinMap({"i2c1.scl": {"PB8": AF(4), "PB6": AF(4)}}, evidence="af_table")`.
+    A map that carries any selector names, as `evidence`, the `Cites`
+    declaration on the same part its selectors were read from; elaboration
+    refuses one that does not.
     """
 
     _declaration_kind = "pin_map"
 
-    def __init__(self, mapping: Mapping[str, Sequence[str] | str]) -> None:
+    def __init__(
+        self,
+        mapping: Mapping[str, Sequence[str] | str | Mapping[str, Selector | None]],
+        *,
+        evidence: str | None = None,
+    ) -> None:
         normalized: dict[str, tuple[str, ...]] = {}
+        selectors: dict[str, dict[str, str]] = {}
         for signal_path, candidates in mapping.items():
             if "." not in signal_path:
                 raise ValueError(
@@ -524,11 +581,30 @@ class PinMap(Declared):
                 )
             if isinstance(candidates, str):
                 candidates = (candidates,)
+            elif isinstance(candidates, Mapping):
+                routed = {}
+                for pin, selector in candidates.items():
+                    if selector is None:
+                        continue
+                    if not isinstance(selector, Selector):
+                        raise ValueError(
+                            f"{signal_path} -> {pin}: a selector is written "
+                            f"Selector(...) or AF(n), not {selector!r}"
+                        )
+                    routed[pin] = selector.text
+                if routed:
+                    selectors[signal_path] = routed
             normalized[signal_path] = tuple(candidates)
         self.mapping = normalized
+        self.selectors = selectors
+        self.evidence = evidence
 
     def candidates(self, port_attribute: str, signal: str) -> tuple[str, ...]:
         return self.mapping.get(f"{port_attribute}.{signal}", ())
+
+    def selector(self, port_attribute: str, signal: str, pin: str) -> str | None:
+        """The selector routing this signal to this candidate, if one is declared."""
+        return self.selectors.get(f"{port_attribute}.{signal}", {}).get(pin)
 
     def as_dict(self) -> dict:
         return {key: list(value) for key, value in sorted(self.mapping.items())}
