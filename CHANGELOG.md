@@ -87,10 +87,13 @@ tracked separately and moves only when the serialized form changes.
   on the I2C interface, or `Strap(pin, {device pin: address})`, whose pin names
   are resolved at elaboration (`IFACE-0004` for one the part does not have).
   `fang.compatibility.resolve_address` reads either, resolving a strap from the
-  inferred nets, and the addressing rule now uses it for every participant: two
-  devices at one address fail naming both, an unresolved strap is undecided
-  naming the pin, a controller with no address is not reported, and a bus whose
-  addresses are known and distinct passes.
+  inferred nets, and the addressing rule now uses it for every participant and
+  compares addresses by overlap: two devices at one address fail naming both,
+  overlapping addresses and an unresolved strap or conflict are undecided, a
+  controller with no address is not reported, and a bus passes only when every
+  address is known and none overlap. A fixed address given as a range or a
+  tolerance is refused (`UNIT-0001`), and the rule's scope covers the strap
+  pin's net, so re-tying a strap brings the rule into the gate.
 - [examples/sensor_node/](examples/sensor_node/): an STM32F401RE reading an
   HS3001 on I2C1, with a console on USART2 and an LED on PA5. Every pad number,
   alternate function and address is cited by table and page from ST's and
@@ -105,11 +108,26 @@ tracked separately and moves only when the serialized form changes.
   platform description and script; C# probes record what devices, pins and
   UARTs were observed doing; and the measurements re-enter through the commit
   gate. `EmulationModel` and `Firmware` bind the models and the ELF, whose
-  digest is recorded on evidence and never in the snapshot. Refusals are
-  `SIM-0009` to `SIM-0016`.
+  digest is recorded on evidence and never in the snapshot; the path resolves
+  against the program that declares the part. Refusals are `SIM-0009` to
+  `SIM-0016`, among them a pin configuration over a port with no bus, a match
+  detail nothing reads, a window that is not a time or is reversed, an
+  observation of a device a fault removes, a stimulus outside the run, a model
+  descriptor fang does not ship (naming the part), and two probes that would
+  share a name. A Renode installed at a version the lowering was not checked
+  against, or a temporary directory whose path has a space, is reported
+  unsupported, by reason.
 - `fang emulate`, the low-level emulation command, with `-o` and
   `--bundle-only`; `fang verify` reports a verification whose evidence names a
-  firmware the bound file no longer is as stale.
+  firmware the bound file no longer is as stale, and runs it again.
+- `fang schematic --drafter copperhead`, a second schematic lowering:
+  `fang.copperhead` writes copperhead's netlist intent from a snapshot and runs
+  `copperhead draft schematic` across a process boundary, and the sheet is read
+  back with `kicad-cli` and returned only if its nets are exactly the design's.
+  A part is drawn with the KiCad symbol its designator prefix names or the one
+  it declares as `symbol = "library:name"`, which also reaches the netlist as
+  its `libsource`. A part with no symbol, or a net with fewer than two drawn
+  pins, is reported as a loss. `noninverting_amp/` ships its draft.
 - `examples/sensor_node/firmware/`: bare-metal firmware for the board, with
   three deliberately broken builds, committed with the toolchain that builds
   them byte for byte. The board's two requirements are decided by running it.
@@ -117,6 +135,11 @@ tracked separately and moves only when the serialized form changes.
 
 ### Changed
 
+- The gate takes a check class's scope over the head as well as the candidate
+  when deciding which checks a transaction requires, so a removal still brings
+  in the check that covered what it removed. Condition 5 does not count a
+  constraint undecided only because a declared verification question has not
+  yet measured, or failed to measure, its parameter.
 - `SCHEMA_VERSION` is 1.2. Port records gain optional `peripheral` and
   `address_strap` keys and connection records an optional `selectors` key, each
   omitted when absent, which the spec counts as an additive change.
