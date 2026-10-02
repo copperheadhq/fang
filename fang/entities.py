@@ -492,13 +492,21 @@ class Calculation(Entity):
 
 @dataclass(frozen=True)
 class Verification(Entity):
-    """What was verified, how, on what evidence, and with what outcome."""
+    """What was verified, how, on what evidence, and with what outcome.
+
+    A verification a tool decided also names the verification level and the
+    tool, so the graph and not only a log says how it was answered. Both are
+    absent until a run writes them, and are then omitted from the record, so a
+    verification nobody has run serializes exactly as it always did.
+    """
 
     kind: str = "verification"
     verifies: str = ""
     method: str = "analysis"
     evidence: tuple[str, ...] = ()
     result: str = "UNKNOWN"
+    level: str | None = None
+    tool: str | None = None
 
     def references(self) -> tuple[str, ...]:
         return ((self.verifies,) if self.verifies else ()) + self.evidence
@@ -508,6 +516,10 @@ class Verification(Entity):
         out.update({"verifies": self.verifies, "method": self.method, "result": self.result})
         if self.evidence:
             out["evidence"] = sorted(self.evidence)
+        if self.level is not None:
+            out["level"] = self.level
+        if self.tool is not None:
+            out["tool"] = self.tool
         return out
 
 

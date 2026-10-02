@@ -11,6 +11,7 @@ model provenance supports, never proof of physical correctness.
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass, field
@@ -28,7 +29,15 @@ from .values import Value
 
 
 class SimulationError(Exception):
-    """A plan that cannot be satisfied. Never run with a substitute."""
+    """A plan that cannot be satisfied. Never run with a substitute.
+
+    Where the refusal is one the diagnostic registry names, it carries that
+    code, so a caller can report it as the diagnostic it is.
+    """
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        super().__init__(message)
+        self.code = code
 
 
 class Level(Enum):
@@ -137,6 +146,42 @@ class ACSweep(Analysis):
         out = super().as_dict()
         out.update({"variation": self.variation, "points": self.points, "start": self.start, "stop": self.stop})
         return out
+
+
+def analysis_from_dict(payload: Mapping) -> Analysis:
+    """Read an analysis back from its record. The inverse of `as_dict`.
+
+    A question stores its analysis in the graph, and the runner rebuilds it
+    from there with nothing but the snapshot in hand.
+    """
+    kind = payload.get("kind")
+    probes = tuple(payload.get("probes", ()))
+    if kind == "operating_point":
+        return OperatingPoint(probes=probes)
+    if kind == "transient":
+        return Transient(
+            probes=probes,
+            stop=payload["stop"],
+            step=payload["step"],
+            initial_conditions=dict(payload.get("initial_conditions", {})),
+        )
+    if kind == "dc":
+        return DCSweep(
+            probes=probes,
+            source=payload["source"],
+            start=payload["start"],
+            stop=payload["stop"],
+            step=payload["step"],
+        )
+    if kind == "ac":
+        return ACSweep(
+            probes=probes,
+            variation=payload["variation"],
+            points=int(payload["points"]),
+            start=payload["start"],
+            stop=payload["stop"],
+        )
+    raise ValueError(f"no analysis is defined for kind {kind!r}")
 
 
 # --------------------------------------------------------------------------
@@ -444,6 +489,429 @@ def _spice_value(value: str) -> str:
             text = text[: -len(unit)]
             break
     return text or "1"
+
+
+# --------------------------------------------------------------------------
+# Lowering for a question: what a real run needs
+# --------------------------------------------------------------------------
+#
+# A question's deck is written from the snapshot, the traits and the question
+# alone. Every magnitude is written as a plain decimal in SI base units, so no
+# SPICE suffix -- where "M" is milli and "MEG" is mega -- can change what a
+# number means, and every line is a function of its inputs, so two
+# preparations of one question are byte-identical.
+
+
+def spice_number(magnitude: Decimal) -> str:
+    """A decimal magnitude as SPICE reads it, without a suffix."""
+    from .units import _decimal_str
+
+    return _decimal_str(magnitude)
+
+
+def si_magnitude(quantity: Quantity) -> Decimal:
+    """The one magnitude a device is written with, in SI base units.
+
+    A scalar is its value and a tolerance its nominal; a range is its typical
+    value when it has one. A range with no typical value has no one magnitude,
+    and choosing its midpoint would be inventing one, so it is refused.
+    """
+    if quantity.kind == "scalar":
+        magnitude = quantity.value
+    elif quantity.kind == "tolerance":
+        magnitude = quantity.nominal
+    elif quantity.typical is not None:
+        magnitude = quantity.typical
+    else:
+        raise SimulationError(
+            f"{quantity} is a range with no typical value; a device is written "
+            "with one magnitude and none is chosen for it"
+        )
+    return quantity._to_base(magnitude)
+
+
+@dataclass(frozen=True)
+class Subcircuit:
+    """A model's `.subckt` line: its name and its ports in declared order."""
+
+    name: str
+    ports: tuple[str, ...]
+
+
+def read_subcircuit(text: str, *, source: str = "the model") -> Subcircuit:
+    """Read the first `.subckt` line of a model file.
+
+    The ports are the model's own order, which is the order an instance must
+    list its nodes in; the part's pin map says which pin lands on which port.
+    Continuation lines are joined and parameters after the ports are ignored.
+    """
+    logical: list[str] = []
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("*"):
+            continue
+        for marker in (";", "$ "):
+            if marker in line:
+                line = line.split(marker, 1)[0].rstrip()
+        if line.startswith("+") and logical:
+            logical[-1] += " " + line[1:].strip()
+        else:
+            logical.append(line)
+    for line in logical:
+        tokens = line.split()
+        if tokens and tokens[0].lower() == ".subckt":
+            if len(tokens) < 2:
+                break
+            ports = []
+            for token in tokens[2:]:
+                if "=" in token or token.lower() in ("params:", "param:"):
+                    break
+                ports.append(token)
+            return Subcircuit(tokens[1], tuple(ports))
+    raise SimulationError(f"{source} declares no .subckt line")
+
+
+@dataclass(frozen=True)
+class ModelFile:
+    """A model a question's deck includes, and the facts the evidence keeps.
+
+    `path` is how the deck names the file, relative to the run's workspace;
+    `location` is where it is read from on this machine, which is not part of
+    any record; `digest` is what the evidence records, because the snapshot
+    does not hold the file.
+    """
+
+    component: str
+    path: str
+    location: str
+    digest: str
+    subcircuit: Subcircuit
+
+
+def load_model(component: Component, trait: Simulatable) -> ModelFile:
+    """Find, digest and read the model a part's trait names.
+
+    A relative source is resolved against the folder of the program that
+    declared the part, which its source location gives. The deck refers to
+    the file by that same relative path, so nothing machine-specific reaches
+    the deck, the job's hash or the evidence.
+    """
+    import hashlib
+    from pathlib import PurePosixPath
+
+    if not trait.source:
+        raise SimulationError(f"{component.id}'s model names no file")
+    written = Path(trait.source)
+    if written.is_absolute():
+        location = written
+    elif component.source_location is not None:
+        location = Path(component.source_location.file).parent / written
+    else:
+        location = Path.cwd() / written
+
+    relative = PurePosixPath(trait.source)
+    if relative.is_absolute() or ".." in relative.parts:
+        relative = PurePosixPath("models") / relative.name
+
+    if not location.is_file():
+        raise SimulationError(
+            f"{component.id}'s model {trait.source} is not a file at {location}"
+        )
+    data = location.read_bytes()
+    subcircuit = read_subcircuit(data.decode("utf-8", errors="replace"), source=trait.source)
+    return ModelFile(
+        component.id,
+        relative.as_posix(),
+        str(location),
+        "sha256:" + hashlib.sha256(data).hexdigest(),
+        subcircuit,
+    )
+
+
+def subcircuit_instance(
+    designator: str,
+    model: ModelFile,
+    pin_map: Mapping[str, str],
+    node_of_pin: Mapping[str, str],
+) -> str:
+    """An `X` device instantiating a part's model.
+
+    The nodes are listed in the model's port order, each the node of the pin
+    the part's pin map lands on that port. A port no pin reaches is refused by
+    name, as is a pin mapped onto a port the model does not declare: either
+    would be a deck whose wiring nobody chose.
+    """
+    from .diagnostics import SIM_MODEL_PORT_UNREACHED
+
+    pins_of: dict[str, list[str]] = {}
+    for pin, port in sorted(pin_map.items()):
+        pins_of.setdefault(port, []).append(pin)
+    unreached = [port for port in model.subcircuit.ports if port not in pins_of]
+    if unreached:
+        raise SimulationError(
+            f"{designator}'s model {model.subcircuit.name} has port"
+            f"{'s' if len(unreached) > 1 else ''} {', '.join(unreached)} that no pin "
+            "of the part's pin map reaches",
+            code=SIM_MODEL_PORT_UNREACHED,
+        )
+    undeclared = sorted(set(pins_of) - set(model.subcircuit.ports))
+    if undeclared:
+        raise SimulationError(
+            f"{designator}'s pin map lands on {', '.join(undeclared)}, which "
+            f"{model.subcircuit.name} does not declare",
+            code=SIM_MODEL_PORT_UNREACHED,
+        )
+    nodes = [node_of_pin[pins_of[port][0]] for port in model.subcircuit.ports]
+    return f"X{designator} {' '.join(nodes)} {model.subcircuit.name}"
+
+
+def primitive_device(component: Component, designator: str, nodes: Sequence[str]) -> str:
+    """A device SPICE knows natively, written from the value the graph holds.
+
+    A primitive with no known value is refused: a resistor of unknown
+    resistance is not a one-ohm resistor.
+    """
+    from .netlist import VALUE_PARAMETERS
+
+    prefix = component.extensions.get("designator_prefix")
+    parameter = VALUE_PARAMETERS.get(prefix)
+    value = component.parameters.get(parameter) if parameter else None
+    if not isinstance(value, Value) or not value.known or value.quantity is None:
+        raise SimulationError(
+            f"{designator}'s {parameter or 'value'} is unknown; a device is not "
+            "written with a value nobody gave it"
+        )
+    magnitude = spice_number(si_magnitude(value.quantity))
+    if prefix == "V":
+        return f"{designator} {nodes[0]} {nodes[1]} DC {magnitude}"
+    return f"{designator} {nodes[0]} {nodes[1]} {magnitude}"
+
+
+@dataclass(frozen=True)
+class BenchItem:
+    """One supply or load, at the nodes its surface resolved to."""
+
+    role: str               # "supply" or "load"
+    surface: str
+    quantity: Quantity
+    positive: str
+    negative: str
+
+
+def bench_device(item: BenchItem, index: int, *, ac: bool = False) -> str:
+    """A bench item as a device: a supply is a `V`, a load an `I` or an `R`.
+
+    Which, for a load, is decided by its dimension, and a load of any other
+    dimension is refused. Under an AC analysis a supply is also the
+    stimulus, at its own magnitude, and the question's assumptions say so.
+    """
+    from .diagnostics import SIM_LOAD_DIMENSION
+    from .units import Unit
+
+    magnitude = spice_number(si_magnitude(item.quantity))
+    nodes = f"{item.positive} {item.negative}"
+    if item.role == "supply":
+        if item.quantity.dimension != Unit.parse("V").dimension:
+            raise SimulationError(f"the supply at {item.surface} is not a voltage")
+        stimulus = f" AC {magnitude}" if ac else ""
+        return f"Vfang_supply{index} {nodes} DC {magnitude}{stimulus}"
+    if item.quantity.dimension == Unit.parse("A").dimension:
+        # Current flows from the first node through the source to the second:
+        # out of the surface's signal, into its return.
+        return f"Ifang_load{index} {nodes} DC {magnitude}"
+    if item.quantity.dimension == Unit.parse("Ohm").dimension:
+        return f"Rfang_load{index} {nodes} {magnitude}"
+    raise SimulationError(
+        f"the load at {item.surface} is {item.quantity}; a load is a current "
+        "drawn or a resistance, nothing else",
+        code=SIM_LOAD_DIMENSION,
+    )
+
+
+@dataclass(frozen=True)
+class DeckMeasure:
+    """One measure as a deck sees it: a slot, two nodes, and what to take.
+
+    Magnitudes are decimals in SI base units: a window in seconds or hertz,
+    a level in volts.
+    """
+
+    slot: str
+    kind: str
+    positive: str
+    negative: str = "0"
+    after: Decimal | None = None
+    until: Decimal | None = None
+    at: Decimal | None = None
+    level: Decimal | None = None
+    edge: str = "either"
+    occurrence: int = 1
+
+
+class SpiceDialect:
+    """What differs between SPICE simulators: analysis, measurement, output.
+
+    Everything else in a question's deck -- the devices, the subcircuit
+    instances, the bench -- is shared, which is what lets a second simulator
+    answer the same question with the same circuit.
+    """
+
+    name: str = ""
+    #: The analysis kinds the dialect can lower a measure over.
+    analyses: frozenset[str] = frozenset()
+
+    def options(self, options: Mapping[str, str]) -> list[str]:
+        return [f".options {name}={value}" for name, value in sorted(options.items())]
+
+    def control(self, analysis: Analysis, measures: Sequence[DeckMeasure]) -> list[str]:
+        raise NotImplementedError
+
+    def parse(self, output: str, measures: Sequence[DeckMeasure]) -> dict[str, Decimal | str]:
+        """Each slot's number, or the reason the output gives none."""
+        raise NotImplementedError
+
+
+#: ngspice's name for each measure's statistic.
+_NGSPICE_STATISTIC = {
+    "peak_to_peak": "PP",
+    "average": "AVG",
+    "maximum": "MAX",
+    "minimum": "MIN",
+}
+
+_NGSPICE_EDGE = {"rising": "RISE", "falling": "FALL", "either": "CROSS"}
+
+
+class NgspiceDialect(SpiceDialect):
+    """ngspice in batch mode, measuring through a `.control` block.
+
+    Both choices are forced by the installed ngspice (45.2): batch mode
+    ignores `.print op`, so an operating-point value is printed from the
+    control block; and a deck-level `.meas ac` reports the real part of a node
+    voltage where the same line in a control block reports its magnitude --
+    an RC corner came back as 1024 Hz against the correct 1592 Hz.
+    """
+
+    name = "ngspice"
+    analyses = frozenset({"operating_point", "transient", "ac"})
+
+    _MEASURED = re.compile(r"^\s*(fang_m\d+)\s*=\s*([-+0-9.eE]+)", re.MULTILINE)
+    _FAILED = re.compile(r"^\s*meas\s+\w+\s+(fang_m\d+)\b.*failed!", re.MULTILINE | re.IGNORECASE)
+
+    @staticmethod
+    def _signal(measure: DeckMeasure, analysis: str) -> str:
+        def voltage(node: str) -> str:
+            return "0" if node == "0" else f"v({node})"
+
+        if measure.positive == "0" and measure.negative == "0":
+            raise SimulationError(
+                f"{measure.slot} would measure ground against ground"
+            )
+        if measure.negative == "0":
+            expression = voltage(measure.positive)
+        else:
+            expression = f"{voltage(measure.positive)}-{voltage(measure.negative)}"
+        return f"mag({expression})" if analysis == "ac" else expression
+
+    def control(self, analysis: Analysis, measures: Sequence[DeckMeasure]) -> list[str]:
+        if analysis.kind not in self.analyses:
+            raise SimulationError(f"ngspice does not measure over a {analysis.kind} analysis here")
+        if getattr(analysis, "initial_conditions", None):
+            raise SimulationError("initial conditions are not lowered for a question")
+        lines = [".control", analysis.directive().lstrip(".")]
+        sweep = {"transient": "tran", "ac": "ac"}.get(analysis.kind)
+        for index, measure in enumerate(measures):
+            signal = self._signal(measure, analysis.kind)
+            if analysis.kind == "operating_point":
+                if measure.kind != "value_at" or measure.at is not None:
+                    raise SimulationError(
+                        f"an operating point has one value per node; {measure.kind} "
+                        "needs a sweep"
+                    )
+                lines.append(f"let {measure.slot} = {signal}")
+                lines.append(f"print {measure.slot}")
+                continue
+            vector = f"fang_s{index}"
+            lines.append(f"let {vector} = {signal}")
+            if measure.kind in _NGSPICE_STATISTIC:
+                window = "".join(
+                    f" {name}={spice_number(value)}"
+                    for name, value in (("from", measure.after), ("to", measure.until))
+                    if value is not None
+                )
+                lines.append(
+                    f"meas {sweep} {measure.slot} {_NGSPICE_STATISTIC[measure.kind]} "
+                    f"{vector}{window}"
+                )
+            elif measure.kind == "value_at":
+                if measure.at is None:
+                    raise SimulationError(f"{measure.slot} names no point to take the value at")
+                lines.append(
+                    f"meas {sweep} {measure.slot} FIND {vector} AT={spice_number(measure.at)}"
+                )
+            elif measure.kind == "crossing":
+                after = f" FROM={spice_number(measure.after)}" if measure.after is not None else ""
+                lines.append(
+                    f"meas {sweep} {measure.slot} WHEN {vector}={spice_number(measure.level)} "
+                    f"{_NGSPICE_EDGE[measure.edge]}={measure.occurrence}{after}"
+                )
+            else:
+                raise SimulationError(f"ngspice has no lowering for a {measure.kind} measure")
+        lines.append(".endc")
+        return lines
+
+    def parse(self, output: str, measures: Sequence[DeckMeasure]) -> dict[str, Decimal | str]:
+        """Read `name = value` lines into decimals, and nothing else.
+
+        A measure ngspice reports as failed, or does not report at all, gets a
+        reason and no number: the parser contains nothing the output did not.
+        """
+        found: dict[str, Decimal | str] = {}
+        for slot in self._FAILED.findall(output):
+            found[slot.lower()] = "ngspice reported the measure as failed"
+        for slot, text in self._MEASURED.findall(output):
+            slot = slot.lower()
+            if slot in found:
+                continue
+            try:
+                found[slot] = Decimal(text)
+            except Exception:
+                found[slot] = f"ngspice printed {text!r}, which is not a number"
+        return {
+            measure.slot: found.get(measure.slot, "ngspice's output does not report it")
+            for measure in measures
+        }
+
+
+def lower_question(
+    *,
+    title: Sequence[str],
+    devices: Sequence[str],
+    bench: Sequence[BenchItem],
+    models: Sequence[ModelFile],
+    analysis: Analysis,
+    measures: Sequence[DeckMeasure],
+    dialect: SpiceDialect,
+    options: Mapping[str, str] = DETERMINISTIC_OPTIONS,
+) -> str:
+    """Write a question's deck: shared circuit, then the dialect's lines.
+
+    The circuit -- devices, subcircuit instances and bench -- is the same for
+    every SPICE dialect; only the options, the analysis and the measurement
+    lines are the dialect's. Each model is included by path, never inlined.
+    """
+    ac = analysis.kind == "ac"
+    lines = [f"* {line}" for line in title]
+    lines.extend(devices)
+    for role in ("supply", "load"):
+        items = [item for item in bench if item.role == role]
+        lines.extend(bench_device(item, index, ac=ac) for index, item in enumerate(items))
+    for path in sorted({model.path for model in models}):
+        lines.append(f".include {path}")
+    lines.extend(dialect.options(options))
+    lines.extend(dialect.control(analysis, measures))
+    lines.append(".end")
+    return "\n".join(lines) + "\n"
 
 
 # --------------------------------------------------------------------------

@@ -112,17 +112,46 @@ def cmd_init(args) -> int:
     return EXIT_OK
 
 
+def _with_measurements(snapshot: Snapshot, workspace: Workspace) -> Snapshot:
+    """A fresh elaboration, keeping what runs measured into this workspace.
+
+    The program declared each measured parameter without a value, so building
+    it again must not withdraw a measurement a run committed.
+    """
+    if not workspace.manifest_path.exists():
+        return snapshot
+    from .verification import MeasuredFacts, carry_measurements
+
+    facts = MeasuredFacts.from_records(workspace.read_records())
+    if not facts.verifications:
+        return snapshot
+    # The measurements belong to the revision they were committed in, so the
+    # state rebuilt around them keeps that revision: an unchanged program
+    # rebuilt this way is the persisted snapshot, byte for byte.
+    carried = carry_measurements(snapshot, facts)
+    return carried.with_entities(carried.entities, workspace.read_manifest().revision_id)
+
+
+def _revision_number(revision_id: str) -> int:
+    """Where a graph over a persisted head continues numbering revisions."""
+    _, _, number = revision_id.partition("-")
+    return int(number) if number.isdigit() else 0
+
+
 def cmd_build(args) -> int:
     """Elaborate, gate, persist, and run the plan. The whole pipeline."""
     result = _elaborate(args)
+    workspace = Workspace(args.directory)
+    snapshot = _with_measurements(result.snapshot, workspace)
+    plan = result.plan.with_snapshot(snapshot.hash)
 
     # Canonical state advances only through the gate, even here.
     graph = KernelGraph(
-        Snapshot(result.snapshot.project_id, "REV-000000"), checks=DEFAULT_CHECKS
+        Snapshot(snapshot.project_id, "REV-000000"), checks=DEFAULT_CHECKS
     )
     operations = tuple(
         AddEntity(entity=entity, reason="elaborated")
-        for entity in sorted(result.snapshot.entities.values(), key=lambda e: e.id)
+        for entity in sorted(snapshot.entities.values(), key=lambda e: e.id)
     )
     proposal = graph.apply(Transaction(graph.head.hash, operations))
     if proposal.rejected:
@@ -130,13 +159,12 @@ def cmd_build(args) -> int:
         print("fang: the commit gate rejected the build", file=sys.stderr)
         return EXIT_FAILED
 
-    workspace = Workspace(args.directory)
-    manifest = workspace.write_snapshot(result.snapshot)
-    workspace.write_plan(result.plan)
+    manifest = workspace.write_snapshot(snapshot)
+    workspace.write_plan(plan)
 
     run = execute(
-        result.plan,
-        result.snapshot,
+        plan,
+        snapshot,
         default_registry(),
         workspace=workspace.dir / "cache",
         traits=result.traits,
@@ -340,6 +368,56 @@ def cmd_sim(args) -> int:
     return EXIT_OK if normalized.passed else EXIT_FAILED
 
 
+def cmd_verify(args) -> int:
+    """Route and run every declared question, and persist only on --commit.
+
+    Each question is printed with its level, its tool, its measurements and
+    its result, or the reason it did not run. A failed verification exits
+    non-zero, as does a question the program left unrunnable; a tool that is
+    not installed is reported and is not by itself a failure.
+    """
+    from tempfile import TemporaryDirectory
+
+    from .verification import NOT_RUNNABLE, REJECTED, questions, report, verify
+
+    result = _elaborate(args)
+    workspace = Workspace(args.directory)
+    if args.commit and not workspace.manifest_path.exists():
+        print(
+            "fang: --commit persists into an existing workspace, and there is none "
+            f"at {workspace.dir}; run 'fang build' first",
+            file=sys.stderr,
+        )
+        return EXIT_FAILED
+
+    head = _with_measurements(result.snapshot, workspace)
+    if not questions(head):
+        print(f"nothing to verify: {Path(args.program).name} declares no question")
+        return EXIT_OK
+
+    graph = KernelGraph(
+        head, checks=DEFAULT_CHECKS, revision_counter=_revision_number(head.revision_id)
+    )
+    with TemporaryDirectory() as scratch:
+        # Without --commit nothing is written into the workspace, not even a
+        # scratch deck; with it, each run's files are kept beside its evidence.
+        runs = workspace.dir / "simulations" if args.commit else Path(scratch)
+        outcomes = verify(graph, traits=result.traits, workspace=runs)
+
+    for line in report(outcomes):
+        print(line)
+
+    if args.commit:
+        if workspace.read_manifest().snapshot == graph.head.hash:
+            print("nothing new to commit")
+        else:
+            manifest = workspace.write_snapshot(graph.head)
+            print(f"committed {manifest.entity_count} entities, snapshot {manifest.snapshot}")
+
+    unfinished = any(o.status in (NOT_RUNNABLE, REJECTED) for o in outcomes)
+    return EXIT_FAILED if any(o.failed for o in outcomes) or unfinished else EXIT_OK
+
+
 def cmd_mcp(args) -> int:
     """Serve the agent surface over stdio, bound to one project root."""
     from .diagnostics import MCP_DEPENDENCY_MISSING
@@ -384,18 +462,19 @@ def cmd_diff(args) -> int:
         return EXIT_FAILED
 
     result = _elaborate(args)
+    snapshot = _with_measurements(result.snapshot, workspace)
     manifest = workspace.read_manifest()
-    if manifest.snapshot == result.snapshot.hash:
+    if manifest.snapshot == snapshot.hash:
         print("no change")
         return EXIT_OK
 
     stored = {record["id"] for record in workspace.read_records()}
-    current = set(result.snapshot.entities)
+    current = set(snapshot.entities)
     for entity_id in sorted(current - stored):
-        print(f"+ {entity_id} {result.snapshot.entities[entity_id].kind}")
+        print(f"+ {entity_id} {snapshot.entities[entity_id].kind}")
     for entity_id in sorted(stored - current):
         print(f"- {entity_id}")
-    print(f"snapshot {manifest.snapshot[:19]} -> {result.snapshot.hash[:19]}")
+    print(f"snapshot {manifest.snapshot[:19]} -> {snapshot.hash[:19]}")
     return EXIT_OK
 
 
@@ -445,6 +524,16 @@ def build_parser() -> argparse.ArgumentParser:
     sim.add_argument("--probe", action="append", help="a signal to probe; repeatable")
     sim.add_argument("-o", "--output", help="write the SPICE deck here")
     sim.set_defaults(handler=cmd_sim)
+
+    verify_command = program_arguments(
+        subparsers.add_parser("verify", help="route and run every declared question")
+    )
+    verify_command.add_argument(
+        "--commit",
+        action="store_true",
+        help="persist the measurements into the existing workspace",
+    )
+    verify_command.set_defaults(handler=cmd_verify)
 
     export = program_arguments(subparsers.add_parser("export", help="write a KiCad netlist"))
     export.add_argument("-o", "--output", help="where to write it; stdout by default")

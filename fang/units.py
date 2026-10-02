@@ -467,6 +467,31 @@ class Quantity:
             exact,
         )
 
+    @classmethod
+    def from_dict(cls, payload: Mapping) -> "Quantity":
+        """Read a quantity back from its record. The inverse of `as_dict`."""
+
+        def magnitude(key: str) -> Decimal | None:
+            text = payload.get(key)
+            return None if text is None else Decimal(str(text))
+
+        tolerance = payload.get("tolerance")
+        return cls(
+            payload["kind"],
+            Unit.parse(payload["unit"]),
+            value=magnitude("value"),
+            minimum=magnitude("min"),
+            maximum=magnitude("max"),
+            typical=magnitude("typical"),
+            nominal=magnitude("nominal"),
+            tolerance=(
+                Tolerance(tolerance["kind"], Decimal(str(tolerance["value"])))
+                if tolerance is not None
+                else None
+            ),
+            conditions=dict(payload.get("conditions", {})),
+        )
+
     def as_dict(self) -> dict:
         out: dict = {"kind": self.kind, "unit": self.unit.symbol}
         for name, key in (
@@ -513,7 +538,16 @@ def _decimal_str(value: Decimal) -> str:
 
     Normalizes away exponent notation for ordinary magnitudes so that the same
     number always serializes the same way, without changing its value.
+
+    An infinite bound is a magnitude too: an event observed not to occur before
+    a run's end is the range from that end to infinity, and it serializes as
+    ``Infinity`` so that ``Decimal`` reads it back unchanged. A NaN is not a
+    magnitude of anything and has no canonical form.
     """
+    if value.is_nan():
+        raise ValueError("NaN is not a magnitude and has no canonical form")
+    if value.is_infinite():
+        return "Infinity" if value > 0 else "-Infinity"
     if value == value.to_integral_value() and abs(value.as_tuple().exponent) < 20:
         text = str(value.quantize(Decimal(1)))
     else:

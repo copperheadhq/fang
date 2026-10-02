@@ -361,17 +361,27 @@ def structural_constraint_check(snapshot: Snapshot) -> list[CheckResult]:
     return results
 
 
-CONSTRAINT_CHECK = CheckClass(
-    "constraint",
-    structural_constraint_check,
-    lambda snapshot: {
-        target
-        for entity in snapshot.entities.values()
-        if isinstance(entity, Constraint)
-        for target in entity.targets
-    }
-    | {e.id for e in snapshot.entities.values() if isinstance(e, Constraint)},
-)
+def _constraint_scope(snapshot: Snapshot) -> set[str]:
+    """What the constraint check covers: every constraint, its targets, and
+    every entity its expression reads.
+
+    A constraint declared in one module over a parameter of another reads an
+    entity it does not target; setting that parameter must still bring the
+    check into the gate, or a measured value could reach the head with the
+    constraint over it never evaluated.
+    """
+    scope: set[str] = set()
+    for entity in snapshot.entities.values():
+        if isinstance(entity, Constraint):
+            scope.add(entity.id)
+            scope.update(entity.targets)
+            scope.update(entity.expression.references())
+            if entity.applicability is not None:
+                scope.update(entity.applicability.references())
+    return scope
+
+
+CONSTRAINT_CHECK = CheckClass("constraint", structural_constraint_check, _constraint_scope)
 
 
 @dataclass(frozen=True)

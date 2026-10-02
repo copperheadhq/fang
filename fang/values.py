@@ -99,6 +99,19 @@ class Value:
         """An inferred or assumed value is never treated as an explicit one."""
         return self.status is ValueStatus.EXPLICIT
 
+    @classmethod
+    def from_dict(cls, payload) -> "Value":
+        """Read a value back from its record. The inverse of `as_dict`."""
+        quantity = payload.get("quantity")
+        confidence = payload.get("confidence")
+        return cls(
+            ValueStatus(payload["status"]),
+            Quantity.from_dict(quantity) if quantity is not None else None,
+            source=payload.get("source"),
+            confidence=Decimal(str(confidence)) if confidence is not None else None,
+            rationale=payload.get("rationale"),
+        )
+
     def as_dict(self) -> dict:
         out: dict = {"status": self.status.value}
         if self.quantity is not None:
