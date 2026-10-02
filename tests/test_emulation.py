@@ -198,7 +198,10 @@ def test_the_plan_hash_does_not_cover_the_snapshot_hash():
     p = plan()
     moved = EmulationPlan(**{**p.__dict__, "snapshot": "sha256:elsewhere"})
     assert moved.hash == p.hash
-    assert moved.as_dict() != p.as_dict()
+    # Nor does the bundle: the plan it carries names no snapshot.
+    firmware = (ELF / "sensor_node.elf").read_bytes()
+    assert moved.as_dict() == p.as_dict() and "snapshot" not in p.as_dict()
+    assert bundle(moved, firmware) == bundle(p, firmware)
 
 
 # -- events -------------------------------------------------------------------
@@ -629,6 +632,44 @@ def test_preparing_a_job_records_the_firmware_and_the_plan():
     assert first.extra["ran"] == "local" and first.extra["plan"].startswith("sha256:")
     assert first.extra["firmware_reports"] == "reported"
     assert first.confidence == Decimal("0.8")
+
+
+def test_an_unrelated_change_to_the_snapshot_leaves_the_emulation_job_as_it_was(tmp_path):
+    """A job's identity excludes the snapshot's own hash (RFC 12 section
+    12.8): an entity the run does not read, or the checkout the program sits
+    in, moves the snapshot and not the job, so a measurement stays current.
+    A rebuilt firmware still moves it."""
+    import shutil as _shutil
+
+    from fang.cli import load_system
+    from fang.emulation import RENODE
+    from fang.entities import Evidence
+    from fang.identity import derive
+
+    result = _elaborate(SENSOR_NODE.SensorNode)
+    question = _question(result.snapshot, "startup")
+    note = Evidence(derive(result.snapshot.project_id, "evidence", "unrelated.note"), claim="a note")
+    edited = result.snapshot.with_entities(
+        {**result.snapshot.entities, note.id: note}, result.snapshot.revision_id
+    )
+    assert edited.hash != result.snapshot.hash
+    before = RENODE.prepare(result.snapshot, question, traits=result.traits)
+    after = RENODE.prepare(edited, question, traits=result.traits)
+    assert after.snapshot == edited.hash
+    assert after.files == before.files and after.extra == before.extra
+    assert after.hash == before.hash
+
+    copy = tmp_path / "sensor_node"
+    _shutil.copytree(ROOT / "examples" / "sensor_node", copy, ignore=_shutil.ignore_patterns("out"))
+    moved = _elaborate(load_system(copy / "sensor_node.py"))
+    assert moved.snapshot.hash != result.snapshot.hash
+    elsewhere = RENODE.prepare(moved.snapshot, _question(moved.snapshot, "startup"), traits=moved.traits)
+    assert elsewhere.hash == before.hash
+
+    firmware = copy / "firmware" / "elf" / "sensor_node.elf"
+    firmware.write_bytes(firmware.read_bytes() + b"\0")
+    rebuilt = RENODE.prepare(moved.snapshot, _question(moved.snapshot, "startup"), traits=moved.traits)
+    assert rebuilt.hash != before.hash
 
 
 def test_a_plan_the_board_cannot_satisfy_is_not_runnable_and_names_its_code():

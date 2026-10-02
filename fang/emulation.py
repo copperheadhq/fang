@@ -259,7 +259,8 @@ class PlanStimulus:
 class EmulationPlan:
     """An emulation question compiled against a snapshot, with every reference
     resolved. Canonical, and identified by the hash of its canonical form; the
-    snapshot hash is recorded beside it and is not part of that identity."""
+    snapshot hash is held beside it and is not part of that identity, nor of
+    its canonical form, so no file of a run's bundle carries it."""
 
     question: str
     requirement: str
@@ -325,9 +326,16 @@ class EmulationPlan:
         return content_hash(self.identity())
 
     def as_dict(self) -> dict:
+        """The plan as its bundle carries it: its identity and its hash.
+
+        The snapshot hash is left out. It covers every entity and the
+        checkout's path, so a bundle carrying it would change with any
+        unrelated edit, and the job hashed over the bundle with it (RFC 12
+        section 12.8 keeps the snapshot's own hash out of a job's identity).
+        The job names its snapshot beside its hash, as `Job.snapshot`.
+        """
         out = self.identity()
         out["plan"] = self.hash
-        out["snapshot"] = self.snapshot
         return out
 
     def device(self, component: str) -> PlanDevice | None:
@@ -1683,6 +1691,8 @@ def plan_from_dict(payload: Mapping[str, Any]) -> EmulationPlan:
     return EmulationPlan(
         question=payload["question"],
         requirement=payload["requirement"],
+        # A bundle's plan names no snapshot; one written before it stopped
+        # carrying it still reads.
         snapshot=payload.get("snapshot", ""),
         machine=payload["machine"],
         platform=payload["platform"]["model"],
