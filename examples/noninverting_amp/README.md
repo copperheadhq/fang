@@ -166,8 +166,9 @@ and `copperhead draft schematic` turns it into
 It draws with KiCad's library symbols, so the op amp names one: `symbol =
 "Amplifier_Operational:LM741"`, the standard single-op-amp drawing with pins 2,
 3 and 6. That sets how the part is drawn, not which part it is. The ground
-marker isn't drawn as a part; its net becomes a ground net, with the ground
-symbol on it.
+marker goes into the intent as KiCad's ground symbol, `power:GND`, and its net
+becomes a ground net: copperhead draws the ground symbol at each pin on it
+rather than the marker as a part.
 
 ![the same circuit, drafted by copperhead and rendered by KiCad](out/copperhead/schematic.svg)
 

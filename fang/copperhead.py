@@ -1,19 +1,24 @@
 """Schematic drafting by copperhead, as a second lowering of a snapshot.
 
-Spec: "One canonical model" — a drafted sheet is a lowering leaving a
-snapshot, never a store of its own — and "External Adapters Report Loss".
+Spec: "One canonical model" (a drafted sheet is a lowering leaving a snapshot,
+never a store of its own) and "External Adapters Report Loss".
 
 Fang's own schematic compiler places parts on a grid and joins them by label.
 copperhead's drafting engine places and wires them: it reads a netlist intent
-(`schematic.intent.json` — parts with the KiCad symbol each is drawn with, and
+(`schematic.intent.json`: parts with the KiCad symbol each is drawn with, and
 nets as lists of `REF.PIN`) and computes every coordinate itself. This module
 writes that intent from a snapshot and runs `copperhead draft schematic` across
 a process boundary, the way `schematic.KicadRenderer` runs `kicad-cli`.
 
 The intent is a projection like the netlist it is read from, so it is a
-function of the snapshot and nothing else. What copperhead cannot draw is
-reported as a loss rather than dropped: a part with no symbol to draw it with,
-and a net that reaches fewer than two drawn pins.
+function of the snapshot and of the options `compile_intent` is called with,
+and nothing else. There is one lowering: `fang schematic --drafter copperhead`,
+`examples/regenerate.py` and `examples/draw_figures.py` all call
+`compile_intent`, and where they draw differently it is because they pass
+different options, never because they lower differently. What copperhead cannot
+draw is reported as a loss rather than dropped: a part with no symbol to draw
+it with, a part with a pin its symbol has no place for, and a net that reaches
+fewer than two drawn pins.
 """
 
 from __future__ import annotations
@@ -31,21 +36,76 @@ from .netlist import Netlist, compile_netlist
 #: The intent format this writes; copperhead refuses a version it does not know.
 INTENT_VERSION = 1
 
-#: Designator prefix to the KiCad symbol copperhead draws a part with when the
-#: part names none of its own. Only symbols whose pin numbers are the ones a
-#: part with that prefix conventionally has: a symbol whose numbering differed
-#: would move a net onto the wrong pin, and copperhead maps endpoints by number.
-LIBRARY_OF_PREFIX: Mapping[str, str] = {
-    "C": "Device:C",
-    "D": "Device:D",
-    "F": "Device:Fuse",
-    "L": "Device:L",
-    "LED": "Device:LED",
-    "R": "Device:R",
-    "TP": "Connector:TestPoint",
-    "V": "Device:Battery_Cell",
-    "Y": "Device:Crystal",
+
+@dataclass(frozen=True)
+class Symbol:
+    """A KiCad library symbol a part is drawn with, and where its pins land."""
+
+    #: The symbol, as `library:name`.
+    library: str
+    #: Each of the part's pin names to the symbol's pin number. None means the
+    #: part numbers its pins as the symbol does, and its own numbers are used.
+    pins: Mapping[str, str] | None = None
+    #: What is printed under the part where its value is only the name of its
+    #: type, which says what the part is modelled as rather than what it is.
+    value: str | None = None
+
+
+#: KiCad's diodes number the cathode 1 and the anode 2; a fang diode numbers
+#: its anode 1, so a diode drawn by number would be drawn backwards.
+_DIODE = {"A": "2", "K": "1"}
+
+#: Designator prefix to the symbol a part is drawn with when neither the part
+#: nor its type names one. A prefix is a convention shared across programs, so
+#: only one that conventionally means a single kind of device is here: `M` is
+#: left out, since KiCad draws a motor with it as well as a meter.
+SYMBOL_OF_PREFIX: Mapping[str, Symbol] = {
+    "C": Symbol("Device:C"),
+    "D": Symbol("Device:D", _DIODE),
+    "DS": Symbol("Device:LED", _DIODE),
+    "F": Symbol("Device:Fuse"),
+    "L": Symbol("Device:L"),
+    "LED": Symbol("Device:LED", _DIODE),
+    "R": Symbol("Device:R"),
+    "RL": Symbol("Device:R"),
+    "RS": Symbol("Device:R"),
+    "RV": Symbol("Device:R_Potentiometer"),
+    "SW": Symbol("Switch:SW_SPST"),
+    "TP": Symbol("Connector:TestPoint"),
+    # A cell names its terminals or numbers them; either way 1 is positive.
+    "V": Symbol("Device:Battery_Cell"),
+    "Y": Symbol("Device:Crystal"),
 }
+
+#: A part's type to the symbol it is drawn with, for a type one prefix does
+#: not pick out: `U` covers every integrated part, and a zener is a `D`. The
+#: types are the ones the examples' textbook figures model.
+SYMBOL_OF_PART: Mapping[str, Symbol] = {
+    # KiCad's generic op amp, not any one part: an ideal op amp is no vendor's.
+    "OpAmp": Symbol(
+        "Simulation_SPICE:OPAMP", {"IN+": "1", "IN-": "2", "OUT": "5"}, "OPAMP"
+    ),
+    # TI's own fully differential amplifier; KiCad has no generic one.
+    "DifferentialOpAmp": Symbol(
+        "Amplifier_Difference:THS4521IDGK",
+        {"IN+": "8", "IN-": "1", "OUT+": "4", "OUT-": "5"},
+        "THS4521",
+    ),
+    "SignalDiode": Symbol("Device:D", _DIODE, "1N4148"),
+    "Zener": Symbol("Device:D_Zener", _DIODE),
+    # A meter's pin 1 is the one current enters by, which KiCad marks + and
+    # numbers 2.
+    "Meter": Symbol("Device:Ammeter_DC", {"1": "2", "2": "1"}),
+    "Lamp": Symbol("Device:Lamp"),
+}
+
+#: What a ground marker, a part whose every pin is a ground pin, is drawn
+#: with. copperhead draws a power symbol at each pin of a ground net rather
+#: than the part itself, so the marker never appears on the sheet as one.
+GROUND_SYMBOL = Symbol("power:GND", value="GND")
+
+#: The symbol a terminal is drawn with, for `terminal_names`.
+TERMINAL = "Connector:TestPoint"
 
 
 @dataclass(frozen=True)
@@ -63,19 +123,66 @@ def _prefix(designator: str) -> str:
     return designator.rstrip("0123456789")
 
 
+def symbol_of(
+    component: Component,
+    designator: str,
+    *,
+    libsource: str | None = None,
+    marker: bool = False,
+) -> Symbol | None:
+    """The symbol a part is drawn with, or None where nothing names one.
+
+    In order: the symbol the part names itself (`symbol = "library:name"`,
+    which reaches the netlist as its libsource), numbered by the part's own
+    pins; the one its type is drawn with; KiCad's ground symbol for a ground
+    marker; the one its designator's prefix names.
+    """
+    if libsource:
+        return Symbol(libsource)
+    if component.part in SYMBOL_OF_PART:
+        return SYMBOL_OF_PART[component.part]
+    if marker:
+        return GROUND_SYMBOL
+    return SYMBOL_OF_PREFIX.get(_prefix(designator))
+
+
+def short_value(value: str) -> str:
+    """A value as a schematic prints it: `10k` for `10 kOhm`, `1uF` for `1 uF`."""
+    for unit, short in ((" kOhm", "k"), (" MOhm", "M"), (" Ohm", "")):
+        value = value.replace(unit, short)
+    return value.replace(" ", "")
+
+
 def compile_intent(
     snapshot,
     *,
     traits=None,
     netlist: Netlist | None = None,
     group: str = "fang",
+    ground: str | None = None,
+    terminal_names: bool = False,
+    short_values: bool = False,
+    date: str = "",
 ) -> Intent:
     """Lower a snapshot to copperhead's netlist intent.
 
-    A part whose every pin is a ground pin marks a node rather than adding a
-    device to it, so it is not drawn as a part: its net is declared a ground
-    net and copperhead draws the ground symbol there instead. Every other part
-    goes into the one group named `group`.
+    Every part goes into the one group named `group`. A part whose every pin
+    is a ground pin marks a node rather than adding a device to it: it is
+    drawn with KiCad's ground symbol unless it names its own, and its net is
+    declared a ground net.
+
+    The rest of the options say how the sheet is labelled, and each is the
+    same for every caller unless that caller passes it:
+
+    `ground` is the name the ground net is drawn with; None keeps the name
+    the netlist gives it. `terminal_names` labels each terminal (a part drawn
+    as a test point) with the name its part has in the program, upper-cased,
+    and names the net it is on after it, the first in order where several
+    meet; a ground net named by `ground` keeps that name. `short_values`
+    prints each value as a schematic does, `10k` rather than `10 kOhm`. `date`
+    is the title block's: it is part of the intent so the same intent drafts
+    the same bytes, and a snapshot carries no issue date, so none is invented
+    unless the caller names one.
     """
     netlist = netlist or compile_netlist(snapshot, traits=traits)
     pins: dict[str, list[Pin]] = {}
@@ -90,42 +197,63 @@ def compile_intent(
 
     losses: list[str] = []
     markers: set[str] = set()
-    drawn: set[str] = set()
-    number: dict[tuple[str, str], str] = {}
+    terminals: dict[str, str] = {}
+    endpoint: dict[tuple[str, str], str] = {}
     parts = []
-    for component in netlist.components:
-        owned = pins.get(component.entity_id, [])
-        for pin in owned:
-            number[(component.designator, pin.vendor_name)] = pin.number or pin.vendor_name
-        if owned and all(pin.role == "ground" for pin in owned):
-            markers.add(component.designator)
-            continue
-        entity = components.get(component.entity_id)
-        library = component.libsource or LIBRARY_OF_PREFIX.get(_prefix(component.designator))
-        if library is None:
+    for item in netlist.components:
+        component = components[item.entity_id]
+        owned = sorted(pins.get(item.entity_id, []), key=lambda pin: pin.vendor_name)
+        marker = bool(owned) and all(pin.role == "ground" for pin in owned)
+        symbol = symbol_of(
+            component, item.designator, libsource=item.libsource, marker=marker
+        )
+        if symbol is None:
             losses.append(
-                f"{component.designator} is not drawn: no KiCad symbol is named for it, "
-                f'and a "{_prefix(component.designator)}" prefix names none; '
+                f"{item.designator} is not drawn: no KiCad symbol is named for it, "
+                f'its type {component.part or "(none)"} is drawn with none, and a '
+                f'"{_prefix(item.designator)}" prefix names none; '
                 'give its part a symbol = "library:name"'
             )
             continue
-        drawn.add(component.designator)
+        if symbol.pins is not None:
+            unplaced = [pin.vendor_name for pin in owned if pin.vendor_name not in symbol.pins]
+            if unplaced:
+                losses.append(
+                    f"{item.designator} is not drawn: {symbol.library} has no pin for its "
+                    f"{', '.join(unplaced)}; give its part a symbol = \"library:name\" "
+                    "whose pins its own numbers are"
+                )
+                continue
+        for pin in owned:
+            if symbol.pins is not None:
+                number = symbol.pins[pin.vendor_name]
+            else:
+                number = pin.number or pin.vendor_name
+            endpoint[(item.designator, pin.vendor_name)] = f"{item.designator}.{number}"
+        if marker:
+            markers.add(item.designator)
+
+        value = item.value
+        if symbol.value is not None and value == component.part:
+            value = symbol.value
+        if short_values:
+            value = short_value(value)
+        if terminal_names and symbol.library == TERMINAL:
+            path = component.identity.path
+            value = terminals[item.designator] = (
+                path.leaf.name.upper() if path is not None else item.designator
+            )
         parts.append(
-            {
-                "ref": component.designator,
-                "libId": library,
-                "value": component.value or (entity.name if entity else component.designator),
-                "group": group,
-            }
+            {"ref": item.designator, "libId": symbol.library, "value": value, "group": group}
         )
 
     nets = []
+    renamed: set[str] = set()
     for net in netlist.nets:
-        ground = any(node.designator in markers for node in net.nodes)
         endpoints = sorted(
-            f"{node.designator}.{number.get((node.designator, node.pin), node.pin)}"
+            endpoint[(node.designator, node.pin)]
             for node in net.nodes
-            if node.designator in drawn
+            if (node.designator, node.pin) in endpoint
         )
         if len(endpoints) < 2:
             losses.append(
@@ -133,19 +261,38 @@ def compile_intent(
                 f"{len(endpoints)} drawn pin(s), and copperhead draws a net between two or more"
             )
             continue
-        entry: dict = {"name": net.name, "pins": endpoints}
-        if ground:
+        grounded = any(node.designator in markers for node in net.nodes)
+        named = sorted(
+            terminals[node.designator] for node in net.nodes if node.designator in terminals
+        )
+        if grounded and ground is not None:
+            name = ground
+        elif named:
+            name = named[0]
+        else:
+            name = net.name
+        if name != net.name:
+            renamed.add(name)
+        entry: dict = {"name": name, "pins": endpoints}
+        if grounded:
             entry["kind"] = "ground"
         nets.append(entry)
+
+    # A name given here must not land on a second net: KiCad joins two nets
+    # drawn under one name, and the drawing would no longer be the netlist.
+    given = [net["name"] for net in nets]
+    clashes = sorted(name for name in renamed if given.count(name) > 1)
+    if clashes:
+        raise ValueError(
+            f"the intent would draw more than one net as {', '.join(clashes)}, "
+            "and KiCad joins nets drawn under one name"
+        )
 
     document = {
         "version": INTENT_VERSION,
         "parts": parts,
         "nets": nets,
-        # The title block's date is part of the intent so the same intent
-        # drafts the same bytes; a snapshot carries no issue date, so none is
-        # invented for it.
-        "hints": {"date": ""},
+        "hints": {"date": date},
     }
     return Intent(document=document, losses=tuple(losses))
 
@@ -194,10 +341,21 @@ def drawn_connections(netlist_text: str) -> set[frozenset[str]]:
 
 
 def intended_connections(intent: Intent) -> set[frozenset[str]]:
-    """The nets an intent asks for, each as the set of its `REF.PIN` strings."""
-    return {
-        frozenset(net["pins"]) for net in intent.document["nets"] if len(net["pins"]) > 1
+    """The nets an intent asks for, each as the set of its `REF.PIN` strings.
+
+    A part drawn with a power symbol is left out, as `drawn_connections` leaves
+    it out of the sheet: copperhead draws a power symbol of its own at each pin
+    of the net instead, and KiCad names those `#PWR...`. What stays is every
+    pin the net joins, so a drawing that loses one still fails the comparison.
+    """
+    power = {
+        part["ref"] for part in intent.document["parts"] if part["libId"].startswith("power:")
     }
+    nets = (
+        frozenset(pin for pin in net["pins"] if pin.split(".", 1)[0] not in power)
+        for net in intent.document["nets"]
+    )
+    return {net for net in nets if len(net) > 1}
 
 
 @dataclass

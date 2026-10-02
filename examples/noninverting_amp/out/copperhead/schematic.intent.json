@@ -26,6 +26,12 @@
       "group": "noninverting_amp"
     },
     {
+      "ref": "GND1",
+      "libId": "power:GND",
+      "value": "GND",
+      "group": "noninverting_amp"
+    },
+    {
       "ref": "R1",
       "libId": "Device:R",
       "value": "220 kOhm",
@@ -89,6 +95,7 @@
       "pins": [
         "C1.2",
         "C2.2",
+        "GND1.1",
         "R1.2",
         "R5.2"
       ],
