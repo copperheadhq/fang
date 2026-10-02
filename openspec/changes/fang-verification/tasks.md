@@ -216,3 +216,10 @@ change.
       counts quoted anywhere match the tree.
 - [x] 11.3 Quote the requirement names in each new module's docstring; verify
       `openspec validate fang-verification --strict` passes.
+
+## 12. Follow-ups from review
+
+- [x] 12.1 Refuse a statistic window whose start is not before its end where
+      `PeakToPeak`, `Average`, `Maximum` or `Minimum` is written, under
+      SIM-0003 and in the words an emulation `Count` is refused in; verify a
+      reversed, an empty and a reversed-across-units window for each.

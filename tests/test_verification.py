@@ -39,6 +39,7 @@ from fang.lang import (
     mV,
     nF,
     require,
+    us,
     uV,
 )
 from fang.parts import Capacitor, Resistor
@@ -96,6 +97,8 @@ from fang.verification import (
     Job,
     Maximum,
     MeasuredFacts,
+    Minimum,
+    PeakToPeak,
     Measurement,
     NotRunnable,
     Question,
@@ -365,6 +368,27 @@ def test_a_window_in_the_wrong_dimension_is_refused_where_it_is_written():
     with pytest.raises(FangError) as raised:
         corner_question(measures={"corner": Average("outlet.line", after=1 * ms)})
     assert raised.value.diagnostic.code == diagnostics.UNIT_DIMENSION_MISMATCH
+
+
+@pytest.mark.parametrize("statistic", [Average, Maximum, Minimum, PeakToPeak])
+@pytest.mark.parametrize(
+    "after, until", [(2 * ms, 1 * ms), (1 * ms, 1 * ms), (1 * ms, 500 * us)],
+    ids=["reversed", "empty", "reversed across units"],
+)
+def test_a_window_whose_start_is_not_before_its_end_is_refused_where_it_is_written(statistic, after, until):
+    """Lowered, it would be `FROM=2m TO=1m`: a measure the simulator takes
+    over nothing, reported as though the run had failed. It is refused as an
+    emulation count's reversed window is, with the same code and words."""
+    with pytest.raises(FangError) as raised:
+        statistic("outlet.line", after=after, until=until)
+    diagnostic = raised.value.diagnostic
+    assert diagnostic.code == diagnostics.SIM_UNRESOLVED_SURFACE
+    assert f"the {statistic.__name__} window ({after}, {until}) at outlet.line is empty" in diagnostic.message
+    assert "its start is not before its end" in diagnostic.message
+    assert diagnostic.location is not None and diagnostic.location.file == __file__
+    # An ordered window still stands, and a one-sided one has nothing to order.
+    statistic("outlet.line", after=500 * us, until=2 * ms)
+    statistic("outlet.line", after=after)
 
 
 def test_a_measure_producing_the_wrong_dimension_fails_elaboration():
