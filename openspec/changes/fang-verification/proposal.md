@@ -1,9 +1,14 @@
 # Verification Backends
 
-The golden source for this change is
-[rfcs/RFC-0001-verification-backends.md](../../../rfcs/RFC-0001-verification-backends.md).
-Its section 3 is the survey of tools and their ranking; its section 6 is the
-normative text this change's delta spec carries.
+This change implements copperhead RFC 12, *The Copperhead Hardware Kernel and
+Fang Language Standard*, version 1.3: Sections 12.7 to 12.10, conformance item
+17 of Section 16.1, and acceptance test 17 of Section 16.2. The evidence it
+writes follows the measurement and verification records of RFC 3 version 1.5,
+Section 14. Both revisions are open as
+[copperheadhq/copperhead-rfcs#6](https://github.com/copperheadhq/copperhead-rfcs/pull/6);
+the change may proceed while it is open, and claims conformance only to the
+version that merges. [design.md](design.md) holds the tool survey and the facts
+the design was checked against.
 
 ## Why
 
@@ -77,10 +82,14 @@ None. The project holds one capability and this change extends it.
   `Touchstone` trait; `fang/cli.py` gains `verify`; `fang/diagnostics.py`
   gains codes in the `SIM` area.
 - No new runtime dependency. ngspice, Xyce and kicad-cli are found on the path
-  and their absence is reported by name; scikit-rf is named in the RFC as a
+  and their absence is reported by name; scikit-rf is named in design.md as a
   future extra and nothing here imports it.
 - `examples/regenerate.py` and `tests/test_examples.py` learn the new output
   and skip it, by name, where ngspice is absent.
 - Docs: a verification reference page and a concepts page on the site, the CLI
-  and simulation pages, `README.md`, `CLAUDE.md`, `CHANGELOG.md`,
-  `openspec/ROADMAP.md` (stage 13), and `MANIFEST.in` for `rfcs/`.
+  and simulation pages, `README.md`, `CLAUDE.md`, `CHANGELOG.md`, and
+  `openspec/ROADMAP.md` (stage 13).
+- Order of work: the spine — questions, routing and the protocol, re-entry and
+  `fang verify` — lands first, proven on ngspice, as RFC 12 Appendix B.12 has
+  it; Xyce, rule checks and Touchstone follow on the same protocol, off the
+  critical path.

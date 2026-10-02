@@ -181,6 +181,8 @@ gate's existing constraint check and by nothing else.
 - **WHEN** a run's evidence is read
 - **THEN** it names the tool and its version, the level, a hash of the native
   input, each measure with its quantity, the assumptions, and the coverage gaps
+- **AND** it names the digest of every input file the run read that the
+  snapshot does not hold, such as a model file
 
 #### Scenario: The verification keeps its identity
 
@@ -192,6 +194,15 @@ gate's existing constraint check and by nothing else.
 
 - **WHEN** a run was prepared against a snapshot that is no longer the head
 - **THEN** its measurements are refused rather than applied
+
+#### Scenario: Re-elaboration does not withdraw a measured value
+
+- **WHEN** a program whose measured parameter holds a committed measurement is
+  elaborated again into the same workspace, unchanged
+- **THEN** the parameter keeps the measured value and the evidence that is its
+  source
+- **AND** the program, which declared the parameter without a value, is not
+  recorded as having changed it
 
 #### Scenario: Confidence is bounded by model provenance
 

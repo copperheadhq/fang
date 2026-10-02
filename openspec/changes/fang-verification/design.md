@@ -2,10 +2,13 @@
 
 ## Context
 
-See [proposal.md](proposal.md) for motivation and
-[RFC-0001](../../../rfcs/RFC-0001-verification-backends.md) for the argument
-and the tool survey. What shapes the approach is what already exists, because
-most of the loop does:
+See [proposal.md](proposal.md) for motivation. The normative text this change
+implements is copperhead RFC 12 version 1.3, Sections 12.7 to 12.10
+([copperheadhq/copperhead-rfcs#6](https://github.com/copperheadhq/copperhead-rfcs/pull/6));
+this document is informative. It holds the tool survey that ranks what the
+change delivers and what it leaves for later, the facts the design was checked
+against, and the decisions that map the RFC onto fang's code. What shapes the
+approach is what already exists, because most of the loop does:
 
 - `simulation.compile_plan`, `lower_to_spice`, `NgspiceBackend` and `normalize`
   already turn a snapshot into a deck, run ngspice across a process boundary,
@@ -28,13 +31,120 @@ most of the loop does:
 - `ingest_external_results` already refuses results not produced against the
   committed head.
 
-Verified against the installed tools rather than from memory: ngspice 45.2
-ignores `.print op` in batch mode and reports the real part for a deck-level
-`.meas ac`, while `meas` inside a `.control` block reports magnitudes and an
-RC corner correctly; a switching buck deck of 160 000 points runs in well under
-a second; `kicad-cli sch erc --format json` on a fang-drawn sheet reports
-`endpoint_off_grid` and `lib_symbol_issues` on every symbol, which are facts
-about the drawing and not the design.
+Three things are wrong today, and each is a small gap with a large
+consequence. The level selector has no input: nothing looks at a constraint and
+decides which level can settle it. The result has nowhere to land:
+`NormalizedResult` carries assertions as strings, `ingest_external_results`
+turns results into prose claims with the actor hard-coded to `kicad-drc`, and
+no path exists from a simulated number to a parameter the evaluator can read.
+And a verification can be asserted: `Verifies(..., result="PASS")` records a
+pass no computation produced, which the buck regulator example does by method
+"analysis" with two datasheet citations as its evidence — a citation, not a
+verification.
+
+Verified against the installed tools rather than from memory (ngspice 45.2,
+kicad-cli 9.0.8 when this was written; the machine has since moved to KiCad
+10.0.6):
+
+- ngspice ignores `.print op` in batch mode, so operating-point values are read
+  from a `print` inside a `.control` block.
+- A deck-level `.meas ac` reports the *real part* of a node voltage, where the
+  same line inside a `.control` block reports the magnitude: an RC corner came
+  back as 1024 Hz against the correct 1592 Hz. The ngspice lowering therefore
+  emits measurements through a control block.
+- A switching buck deck of 160 000 points runs in well under a second.
+- `kicad-cli sch erc --format json` on a fang-drawn sheet reports
+  `endpoint_off_grid` and `lib_symbol_issues` on every symbol, which are facts
+  about the drawing and not the design.
+
+## Survey: open-source tools, ranked by value
+
+Value is a product of three things: **which questions the tool decides** that
+the kernel cannot decide itself; **how close its input is to what the kernel
+already holds** — a netlist and parameters, which exist, or copper geometry,
+which does not; and **what it costs to depend on** — a binary on the path found
+at run time costs nothing to the core install, a Python package with a compiled
+stack costs an extra, and a licence that reaches across the process boundary
+costs a conversation.
+
+Everything below is reached across a process boundary or read as data. Nothing
+is linked into the kernel, and the kernel never binds to a wrapper library in
+place of emitting a tool's native input — the existing requirement, and the
+reason PySpice is excluded. The two tools installed when this was written were
+verified against their installed versions; everything else is described from
+its published documentation, and a claim about it is verified before it is
+written against.
+
+### Tier 1 — decides questions now, from what the kernel already holds
+
+| Tool | Licence | Decides | Input it needs | Level | Delivered |
+| --- | --- | --- | --- | --- | --- |
+| **ngspice** | BSD-3 | Operating point, transient (ripple, overshoot, settling, startup), AC (corner, gain, phase margin), DC sweeps, noise | The SPICE deck the kernel already lowers; a bench | circuit | this change, on the spine |
+| **KiCad CLI** (`kicad-cli sch erc`) | GPL-3 | Electrical rules over the schematic fang draws: undriven inputs, conflicting drivers, unconnected pins | The `.kicad_sch` the schematic compiler already writes | external (rule check) | this change, after the spine |
+| **Touchstone models** (`.sNp`, read in-tree) | file format | Return loss, VSWR and insertion loss at a frequency, through an L or π matching network, from a vendor's or a VNA's measured N-port | A model file the part declares; the matching values the graph holds | equation | this change, after the spine |
+| **Xyce** | GPL-3 | Everything ngspice does, plus sensitivity analysis and parallel sweeps | The same deck; Xyce's own `.print` and measure-file conventions | circuit | this change, after the spine, reporting unsupported where not installed |
+
+ngspice is first because it answers the question every power rail asks — *what
+does the output actually do under load* — and the deck it needs already exists.
+KiCad ERC is second not because its rules are deep (fang's own compatibility
+check covers the electrical ones on the graph) but because it is the
+manufacturer's-eye check on the artifact fang ships, it costs one subprocess,
+and it establishes the rule-check path DRC will use once there is a board.
+Touchstone reading is third because an RF question over a chip antenna is
+otherwise unanswerable, the model is data the part carries, and evaluating it
+is closed-form arithmetic. Xyce is fourth because it costs almost nothing once
+ngspice is behind a protocol, and a second SPICE dialect proves the protocol is
+not secretly ngspice-shaped.
+
+### Tier 2 — decides questions now, at the cost of a dependency
+
+| Tool | Licence | Decides | Cost | Level | Status |
+| --- | --- | --- | --- | --- | --- |
+| **scikit-rf** | BSD-3 | N-port composition beyond a cascade, de-embedding, calibration, vector fitting, mixed-mode parameters | Python extra pulling numpy and scipy | equation / symbolic | named as a future `rf` extra; nothing here imports it |
+| **SymPy** + **Lcapy** | BSD-3 / LGPL-3 | Symbolic transfer functions and poles of linear networks: the symbolic level, which has no implementation | Python extra | symbolic | follow-on change |
+| **atlc** | GPL-2 | Characteristic and differential impedance of a trace from its stackup cross-section | A binary; needs a stackup and a trace geometry | external | follow-on, first thing after a stackup exists |
+| **OpenVAF** | GPL-3 | Compiles Verilog-A device models to ngspice's OSDI interface: a model supply, not an analysis | A binary at model-compile time | — | follow-on |
+
+scikit-rf is read *around* deliberately. Reading a Touchstone file and
+cascading two-ports is a hundred lines of complex arithmetic the standard
+library does; what scikit-rf adds is real, and worth an extra when a question
+needs it, but making every RF question pay for a numpy stack to answer "is S11
+below −10 dB at 2.44 GHz" would be the wrong trade.
+
+### Tier 3 — decides questions the kernel cannot yet ask
+
+These need copper: traces, planes, a stackup, placement. The kernel names the
+physical entities and implements none of them; fang places parts and names nets
+and does not route. Every tool here waits on that layer.
+
+| Tool | Licence | Decides | Needs | Level |
+| --- | --- | --- | --- | --- |
+| **FastHenry** | permissive | Loop inductance of a hot loop, a return path, a via | Conductor geometry | external |
+| **KiCad CLI** (`kicad-cli pcb drc`) | GPL-3 | Clearance, width, annular ring, courtyard, schematic parity | A `.kicad_pcb` | external (rule check) |
+| **openEMS** (+ CSXCAD, gerber2ems) | GPL-3 / LGPL-3 / Apache-2.0 | Full-wave S-parameters of an antenna, a transition, a coupled pair | A mesh over a region | external |
+| **Palace** | Apache-2.0 | Full-wave FEM, the same questions as openEMS | A mesh | external |
+| **Elmer FEM** (+ Gmsh) | GPL-2 / LGPL-2.1 | Junction and board temperature | A meshed board with per-component power | external |
+| **FasterCap** / **FastCap** | LGPL-2.1 / MIT-style | Parasitic capacitance of a pad, a cut-out, a guard ring | Conductor and dielectric geometry | external |
+| **PyBERT** + **PyIBIS-AMI** | BSD-3 | Channel eye and jitter over an IBIS-AMI model | A routed trace | behavioural |
+| **gerbonara** / **pcb-tools** | MIT / Apache-2.0 | Reading and checking manufacturing artifacts | Gerbers | external (rule check) |
+
+The first step into this tier is not a solver but the physical layer itself, as
+its own change, with a `.kicad_pcb` as an interchange encoding of that layer and
+never a second store. The second is atlc, because a stackup is enough for it;
+the third is FastHenry, because a hot-loop number turns *"CIN should be closer"*
+into a measurement.
+
+### Considered and set aside
+
+| Tool | Why not |
+| --- | --- |
+| **PySpice** | A wrapper; binding to it is what "Simulation Is A Compiler Target" forbids. |
+| **Qucs-S / Qucsator** | Its ngspice and Xyce backends are the ones already here. |
+| **Gnucap** | A third SPICE without a question the first two leave open. |
+| **OpenModelica**, **SystemC-AMS** | The behavioural level for system simulation; nothing in the examples asks a question there yet. |
+| **Freerouting**, **KiKit** | Doing, not verifying: tools a plan calls, not backends a question routes to. |
+| **CalculiX**, **OpenFOAM** | Beyond any question a board program declares. |
+| **LTspice** | Not open source. Its `.subckt` libraries remain usable by ngspice as data. |
 
 ## Goals / Non-Goals
 
@@ -48,15 +158,59 @@ about the drawing and not the design.
   name.
 - Examples that are real boards with real questions, whose committed outputs
   the suite regenerates and compares.
+- The spine first. Questions, routing and the protocol, re-entry and `fang
+  verify` land as one unit proven on ngspice; Xyce, rule checks and Touchstone
+  follow on the same protocol.
 
 **Non-Goals:**
 
-- No board geometry, and so no FastHenry, openEMS, Elmer or DRC (RFC §3.3).
-- No optimization loop and no agent tool (RFC §7).
+- No board geometry, and so no FastHenry, openEMS, Elmer or DRC (Tier 3 above).
+- No optimization loop: a loop that proposes component changes and
+  re-simulates is a layer above this one, whose unit of work is a transaction
+  through `propose`; this layer gives it a number to rank by.
+- No agent tool. A read-only projection listing questions and their routes is
+  cheap and can follow; running tools from an agent session spawns a process,
+  and that needs its own requirement.
 - No change to `fang sim`, `select_level`'s signature, or any existing
   requirement's text.
 
 ## Decisions
+
+### The loop
+
+```text
+Fang program
+   |  Simulates(...) / Checks(...) / Evaluates(...)   -- a question, declared
+   v
+Verification entity, result UNKNOWN          Constraint over the measured parameter,
+(what it verifies, the bench, the measures)  evaluating to undecided
+   |
+   v
+route(question) --> level, tool              equation: already decided, no tool runs
+   |
+   v
+tool.prepare(snapshot, question) --> Job     the native input: a deck, a schematic,
+   |                                         a model file and a frequency
+   v
+tool.run(job, workspace) --> RawRun          across a process boundary; version recorded;
+   |                                         unsupported if the tool is absent
+   v
+tool.read(job, raw) --> Measurements         Decimal at the boundary, nothing else
+   |
+   v
+Transaction against the head:
+   SetParameter(measured, Value.inferred(source=EVD, confidence))
+   AddEntity(Evidence: the run, structured)
+   RemoveEntity + AddEntity(Verification: result, evidence, level)
+   |
+   v
+KernelGraph.propose --> the constraint check runs over the measured value
+   |
+   +-- accepted:  commit; the constraint is decided
+   +-- rejected:  a hard constraint failed; the head does not move;
+                  the failure is recorded as a Verification FAIL with the
+                  Evidence, in a second transaction that touches no parameter
+```
 
 ### A question is a `Verification` entity, not a new kind
 
@@ -77,12 +231,62 @@ whose result moves from unknown to decided is the simpler truth.
 they drive. A bench is a condition of a verification, not a property of the
 circuit; two questions over one board have two benches.
 
+### The authoring surface
+
+Questions are rationale declarations, filed beside `Requires` and `Verifies`,
+because a verification is engineering reasoning and belongs with the rest of
+it:
+
+```python
+class Rail3V3(System):
+    rail_tolerance = Requires("The 3V3 rail holds 3.3 V within 3% for 0 to 1.5 A ...")
+
+    ripple = Parameter("V", description="peak-to-peak on the rail at full load")
+    output = Parameter("V", description="the rail's average at full load")
+
+    under_load = Simulates(
+        "rail_tolerance",
+        measures={
+            "ripple": PeakToPeak("rail_out.dc", after=1 * ms, until=1.2 * ms),
+            "output": Average("rail_out.dc", after=1 * ms, until=1.2 * ms),
+        },
+        supplies={"controller.vin": 12 * V},
+        loads={"rail_out.dc": 1.5 * A},
+        analysis=Transient(stop="1.2ms", step="10ns"),
+        abstracted=("dc_in", "protection", "reverse"),
+    )
+
+    def constraints(self):
+        require(self.ripple <= 30 * mV)
+        require(self.output >= 3.2 * V)
+        require(self.output <= 3.4 * V)
+```
+
+`Checks("layout_rules", tool="kicad-erc", excluded={"endpoint_off_grid": "fang
+draws its sheet on its own grid"})` declares a rule-check question.
+`Evaluates("antenna_match", measures={"return_loss": ReturnLoss("antenna.rf",
+at=2.44 * GHz, through=("series_l", "shunt_c"))})` declares an RF question over
+a part carrying a `Touchstone` model.
+
 ### The measured value enters as an inferred parameter, through `SetParameter`
 
 This is what makes the existing evaluator decide the constraint. The
 alternative — a resolver overlay that consults evidence — would be a second
 place a parameter's value can come from, which is exactly what the governing
 invariant forbids.
+
+The program declares the parameter without a value, so re-elaborating it says
+nothing about the value and must not withdraw a committed measurement; RFC 12
+Section 12.7 states the ownership this rests on, and the delta spec carries it
+as a scenario. Fang's spec has no per-fact ownership check yet, so the
+behaviour is held by the elaboration diff leaving an inferred value with a
+source in place when the program supplies none.
+
+The confidence of an inferred measurement is bounded by the provenance of the
+models it rests on: `1` for a run over primitives and cited vendor models,
+lower where a model's provenance is *assumed* (an ideal switch standing in for
+a controller). The exact scale is the tool's to state and the evidence records
+it; a program can require a confidence but the layer never raises one.
 
 ### Replacing the verification is `RemoveEntity` then `AddEntity`
 
@@ -112,12 +316,15 @@ dialect object that writes the analysis and measurement lines and parses the
 output: `NgspiceDialect` emits a `.control` block and parses `name = value`
 lines from stdout; `XyceDialect` emits `.measure` lines and parses the
 `.mt0`-style measure file. `NgspiceBackend` is reused unchanged for `run`;
-`XyceBackend` is its sibling.
+`XyceBackend` is its sibling. Because the dialect is a seam from the start,
+landing ngspice first and Xyce later changes no shared code.
 
 Subcircuit instantiation reads the model file's `.subckt` line for the port
 order and maps the part's pins through the trait's `pin_map`; a port the map
 does not reach is a preparation error naming it. The model path is resolved
-against the program's folder, which the elaboration's source location gives.
+against the program's folder, which the elaboration's source location gives,
+and the model file's digest is recorded among the evidence's inputs, because
+the snapshot does not hold the file.
 
 ### Probes are part surfaces
 
@@ -148,6 +355,19 @@ rules fire on every symbol. They are not hidden by the tool; the *question*
 excludes them, each with a reason, and the evidence records the rule, the
 reason and the count excluded.
 
+### Determinism
+
+- A `Job` is a function of the snapshot and the question. Two preparations of
+  the same question over the same snapshot are byte-identical, and the job's
+  hash is recorded on the evidence.
+- Every number crosses the boundary as a `Decimal` under the kernel's fixed
+  context. A tool that computes in binary floats — the Touchstone reader's
+  complex arithmetic — quantizes to six significant figures before the
+  boundary.
+- Tool versions are recorded on every evidence entity. Two runs on two versions
+  of ngspice are two pieces of evidence, not one.
+- Seeds are recorded where a tool takes one; none of the delivered tools does.
+
 ### Diagnostics go in the `SIM` area
 
 `SIM-0001..` are allocated for: a question naming an undeclared parameter, a
@@ -162,7 +382,10 @@ spec does not change.
 omits tool versions; the evidence keeps every figure and the version. The
 suite compares the file like any other and skips it, by name, where the tool
 is absent — the precedent is `schematic.svg`, which already depends on the
-installed KiCad.
+installed KiCad. A committed output carrying a measured number is regenerated
+on the machine's installed tool, so a version that moves a number in its
+fourth significant figure moves nothing in the listing, and one that moves it
+further shows up as a diff a person reads.
 
 ## Risks / Trade-offs
 
@@ -178,11 +401,14 @@ installed KiCad.
   extension mechanism is the sanctioned place for it; promoting it to fields is
   a schema-version change that can follow once the shape has settled.
 - [ERC on a generated sheet is mostly about the drawing] → accepted and stated
-  in the RFC: its value is establishing the rule-check path and checking the
+  in the survey: its value is establishing the rule-check path and checking the
   artifact fang ships.
 - [Xyce cannot be run here] → its dialect is tested on preparation and on
   parsing a captured measure file; its `run` is tested only for reporting
-  unsupported. The RFC says so.
+  unsupported.
+- [KiCad moved from 9.0.8 to 10.0.6 on this machine] → the ERC parser is
+  written against JSON captured from the installed version when the rule-check
+  group is built, not against the 9.0.8 output this survey saw.
 
 ## Migration Plan
 
@@ -192,7 +418,26 @@ outputs; `python examples/regenerate.py buck_regulator` rewrites them.
 `SCHEMA_VERSION` does not move: `level` and `tool` are optional fields omitted
 when absent, and `extensions` already serializes.
 
+## Phasing beyond this change
+
+| Stage | Change | Delivers | Needs |
+| --- | --- | --- | --- |
+| 13 | `fang-verification` (this change) | Questions, benches, measures, the tool protocol, routing, re-entry; ngspice, then Xyce, KiCad ERC and Touchstone; `fang verify`; three examples | nothing new |
+| — | `fang-mcu-parts`, `fang-emulation` | RFC 12 Sections 7.3, 7.4 and 12.11 to 12.14: firmware run in Renode as a question on this protocol | this change's spine |
+| 14 | `fang-physical` | The physical layer: board, layers, stackup, footprints and pads as entities, `.kicad_pcb` as interchange | a design conversation about identity for physical entities |
+| 15 | `fang-fields` | atlc, FastHenry, KiCad DRC, openEMS or Palace, Elmer | stage 14 |
+| — | `fang-symbolic` | Lcapy behind the symbolic level; scikit-rf behind an `rf` extra | nothing |
+
 ## Open Questions
 
 - Whether `verify --commit` should also re-run `build`'s tool plan. It does not
   in this change; the two commands stay independent.
+- The confidence scale. Tools state a confidence in `[0, 1]` bounded by model
+  provenance, and nothing yet consumes it beyond recording. A policy that
+  refuses to commit an inferred value below a confidence is the obvious next
+  use, and is a `Policy` field, not a runner concern (RFC 12 Appendix C,
+  decision 13).
+- Sweeps. Xyce's value is in sweeps and sensitivities. A question that measures
+  into a range rather than a scalar — ripple across a load range — needs the
+  measure to say so and the parameter to be a range quantity. `Quantity`
+  already represents ranges; the measures do not yet produce them.
