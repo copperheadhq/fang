@@ -183,7 +183,7 @@ says so rather than substituting anything.
 ## Tests
 
 ```bash
-python -m pytest          # 1616 tests; those needing a binary skip by name
+python -m pytest          # 1638 tests; those needing a binary skip by name
 python -m pytest -rs      # names each environment-dependent skip
 ```
 
@@ -191,7 +191,7 @@ The suite includes one test per acceptance criterion (AT-R1 to AT-R13, AT-K1
 to AT-K10, AT-V1, AT-F1 and AT-F2). **All 26 pass**; AT-V1 runs a circuit
 simulation and needs ngspice, and AT-F1 and AT-F2 run firmware and need Renode
 1.17.0. The only skips name what is missing: the NetworkX and MCP extras, and
-the ngspice, kicad-cli, copperhead and Renode binaries. The examples that ship a
+the ngspice, Xyce, kicad-cli, copperhead and Renode binaries. The examples that ship a
 KiCad schematic need `kicad-cli` to rebuild, and the ones with questions
 compare their `verification.txt` only where the tools those questions route to
 are installed.
