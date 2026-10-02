@@ -83,14 +83,14 @@ change.
       parameter is still unknown.
 - [x] 5.4 Verify a rejection for any other reason records nothing, and that
       measurements prepared against a stale head are refused.
-- [ ] 5.5 When a program is elaborated again into a workspace whose head holds a
+- [x] 5.5 When a program is elaborated again into a workspace whose head holds a
       measured value for a parameter the program declares without one, keep
       the measured value and its evidence; verify an unchanged re-elaboration
       leaves both in place and records no change to the parameter.
 
 ## 6. The command
 
-- [ ] 6.1 Add `fang verify` with `--commit`; verify it prints level, tool,
+- [x] 6.1 Add `fang verify` with `--commit`; verify it prints level, tool,
       measurements and result per question, exits non-zero on a failed
       verification, zero on an unsupported one and on a program with no
       questions, and leaves the workspace untouched without `--commit`.

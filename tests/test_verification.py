@@ -17,6 +17,7 @@ from conftest import FIXED_TIME
 
 from fang import diagnostics
 from fang.checks import DEFAULT_CHECKS
+from fang.cli import EXIT_FAILED, EXIT_OK, main
 from fang.constraints import CheckStatus, Comparison, Literal, Ref, Truth
 from fang.diagnostics import REGISTRY, FangError
 from fang.diff import ChangeClass
@@ -75,6 +76,7 @@ from fang.simulation import (
 from fang.traits import Simulatable
 from fang.units import Quantity
 from fang.values import Value, ValueStatus
+from fang.workspace import Workspace
 from fang.verification import (
     ANSWERED,
     DECIDED,
@@ -1059,3 +1061,164 @@ def test_a_changed_question_is_answered_afresh(tmp_path):
     rebuilt = carry_measurements(build(Rebenched).snapshot, MeasuredFacts.of(graph.head))
     assert verification_of(rebuilt).result == "UNKNOWN"
     assert not rebuilt.entities[SYSTEM].parameters["corner"].known
+
+
+# ==========================================================================
+# The command
+# ==========================================================================
+
+EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
+
+#: A program the command is pointed at, written to a scratch folder, with the
+#: constraint and the bench as the test needs them.
+PROGRAM = '''
+"""An RC low-pass between two jacks."""
+
+from fang.interfaces import AnalogOut, Pin, PinMap
+from fang.lang import Parameter, Part, System, V, kHz, kOhm, mV, nF, require
+from fang.parts import Capacitor, Resistor
+from fang.rationale import Requires
+from fang.simulation import ACSweep
+from fang.verification import Crossing, Simulates
+
+
+class Jack(Part):
+    designator_prefix = "J"
+    line = AnalogOut()
+    TIP = Pin("TIP", role="analog", number="1")
+    SLEEVE = Pin("SLEEVE", role="ground", number="2")
+    pinmap = PinMap({"line.signal": "TIP", "line.ref": "SLEEVE"})
+
+
+class Filter(System):
+    corner_spec = Requires("The corner lies at or below @UPPER@ kHz")
+    corner = Parameter("Hz")
+
+    inlet = Jack()
+    outlet = Jack()
+    r = Resistor(resistance=10 * kOhm)
+    c = Capacitor(capacitance=10 * nF)
+
+    by_simulation = Simulates(
+        "corner_spec",
+        measures={"corner": Crossing("outlet.line", level=707.1 * mV, edge="falling")},
+        supplies=@SUPPLIES@,
+        analysis=ACSweep(variation="dec", points=100, start="10", stop="1meg"),
+        abstracted=("inlet", "outlet"),
+    )
+
+    def architecture(self):
+        self.inlet.line.signal >> self.r.p1
+        self.r.p2 >> self.c.p1
+        self.c.p2 >> self.inlet.line.ref
+        self.outlet.line.signal >> self.c.p1
+        self.outlet.line.ref >> self.c.p2
+
+    def constraints(self):
+        require(self.corner <= @UPPER@ * kHz)
+'''
+
+
+def program(tmp_path, *, upper: str = "2", supplies: str = '{"inlet.line": 1 * V}') -> str:
+    path = tmp_path / "filter.py"
+    path.write_text(PROGRAM.replace("@UPPER@", upper).replace("@SUPPLIES@", supplies))
+    return str(path)
+
+
+@pytest.fixture
+def ngspice(monkeypatch):
+    """ngspice as the command reaches it, answering with captured output."""
+    backend = CannedBackend(FILTER_OUTPUT)
+    monkeypatch.setattr(NGSPICE, "backend", backend)
+    return backend
+
+
+def snapshot_of(directory: Path) -> dict[str, bytes]:
+    """Every file under a workspace, by path, so a change to any shows."""
+    return {
+        str(path.relative_to(directory)): path.read_bytes()
+        for path in sorted(directory.rglob("*"))
+        if path.is_file()
+    }
+
+
+def test_verify_reports_each_question(tmp_path, ngspice, capsys):
+    assert main(["verify", program(tmp_path), "-C", str(tmp_path)]) == EXIT_OK
+    output = capsys.readouterr().out
+    assert "system.by_simulation (VER-" in output
+    assert "  circuit level, ngspice (ngspice-45.2)" in output
+    assert "  corner = 1590 Hz" in output
+    assert "  coverage gap: system.inlet is abstracted, not modelled" in output
+    assert output.rstrip().endswith("PASS")
+
+
+def test_a_failed_verification_exits_non_zero(tmp_path, ngspice, capsys):
+    assert main(["verify", program(tmp_path, upper="1.2"), "-C", str(tmp_path)]) == EXIT_FAILED
+    output = capsys.readouterr().out
+    assert "failed: the gate refused the measurement" in output
+    assert output.rstrip().endswith("FAIL")
+
+
+def test_an_unsupported_question_is_reported_and_is_not_a_failure(tmp_path, ngspice, capsys):
+    ngspice.installed = False
+    assert main(["verify", program(tmp_path), "-C", str(tmp_path)]) == EXIT_OK
+    output = capsys.readouterr().out
+    assert "unsupported: ngspice is not installed" in output
+    assert ngspice.runs == []
+
+
+def test_a_question_left_unrunnable_exits_non_zero(tmp_path, ngspice, capsys):
+    assert main(["verify", program(tmp_path, supplies="{}"), "-C", str(tmp_path)]) == EXIT_FAILED
+    assert "not runnable: system.by_simulation names no supply" in capsys.readouterr().out
+
+
+def test_a_program_with_no_questions_says_so(tmp_path, capsys):
+    divider = str(EXAMPLES / "divider" / "divider.py")
+    assert main(["verify", divider, "-C", str(tmp_path)]) == EXIT_OK
+    assert "nothing to verify: divider.py declares no question" in capsys.readouterr().out
+
+
+def test_nothing_persists_without_a_commit(tmp_path, ngspice, capsys):
+    source = program(tmp_path)
+    assert main(["build", source, "-C", str(tmp_path)]) == EXIT_OK
+    before = snapshot_of(Workspace(tmp_path).dir)
+    assert main(["verify", source, "-C", str(tmp_path)]) == EXIT_OK
+    assert snapshot_of(Workspace(tmp_path).dir) == before
+
+
+def test_commit_needs_an_existing_workspace(tmp_path, ngspice, capsys):
+    code = main(["verify", program(tmp_path), "-C", str(tmp_path), "--commit"])
+    assert code == EXIT_FAILED
+    assert "run 'fang build' first" in capsys.readouterr().err
+    assert not Workspace(tmp_path).exists
+
+
+def test_a_commit_persists_and_a_rebuild_keeps_the_measured_value(tmp_path, ngspice, capsys):
+    """Re-elaboration into the workspace does not withdraw a measured value,
+    and the program is not recorded as having changed it."""
+    source = program(tmp_path)
+    workspace = Workspace(tmp_path)
+    assert main(["build", source, "-C", str(tmp_path)]) == EXIT_OK
+    built = workspace.read_manifest().snapshot
+
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_OK
+    committed = workspace.read_manifest().snapshot
+    assert committed != built
+    records = workspace.read_records()
+    evidence = [r for r in records if r["kind"] == "evidence" and "measurement" in r.get("extensions", {})]
+    assert len(evidence) == 1
+    corner = next(r for r in records if r["kind"] == "block")["parameters"]["corner"]
+    assert corner["status"] == "inferred" and corner["source"] == evidence[0]["id"]
+
+    assert main(["build", source, "-C", str(tmp_path)]) == EXIT_OK
+    assert workspace.read_manifest().snapshot == committed
+    capsys.readouterr()
+    assert main(["diff", source, "-C", str(tmp_path)]) == EXIT_OK
+    assert capsys.readouterr().out.strip() == "no change"
+
+    runs = len(ngspice.runs)
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_OK
+    output = capsys.readouterr().out
+    assert "equation level, by the constraint evaluator; nothing runs" in output
+    assert "nothing new to commit" in output
+    assert len(ngspice.runs) == runs
