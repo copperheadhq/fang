@@ -562,7 +562,6 @@ def test_a_plan_the_board_cannot_satisfy_is_not_runnable_and_names_its_code():
             "sensor_ready", run_until=2 * SENSOR_NODE.s,
             measures={"first_read": FirstAt(I2CRead("env"))},
         )
-        sensor_missing = None
 
     result = _elaborate(Unabstracted)
     with pytest.raises(NotRunnable) as raised:
@@ -588,17 +587,13 @@ def _startup_with(firmware: str):
             "sensor_ready", run_until=original.run_until, stimuli=original.stimuli,
             measures=original.measures, abstracted=original.abstracted, firmware=firmware,
         )
-        sensor_missing = None
 
     return Variant
 
 
 @needs_renode
 def test_the_startup_question_passes_through_the_gate(tmp_path):
-    class StartupOnly(SENSOR_NODE.SensorNode):
-        sensor_missing = None
-
-    graph, outcome = _answered(StartupOnly, "startup", tmp_path)
+    graph, outcome = _answered(SENSOR_NODE.SensorNode, "startup", tmp_path)
     assert outcome.status == "answered"
     verification = graph.head.entities[outcome.question.id]
     assert verification.result == "PASS" and verification.tool == "renode"
@@ -651,7 +646,6 @@ def test_the_no_timeout_build_fails_the_missing_sensor_question(tmp_path):
     original = SENSOR_NODE.SensorNode.sensor_missing
 
     class NoTimeout(SENSOR_NODE.SensorNode):
-        startup = None
         sensor_missing = Emulates(
             "survives_missing_sensor", run_until=original.run_until, faults=original.faults,
             measures=original.measures, abstracted=original.abstracted,
@@ -689,3 +683,34 @@ def test_a_hung_run_is_ended_whole_and_keeps_its_partial_events():
     assert survivors.strip() == ""
     measured_run = measure(p, run_record(run.events, run.outcome))
     assert all(m.quantity is None for m in measured_run)
+
+
+# -- the commands ----------------------------------------------------------------
+
+
+def _cli(*argv):
+    from fang.cli import main
+
+    return main(list(argv))
+
+
+def test_emulate_writes_a_bundle_without_running_anything(tmp_path, capsys):
+    program = str(ROOT / "examples" / "sensor_node" / "sensor_node.py")
+    assert _cli("emulate", program, "--bundle-only", "-o", str(tmp_path)) == 0
+    printed = capsys.readouterr().out
+    assert "renode 1.17.0" not in printed and "plan sha256:" in printed
+    written = {p.name for p in (tmp_path / "startup").iterdir()}
+    assert written == {"plan.json", "platform.repl", "run.resc", "fang_probes.cs",
+                       "stm32f401re.repl", "firmware.elf", "manifest.json"}
+
+
+def test_emulate_on_a_program_with_no_emulation_question_says_so(capsys):
+    assert _cli("emulate", str(ROOT / "examples" / "divider" / "divider.py")) == 0
+    assert "declares no emulation question" in capsys.readouterr().out
+
+
+@needs_renode
+def test_emulate_prints_what_the_run_measured(capsys):
+    assert _cli("emulate", str(ROOT / "examples" / "sensor_node" / "sensor_node.py")) == 0
+    printed = capsys.readouterr().out
+    assert "first_read = 0.0400 s" in printed and "fast_blinks = 5" in printed

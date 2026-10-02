@@ -969,6 +969,9 @@ class NgspiceBackend:
                 f"{self.executable} is not installed; the run reports unsupported "
                 "rather than producing a substitute result"
             )
+        # Absolute, because ngspice runs from inside the workspace and is also
+        # handed the deck's path: a relative path would be resolved twice.
+        workspace = Path(workspace).resolve()
         workspace.mkdir(parents=True, exist_ok=True)
         deck = workspace / "deck.cir"
         deck.write_text(netlist)

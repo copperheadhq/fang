@@ -387,3 +387,17 @@ def test_the_cheapest_level_that_can_decide_is_selected():
 
 def test_a_field_solver_question_beats_every_cheaper_level():
     assert select_level(decidable_by_equation=True, needs_field_solver=True) is Level.EXTERNAL
+
+
+@pytest.mark.skipif(
+    not NgspiceBackend().available(), reason="ngspice is not installed here"
+)
+def test_a_relative_workspace_still_finds_its_deck(tmp_path, monkeypatch):
+    """ngspice runs from inside the workspace and is handed the deck's path, so
+    a relative workspace was resolved twice and the deck was not found."""
+    result = elaborate(Divider, project_id=PROJECT)
+    plan = compile_plan(result.snapshot, traits=result.traits)
+    deck = lower_to_spice(result.snapshot, plan, traits=result.traits)
+    monkeypatch.chdir(tmp_path)
+    raw = NgspiceBackend().run(deck, workspace=Path(".copperhead") / "simulations")
+    assert raw.exit_status == 0

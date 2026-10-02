@@ -620,3 +620,142 @@ def test_at_v1_an_undecided_constraint_is_decided_by_a_run_that_entered_through_
     verification = graph.head.entities[question.id]
     assert verification.result == "FAIL"
     assert verification.evidence == (failed.evidence,) == (answered.evidence,)
+
+
+# -- AT-F1 and AT-F2: firmware emulation -----------------------------------------
+
+
+def _renode_installed() -> bool:
+    from fang.emulation import RENODE
+
+    return RENODE.available()
+
+
+def _sensor_node():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "sensor_node_for_acceptance", EXAMPLES / "sensor_node" / "sensor_node.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _asked(snapshot, attribute):
+    """One question of the board, by the attribute that declares it."""
+    from fang.verification import questions
+
+    return next(q for q in questions(snapshot) if q.label.endswith(f".{attribute}"))
+
+
+@pytest.mark.skipif(not _renode_installed(), reason="renode 1.17.0 is not installed here")
+def test_at_f1_a_requirement_over_firmware_behaviour_is_decided_through_the_gate(tmp_path):
+    """AT-F1: the demo board, its firmware and the startup question. The run's
+    measurements enter through the gate and decide every constraint over them
+    on the committed head, each parameter inferred with the run's evidence as
+    its source, the evidence naming the emulator, the firmware and the plan.
+    Run against the wrong-address build instead, the head does not move and
+    the verification reads failed, with the first read observed absent."""
+    from fang.checks import DEFAULT_CHECKS
+    from fang.elaborate import elaborate
+    from fang.emulation import RENODE, Emulates
+    from fang.values import ValueStatus
+    from fang.verification import answer, constraint_statuses, questions
+
+    board = _sensor_node()
+
+    result = elaborate(board.SensorNode, project_id="PRJ-AT-F1")
+    graph = KernelGraph(result.snapshot, checks=DEFAULT_CHECKS)
+    question = _asked(graph.head, "startup")
+    assert set(constraint_statuses(graph.head, question).values()) == {CheckStatus.UNKNOWN}
+
+    outcome = answer(graph, question, traits=result.traits, workspace=tmp_path / "pass")
+
+    head = graph.head
+    assert set(constraint_statuses(head, question).values()) == {CheckStatus.PASS}
+    for entity, attr in question.parameters:
+        value = head.entities[entity].parameters[attr]
+        assert value.status is ValueStatus.INFERRED and value.source == outcome.evidence
+    verification = head.entities[question.id]
+    assert (verification.result, verification.level, verification.tool) == ("PASS", "behavioural", "renode")
+    record = head.entities[outcome.evidence].extensions["measurement"]
+    assert record["tool"] == {"name": "renode", "version": RENODE.version()}
+    assert record["inputs"][0]["path"] == "firmware/elf/sensor_node.elf"
+    assert record["inputs"][0]["hash"].startswith("sha256:")
+    assert record["plan"].startswith("sha256:")
+
+    original = board.SensorNode.startup
+
+    class WrongAddress(board.SensorNode):
+        startup = Emulates(
+            "sensor_ready", run_until=original.run_until, stimuli=original.stimuli,
+            measures=original.measures, abstracted=original.abstracted,
+            firmware=str(EXAMPLES / "sensor_node" / "firmware" / "elf" / "wrong_address.elf"),
+        )
+
+    result = elaborate(WrongAddress, project_id="PRJ-AT-F1")
+    graph = KernelGraph(result.snapshot, checks=DEFAULT_CHECKS)
+    question = _asked(graph.head, "startup")
+    before = {entity: graph.head.entities[entity].as_dict() for entity, _ in question.parameters}
+    failed = answer(graph, question, traits=result.traits, workspace=tmp_path / "fail")
+    assert failed.status == "failed"
+    for entity, attr in question.parameters:
+        assert not graph.head.entities[entity].parameters[attr].known
+        assert graph.head.entities[entity].as_dict() == before[entity]
+    verification = graph.head.entities[question.id]
+    assert verification.result == "FAIL"
+    measures = graph.head.entities[failed.evidence].extensions["measurement"]["measures"]
+    first_read = next(m for m in measures if m["name"] == "first_read")
+    assert first_read["max"] == "Infinity"
+
+
+@pytest.mark.skipif(not _renode_installed(), reason="renode 1.17.0 is not installed here")
+def test_at_f2_what_cannot_be_modelled_cannot_pass(tmp_path):
+    """AT-F2: with the sensor's model removed and the sensor not abstracted,
+    or a fault its model does not declare, the plan is refused naming what is
+    missing and nothing runs; and the startup plan run ten times gives ten
+    byte-identical event records."""
+    from fang.elaborate import elaborate
+    from fang.emulation import RENODE, EmulationModel, Emulates, Fault, Firmware
+    from fang.lang import System
+    from fang.verification import NotRunnable, questions
+
+    board = _sensor_node()
+
+    class NoSensorModel(board.SensorNode):
+
+        def __init__(self, **overrides):
+            System.__init__(self, **overrides)
+            self.mcu.add_trait(EmulationModel(source="fang:stm32f401re"))
+            self.mcu.add_trait(Firmware("firmware/elf/sensor_node.elf", target="stm32f401re"))
+
+    result = elaborate(NoSensorModel, project_id="PRJ-AT-F2")
+    question = _asked(result.snapshot, "startup")
+    with pytest.raises(NotRunnable) as refused:
+        RENODE.prepare(result.snapshot, question, traits=result.traits)
+    assert refused.value.code == "SIM-0010" and "system.env" in str(refused.value)
+
+    original = board.SensorNode.sensor_missing
+
+    class StuckBus(board.SensorNode):
+        sensor_missing = Emulates(
+            "survives_missing_sensor", run_until=original.run_until,
+            faults=[Fault("env", "stuck_low")], measures=original.measures,
+            abstracted=original.abstracted,
+        )
+
+    result = elaborate(StuckBus, project_id="PRJ-AT-F2")
+    question = _asked(result.snapshot, "sensor_missing")
+    with pytest.raises(NotRunnable) as refused:
+        RENODE.prepare(result.snapshot, question, traits=result.traits)
+    assert refused.value.code == "SIM-0011" and "stuck_low" in str(refused.value)
+
+    result = elaborate(board.SensorNode, project_id="PRJ-AT-F2")
+    question = _asked(result.snapshot, "startup")
+    job = RENODE.prepare(result.snapshot, question, traits=result.traits)
+    records = {
+        bytes(RENODE.run(job, workspace=tmp_path / f"run-{n}").outputs["events.jsonl"])
+        for n in range(10)
+    }
+    assert len(records) == 1

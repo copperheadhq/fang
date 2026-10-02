@@ -1315,11 +1315,18 @@ class At:
 
 
 @dataclass(frozen=True)
-class Absent:
-    """A fault: the device is not on its bus, so its address goes unanswered."""
+class Fault:
+    """A fault, named by its mechanism. A plan accepts one only where the
+    device's model declares it, and never lets one mechanism stand in for
+    another: a device that stops answering is not a stuck line."""
 
     surface: str
-    kind: str = "absent"
+    kind: str
+
+
+def Absent(surface: str) -> Fault:
+    """The device is not on its bus, so its address goes unanswered."""
+    return Fault(surface, "absent")
 
 
 class Emulates(QuestionDeclaration):
@@ -1341,7 +1348,7 @@ class Emulates(QuestionDeclaration):
         measures: Mapping[str, Measure],
         run_until: Quantity | None = None,
         stimuli: Sequence[At] = (),
-        faults: Sequence[Absent] = (),
+        faults: Sequence[Fault] = (),
         firmware: str | None = None,
         seed: int = 0,
         abstracted: Sequence[str] = (),

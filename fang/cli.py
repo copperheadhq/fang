@@ -368,6 +368,61 @@ def cmd_sim(args) -> int:
     return EXIT_OK if normalized.passed else EXIT_FAILED
 
 
+def cmd_emulate(args) -> int:
+    """Run each emulation question's firmware in Renode and print what it measured.
+
+    The low-level command, as `fang sim` is for SPICE: each question's plan is
+    compiled and lowered, its bundle written where asked, and the run made if
+    Renode is installed. Nothing goes through the gate and no workspace
+    changes; `fang verify` is the command that takes the answer back in.
+    """
+    from tempfile import TemporaryDirectory
+
+    from .emulation import RENODE
+    from .verification import NotRunnable, _quantity_text, questions
+
+    result = _elaborate(args)
+    asked = [q for q in questions(result.snapshot) if q.method == "emulation"]
+    if not asked:
+        print(f"nothing to emulate: {Path(args.program).name} declares no emulation question")
+        return EXIT_OK
+
+    status = EXIT_OK
+    for question in asked:
+        print(f"{question.label} ({question.id})")
+        try:
+            job = RENODE.prepare(result.snapshot, question, traits=result.traits)
+        except NotRunnable as exc:
+            print(f"  not runnable [{exc.code}]: {exc}")
+            status = EXIT_FAILED
+            continue
+        print(f"  plan {job.extra['plan']}")
+        if args.output:
+            folder = Path(args.output) / question.label.rsplit(".", 1)[-1]
+            folder.mkdir(parents=True, exist_ok=True)
+            for path, content in sorted(job.files.items()):
+                data = content.encode("utf-8") if isinstance(content, str) else content
+                (folder / path).write_bytes(data)
+            print(f"  wrote the bundle to {folder}")
+        if args.bundle_only:
+            continue
+        if not RENODE.available():
+            print(
+                "  unsupported: renode is not installed, or is a version the lowering "
+                "was not checked against; nothing ran and no result is fabricated"
+            )
+            continue
+        with TemporaryDirectory() as scratch:
+            raw = RENODE.run(job, workspace=Path(scratch))
+        print(f"  renode {raw.version}: the run {raw.outputs.get('outcome', 'ended')}")
+        for measurement in RENODE.read(job, raw):
+            if measurement.quantity is None:
+                print(f"  {measurement.name}: no value ({measurement.reason})")
+            else:
+                print(f"  {measurement.name} = {_quantity_text(measurement.quantity, 3)}")
+    return status
+
+
 def cmd_verify(args) -> int:
     """Route and run every declared question, and persist only on --commit.
 
@@ -391,6 +446,13 @@ def cmd_verify(args) -> int:
         return EXIT_FAILED
 
     head = _with_measurements(result.snapshot, workspace)
+    from .emulation import stale
+
+    for label, path, recorded, current in stale(head):
+        print(
+            f"stale: {label}: {path} is now {current}, not the {recorded} its evidence "
+            "names; it runs again"
+        )
     if not questions(head):
         print(f"nothing to verify: {Path(args.program).name} declares no question")
         return EXIT_OK
@@ -515,6 +577,13 @@ def build_parser() -> argparse.ArgumentParser:
     view_command.add_argument("-C", "--directory", default=".", help="the project directory")
     view_command.add_argument("-o", "--output", help="write SVG here instead of summarizing")
     view_command.set_defaults(handler=cmd_view)
+
+    emulate = program_arguments(
+        subparsers.add_parser("emulate", help="run the firmware in Renode and print what it measured")
+    )
+    emulate.add_argument("-o", "--output", help="write each question's bundle into a folder here")
+    emulate.add_argument("--bundle-only", action="store_true", help="write the bundles and run nothing")
+    emulate.set_defaults(handler=cmd_emulate)
 
     sim = program_arguments(subparsers.add_parser("sim", help="compile and run a simulation"))
     sim.add_argument("--analysis", choices=("op", "transient"), default="op")
