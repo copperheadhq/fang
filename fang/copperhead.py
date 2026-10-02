@@ -306,11 +306,20 @@ class DraftRefused(Exception):
     whose connections are not the intent's; the message says which."""
 
 
-def drawn_connections(netlist_text: str) -> set[frozenset[str]]:
-    """Every net of two or more pins in a KiCad netlist, as `REF.PIN` strings.
+#: Stands in a net's pin set for the power symbols on it. A ground net joining
+#: one pin to its marker is drawn as that pin and a power symbol; without this
+#: the net would shrink to one pin on both sides and a sheet that lost the
+#: connection to ground would still compare equal.
+POWERED = "#power"
 
-    KiCad names a power symbol `#PWR...`; those are left out, and the ground
-    net they sit on is still there through the pins it joins.
+
+def drawn_connections(netlist_text: str, powered: frozenset[str] = frozenset()) -> set[frozenset[str]]:
+    """Every net in a KiCad netlist that joins two or more pins, or joins a pin
+    to a power symbol, as `REF.PIN` strings.
+
+    A net carrying a power symbol gains POWERED. KiCad either lists the symbol
+    as a `#PWR...` node or leaves it out and names the net after it, so a net
+    named in `powered` (the intent's power symbols and ground nets) counts too.
     """
     from .sexpr import Node, parse
 
@@ -324,6 +333,12 @@ def drawn_connections(netlist_text: str) -> set[frozenset[str]]:
                 walk(item)
                 continue
             pins = set()
+            name = next(
+                (c.items[1].value for c in item.items if isinstance(c, Node) and c.head == "name"),
+                None,
+            )
+            if name in powered:
+                pins.add(POWERED)
             for child in item.items:
                 if isinstance(child, Node) and child.head == "node":
                     fields = {
@@ -331,13 +346,25 @@ def drawn_connections(netlist_text: str) -> set[frozenset[str]]:
                         for f in child.items
                         if isinstance(f, Node) and f.head in ("ref", "pin")
                     }
-                    if not fields["ref"].startswith("#"):
+                    if fields["ref"].startswith("#"):
+                        pins.add(POWERED)
+                    else:
                         pins.add(f"{fields['ref']}.{fields['pin']}")
             if len(pins) > 1:
                 found.add(frozenset(pins))
 
     walk(parse(netlist_text))
     return found
+
+
+def powered_names(intent: Intent) -> frozenset[str]:
+    """The names a sheet drawn from the intent gives its powered nets: each
+    power symbol's value, and each ground net's own name."""
+    values = {
+        part["value"] for part in intent.document["parts"] if part["libId"].startswith("power:")
+    }
+    grounds = {net["name"] for net in intent.document["nets"] if net.get("kind") == "ground"}
+    return frozenset(values | grounds)
 
 
 def intended_connections(intent: Intent) -> set[frozenset[str]]:
@@ -351,11 +378,16 @@ def intended_connections(intent: Intent) -> set[frozenset[str]]:
     power = {
         part["ref"] for part in intent.document["parts"] if part["libId"].startswith("power:")
     }
-    nets = (
-        frozenset(pin for pin in net["pins"] if pin.split(".", 1)[0] not in power)
-        for net in intent.document["nets"]
-    )
-    return {net for net in nets if len(net) > 1}
+    wanted = set()
+    for net in intent.document["nets"]:
+        pins = {pin for pin in net["pins"] if pin.split(".", 1)[0] not in power}
+        # A ground net, or one a power part sits on, is drawn with copperhead's
+        # power symbol on it, which the read-back counts as POWERED.
+        if net.get("kind") == "ground" or len(pins) < len(net["pins"]):
+            pins.add(POWERED)
+        if len(pins) > 1:
+            wanted.add(frozenset(pins))
+    return wanted
 
 
 @dataclass
@@ -442,7 +474,7 @@ class CopperheadDrafter:
                 f"{self.reader} could not read the drafted sheet back: "
                 f"{(read.stderr or read.stdout).strip()}"
             )
-        found = drawn_connections(back.read_text(encoding="utf-8"))
+        found = drawn_connections(back.read_text(encoding="utf-8"), powered_names(intent))
         wanted = intended_connections(intent)
         if found != wanted:
             extra = sorted(", ".join(sorted(net)) for net in found - wanted)

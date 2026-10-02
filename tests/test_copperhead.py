@@ -6,6 +6,7 @@ import json
 import pytest
 
 from fang.copperhead import (
+    POWERED,
     CopperheadDrafter,
     DraftRefused,
     DrafterUnavailable,
@@ -13,6 +14,7 @@ from fang.copperhead import (
     compile_intent,
     drawn_connections,
     intended_connections,
+    powered_names,
     short_value,
 )
 from fang.elaborate import elaborate
@@ -130,7 +132,7 @@ def test_a_power_symbol_is_left_out_of_the_connections_a_draft_must_have(intent)
     back leaves them out, so the intent's own power part is left out too."""
     wanted = intended_connections(intent)
     assert not any(pin.startswith("GND1.") for net in wanted for pin in net)
-    assert frozenset({"C1.2", "R1.2", "V1.2"}) in wanted
+    assert frozenset({"C1.2", "R1.2", "V1.2", POWERED}) in wanted
 
 
 def test_a_net_from_a_ground_marker_to_one_pin_is_drawn():
@@ -418,9 +420,34 @@ READ_BACK = """(export (version "E")
 
 def test_a_draft_is_read_back_without_its_power_symbols():
     assert drawn_connections(READ_BACK) == {
-        frozenset({"R1.2", "V1.2"}),
+        frozenset({"R1.2", "V1.2", POWERED}),
         frozenset({"R1.1", "R2.1", "R3.2"}),
     }
+
+
+def test_a_ground_net_of_one_pin_is_still_compared():
+    """A resistor to ground is one pin and a ground symbol once drawn. It is
+    compared as that, so a sheet that loses the connection to ground differs
+    from the intent rather than both sides dropping a one-pin net."""
+    intent = Intent(document={
+        "parts": [
+            {"ref": "GND1", "libId": "power:GND", "value": "GND"},
+            {"ref": "R1", "libId": "Device:R", "value": "10k"},
+        ],
+        "nets": [
+            {"name": "GND", "kind": "ground", "pins": ["GND1.1", "R1.2"]},
+        ],
+    }, losses=())
+    assert intended_connections(intent) == {frozenset({"R1.2", POWERED})}
+    # KiCad either lists the ground symbol as a #PWR node, or leaves it out and
+    # names the net after it; either way the net reads as powered.
+    listed = '(export (nets (net (code "1") (name "GND") (node (ref "#PWR01") (pin "1")) (node (ref "R1") (pin "2")))))'
+    named = '(export (nets (net (code "1") (name "GND") (node (ref "R1") (pin "2")))))'
+    floating = '(export (nets (net (code "1") (name "Net-(R1-Pad2)") (node (ref "R1") (pin "2")))))'
+    names = powered_names(intent)
+    assert drawn_connections(listed, names) == intended_connections(intent)
+    assert drawn_connections(named, names) == intended_connections(intent)
+    assert drawn_connections(floating, names) != intended_connections(intent)
 
 
 def test_a_draft_whose_connections_are_not_the_intent_is_refused(intent, tmp_path, monkeypatch):
@@ -436,12 +463,13 @@ def test_a_draft_whose_connections_are_not_the_intent_is_refused(intent, tmp_pat
         workspace = options["cwd"]
         if arguments[1:3] == ["sch", "export"]:
             wanted = sorted(intended_connections(intent), key=sorted)
+            def node(pin):
+                ref, number = ("#PWR01", "1") if pin == POWERED else pin.split(".")
+                return f' (node (ref "{ref}") (pin "{number}"))'
+
             nets = "".join(
                 f'(net (code "{i}") (name "n{i}")'
-                + "".join(
-                    f' (node (ref "{pin.split(".")[0]}") (pin "{pin.split(".")[1]}"))'
-                    for pin in sorted(net) + (["X9.1"] if i == 0 else [])
-                )
+                + "".join(node(pin) for pin in sorted(net) + (["X9.1"] if i == 0 else []))
                 + ")"
                 for i, net in enumerate(wanted)
             )
