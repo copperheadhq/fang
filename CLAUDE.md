@@ -273,5 +273,8 @@ self-contained `index.html` with no build step, serving `site/` as the document 
 is copperhead's own, taken from `docs.copperhead.sh`, with two values nudged for contrast and the
 reason recorded. Fang is a sub-brand of copperhead, so a change to the identity belongs upstream
 in copperhead's system first.
+[site/social/](site/social/) holds images for posting, drawn in that identity by its `make.py`
+from runs made as they are drawn — the firmware emulation renders run `sensor_node` and its broken
+builds in Renode — so no number on an image is typed in by hand.
 
 RFC 2119 keywords in the spec and RFCs are normative.
