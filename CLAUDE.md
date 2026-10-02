@@ -152,12 +152,16 @@ temporary copy in its own process group; its package data is the F401 platform d
 C# probes (`probes/fang_probes.cs`) and the model descriptors (`models/*.json`), which say what
 each model covers and which of its warnings are expected. Things learned against Renode 1.17.0
 that the code depends on: durations are written as decimal seconds (it reads `"100ms"` as 100 s),
-files are named `$ORIGIN/...` (its launcher runs from its install directory), probes are named
-`fang_*` (they share a namespace with the platform's peripherals), and the GPIO output-type
-register is judged by the firmware's writes because Renode does not store it. A measure gives an
+files are named `$ORIGIN/...` (its launcher runs from its install directory) and it cannot include
+a script from a path with a space (so such a temporary directory is reported unsupported), probes
+are named `fang_` plus the device's full path (they share a namespace with the platform's
+peripherals, and two that would collide are refused), and the GPIO output-type register is judged
+by the firmware's writes because Renode does not store it. A measure gives an
 absent event in a completed run as the half-open range after the run's end, nothing for a run
 that timed out, and nothing over a model that warned of something its descriptor does not expect.
-The firmware's digest goes on evidence, never in the snapshot; `stale()` compares it with the file.
+The firmware's digest goes on evidence, never in the snapshot; `stale()` resolves the bound path
+exactly as a run does (`_firmware_location`, against the program that declares the part) and
+compares the digest with the file.
 Emulation models are `EmulationModel` traits, not `Simulatable`, because the trait registry holds
 one trait per protocol per entity.
 
