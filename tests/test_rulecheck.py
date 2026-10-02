@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from dataclasses import replace
 from pathlib import Path
 
@@ -212,6 +213,10 @@ def fake_kicad_cli(tmp_path, report: str) -> str:
     return str(script)
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="the stand-in kicad-cli is a script started by its shebang, which Windows does not run",
+)
 def test_an_unread_report_fails_the_run_and_leaves_the_result_unknown(tmp_path):
     """A report with no sheets is a run that did not complete, with the
     reason; no verdict is drawn from it."""
