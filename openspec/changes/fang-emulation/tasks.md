@@ -202,3 +202,26 @@ and recorded files the later tests read — each reviewed again as it lands.
       probe by the whole path and refuse two of one name in the lowering.
 - [x] 11.9 Report an installed Renode of an unchecked version by its version,
       not as missing, through `fang verify` and `fang emulate`.
+- [x] 11.10 Refuse a run duration that is not positive under SIM-0014 where
+      `Emulates` is written, when the plan compiles, and in the lowering;
+      verify zero and a negative duration at each.
+- [x] 11.11 Match a model warning only against the expected warnings of its
+      own model's descriptor, each expected warning in the plan naming its
+      descriptor; verify a sensor warning the platform expects withdraws the
+      sensor's measures, and a bus warning the sensor expects withdraws the
+      bus's; regenerate `sensor_node`'s plans.
+- [x] 11.12 Refuse a device address that is no whole number under SIM-0016,
+      naming the device and the address, rather than truncating it; verify
+      with the sensor at `72.5 * addr`.
+- [x] 11.13 Refuse a pin selector the platform does not read under SIM-0013,
+      naming the pin and the selector, and give a pin configuration over one
+      no value; verify `Selector("AF_4")` on the board and `AF_4` and `AF16`
+      in a plan.
+- [x] 11.14 Exit `fang emulate` non-zero when a run timed out or crashed, as
+      `fang verify` does for a failed verification; verify both outcomes with
+      a stand-in Renode.
+- [x] 11.15 Keep a run's bundle, `events.jsonl`, `renode.log` and
+      `outcome.json` in the workspace the tool is given, Renode still running
+      from its temporary copy; verify `verify --commit` keeps both questions'
+      runs under `.copperhead/simulations/`, `verify` alone keeps none, and a
+      run that cannot be made keeps nothing.

@@ -96,12 +96,13 @@ its code, its message and the diff it would have applied.
 | `SIM-0011` | A fault the device's emulation model does not support |
 | `SIM-0012` | A stimulus names an input its model lacks, or a value of the wrong dimension |
 | `SIM-0013` | A pin the emulation platform does not map |
-| `SIM-0014` | An emulation names no run duration |
+| `SIM-0014` | An emulation names no run duration, or one that is not positive |
 | `SIM-0015` | No firmware is bound, or it was built for another target |
 | `SIM-0016` | A bus device's controller or address cannot be resolved |
 
 `SIM-0001`, `SIM-0002`, `SIM-0003`, `SIM-0005` and `SIM-0008` fail where the
-question is written or elaborated. The others are a question
+question is written or elaborated, and so does `SIM-0014` for a run that is not
+positive. The others are a question
 [`fang verify`](/reference/verification/) reports as not runnable, naming what
 is missing, rather than running it with something assumed in its place.
 `SIM-0009` to `SIM-0016` are an emulation plan refused before anything runs;

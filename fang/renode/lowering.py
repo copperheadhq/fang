@@ -47,6 +47,11 @@ FIRMWARE = "firmware.elf"
 MANIFEST = "manifest.json"
 EVENTS = "events.jsonl"
 
+#: What a run leaves beside its bundle, in the workspace it was given:
+#: Renode's own log, and how the run ended.
+LOG = "renode.log"
+OUTCOME = "outcome.json"
+
 
 class LoweringError(ValueError):
     """The plan holds something the lowering will not write."""
@@ -150,6 +155,12 @@ def platform_description(plan: "EmulationPlan") -> str:
 def script(plan: "EmulationPlan") -> str:
     """The run: seed first, the platform, the watchpoints, the firmware, the
     stimulus segments, the read-backs, and an explicit end."""
+    if plan.run_until_ns <= 0:
+        # Nothing would run and the script would still finish "completed",
+        # so a record of no time would read as an observation.
+        raise LoweringError(
+            f"the run lasts {plan.run_until_ns} ns; a run of no time observes nothing"
+        )
     recorder = f"sysbus.{_identifier(plan.recorder_port, 'the recorder port')}.recorder"
     lines = [
         f"emulation SetSeed {int(plan.seed)}",

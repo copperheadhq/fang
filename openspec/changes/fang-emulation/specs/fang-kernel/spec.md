@@ -107,13 +107,14 @@ Compiling an emulation question SHALL resolve, or refuse naming what is
 missing: the target component with its platform model and firmware; the scope,
 being the target and every component sharing a net with a pin the question
 touches, each carrying a peripheral model or listed as abstracted; each bus in
-scope with its controller instance, its chosen pins and their selectors, the
-electrical requirements of its signals, and each device's address; each
+scope with its controller instance, its chosen pins and their selectors, each
+a selector the platform descriptor reads, the electrical requirements of its signals, and each device's address, a whole
+number the emulator is given as the graph holds it; each
 observation point, a signal with several loads being observed on its one pin;
 each stimulus and fault against its model's declarations, a stimulus setting an
 input to one value at a time within the run, on a device present in the run;
 each measure against what the probes can record; and the run's virtual
-duration, which has no default. A measure that would read the same whatever the
+duration, which has no default and SHALL be positive. A measure that would read the same whatever the
 firmware did SHALL be refused rather than measured: a pin-configuration measure
 over a port that is no bus in scope with pins of the target, a match naming a
 detail its measure does not filter on, a count over a window that is empty or
@@ -142,6 +143,13 @@ identified by the hash of its canonical form.
 
 - **WHEN** a question names no run duration
 - **THEN** the plan is refused rather than given a default
+
+#### Scenario: A run of no time or less is refused
+
+- **WHEN** a question names a run duration that is zero or negative
+- **THEN** the declaration is refused with the duration's `SIM` diagnostic
+- **AND** a plan carrying such a duration is neither compiled nor lowered,
+  since its script would run nothing and still finish as completed
 
 #### Scenario: A stimulus that cannot be applied is refused
 
@@ -180,6 +188,13 @@ identified by the hash of its canonical form.
 
 - **WHEN** an edge is measured on a signal of the target that drives two loads
 - **THEN** the plan observes the one pin the signal lands on
+
+#### Scenario: An address that is no whole number is refused
+
+- **WHEN** a device on a bus in scope declares an address that is not a whole
+  number
+- **THEN** the plan is refused naming the device and the address, rather than
+  giving the emulator another address in its place
 
 #### Scenario: The plan carries the board's facts
 
@@ -267,7 +282,10 @@ and a measure SHALL compare the result with the mode, selector and output type
 the board requires, measuring the number of pins that differ. A register the
 model accepts without storing SHALL be judged by the firmware's writes to it,
 never by a read-back. A probe SHALL NOT read a register that has read side
-effects.
+effects. A selector the platform cannot read SHALL refuse the plan, and a
+pin-configuration measure over a pin whose selector it cannot read SHALL
+produce no value, so that no pin is counted as configured with its selector
+unchecked.
 
 #### Scenario: Correctly configured pins measure zero
 
@@ -287,6 +305,14 @@ effects.
   them, and the firmware writes open drain for both I2C pins
 - **THEN** the measure counts neither pin, although the register reads back 0
 
+#### Scenario: A selector the platform does not read is refused
+
+- **WHEN** a bus pin's selector is not one the platform descriptor reads, such
+  as `AF_4` on a platform that reads `AF0` to `AF15`
+- **THEN** the plan is refused naming the pin and the selector
+- **AND** a pin-configuration measure over such a pin has no value, rather
+  than a count that skipped its selector
+
 ### Requirement: Absence Is An Observation; An Incomplete Run Is Not
 
 In a run that completed, an event that did not occur SHALL be measured as not
@@ -296,7 +322,8 @@ SHALL produce no value. A measure over a model that reported a warning its
 descriptor does not expect SHALL produce no value, and the evidence SHALL name
 the warning. A warning the model's descriptor expects SHALL NOT withdraw a
 measure; it SHALL be recorded on the evidence as the coverage gap the
-descriptor says it stands for.
+descriptor says it stands for. A warning SHALL be matched only against the
+expected warnings of the descriptor of the model that reported it.
 
 #### Scenario: A read that never happens fails its bound
 
@@ -330,13 +357,24 @@ descriptor says it stands for.
 - **THEN** the measures over the bus keep their values
 - **AND** the evidence lists the coverage gap the descriptor names for it
 
+#### Scenario: A warning is expected only by its own model's descriptor
+
+- **WHEN** the sensor's model reports a warning that the platform's descriptor
+  lists as expected and the sensor's descriptor does not
+- **THEN** every measure over the sensor's events has no value
+- **AND** a warning only the sensor's descriptor expects, reported by the
+  platform's I2C controller, withdraws the measures over the bus
+
 ### Requirement: Emulation Runs Are Deterministic And Identified
 
 The evidence of every run SHALL record the emulator's version and build, the
 firmware digest, the plan hash, the seed, and the digest of every file the run
 was given. Repeated runs of one plan on one emulator build SHALL produce
 byte-identical event records; a run that cannot SHALL report the difference
-rather than choose one record.
+rather than choose one record. A run SHALL leave its bundle, its event record,
+the emulator's log and its outcome in the workspace it is given, whatever
+directory the emulator itself ran from, so that a run whose evidence is
+committed keeps them beside it.
 
 #### Scenario: Ten runs give one record
 
@@ -348,6 +386,15 @@ rather than choose one record.
 - **WHEN** a run's evidence is read
 - **THEN** it names the emulator version and build, the firmware digest, the
   plan hash, the seed and the digest of every bundle file
+
+#### Scenario: A committed run keeps its files
+
+- **WHEN** `verify --commit` runs an emulation question, whether or not the
+  run completes
+- **THEN** the workspace's simulations directory holds the run's bundle, its
+  event record, the emulator's log and its outcome
+- **AND WHEN** `verify` runs the question without `--commit`
+- **THEN** nothing is written into the workspace
 
 ### Requirement: The Emulator Is Reported, Never Substituted
 
@@ -391,7 +438,9 @@ events kept, and the run reported failed with the verification left unknown.
 `fang emulate` SHALL compile each emulation question's plan, write its bundle,
 run the emulator where it is installed, and print each measure's value or the
 reason it has none. With `--bundle-only` it SHALL write the bundle and run
-nothing. It SHALL NOT change a workspace.
+nothing. It SHALL NOT change a workspace. It SHALL exit non-zero when a
+question is not runnable or a run did not complete, and an emulator that is
+not installed SHALL NOT by itself make it fail.
 
 #### Scenario: A bundle is written without an emulator
 
@@ -404,6 +453,13 @@ nothing. It SHALL NOT change a workspace.
 - **WHEN** `fang emulate` runs on the demo board with the emulator installed
 - **THEN** it prints each question's measures and leaves any workspace
   untouched
+
+#### Scenario: A run that does not complete fails the command
+
+- **WHEN** `fang emulate` runs a question and the run ends on a timeout or a
+  crash
+- **THEN** it prints how the run ended and that its measures have no value,
+  and exits non-zero
 
 ### Requirement: Emulation Acceptance Tests
 

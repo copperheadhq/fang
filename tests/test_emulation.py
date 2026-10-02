@@ -98,7 +98,9 @@ def plan(*, absent: bool = False, status_pin: int = 5, stimuli=None, run_until_n
             "reported": {"kind": "uart_value", "entity": "mcu.usart2", "prefix": "temp=", "unit": "degC"},
             "mux_mismatches": {"kind": "pin_config", "entity": "mcu.i2c1"},
         },
-        expected_warnings=tuple(descriptor("fang:stm32f401re").expected_warnings),
+        expected_warnings=tuple(
+            {"model": "fang:stm32f401re", **w} for w in descriptor("fang:stm32f401re").expected_warnings
+        ),
     )
 
 
@@ -279,6 +281,47 @@ def test_expected_warnings_are_coverage_gaps_not_withdrawals():
     assert measured(plan(), record)["first_read"].quantity is not None
 
 
+def _warned(source: str, text: str) -> RunRecord:
+    """The startup run with one more model warning, recorded under `source`."""
+    events = list(recorded("startup").events)
+    warning = Event(events[3].seq, events[3].t_ns, source, "model.warning", {"text": text})
+    later = (Event(e.seq + 1, e.t_ns, e.source, e.type, e.payload) for e in events[3:])
+    return RunRecord((*events[:3], warning, *later), "completed")
+
+
+def test_a_warning_the_platform_expects_still_withdraws_the_sensors_measures():
+    # The patterns were pooled across descriptors, so a sensor warning that
+    # matched the platform's timing-register pattern was taken as expected.
+    text = "Unhandled write to offset 0x1C. Unhandled bits: [4, 6] when writing value 0x50."
+    m = measured(plan(), _warned("env", text))
+    assert m["first_read"].quantity is None
+    assert "withdrawn: env" in m["first_read"].reason and "0x1C" in m["first_read"].reason
+    assert m["slow_blinks"].quantity is not None
+
+
+def test_a_warning_the_sensor_expects_is_expected_only_of_the_sensor():
+    p = plan()
+    quirk = {"model": "renode:Sensors.HS3001", "gap": "the sensor's quirk", "pattern": "Sensor quirk"}
+    quirky = EmulationPlan(**{**p.__dict__, "expected_warnings": (*p.expected_warnings, quirk)})
+
+    from_sensor = _warned("env", "Sensor quirk at 0x44")
+    assert measured(quirky, from_sensor)["first_read"].quantity is not None
+    assert "the sensor's quirk" in coverage_gaps_observed(from_sensor, quirky)
+
+    from_bus = _warned("mcu.i2c1", "Sensor quirk at 0x44")
+    assert measured(quirky, from_bus)["first_read"].quantity is None
+    assert "the sensor's quirk" not in coverage_gaps_observed(from_bus, quirky)
+
+
+def test_each_expected_warning_in_a_plan_names_its_descriptor():
+    from fang.emulation import compile_plan
+
+    result, paths = _board()
+    compiled = compile_plan(result.snapshot, _Question(_startup_data(paths)), traits=result.traits)
+    assert {w["model"] for w in compiled.expected_warnings} == {"fang:stm32f401re"}
+    assert [dict(w) for w in compiled.expected_warnings] == [dict(w) for w in plan().expected_warnings]
+
+
 def test_a_push_pull_build_is_caught_though_every_transaction_succeeded():
     m = measured(plan(), recorded("push_pull"))
     assert m["mux_mismatches"].quantity.value == 2
@@ -448,6 +491,40 @@ def test_a_plan_without_a_duration_is_refused():
     del data["scenario"]["run_until"]
     with pytest.raises(EmulationError, match="duration"):
         compile_plan(result.snapshot, _Question(data), traits=result.traits)
+
+
+@pytest.mark.parametrize("duration", ["-1", "0"])
+def test_a_run_of_no_time_or_less_is_refused_where_it_is_declared(duration):
+    # A negative run_until passed the dimension check, and its lowering wrote
+    # no RunFor and still finished "completed".
+    from fang.diagnostics import FangError
+    from fang.emulation import Emulates, FirstAt, I2CRead
+    from fang.units import Quantity
+
+    with pytest.raises(FangError) as refused:
+        Emulates("sensor_ready", run_until=Quantity.scalar(Decimal(duration), "s"),
+                 measures={"first_read": FirstAt(I2CRead("env"))})
+    assert refused.value.diagnostic.code == "SIM-0014"
+    assert refused.value.diagnostic.location.file == __file__
+
+
+@pytest.mark.parametrize("duration", ["-1", "0"])
+def test_a_plan_of_no_time_or_less_is_refused_as_a_duration(duration):
+    from fang.emulation import EmulationError, compile_plan
+
+    result, paths = _board()
+    data = _startup_data(paths, stimuli=[])
+    data["scenario"]["run_until"] = _scalar(duration, "s")
+    with pytest.raises(EmulationError, match="positive time") as refused:
+        compile_plan(result.snapshot, _Question(data), traits=result.traits)
+    assert refused.value.code == "duration"
+
+
+@pytest.mark.parametrize("nanoseconds", [-1_000_000_000, 0])
+def test_a_plan_of_no_time_or_less_is_not_lowered(nanoseconds):
+    # Lowered, it would finish "completed" having run nothing.
+    with pytest.raises(LoweringError, match="no time"):
+        script(plan(run_until_ns=nanoseconds, stimuli=()))
 
 
 @needs_renode
@@ -1110,6 +1187,99 @@ def test_emulate_reports_an_unchecked_version_and_runs_nothing(monkeypatch, caps
     assert "unsupported: Renode 1.18.0 is installed" in printed
 
 
+@pytest.mark.parametrize("outcome", ["timeout", "crashed"])
+def test_emulate_fails_when_a_run_does_not_complete(monkeypatch, capsys, outcome):
+    # It exited 0, so a script read a hung or crashed run as a success.
+    from fang.emulation import RENODE
+    from fang.renode import RenodeRun
+
+    class Ends(_Crashes):
+        def run(self, files, *, timeout=120):
+            return RenodeRun("1.17.0", "1.17.0+stand-in", None if outcome == "timeout" else 1,
+                             outcome, b"", "", ())
+
+    monkeypatch.setattr(RENODE, "backend", Ends())
+    assert _cli("emulate", str(ROOT / "examples" / "sensor_node" / "sensor_node.py")) == 1
+    printed = capsys.readouterr().out
+    assert f"the run {outcome}" in printed and "first_read: no value" in printed
+
+
+class _Logs(_Crashes):
+    """A Renode whose every run crashes having logged a line: a run worth
+    keeping, since its log is how the crash is read."""
+
+    def run(self, files, *, timeout=120):
+        from fang.renode import RenodeRun
+
+        return RenodeRun("1.17.0", "1.17.0+stand-in", 1, "crashed", b"", "the stand-in crashed\n",
+                         ("renode", "--console", "--disable-gui", "-p", "run.resc"))
+
+
+def test_a_run_keeps_its_bundle_and_what_it_left_in_its_workspace(tmp_path):
+    # The run happened in a temporary directory deleted on return, so a run
+    # made under verify --commit kept neither its bundle nor its log.
+    import json as _json
+
+    from fang.emulation import RENODE, RenodeTool
+
+    result = _elaborate(SENSOR_NODE.SensorNode)
+    job = RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
+    kept = tmp_path / "renode-run"
+    RenodeTool(backend=_Logs()).run(job, workspace=kept)
+    for name, content in job.files.items():
+        assert (kept / name).read_bytes() == (content.encode("utf-8") if isinstance(content, str) else content)
+    assert (kept / "events.jsonl").read_bytes() == b""
+    assert (kept / "renode.log").read_text(encoding="utf-8") == "the stand-in crashed\n"
+    ended = _json.loads((kept / "outcome.json").read_text(encoding="utf-8"))
+    assert ended["outcome"] == "crashed" and ended["exit_status"] == 1
+    assert ended["renode"] == {"version": "1.17.0", "build": "1.17.0+stand-in"}
+
+
+def test_a_run_that_cannot_be_made_keeps_nothing(monkeypatch, tmp_path):
+    from fang.emulation import RENODE, RenodeTool
+    from fang.verification import ToolUnavailable
+
+    class Checked(RenodeBackend):
+        def available(self):
+            return True
+
+        def identify(self):
+            return "1.17.0", "1.17.0+stand-in"
+
+    result = _elaborate(SENSOR_NODE.SensorNode)
+    job = RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
+    _spaced_tmpdir(monkeypatch, tmp_path)
+    with pytest.raises(ToolUnavailable):
+        RenodeTool(backend=Checked()).run(job, workspace=tmp_path / "renode-run")
+    assert not (tmp_path / "renode-run").exists()
+
+
+def test_verify_commit_keeps_each_run_and_verify_alone_keeps_none(monkeypatch, tmp_path, capsys):
+    import shutil as _shutil
+
+    from fang.emulation import RENODE
+
+    copy = tmp_path / "sensor_node"
+    _shutil.copytree(ROOT / "examples" / "sensor_node", copy, ignore=_shutil.ignore_patterns("out"))
+    program = str(copy / "sensor_node.py")
+    assert _cli("build", program, "-C", str(copy)) == 0
+    monkeypatch.setattr(RENODE, "backend", _Logs())
+    runs = copy / ".copperhead" / "simulations"
+
+    _cli("verify", program, "-C", str(copy))
+    assert not any(runs.iterdir())
+
+    _cli("verify", program, "-C", str(copy), "--commit")
+    logs = sorted(runs.glob("renode-*/renode.log"))
+    assert len(logs) == 2
+    for log in logs:
+        assert log.read_text(encoding="utf-8") == "the stand-in crashed\n"
+        assert {"events.jsonl", "outcome.json", "plan.json", "run.resc", "firmware.elf"} <= {
+            p.name for p in log.parent.iterdir()
+        }
+    capsys.readouterr()
+
+
 def _spaced_tmpdir(monkeypatch, tmp_path):
     """TMPDIR set to a path with a space in it, as tempfile reads it afresh."""
     import tempfile
@@ -1231,6 +1401,66 @@ def test_a_model_naming_no_shipped_descriptor_refuses_the_plan_naming_the_part(p
         compile_plan(result.snapshot, _Question(_startup_data(paths)), traits=result.traits)
     assert refused.value.code == "model"
     assert part in str(refused.value) and "renode:Sensors.Generic" in str(refused.value)
+
+
+def test_an_address_that_is_no_whole_number_refuses_the_plan():
+    # 72.5 was made 72 by int(), so Renode answered at an address the graph
+    # does not hold.
+    from fang.emulation import RENODE
+    from fang.interfaces import I2CPort
+    from fang.lang import V, kHz, kOhm
+
+    class HalfAddressed(SENSOR_NODE.HS3001):
+        i2c = I2CPort(address=72.5 * SENSOR_NODE.addr, voltage=3.3 * V, bit_rate=400 * kHz,
+                      pull_up_resistance=2.2 * kOhm, pull_up_supply=3.3 * V)
+
+    class Board(SENSOR_NODE.SensorNode):
+        env = HalfAddressed(package="LGA-6")
+
+    result = _elaborate(Board)
+    with pytest.raises(NotRunnable) as refused:
+        RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
+    assert refused.value.code == "SIM-0016"
+    assert "system.env" in str(refused.value) and "72.5" in str(refused.value)
+
+
+def test_a_selector_the_platform_does_not_read_refuses_the_plan():
+    # "AF_4" read as no alternate function, so PinConfig skipped the AFR
+    # comparison and measured 0 whatever the firmware wrote there.
+    from fang.emulation import RENODE
+    from fang.interfaces import AF, PinMap, Selector
+
+    class Misspelt(SENSOR_NODE.STM32F401RE):
+        peripherals = PinMap(
+            {
+                "i2c1.scl": {"PB8": Selector("AF_4"), "PB6": AF(4)},
+                "i2c1.sda": {"PB9": AF(4), "PB7": AF(4)},
+                "usart2.tx": {"PA2": AF(7)},
+                "usart2.rx": {"PA3": AF(7)},
+            },
+            evidence="af_table",
+        )
+
+    class Board(SENSOR_NODE.SensorNode):
+        mcu = Misspelt(package="LQFP-64")
+
+    result = _elaborate(Board)
+    with pytest.raises(NotRunnable) as refused:
+        RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
+    assert refused.value.code == "SIM-0013"
+    assert "PB8" in str(refused.value) and "'AF_4'" in str(refused.value)
+
+
+@pytest.mark.parametrize("selector", ["AF_4", "AF16"])
+def test_a_pin_configuration_over_a_selector_the_platform_does_not_read_has_no_value(selector):
+    p = plan()
+    (bus,) = p.buses
+    scl, sda = bus.pins
+    misspelt = PlanPin(scl.pin, scl.vendor, scl.signal, selector, scl.open_drain, scl.port, scl.index)
+    unread = EmulationPlan(**{**p.__dict__, "buses": (PlanBus(bus.port, bus.instance, bus.emulator,
+                                                              (misspelt, sda), bus.devices),)})
+    mux = measured(unread, recorded("startup"))["mux_mismatches"]
+    assert mux.quantity is None and selector in mux.reason and "PB8" in mux.reason
 
 
 def test_a_model_naming_no_shipped_descriptor_is_sim_0009_through_prepare():

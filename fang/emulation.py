@@ -504,17 +504,29 @@ def _after_end(record: RunRecord, since_ns: int = 0) -> Quantity:
     return Quantity.range(_seconds(record.end_ns - since_ns), INFINITY, "s")
 
 
+def _expected_of(plan: EmulationPlan, source: str) -> tuple[Mapping[str, str], ...]:
+    """The warnings expected of the model that raised one recorded under
+    `source`: a device's probe records its own model's warnings under the
+    device, and every other source is a peripheral of the platform, watched
+    under its bus. Another descriptor's patterns never excuse a warning, and
+    an entry naming no descriptor is expected of none."""
+    device = plan.device(source)
+    model = device.model if device is not None else plan.platform
+    return tuple(w for w in plan.expected_warnings if w.get("model") == model)
+
+
+def _expected_matches(plan: EmulationPlan, event: Event) -> tuple[Mapping[str, str], ...]:
+    text = event.payload.get("text", "")
+    return tuple(w for w in _expected_of(plan, event.source) if re.search(w["pattern"], text))
+
+
 def withdrawals(record: RunRecord, plan: EmulationPlan) -> dict[str, str]:
     """Sources whose model warned of something its descriptor does not expect."""
-    patterns = [re.compile(w["pattern"]) for w in plan.expected_warnings]
     withdrawn: dict[str, str] = {}
     for event in record.events:
-        if event.type != "model.warning":
+        if event.type != "model.warning" or _expected_matches(plan, event):
             continue
-        text = event.payload.get("text", "")
-        if any(p.search(text) for p in patterns):
-            continue
-        withdrawn.setdefault(event.source, text)
+        withdrawn.setdefault(event.source, event.payload.get("text", ""))
     return withdrawn
 
 
@@ -524,9 +536,7 @@ def coverage_gaps_observed(record: RunRecord, plan: EmulationPlan) -> tuple[str,
     for event in record.events:
         if event.type != "model.warning":
             continue
-        for warning in plan.expected_warnings:
-            if re.search(warning["pattern"], event.payload.get("text", "")):
-                gaps.add(warning["gap"])
+        gaps.update(warning["gap"] for warning in _expected_matches(plan, event))
     return tuple(sorted(gaps))
 
 
@@ -599,18 +609,47 @@ def _measure_one(name: str, spec: Mapping[str, Any], plan: EmulationPlan, record
                 return Measured(name, Quantity.scalar(Decimal(number.group(0)), spec["unit"]), None, True)
         return Measured(name, None, f"no line beginning {prefix!r} was printed before the run's end", True)
     if kind == "pin_config":
+        unread = _unread_selectors(plan, spec["entity"])
+        if unread:
+            vendor, selector = unread[0]
+            return Measured(
+                name, None,
+                f"the selector {selector!r} on {vendor} is not one the platform model reads, "
+                "so the pin's alternate function cannot be compared",
+            )
         return Measured(name, Quantity.scalar(pin_mismatches(plan, record, spec["entity"]), "1"))
     raise ValueError(f"no measure of kind {kind!r}")
 
 
 _MODE_ALTERNATE = 0b10
 
+#: How the platform's GPIO reads a selector: an alternate function, AF0 to
+#: AF15, the value of the pin's four-bit field in AFRL or AFRH.
+_ALTERNATE = re.compile(r"AF(\d+)")
+
 
 def _selector_number(selector: str | None) -> int | None:
+    """The alternate function a selector names, or None for one the platform
+    does not read. A plan refuses a selector this cannot read, and a pin
+    configuration over one has no value, so a pin is never let through
+    unchecked."""
     if selector is None:
         return None
-    found = re.fullmatch(r"AF(\d+)", selector)
-    return int(found.group(1)) if found else None
+    found = _ALTERNATE.fullmatch(selector)
+    if found is None or int(found.group(1)) > 0xF:
+        return None
+    return int(found.group(1))
+
+
+def _unread_selectors(plan: EmulationPlan, port: str) -> list[tuple[str, str]]:
+    """A bus's pins whose selector the platform does not read, with it."""
+    return [
+        (pin.vendor, pin.selector)
+        for bus in plan.buses
+        if bus.port == port
+        for pin in bus.pins
+        if pin.selector is not None and _selector_number(pin.selector) is None
+    ]
 
 
 def register_values(plan: EmulationPlan, record: RunRecord) -> dict[tuple[str, str], int]:
@@ -965,6 +1004,14 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
                 signal = str(connection.identity.path).rsplit(".", 1)[-1]
                 emulator_port, index = mapped(pin)
                 selector = connection.selectors.get(pin, {}).get("selector")
+                if selector is not None and _selector_number(selector) is None:
+                    # The pin configuration would skip the comparison it
+                    # cannot make, and count a wrong mux as right.
+                    raise _refuse(
+                        f"the selector {selector!r} on {pins[pin].vendor_name} is not one the "
+                        "platform model reads: it reads an alternate function, AF0 to AF15",
+                        "pin",
+                    )
                 plan_pins[pin] = PlanPin(
                     pin, pins[pin].vendor_name, signal, selector,
                     spec.signal(signal).open_drain, emulator_port, index,
@@ -990,6 +1037,16 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
             low, high = address.quantity.interval()
             if low != high:
                 raise _refuse(f"the address of {_path(entities, component)} is a range", "address")
+            if Decimal(low) != Decimal(low).to_integral_value():
+                # Made whole, the emulator would put the device at an
+                # address the graph does not hold.
+                raise _refuse(
+                    f"the address of {_path(entities, component)} is "
+                    f"{format(Decimal(low).normalize(), 'f')}, not a whole number; a device "
+                    "answers on an integer address, and no other is given to the emulator "
+                    "in its place",
+                    "address",
+                )
             plan_devices.append(
                 PlanDevice(component, _probe_name(_path(entities, component)),
                            model.id, model.document["renode_type"], int(low), component in absent)
@@ -1088,7 +1145,11 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
     run_until = _quantity_from(scenario["run_until"])
     run_until_ns = _nanoseconds(run_until)
     if run_until_ns <= 0:
-        raise _refuse(f"the run lasts {run_until}, and a run observes nothing in no time", "duration")
+        raise _refuse(
+            f"the run lasts {run_until}; a run lasts a positive time, and one of no time "
+            "observes nothing",
+            "duration",
+        )
 
     stimuli = []
     assumptions = [f"the core runs at {platform.document['core_clock_hz']} Hz, as the platform model assumes"]
@@ -1156,11 +1217,13 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
             out = {"kind": kind, "entity": resolved(record["surface"])["port"]}
         measures[name] = out
 
+    # Each expected warning names the descriptor that expects it, so a run
+    # matches a warning only against its own model's patterns.
     gaps = set(platform.not_modelled)
-    expected = list(platform.expected_warnings)
-    for model in device_descriptors.values():
+    expected = [{"model": platform.id, **w} for w in platform.expected_warnings]
+    for model in sorted({m.id: m for m in device_descriptors.values()}.values(), key=lambda m: m.id):
         gaps.update(model.not_modelled)
-        expected.extend(model.expected_warnings)
+        expected.extend({"model": model.id, **w} for w in model.expected_warnings)
     for component, name in abstracted.items():
         gaps.add(f"{name} is abstracted, not modelled")
 
@@ -1502,6 +1565,16 @@ class Emulates(QuestionDeclaration):
                 f"run_until is {run_until}; a run lasts a time",
                 location=self._source,
             )
+        # A run of no time, or of less, would be lowered with nothing to run
+        # and still end "completed", so it is refused where it is written, as
+        # the plan refuses it when it compiles.
+        if run_until is not None and not Decimal(run_until.interval()[0]) > 0:
+            raise error(
+                SIM_EMULATION_DURATION,
+                f"run_until is {run_until}; a run lasts a positive time, and one of "
+                "no time observes nothing",
+                location=self._source,
+            )
         for stimulus in stimuli:
             if stimulus.time.dimension != _TIME:
                 raise error(
@@ -1748,13 +1821,43 @@ class RenodeTool:
         )
 
     def run(self, job: Job, *, workspace) -> RawRun:
+        """Run the bundle, and keep it and what the run left in `workspace`.
+
+        Renode runs from the temporary copy the backend makes, since its
+        monitor cannot include a script from a path with a space in it and a
+        run should reach nothing but its own copy. The bundle, the event
+        record, Renode's log and the outcome are then written into
+        `workspace`: under `fang verify --commit` that is beside the run's
+        evidence, and otherwise a scratch directory. A run that could not be
+        made writes nothing.
+        """
+        from pathlib import Path
+
         from .renode import RenodeUnavailable
+        from .renode.lowering import EVENTS, LOG, OUTCOME
+        from .serialization import canonical_bytes
 
         files = {name: (c.encode("utf-8") if isinstance(c, str) else c) for name, c in job.files.items()}
         try:
             run = self.backend.run(files, timeout=self.timeout)
         except RenodeUnavailable as exc:
             raise ToolUnavailable(str(exc)) from None
+        kept = Path(workspace)
+        kept.mkdir(parents=True, exist_ok=True)
+        for name, content in sorted(files.items()):
+            target = kept / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(content)
+        (kept / EVENTS).write_bytes(run.events)
+        (kept / LOG).write_text(run.log, encoding="utf-8")
+        ended = {
+            "outcome": run.outcome,
+            "renode": {"version": run.version, "build": run.build},
+            "arguments": list(run.arguments),
+        }
+        if run.exit_status is not None:
+            ended["exit_status"] = run.exit_status
+        (kept / OUTCOME).write_bytes(canonical_bytes(ended))
         version = f"{run.version} (build {run.build})" if run.build else run.version
         succeeded = run.outcome == "completed"
         return RawRun(
