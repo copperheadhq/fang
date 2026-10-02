@@ -2,7 +2,8 @@
 
 Spec: "Fang Is Ordinary Python", "Declarative Module Composition", "Parameter
 Declaration And Reference", "Declared Constraints Are Not Evaluated Eagerly",
-and "The Connect Operator".
+"The Connect Operator", and "A Port May Be One Peripheral Instance" (a merged
+pin map keeps each selector with the evidence its own map cites).
 
 A Fang program is an ordinary Python module. Nothing here mutates geometry,
 calls a tool, or evaluates a constraint; declarations are recorded and the

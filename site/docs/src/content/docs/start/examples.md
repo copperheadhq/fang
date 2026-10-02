@@ -1,6 +1,6 @@
 ---
 title: Examples
-description: Eleven programs in the repository, smallest first.
+description: Twelve programs in the repository, smallest first.
 sidebar:
   order: 3
   attrs:
@@ -21,6 +21,7 @@ program that has since changed.
 | [`equations/`](/examples/equations/) | Values chosen by equation and reuse by inheritance |
 | [`sensor_board/`](/examples/sensor_board/) | Interfaces lowering to pins, a recorded decision, a check left undecided |
 | [`i2c_bus/`](/examples/i2c_bus/) | A multi-drop bus, addresses as constrained parameters |
+| [`sensor_node/`](/examples/sensor_node/) | Ports that name their controller, cited pin selectors, an address the check reads |
 | [`usb_uart_bridge/`](/examples/usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet |
 | [`buck_regulator/`](/examples/buck_regulator/) | Requirement, decision, calculations and verification beside the circuit |
 | [`servo_drive/`](/examples/servo_drive/) | Composition: one `HalfBridge` block instantiated three times |
@@ -76,6 +77,12 @@ keep survive here. The device addresses are parameters, so "no two devices answe
 to the same address" is a constraint the kernel decides rather than a linter
 rule. And the RTC's thresholds are recorded as an assumption, which leaves that
 link undecided rather than passed.
+
+**`sensor_node/`** puts on the board what the firmware otherwise holds alone.
+The STM32F401RE's `i2c1` port names I2C1, and each candidate pin carries the
+alternate function that routes the signal to it, cited from ST's table. The
+lowered pin connections carry AF4. The HS3001's port carries its address,
+0x44, and the compatibility check decides the addressing rule from it.
 
 **`usb_uart_bridge/`** shows part selection landing on the instance rather
 than the class template. The logical part stays "a 3.3 V regulator". Which one

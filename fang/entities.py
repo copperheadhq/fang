@@ -1,8 +1,9 @@
 """The EIR entity model the kernel graph holds.
 
 Spec: "Typed Connections", "Typed Interfaces, Ports, Buses, and Domains",
-"Requirement State Transitions", and "Structural Validation". The kernel graph
-holds these entities and nothing else; there is no second model.
+"Requirement State Transitions", "Structural Validation", "A Port May Be One
+Peripheral Instance", and "An Addressed Bus Device Carries Its Address". The
+kernel graph holds these entities and nothing else; there is no second model.
 """
 
 from __future__ import annotations

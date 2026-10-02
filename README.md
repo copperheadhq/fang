@@ -198,6 +198,9 @@ in [tests/test_examples.py](https://github.com/copperheadhq/fang/blob/main/tests
   thresholds are an assumption rather than a number
 - [examples/sensor_board/](https://github.com/copperheadhq/fang/tree/main/examples/sensor_board/): a regulated board with an
   MCU and an I2C sensor, showing pin lowering and recorded decisions
+- [examples/sensor_node/](https://github.com/copperheadhq/fang/tree/main/examples/sensor_node/): an STM32F401RE and an
+  HS3001, with ports that name their controller, alternate functions cited from
+  ST's table on the lowered pins, and the sensor's address read by the check
 - [examples/usb_uart_bridge/](https://github.com/copperheadhq/fang/tree/main/examples/usb_uart_bridge/): USB to serial, with
   chosen vendor parts, a crystal and a UART crossover named wire by wire
 - [examples/buck_regulator/](https://github.com/copperheadhq/fang/tree/main/examples/buck_regulator/): 12 V to 3.3 V, with the

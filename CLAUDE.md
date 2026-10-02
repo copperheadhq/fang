@@ -18,7 +18,7 @@ it is never a persisted or public representation — and the MCP SDK, which only
 
 ```bash
 pip install -e ".[dev]"          # add ",analysis" for the NetworkX-backed queries, ",mcp" for `fang mcp`
-python -m pytest                 # whole suite (614 tests, ~16s); addopts = -q, testpaths = tests
+python -m pytest                 # whole suite (654 tests, ~16s); addopts = -q, testpaths = tests
 fang build examples/sensor_board/sensor_board.py   # the console script, after an editable install
 python -m pytest -rs             # also lists the acceptance tests deferred to later phases
 python -m pytest tests/test_graph.py::test_name -x
@@ -106,6 +106,17 @@ Two ordering rules the gate encodes and that new code must not invert:
 `materialize()` refuses a `Realization` whose parent is not the committed snapshot, and
 `ingest_external_results()` refuses results produced against anything but the committed head —
 external check results re-enter as `Evidence` through an ordinary transaction.
+
+**Interfaces and pins.** [fang/interfaces.py](fang/interfaces.py) is the catalogue and the pin
+model; [fang/lowering.py](fang/lowering.py) turns an interface connection into pin connections,
+choosing in declared order and recording each choice as a `Decision`. A port may name its
+peripheral instance (`peripheral="I2C1"`), and a candidate may carry a `Selector` or `AF(n)` cited
+from a `Cites` on the same part; the chosen pin's selector lands on the pin `Connection` as
+`selectors`, never on the `Pin`, because one pin serves several ports. An I2C port's address is a
+dimensionless parameter or a `Strap` keyed by the device's own pins.
+`compatibility.resolve_address` is the one reader of either: it resolves a strap from the inferred
+nets when asked and never stores the result beside the strap, so the addressing rule and anything
+else that needs an address cannot disagree.
 
 **Lowerings.** [fang/netlist.py](fang/netlist.py) projects a snapshot to a netlist and
 [fang/kicad.py](fang/kicad.py) emits it; [fang/schematic.py](fang/schematic.py) is the

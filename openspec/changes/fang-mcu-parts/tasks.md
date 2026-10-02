@@ -76,10 +76,10 @@ version 1.5, Section 9.3
 
 ## 5. Documents
 
-- [ ] 5.1 Document `peripheral`, selectors, `AF`, `Strap` and addressing on the
+- [x] 5.1 Document `peripheral`, selectors, `AF`, `Strap` and addressing on the
       interfaces reference page; add the example to `examples/README.md`;
       update `CLAUDE.md` and `CHANGELOG.md`; verify internal links resolve and
       quoted counts match the tree.
-- [ ] 5.2 Quote the requirement names in each touched module's docstring;
+- [x] 5.2 Quote the requirement names in each touched module's docstring;
       verify `openspec validate fang-mcu-parts --strict` and the whole suite
       pass.
