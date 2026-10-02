@@ -17,7 +17,7 @@ from conftest import FIXED_TIME
 
 from fang import diagnostics
 from fang.checks import DEFAULT_CHECKS
-from fang.cli import EXIT_FAILED, EXIT_OK, main
+from fang.cli import EXIT_FAILED, EXIT_OK, load_system, main
 from fang.constraints import CheckStatus, Comparison, Literal, Ref, Truth
 from fang.diagnostics import REGISTRY, FangError
 from fang.diff import ChangeClass
@@ -1973,6 +1973,27 @@ def test_evidence_a_retried_run_left_behind_is_not_a_change(tmp_path, ngspice, c
     captured = capsys.readouterr()
     assert "run 'fang build' first" not in captured.err
     assert "equation level, by the constraint evaluator; nothing runs" in captured.out
+
+
+def test_staleness_is_judged_on_the_committed_runs_beside_the_design(tmp_path, ngspice, monkeypatch):
+    """verify names a run on a since-rebuilt firmware as stale, from what was
+    committed. The firmware is found beside the program that declares the
+    part it runs on, so the parts stay in what is judged; with the runs alone,
+    every firmware read as missing from any other directory."""
+    import fang.emulation
+
+    judged = []
+    monkeypatch.setattr(fang.emulation, "stale", lambda snapshot: judged.append(snapshot) or ())
+    source = program(tmp_path)
+    assert main(["build", source, "-C", str(tmp_path)]) == EXIT_OK
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_OK
+    assert main(["verify", source, "-C", str(tmp_path)]) == EXIT_OK
+
+    committed = judged[-1]
+    elaborated = elaborate(load_system(Path(source)), project_id="PRJ-LOCAL").snapshot
+    assert set(elaborated.entities) <= set(committed.entities)
+    verification = verification_of(committed)
+    assert verification.result == "PASS" and verification.evidence[0] in committed.entities
 
 
 def test_a_relaxed_constraint_re_enters_a_recorded_failure(tmp_path, ngspice, capsys):

@@ -535,10 +535,13 @@ def cmd_verify(args) -> int:
 
     # Read from what was committed, not from the head: a run on a firmware
     # rebuilt since is no longer current, so the head no longer carries it.
+    # The design stays beside the runs, since a bound firmware is found
+    # beside the program that declares the part it runs on.
     facts = _measured_facts(workspace)
     if facts is not None:
         committed = result.snapshot.with_entities(
-            {**facts.verifications, **facts.evidence}, result.snapshot.revision_id
+            {**result.snapshot.entities, **facts.verifications, **facts.evidence},
+            result.snapshot.revision_id,
         )
         for label, path, recorded, current in stale(committed):
             print(
