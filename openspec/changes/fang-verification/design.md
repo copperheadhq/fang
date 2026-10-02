@@ -482,7 +482,15 @@ analysis is not runnable under SIM-0004, as one with no supply is.
 question the program left unrunnable or a measurement the gate refused for
 another reason, since the work the command names did not happen. Unsupported
 and unroutable are zero. Runs go to a scratch directory, and only `--commit`
-writes, into `.copperhead/simulations` and the record stream.
+writes, into `.copperhead/simulations` and the record stream. The head `verify`
+starts from is the program elaborated afresh with what runs measured carried in,
+which no transaction proposed, so `--commit` writes it only once the gate has
+seen it whole: every entity proposed against an empty snapshot with the default
+checks, exactly as `build` gates what it writes (the workspace keeps records,
+not typed entities, so the persisted head cannot be rebuilt to propose a
+re-elaboration against). A measurement still current under a constraint
+tightened since breaks a hard constraint, and the commit is refused with the
+gate's TXN-0002, as `build` would refuse it.
 
 **Re-elaboration keeps a measurement while it is current.** `carry_measurements`
 keeps an answered verification, its evidence and the values that evidence is the

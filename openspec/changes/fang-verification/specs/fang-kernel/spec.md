@@ -360,7 +360,10 @@ file's range SHALL be refused rather than extrapolated.
 The `verify` command SHALL route and run every declared question, print each
 question's level, tool, measurements, and result or the reason it did not run,
 exit non-zero when any verification failed, and persist measurements only when
-asked to commit into an existing workspace.
+asked to commit into an existing workspace. What it persists SHALL first pass
+the commit gate whole, as what `build` persists does; a design the gate rejects
+SHALL NOT be written, and the command SHALL report the gate's diagnostics and
+exit non-zero.
 
 #### Scenario: Verify reports each question
 
@@ -383,6 +386,13 @@ asked to commit into an existing workspace.
 
 - **WHEN** `verify` runs without being asked to commit
 - **THEN** the workspace is unchanged
+
+#### Scenario: A commit the gate rejects writes nothing
+
+- **WHEN** `verify` is asked to commit a design the commit gate rejects, such as
+  one holding a committed measurement that breaks a constraint tightened since
+- **THEN** nothing is written to the workspace
+- **AND** the command reports the gate's diagnostics and exits non-zero
 
 #### Scenario: A program with no questions says so
 

@@ -1646,6 +1646,31 @@ def test_a_commit_persists_and_a_rebuild_keeps_the_measured_value(tmp_path, ngsp
     assert len(ngspice.runs) == runs
 
 
+def test_verify_commits_only_what_the_gate_accepts(tmp_path, ngspice, capsys):
+    """A PASS committed at 1.59 kHz under a 2 kHz limit, and the limit then
+    tightened to 1.2 kHz. The measurement is still current, so the head
+    verify starts from holds a value that breaks a hard constraint; that head
+    was never proposed, and --commit refuses to write it, with the gate's
+    diagnostics, as build does."""
+    source = program(tmp_path)
+    workspace = Workspace(tmp_path)
+    assert main(["build", source, "-C", str(tmp_path)]) == EXIT_OK
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_OK
+    committed = snapshot_of(workspace.dir)
+    capsys.readouterr()
+
+    program(tmp_path, upper="1.2")
+    assert main(["verify", source, "-C", str(tmp_path), "--commit"]) == EXIT_FAILED
+    captured = capsys.readouterr()
+    assert captured.out.rstrip().endswith("FAIL")
+    assert "TXN-0002" in captured.err
+    assert "the commit gate rejected the verified design; nothing is committed" in captured.err
+    assert snapshot_of(workspace.dir) == committed
+    # What verify refused, build refuses too: the two persist through one gate.
+    assert main(["build", source, "-C", str(tmp_path)]) == EXIT_FAILED
+    assert "TXN-0002" in capsys.readouterr().err
+
+
 def test_a_relaxed_constraint_re_enters_a_recorded_failure(tmp_path, ngspice, capsys):
     """A FAIL left the corner unknown; with the constraint relaxed, verify
     does not print the old FAIL as current forever, nor run again: the

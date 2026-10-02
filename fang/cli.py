@@ -144,6 +144,23 @@ def _with_measurements(snapshot: Snapshot, workspace: Workspace, traits=None) ->
     return carried.with_entities(carried.entities, workspace.read_manifest().revision_id)
 
 
+def _gated(snapshot: Snapshot, reason: str):
+    """The gate's verdict on a whole design about to be persisted.
+
+    Every entity is proposed, as one transaction, against an empty snapshot
+    of the project, with the default checks, so the gate runs every check
+    class over all of it. Whatever `build` or `verify --commit` writes into
+    the workspace has passed this first: neither persists a state the gate
+    never saw.
+    """
+    graph = KernelGraph(Snapshot(snapshot.project_id, "REV-000000"), checks=DEFAULT_CHECKS)
+    operations = tuple(
+        AddEntity(entity=entity, reason=reason)
+        for entity in sorted(snapshot.entities.values(), key=lambda e: e.id)
+    )
+    return graph.propose(Transaction(graph.head.hash, operations))
+
+
 def _revision_number(revision_id: str) -> int:
     """Where a graph over a persisted head continues numbering revisions."""
     _, _, number = revision_id.partition("-")
@@ -158,14 +175,7 @@ def cmd_build(args) -> int:
     plan = result.plan.with_snapshot(snapshot.hash)
 
     # Canonical state advances only through the gate, even here.
-    graph = KernelGraph(
-        Snapshot(snapshot.project_id, "REV-000000"), checks=DEFAULT_CHECKS
-    )
-    operations = tuple(
-        AddEntity(entity=entity, reason="elaborated")
-        for entity in sorted(snapshot.entities.values(), key=lambda e: e.id)
-    )
-    proposal = graph.apply(Transaction(graph.head.hash, operations))
+    proposal = _gated(snapshot, "elaborated")
     if proposal.rejected:
         report_diagnostics(proposal.diagnostics)
         print("fang: the commit gate rejected the build", file=sys.stderr)
@@ -492,6 +502,17 @@ def cmd_verify(args) -> int:
         if workspace.read_manifest().snapshot == graph.head.hash:
             print("nothing new to commit")
         else:
+            # The head began as the program elaborated afresh with what runs
+            # measured carried in, which no transaction proposed; it is
+            # persisted only once the gate has seen it whole, as build's is.
+            proposal = _gated(graph.head, "verified")
+            if proposal.rejected:
+                report_diagnostics(proposal.diagnostics)
+                print(
+                    "fang: the commit gate rejected the verified design; nothing is committed",
+                    file=sys.stderr,
+                )
+                return EXIT_FAILED
             manifest = workspace.write_snapshot(graph.head)
             print(f"committed {manifest.entity_count} entities, snapshot {manifest.snapshot}")
 

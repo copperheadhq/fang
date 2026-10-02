@@ -109,6 +109,10 @@ change.
       measurements and result per question, exits non-zero on a failed
       verification, zero on an unsupported one and on a program with no
       questions, and leaves the workspace untouched without `--commit`.
+- [x] 6.2 Gate what `verify --commit` writes as `build` gates what it writes,
+      the whole design proposed against an empty snapshot with the default
+      checks; verify a design holding a measurement that breaks a tightened
+      constraint is refused with the gate's diagnostics and nothing written.
 
 ## 7. The spine's examples and acceptance test
 
