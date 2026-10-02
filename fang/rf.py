@@ -46,8 +46,12 @@ from .verification import (
     model_confidence,
 )
 
-#: Frequency units an option line may name, to hertz.
-FREQUENCY_UNITS = {"HZ": 1.0, "KHZ": 1e3, "MHZ": 1e6, "GHZ": 1e9}
+#: Frequency units an option line may name, to hertz. Decimal, so a file's
+#: last point scaled to hertz is the frequency a question names, not the
+#: binary float nearest it: 2.01 * 1e9 is 2009999999.9999998.
+FREQUENCY_UNITS = {
+    "HZ": Decimal(1), "KHZ": Decimal("1E3"), "MHZ": Decimal("1E6"), "GHZ": Decimal("1E9"),
+}
 FORMATS = ("RI", "MA", "DB")
 
 
@@ -59,22 +63,25 @@ class TouchstoneError(ValueError):
 class Network:
     """An N-port's scattering parameters, as the file gives them.
 
-    Frequencies are hertz, ascending; each point holds the N x N parameters
-    in the file's order, normalized to the file's reference resistance.
+    Frequencies are hertz, ascending, and decimal: they are scaled and
+    compared exactly, so a question at a point the file names is at that
+    point. Each point holds the N x N parameters in the file's order,
+    normalized to the file's reference resistance.
     """
 
     ports: int
-    frequencies: tuple[float, ...]
+    frequencies: tuple[Decimal, ...]
     parameters: tuple[tuple[complex, ...], ...]
     reference: float
 
     @property
-    def span(self) -> tuple[float, float]:
+    def span(self) -> tuple[Decimal, Decimal]:
         return self.frequencies[0], self.frequencies[-1]
 
-    def reflection(self, frequency: float) -> complex:
+    def reflection(self, frequency: Decimal | float | int) -> complex:
         """S11 at a frequency, interpolated linearly in real and imaginary
         parts between the two points around it; refused outside the file."""
+        frequency = _decimal_hertz(frequency)
         low, high = self.span
         if not low <= frequency <= high:
             raise TouchstoneError(
@@ -88,7 +95,7 @@ class Network:
             if points[index] > frequency:
                 f0, f1 = points[index - 1], points[index]
                 s0, s1 = self.parameters[index - 1][0], self.parameters[index][0]
-                weight = (frequency - f0) / (f1 - f0)
+                weight = float((frequency - f0) / (f1 - f0))
                 return s0 + (s1 - s0) * weight
         return self.parameters[-1][0]
 
@@ -100,8 +107,20 @@ class Network:
         return self.reference * (1 + reflection) / (1 - reflection)
 
 
-def _hertz(value: float) -> str:
-    return f"{format(value / 1e9, '.6g')} GHz" if value >= 1e9 else f"{format(value, '.6g')} Hz"
+def _decimal_hertz(value: Decimal | float | int) -> Decimal:
+    """A frequency as a Decimal; a float through its shortest decimal form,
+    never its binary expansion."""
+    if isinstance(value, Decimal):
+        return value
+    return Decimal(repr(value)) if isinstance(value, float) else Decimal(value)
+
+
+def _hertz(value: Decimal) -> str:
+    """A frequency for a person to read, at six significant figures."""
+    giga = Decimal("1E9")
+    if value >= giga:
+        return f"{format(float(value / giga), '.6g')} GHz"
+    return f"{format(float(value), '.6g')} Hz"
 
 
 def read_touchstone(text: str, *, ports: int) -> Network:
@@ -112,7 +131,7 @@ def read_touchstone(text: str, *, ports: int) -> Network:
     A file of Y, Z, H or G parameters is refused rather than read as S.
     """
     unit, form, reference = "GHZ", "MA", 50.0
-    numbers: list[float] = []
+    numbers: list[str] = []
     for raw in text.splitlines():
         line = raw.split("!", 1)[0].strip()
         if not line:
@@ -137,23 +156,34 @@ def read_touchstone(text: str, *, ports: int) -> Network:
             continue
         if line.startswith("["):
             raise TouchstoneError("version 2 keywords are not read")
+        # Kept as written: a frequency is read as a Decimal and a parameter as
+        # a float, each from the text the file holds.
+        tokens = line.split()
         try:
-            numbers.extend(float(token) for token in line.split())
+            for token in tokens:
+                float(token)
         except ValueError:
             raise TouchstoneError(f"{line!r} is not a line of numbers") from None
+        numbers.extend(tokens)
 
     width = 1 + 2 * ports * ports
     if not numbers or len(numbers) % width:
         raise TouchstoneError(
             f"the data does not divide into points of {width} numbers for {ports} port(s)"
         )
-    frequencies: list[float] = []
+    frequencies: list[Decimal] = []
     parameters: list[tuple[complex, ...]] = []
     for start in range(0, len(numbers), width):
         point = numbers[start:start + width]
-        frequencies.append(point[0] * FREQUENCY_UNITS[unit])
+        try:
+            frequency = Decimal(point[0]) * FREQUENCY_UNITS[unit]
+        except ArithmeticError:
+            raise TouchstoneError(f"{point[0]!r} is not a frequency") from None
+        if not frequency.is_finite():
+            raise TouchstoneError(f"{point[0]!r} is not a frequency")
+        frequencies.append(frequency)
         values = []
-        for first, second in zip(point[1::2], point[2::2]):
+        for first, second in zip(map(float, point[1::2]), map(float, point[2::2])):
             if form == "RI":
                 values.append(complex(first, second))
             elif form == "MA":
@@ -306,7 +336,7 @@ class TouchstoneTool:
 
             frequency = si_magnitude(measure.at)
             low, high = network.span
-            if not low <= float(frequency) <= high:
+            if not low <= frequency <= high:
                 raise NotRunnable(
                     f"{question.label} asks for {measure.at}, outside {path}'s range, "
                     f"{_hertz(low)} to {_hertz(high)}; nothing is extrapolated",
@@ -409,13 +439,13 @@ class TouchstoneTool:
                 if "sha256:" + hashlib.sha256(data).hexdigest() != job.inputs[measure["model"]]:
                     raise TouchstoneError(f"{measure['model']} changed after the job was prepared")
                 network = read_touchstone(data.decode("utf-8", errors="replace"), ports=measure["ports"])
-                frequency = float(Decimal(measure["at"]))
+                frequency = Decimal(measure["at"])
                 load = network.impedance(network.reflection(frequency))
                 ladder = [
                     Element(e["name"], e["kind"], e["device"], float(Decimal(e["value"])))
                     for e in chain
                 ]
-                seen = one_port(load, ladder, 2 * math.pi * frequency)
+                seen = one_port(load, ladder, 2 * math.pi * float(frequency))
                 loss = quantize(return_loss(seen, float(Decimal(measure["reference"]))))
                 results[measure["name"]] = {"value": loss}
         except (KeyError, OSError, ValueError) as exc:

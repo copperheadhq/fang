@@ -271,6 +271,25 @@ def test_a_frequency_outside_the_file_is_refused_naming_the_range(tmp_path):
     assert outcome.status == NOT_RUNNABLE and outcome.result == "UNKNOWN"
 
 
+def test_a_question_at_the_files_last_point_is_inside_its_range(tmp_path):
+    """2.01 GHz scaled to hertz in binary floats is 2009999999.9999998, just
+    below the 2.01 GHz a question names, which was then refused as outside
+    the file. Frequencies are scaled and compared as decimals."""
+    network = read_touchstone("# GHZ S RI R 50\n2.00 0 0\n2.01 0.5 0\n", ports=1)
+    assert network.span == (Decimal("2.00E9"), Decimal("2.01E9"))
+    assert network.reflection(Decimal("2010000000")) == complex(0.5, 0)
+
+    model = tmp_path / "antenna.s1p"
+    model.write_text("# GHZ S RI R 50\n1.99 0 0\n2.00 0 0\n2.01 0.333333333333 0\n")
+    result = elaborate(matched(model, at=2.01 * GHz, through=()), project_id=PROJECT)
+    job = TOUCHSTONE.prepare(result.snapshot, questions(result.snapshot)[0], traits=result.traits)
+    assert '"at":"2010000000"' in job.input
+
+    graph, outcome = evaluate(tmp_path, matched(model, at=2.01 * GHz, through=()))
+    assert outcome.status != NOT_RUNNABLE
+    assert outcome.measurements[0].quantity == Quantity.scalar("9.54243", "dB")
+
+
 def test_confidence_is_bounded_by_the_models_provenance(tmp_path):
     model = write_model(tmp_path / "antenna.s1p", LOAD)
     _, assumed = evaluate(tmp_path / "a", matched(model, provenance=assumed_provenance("synthetic")))
