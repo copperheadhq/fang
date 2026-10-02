@@ -1156,3 +1156,65 @@ def test_a_scratch_path_with_a_space_is_reported_unsupported_through_verify(monk
                      tools=_stand_in_tools(Checked()), workspace=tmp_path / "runs")
     assert outcome.status == "unsupported" and "space" in outcome.message
     assert graph.head.hash == result.snapshot.hash
+
+
+@pytest.mark.parametrize(
+    "quantity",
+    [
+        {"kind": "range", "unit": "degC", "min": "20", "max": "30"},
+        {"kind": "tolerance", "unit": "degC", "nominal": "25", "tolerance": {"kind": "relative", "value": "1"}},
+    ],
+)
+def test_a_stimulus_of_more_than_one_value_is_refused(quantity):
+    # The conversion's value was None, and the plan raised AttributeError.
+    from fang.emulation import EmulationError, compile_plan
+
+    result, paths = _board()
+    stimuli = [{"at": _scalar("0", "ms"), "surface": "env", "input": "temperature", "quantity": quantity}]
+    with pytest.raises(EmulationError, match="temperature") as refused:
+        compile_plan(result.snapshot, _Question(_startup_data(paths, stimuli=stimuli)), traits=result.traits)
+    assert refused.value.code == "stimulus"
+
+
+def test_a_ranged_stimulus_leaves_verify_standing(tmp_path):
+    # answer() catches only NotRunnable, so the AttributeError ended fang verify.
+    from fang.emulation import At, Emulates
+    from fang.units import Quantity
+    from fang.verification import NOT_RUNNABLE
+
+    original = SENSOR_NODE.SensorNode.startup
+
+    class Ranged(SENSOR_NODE.SensorNode):
+        startup = Emulates(
+            "sensor_ready", run_until=original.run_until,
+            stimuli=[At(0 * SENSOR_NODE.ms, "env.temperature", Quantity.range(20, 30, "degC"))],
+            measures=original.measures, abstracted=original.abstracted,
+        )
+
+    result = _elaborate(Ranged)
+    graph = KernelGraph(result.snapshot, checks=DEFAULT_CHECKS)
+    outcome = answer(graph, _question(graph.head, "startup"), traits=result.traits,
+                     tools=_stand_in_tools(), workspace=tmp_path)
+    assert outcome.status == NOT_RUNNABLE and "temperature" in outcome.message
+
+
+@pytest.mark.parametrize("at", [_scalar("3", "s"), _scalar("-1", "ms")])
+def test_a_stimulus_outside_the_run_is_refused_as_a_stimulus(at):
+    # One after the run's end was refused by the lowering, as SIM-0003 "a
+    # surface or part that resolves to no pins".
+    from fang.emulation import RENODE, At, Emulates
+    from fang.units import Quantity
+
+    original = SENSOR_NODE.SensorNode.startup
+
+    class Late(SENSOR_NODE.SensorNode):
+        startup = Emulates(
+            "sensor_ready", run_until=original.run_until,
+            stimuli=[At(Quantity.from_dict(at), "env.temperature", 25 * SENSOR_NODE.degC)],
+            measures=original.measures, abstracted=original.abstracted,
+        )
+
+    result = _elaborate(Late)
+    with pytest.raises(NotRunnable) as refused:
+        RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
+    assert refused.value.code == "SIM-0012" and "env.temperature" in str(refused.value)

@@ -1068,6 +1068,13 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
                 )
     watched = tuple(PlanWatch(_probe_name(f"{b.emulator}_warnings"), b.emulator, b.port) for b in buses)
 
+    if "run_until" not in scenario:
+        raise _refuse("the question names no run duration, and none is assumed", "duration")
+    run_until = _quantity_from(scenario["run_until"])
+    run_until_ns = _nanoseconds(run_until)
+    if run_until_ns <= 0:
+        raise _refuse(f"the run lasts {run_until}, and a run observes nothing in no time", "duration")
+
     stimuli = []
     assumptions = [f"the core runs at {platform.document['core_clock_hz']} Hz, as the platform model assumes"]
     for stimulus in scenario.get("stimuli", ()):
@@ -1077,6 +1084,12 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
         if model is None or name not in model.inputs:
             raise _refuse(f"the model of {_path(entities, component)} accepts no input {name!r}", "stimulus")
         quantity = _quantity_from(stimulus["quantity"])
+        if quantity.kind != "scalar":
+            raise _refuse(
+                f"{stimulus['surface']}.{name} is set to {quantity}, a {quantity.kind}: a "
+                "stimulus sets the model's input to one value",
+                "stimulus",
+            )
         try:
             converted, _ = quantity.converted_to(model.inputs[name]["unit"])
         except Exception as exc:
@@ -1085,13 +1098,15 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
             ) from exc
         device = next(d for b in buses for d in b.devices if d.component == component)
         at = _nanoseconds(_quantity_from(stimulus["at"]))
+        if not 0 <= at <= run_until_ns:
+            raise _refuse(
+                f"the stimulus on {stimulus['surface']}.{name} at {_quantity_from(stimulus['at'])} "
+                f"falls outside the run, from 0 to {run_until}, so it would never be applied",
+                "stimulus",
+            )
         stimuli.append(PlanStimulus(at, component, device.probe, name, model.inputs[name]["property"],
                                     format(converted.value.normalize(), "f"), model.inputs[name]["unit"]))
         assumptions.append(f"{stimulus['surface']}.{name} is {quantity} from {_quantity_from(stimulus['at'])}")
-
-    if "run_until" not in scenario:
-        raise _refuse("the question names no run duration, and none is assumed", "duration")
-    run_until_ns = _nanoseconds(_quantity_from(scenario["run_until"]))
 
     # -- measures ------------------------------------------------------------
     def match_record(match: Mapping[str, Any]) -> dict:
