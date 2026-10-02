@@ -161,6 +161,10 @@ UNITS: Mapping[str, _UnitDef] = {
     "rad": _d(DIMENSIONLESS, prefixable=False),
     "percent": _d(DIMENSIONLESS, "0.01", prefixable=False),
     "ppm": _d(DIMENSIONLESS, "0.000001", prefixable=False),
+    # A ratio on a logarithmic scale. Dimensionless, and compared only with
+    # other decibels: the factor is 1 because nothing converts a decibel into
+    # a linear ratio here, and a constraint in dB is written in dB.
+    "dB": _d(DIMENSIONLESS, prefixable=False),
     # accepted non-SI
     "min": _d(_T, "60", prefixable=False),
     "h": _d(_T, "3600", prefixable=False),

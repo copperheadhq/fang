@@ -681,6 +681,98 @@ class Checks(QuestionDeclaration):
         }
 
 
+@dataclass(frozen=True)
+class ReturnLoss(Measure):
+    """How much of what is sent into a port comes back: -20 log10 |Gamma|, in dB.
+
+    Taken at a part carrying a Touchstone model, at one frequency, through the
+    matching parts named in order from the port toward the model, and against
+    a reference impedance, 50 Ohm unless the question says otherwise. Each
+    matching part is a series or a shunt element by how the graph connects it,
+    and its value is the one the graph holds.
+    """
+
+    at: Quantity = field(kw_only=True)
+    through: tuple[str, ...] = field(default=(), kw_only=True)
+    reference: Quantity = field(
+        default_factory=lambda: Quantity.scalar("50", "Ohm"), kw_only=True
+    )
+
+    kind = "return_loss"
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "through", tuple(self.through))
+        if self.at.dimension != FREQUENCY:
+            raise error(
+                UNIT_DIMENSION_MISMATCH,
+                f"a return loss at {self.surface} is taken at a frequency, not {self.at.unit}",
+            )
+        if self.reference.dimension != RESISTANCE:
+            raise error(
+                UNIT_DIMENSION_MISMATCH,
+                f"a return loss at {self.surface} is against a resistance, not "
+                f"{self.reference.unit}",
+            )
+
+    def produces(self, analysis: str | None) -> Dimension | None:
+        return Unit.parse("dB").dimension
+
+    def fields(self) -> dict:
+        # The matching parts are a chain, so each carries its position: the
+        # record stream sorts a list it does not know to be ordered.
+        return {
+            "at": self.at.as_dict(),
+            "reference": self.reference.as_dict(),
+            "through": [
+                {"position": position, "part": part}
+                for position, part in enumerate(self.through)
+            ],
+        }
+
+    @classmethod
+    def read(cls, payload: Mapping) -> "Measure":
+        chain = sorted(payload.get("through", ()), key=lambda link: link["position"])
+        return cls(
+            payload["surface"],
+            at=Quantity.from_dict(payload["at"]),
+            through=tuple(link["part"] for link in chain),
+            reference=Quantity.from_dict(payload["reference"]),
+        )
+
+
+class Evaluates(QuestionDeclaration):
+    """A question over a data model a part carries -- a vendor's or an
+    instrument's network parameters -- answered by reading the data and
+    composing the named parts in closed form, at the equation level.
+
+    Each matching part a measure names is resolved here, while the module tree
+    is in hand, to the one component it is.
+    """
+
+    fixed_method = "analysis"
+
+    def question_fields(self, module) -> dict:
+        parts: dict[str, str] = {}
+        for measure in self.measures.values():
+            for name in getattr(measure, "through", ()):
+                found = resolve_parts(module, name, location=self._source)
+                if len(found) != 1:
+                    raise error(
+                        SIM_UNRESOLVED_SURFACE,
+                        f"{name!r} holds {len(found)} parts; a matching element is one part",
+                        location=self._source,
+                    )
+                parts[name] = found[0]["component"]
+        return {
+            "evaluation": {
+                "parts": [
+                    {"name": name, "component": component}
+                    for name, component in sorted(parts.items())
+                ]
+            }
+        }
+
+
 # --------------------------------------------------------------------------
 # A question, read from the graph
 # --------------------------------------------------------------------------
@@ -1566,10 +1658,12 @@ XYCE = SpiceTool("xyce", XyceDialect(), XyceBackend())
 
 def builtin_tools() -> tuple[Tool, ...]:
     """The tools fang ships, in their documented routing order: ngspice and
-    xyce at the circuit level, then kicad-erc at the external level."""
+    xyce at the circuit level, kicad-erc at the external level, and
+    touchstone at the equation level."""
+    from .rf import TOUCHSTONE
     from .rulecheck import KICAD_ERC
 
-    return (NGSPICE, XYCE, KICAD_ERC)
+    return (NGSPICE, XYCE, KICAD_ERC, TOUCHSTONE)
 
 
 def default_tools() -> ToolRegistry:
@@ -1585,9 +1679,9 @@ TOOLS = ToolRegistry(builtins=builtin_tools)
 def register_tool(tool: Tool, *, before: str | None = None, registry: ToolRegistry | None = None) -> Tool:
     """Make a tool available to routing, after the tools already registered.
 
-    The documented order is the built-ins first -- ngspice, xyce, kicad-erc --
-    and then each tool in the order it registers; `before` names a tool to
-    precede instead.
+    The documented order is the built-ins first -- ngspice, xyce, kicad-erc,
+    touchstone -- and then each tool in the order it registers; `before`
+    names a tool to precede instead.
     """
     return (TOOLS if registry is None else registry).register(tool, before=before)
 

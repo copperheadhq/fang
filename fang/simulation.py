@@ -589,20 +589,20 @@ class ModelFile:
     subcircuit: Subcircuit
 
 
-def load_model(component: Component, trait: Simulatable) -> ModelFile:
-    """Find, digest and read the model a part's trait names.
+def model_path(component: Component, source: str) -> tuple[str, Path]:
+    """Where a part's model file is, and how a run's workspace names it.
 
     A relative source is resolved against the folder of the program that
-    declared the part, which its source location gives. The deck refers to
-    the file by that same relative path, so nothing machine-specific reaches
-    the deck, the job's hash or the evidence.
+    declared the part, which its source location gives, and is named in the
+    workspace by that same relative path, so nothing machine-specific reaches
+    a job, its hash or the evidence. An absolute or escaping path is named
+    `models/<file>`.
     """
-    import hashlib
     from pathlib import PurePosixPath
 
-    if not trait.source:
+    if not source:
         raise SimulationError(f"{component.id}'s model names no file")
-    written = Path(trait.source)
+    written = Path(source)
     if written.is_absolute():
         location = written
     elif component.source_location is not None:
@@ -610,19 +610,24 @@ def load_model(component: Component, trait: Simulatable) -> ModelFile:
     else:
         location = Path.cwd() / written
 
-    relative = PurePosixPath(trait.source)
+    relative = PurePosixPath(source)
     if relative.is_absolute() or ".." in relative.parts:
         relative = PurePosixPath("models") / relative.name
-
     if not location.is_file():
-        raise SimulationError(
-            f"{component.id}'s model {trait.source} is not a file at {location}"
-        )
+        raise SimulationError(f"{component.id}'s model {source} is not a file at {location}")
+    return relative.as_posix(), location
+
+
+def load_model(component: Component, trait: Simulatable) -> ModelFile:
+    """Find, digest and read the subcircuit model a part's trait names."""
+    import hashlib
+
+    relative, location = model_path(component, trait.source)
     data = location.read_bytes()
     subcircuit = read_subcircuit(data.decode("utf-8", errors="replace"), source=trait.source)
     return ModelFile(
         component.id,
-        relative.as_posix(),
+        relative,
         str(location),
         "sha256:" + hashlib.sha256(data).hexdigest(),
         subcircuit,

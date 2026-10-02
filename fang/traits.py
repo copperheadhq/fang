@@ -103,6 +103,23 @@ class Simulatable(Trait):
 
 
 @dataclass
+class Touchstone(Trait):
+    """A part's network parameters, carried as data: a Touchstone file.
+
+    `source` names the `.sNp` file, relative to the program that declares the
+    part; `ports` names the part's pins in the file's port order. The
+    provenance says where the numbers came from -- a vendor, a network
+    analyser, or nobody -- and bounds the confidence of every answer read from
+    them. The file is read in-tree; nothing is simulated.
+    """
+
+    protocol = "touchstone"
+    source: str = ""
+    ports: tuple[str, ...] = ()
+    provenance: Provenance = field(default_factory=Provenance)
+
+
+@dataclass
 class Renderable(Trait):
     """A hint for the view compiler. It carries no geometry and no meaning."""
 

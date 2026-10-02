@@ -137,23 +137,23 @@ change.
 
 ## 10. Touchstone
 
-- [ ] 10.1 Add the `Touchstone` trait to `fang/traits.py` (source, ports,
+- [x] 10.1 Add the `Touchstone` trait to `fang/traits.py` (source, ports,
       provenance); verify it registers and enumerates like `Simulatable`.
-- [ ] 10.2 Add the `ReturnLoss` measure and the `Evaluates` declaration,
+- [x] 10.2 Add the `ReturnLoss` measure and the `Evaluates` declaration,
       refusing a `result`; verify a declaration with a result raises.
-- [ ] 10.3 Add `fang/rf.py`: read `.s1p`/`.s2p` with option-line units, the RI,
+- [x] 10.3 Add `fang/rf.py`: read `.s1p`/`.s2p` with option-line units, the RI,
       MA and DB formats and reference resistance, and interpolate; verify two
       files in different formats give the same measurement, and that a frequency
       outside the range is refused naming the range.
-- [ ] 10.4 Compose named series and shunt parts into the one-port from the
+- [x] 10.4 Compose named series and shunt parts into the one-port from the
       graph's values, leaving the question unanswered when a value is unknown;
       verify against a hand-computed match.
-- [ ] 10.5 Quantize to six significant figures at the `Decimal` boundary; verify
+- [x] 10.5 Quantize to six significant figures at the `Decimal` boundary; verify
       the measurement's text is stable.
-- [ ] 10.6 Add `examples/antenna_match/`: a chip antenna's Touchstone model
+- [x] 10.6 Add `examples/antenna_match/`: a chip antenna's Touchstone model
       through an L match, return loss at 2.44 GHz; the model file is synthetic
       and says so in its header and provenance; README and `out/`.
-- [ ] 10.7 Add `tests/test_rf.py` covering the delta spec's Touchstone
+- [x] 10.7 Add `tests/test_rf.py` covering the delta spec's Touchstone
       scenarios; verify the whole suite passes.
 
 ## 11. Documents

@@ -519,7 +519,7 @@ def answered(tmp_path, system=Filter, stdout=FILTER_OUTPUT, **kwargs):
 
 
 def test_the_default_registry_holds_its_tools_in_routing_order():
-    assert default_tools().names() == ["ngspice", "xyce", "kicad-erc"]
+    assert default_tools().names() == ["ngspice", "xyce", "kicad-erc", "touchstone"]
     assert isinstance(NGSPICE, Tool)
     assert isinstance(Spy("spy"), Tool)
 
@@ -528,9 +528,9 @@ def test_a_tool_registers_after_the_built_ins_or_before_a_tool_it_names():
     registry = default_tools()
     register_tool(Spy("late"), registry=registry)
     register_tool(Spy("early"), before="ngspice", registry=registry)
-    assert registry.names() == ["early", "ngspice", "xyce", "kicad-erc", "late"]
+    assert registry.names() == ["early", "ngspice", "xyce", "kicad-erc", "touchstone", "late"]
     register_tool(Spy("late", level=Level.EXTERNAL), registry=registry)
-    assert registry.names() == ["early", "ngspice", "xyce", "kicad-erc", "late"]
+    assert registry.names() == ["early", "ngspice", "xyce", "kicad-erc", "touchstone", "late"]
     assert registry.get("late").level is Level.EXTERNAL
 
 

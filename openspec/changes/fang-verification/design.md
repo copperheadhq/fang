@@ -519,6 +519,27 @@ asks, and a trimmed capture is the parser's fixture. `Checks` defaults to no
 named tool and routes by method; the built-in tools load on first use of the
 registry, because `rulecheck.py` imports `verification.py`.
 
+**Touchstone questions.** `Evaluates` fixes the method `analysis`, which
+routes to the equation level, where the in-tree `touchstone` tool covers a
+question whose measures are all `ReturnLoss`. The tool is always available and
+its version is fang's. `through` names the matching parts in order from the
+port toward the model; the record carries each with its position, because the
+record stream sorts any list it does not know to be ordered. A part is a shunt
+element when one of its terminals is on ground and a series element otherwise,
+and its value is the inductance, capacitance or resistance the graph holds.
+Return loss is positive, -20 log10 |Gamma|, against a reference of 50 Ohm
+unless the measure names another; the file's own reference is honoured when
+the load is read back from S11, which is how files in different references
+agree. A file of more than one port is read at port 1 with the others
+terminated in the file's reference, and the job says so. Interpolation is
+linear in real and imaginary parts. The run re-reads the declared file and
+refuses one whose digest has changed since preparation. A perfect match is an
+infinite return loss. Decibels needed a unit: `dB` is dimensionless with a
+factor of 1, compared only with decibels, and `GHz`, `nH` and `dB` join the
+literals `fang.lang` exports. The design's sketch names `("series_l",
+"shunt_c")`; the shipped example's antenna is below 50 Ohm, so its match puts
+the shunt part at the port, `("shunt_c", "series_l")`.
+
 **Infinity.** A quantity bound may be infinite; it serializes as `Infinity`,
 which `Decimal` reads back, and compares under interval semantics. A NaN is
 refused.
