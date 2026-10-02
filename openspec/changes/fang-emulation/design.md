@@ -326,7 +326,12 @@ A run that ended `timeout` or `crashed` produces no measurement. A
 that model's events, and the evidence names the warning. A warning the
 descriptor expects, such as the I2C controller's on every write to CCR and
 TRISE, withdraws nothing and is recorded as the coverage gap the descriptor
-names for it; a recorded run that completes carries 22 or 23 of them.
+names for it; a recorded run that completes carries 22 or 23 of them. A
+warning is matched only against its own model's descriptor: the plan records
+which descriptor expects each pattern, a device's probe records its model's
+warnings under the device, and the platform's peripherals are watched under
+their bus, so a pattern the platform expects never excuses the same text from
+the sensor.
 
 ### `RenodeBackend`
 

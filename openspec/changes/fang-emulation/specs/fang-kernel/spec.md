@@ -303,7 +303,8 @@ SHALL produce no value. A measure over a model that reported a warning its
 descriptor does not expect SHALL produce no value, and the evidence SHALL name
 the warning. A warning the model's descriptor expects SHALL NOT withdraw a
 measure; it SHALL be recorded on the evidence as the coverage gap the
-descriptor says it stands for.
+descriptor says it stands for. A warning SHALL be matched only against the
+expected warnings of the descriptor of the model that reported it.
 
 #### Scenario: A read that never happens fails its bound
 
@@ -336,6 +337,14 @@ descriptor says it stands for.
   descriptor lists as an expected warning
 - **THEN** the measures over the bus keep their values
 - **AND** the evidence lists the coverage gap the descriptor names for it
+
+#### Scenario: A warning is expected only by its own model's descriptor
+
+- **WHEN** the sensor's model reports a warning that the platform's descriptor
+  lists as expected and the sensor's descriptor does not
+- **THEN** every measure over the sensor's events has no value
+- **AND** a warning only the sensor's descriptor expects, reported by the
+  platform's I2C controller, withdraws the measures over the bus
 
 ### Requirement: Emulation Runs Are Deterministic And Identified
 

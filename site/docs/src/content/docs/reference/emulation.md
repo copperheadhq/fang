@@ -186,7 +186,9 @@ Three rules keep a measure honest:
   descriptor does not expect means the firmware did something the model does
   not cover; every measure over that model has no value, and the evidence
   names the warning. A warning the descriptor expects is the coverage gap it
-  stands for.
+  stands for. A warning is matched only against the descriptor of the model
+  that raised it, so text the platform expects from its I2C controller still
+  withdraws the measures over the sensor when the sensor's model reports it.
 - **Pin configuration is measured.** Renode's I2C and UART controllers do not
   consult the pins' configuration, so firmware with the wrong pin setup would
   pass every bus measure. `PinConfig` reads what the firmware wrote to the

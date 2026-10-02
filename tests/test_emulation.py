@@ -98,7 +98,9 @@ def plan(*, absent: bool = False, status_pin: int = 5, stimuli=None, run_until_n
             "reported": {"kind": "uart_value", "entity": "mcu.usart2", "prefix": "temp=", "unit": "degC"},
             "mux_mismatches": {"kind": "pin_config", "entity": "mcu.i2c1"},
         },
-        expected_warnings=tuple(descriptor("fang:stm32f401re").expected_warnings),
+        expected_warnings=tuple(
+            {"model": "fang:stm32f401re", **w} for w in descriptor("fang:stm32f401re").expected_warnings
+        ),
     )
 
 
@@ -277,6 +279,47 @@ def test_expected_warnings_are_coverage_gaps_not_withdrawals():
     record = recorded("startup")
     assert "I2C bus timing (CCR, TRISE)" in coverage_gaps_observed(record, plan())
     assert measured(plan(), record)["first_read"].quantity is not None
+
+
+def _warned(source: str, text: str) -> RunRecord:
+    """The startup run with one more model warning, recorded under `source`."""
+    events = list(recorded("startup").events)
+    warning = Event(events[3].seq, events[3].t_ns, source, "model.warning", {"text": text})
+    later = (Event(e.seq + 1, e.t_ns, e.source, e.type, e.payload) for e in events[3:])
+    return RunRecord((*events[:3], warning, *later), "completed")
+
+
+def test_a_warning_the_platform_expects_still_withdraws_the_sensors_measures():
+    # The patterns were pooled across descriptors, so a sensor warning that
+    # matched the platform's timing-register pattern was taken as expected.
+    text = "Unhandled write to offset 0x1C. Unhandled bits: [4, 6] when writing value 0x50."
+    m = measured(plan(), _warned("env", text))
+    assert m["first_read"].quantity is None
+    assert "withdrawn: env" in m["first_read"].reason and "0x1C" in m["first_read"].reason
+    assert m["slow_blinks"].quantity is not None
+
+
+def test_a_warning_the_sensor_expects_is_expected_only_of_the_sensor():
+    p = plan()
+    quirk = {"model": "renode:Sensors.HS3001", "gap": "the sensor's quirk", "pattern": "Sensor quirk"}
+    quirky = EmulationPlan(**{**p.__dict__, "expected_warnings": (*p.expected_warnings, quirk)})
+
+    from_sensor = _warned("env", "Sensor quirk at 0x44")
+    assert measured(quirky, from_sensor)["first_read"].quantity is not None
+    assert "the sensor's quirk" in coverage_gaps_observed(from_sensor, quirky)
+
+    from_bus = _warned("mcu.i2c1", "Sensor quirk at 0x44")
+    assert measured(quirky, from_bus)["first_read"].quantity is None
+    assert "the sensor's quirk" not in coverage_gaps_observed(from_bus, quirky)
+
+
+def test_each_expected_warning_in_a_plan_names_its_descriptor():
+    from fang.emulation import compile_plan
+
+    result, paths = _board()
+    compiled = compile_plan(result.snapshot, _Question(_startup_data(paths)), traits=result.traits)
+    assert {w["model"] for w in compiled.expected_warnings} == {"fang:stm32f401re"}
+    assert [dict(w) for w in compiled.expected_warnings] == [dict(w) for w in plan().expected_warnings]
 
 
 def test_a_push_pull_build_is_caught_though_every_transaction_succeeded():

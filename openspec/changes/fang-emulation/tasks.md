@@ -205,3 +205,8 @@ and recorded files the later tests read — each reviewed again as it lands.
 - [x] 11.10 Refuse a run duration that is not positive under SIM-0014 where
       `Emulates` is written, when the plan compiles, and in the lowering;
       verify zero and a negative duration at each.
+- [x] 11.11 Match a model warning only against the expected warnings of its
+      own model's descriptor, each expected warning in the plan naming its
+      descriptor; verify a sensor warning the platform expects withdraws the
+      sensor's measures, and a bus warning the sensor expects withdraws the
+      bus's; regenerate `sensor_node`'s plans.

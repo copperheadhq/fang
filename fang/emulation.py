@@ -504,17 +504,29 @@ def _after_end(record: RunRecord, since_ns: int = 0) -> Quantity:
     return Quantity.range(_seconds(record.end_ns - since_ns), INFINITY, "s")
 
 
+def _expected_of(plan: EmulationPlan, source: str) -> tuple[Mapping[str, str], ...]:
+    """The warnings expected of the model that raised one recorded under
+    `source`: a device's probe records its own model's warnings under the
+    device, and every other source is a peripheral of the platform, watched
+    under its bus. Another descriptor's patterns never excuse a warning, and
+    an entry naming no descriptor is expected of none."""
+    device = plan.device(source)
+    model = device.model if device is not None else plan.platform
+    return tuple(w for w in plan.expected_warnings if w.get("model") == model)
+
+
+def _expected_matches(plan: EmulationPlan, event: Event) -> tuple[Mapping[str, str], ...]:
+    text = event.payload.get("text", "")
+    return tuple(w for w in _expected_of(plan, event.source) if re.search(w["pattern"], text))
+
+
 def withdrawals(record: RunRecord, plan: EmulationPlan) -> dict[str, str]:
     """Sources whose model warned of something its descriptor does not expect."""
-    patterns = [re.compile(w["pattern"]) for w in plan.expected_warnings]
     withdrawn: dict[str, str] = {}
     for event in record.events:
-        if event.type != "model.warning":
+        if event.type != "model.warning" or _expected_matches(plan, event):
             continue
-        text = event.payload.get("text", "")
-        if any(p.search(text) for p in patterns):
-            continue
-        withdrawn.setdefault(event.source, text)
+        withdrawn.setdefault(event.source, event.payload.get("text", ""))
     return withdrawn
 
 
@@ -524,9 +536,7 @@ def coverage_gaps_observed(record: RunRecord, plan: EmulationPlan) -> tuple[str,
     for event in record.events:
         if event.type != "model.warning":
             continue
-        for warning in plan.expected_warnings:
-            if re.search(warning["pattern"], event.payload.get("text", "")):
-                gaps.add(warning["gap"])
+        gaps.update(warning["gap"] for warning in _expected_matches(plan, event))
     return tuple(sorted(gaps))
 
 
@@ -1160,11 +1170,13 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
             out = {"kind": kind, "entity": resolved(record["surface"])["port"]}
         measures[name] = out
 
+    # Each expected warning names the descriptor that expects it, so a run
+    # matches a warning only against its own model's patterns.
     gaps = set(platform.not_modelled)
-    expected = list(platform.expected_warnings)
-    for model in device_descriptors.values():
+    expected = [{"model": platform.id, **w} for w in platform.expected_warnings]
+    for model in sorted({m.id: m for m in device_descriptors.values()}.values(), key=lambda m: m.id):
         gaps.update(model.not_modelled)
-        expected.extend(model.expected_warnings)
+        expected.extend({"model": model.id, **w} for w in model.expected_warnings)
     for component, name in abstracted.items():
         gaps.add(f"{name} is abstracted, not modelled")
 
