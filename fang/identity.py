@@ -242,6 +242,21 @@ class Identity:
             out["display_name"] = self.display_name
         return out
 
+    @classmethod
+    def from_dict(cls, payload: Mapping) -> "Identity":
+        """Read an identity back from its record. The inverse of `as_dict`."""
+        path = payload.get("path")
+        value = payload.get("uuid")
+        return cls(
+            payload["id"],
+            Origin(payload["origin"]),
+            path=Path.parse(path) if path is not None else None,
+            uuid=uuid.UUID(value) if value is not None else None,
+            key=payload.get("key"),
+            external_id=payload.get("external_id"),
+            display_name=payload.get("display_name"),
+        )
+
 
 def derive(
     project_id: str,

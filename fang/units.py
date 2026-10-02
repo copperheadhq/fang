@@ -467,6 +467,31 @@ class Quantity:
             exact,
         )
 
+    @classmethod
+    def from_dict(cls, payload: Mapping) -> "Quantity":
+        """Read a quantity back from its record. The inverse of `as_dict`."""
+
+        def magnitude(key: str) -> Decimal | None:
+            text = payload.get(key)
+            return None if text is None else Decimal(str(text))
+
+        tolerance = payload.get("tolerance")
+        return cls(
+            payload["kind"],
+            Unit.parse(payload["unit"]),
+            value=magnitude("value"),
+            minimum=magnitude("min"),
+            maximum=magnitude("max"),
+            typical=magnitude("typical"),
+            nominal=magnitude("nominal"),
+            tolerance=(
+                Tolerance(tolerance["kind"], Decimal(str(tolerance["value"])))
+                if tolerance is not None
+                else None
+            ),
+            conditions=dict(payload.get("conditions", {})),
+        )
+
     def as_dict(self) -> dict:
         out: dict = {"kind": self.kind, "unit": self.unit.symbol}
         for name, key in (

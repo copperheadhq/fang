@@ -19,16 +19,16 @@ change.
 
 ## 2. Declaring questions
 
-- [ ] 2.1 Add the circuit measure specs (`PeakToPeak`, `Average`, `Maximum`,
+- [x] 2.1 Add the circuit measure specs (`PeakToPeak`, `Average`, `Maximum`,
       `Minimum`, `ValueAt`, `Crossing`) and the `Simulates` declaration in
       `fang/verification.py`, refusing a `result`; verify a declaration with a
       result raises.
-- [ ] 2.2 Elaborate a question into a `Verification` with result `UNKNOWN` and
+- [x] 2.2 Elaborate a question into a `Verification` with result `UNKNOWN` and
       `extensions["question"]` holding the canonical question dictionary, with
       every surface resolved to `(component id, pin)` pairs at elaboration time;
       verify the entity names the requirement, method, measured parameters and
       bench, and that two elaborations are byte-identical.
-- [ ] 2.3 Fail elaboration with a `SIM` diagnostic when a measure names an
+- [x] 2.3 Fail elaboration with a `SIM` diagnostic when a measure names an
       undeclared parameter or a surface with no pins; verify each names what is
       wrong.
 - [ ] 2.4 Verify a plain `Verifies(..., method="inspection", result="PASS")`

@@ -354,7 +354,13 @@ def _build_entities(
         )
         for name, declaration in declarations:
             rationale_entity = _rationale_entity(
-                declaration, f"{path}.{name}", project_id, revision_id, built_at, scope
+                declaration,
+                f"{path}.{name}",
+                project_id,
+                revision_id,
+                built_at,
+                scope,
+                module=module,
             )
             entities[rationale_entity.id] = rationale_entity
 
@@ -551,12 +557,20 @@ def _rationale_entity(
     revision_id: str,
     built_at: datetime,
     scope: Mapping[str, str],
+    *,
+    module: Module | None = None,
 ) -> Entity:
     """Turn one rationale declaration into its entity.
 
     A name that matches something declared beside it resolves to that entity's
     identifier; anything else is left alone, because it names a document or an
     entity outside this module.
+
+    A verification declared as a question carries the canonical question in
+    its extensions. The declaration builds it, through its own
+    `elaborate_question`, from the module that declares it: pin maps live on
+    part classes and are gone once the snapshot exists, so every surface the
+    question names is resolved here.
     """
 
     def ref(name: str) -> str:
@@ -615,12 +629,17 @@ def _rationale_entity(
             **common,
         )
     if kind == "verification":
+        extensions: dict = {}
+        elaborate_question = getattr(declaration, "elaborate_question", None)
+        if elaborate_question is not None and module is not None:
+            extensions["question"] = elaborate_question(module, project_id=project_id)
         return Verification(
             identity,
             verifies=ref(declaration.verifies),
             method=declaration.method,
             evidence=refs(declaration.evidence),
             result=declaration.result,
+            extensions=extensions,
             **common,
         )
     raise ValueError(f"no entity is defined for rationale kind {kind!r}")

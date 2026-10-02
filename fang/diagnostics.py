@@ -43,6 +43,10 @@ class SourceLocation:
             out["column"] = self.column
         return out
 
+    @classmethod
+    def from_dict(cls, payload) -> "SourceLocation":
+        return cls(payload["file"], payload["line"], payload.get("column"))
+
 
 @dataclass(frozen=True)
 class Code:
