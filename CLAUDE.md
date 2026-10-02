@@ -18,7 +18,7 @@ it is never a persisted or public representation — and the MCP SDK, which only
 
 ```bash
 pip install -e ".[dev]"          # add ",analysis" for the NetworkX-backed queries, ",mcp" for `fang mcp`
-python -m pytest                 # whole suite (1616 tests): ~85s; ~7 min where Renode runs the emulations live
+python -m pytest                 # whole suite (1638 tests): ~85s; ~7 min where Renode runs the emulations live
 fang build examples/sensor_board/sensor_board.py   # the console script, after an editable install
 python -m pytest -rs             # also lists the acceptance tests deferred to later phases
 python -m pytest tests/test_graph.py::test_name -x
@@ -169,7 +169,8 @@ a warning is matched only against the descriptor of the model that raised it. An
 whole number and a selector one the platform reads (AF0 to AF15 on the F401). A run keeps its
 bundle, events, log and outcome in the workspace it is given, and `fang emulate` fails on a run that
 did not complete.
-The firmware's digest goes on evidence, never in the snapshot; `stale()` resolves the bound path
+The bundle's plan names no snapshot, so an unrelated design change leaves the job current. The
+firmware's digest goes on evidence, never in the snapshot; `stale()` resolves the bound path
 exactly as a run does (`_firmware_location`, against the program that declares the part) and
 compares the digest with the file.
 Emulation models are `EmulationModel` traits, not `Simulatable`, because the trait registry holds
@@ -208,7 +209,11 @@ input digests (firmware, models) and never the snapshot or the installed tool ve
 is the same on every machine. A run already recorded for the same job and version re-enters from its
 record through the gate instead of running. `fang verify` writes nothing without `--commit`, and
 `--commit` persists measurements only: it refuses a program whose design no longer matches the
-persisted records, which is `fang build`'s to persist. A run's bundle names a model by its relative
+persisted records, which is `fang build`'s to persist. A rebuild carries a measurement that a
+since-tightened constraint now breaks as that failure: the verification `FAIL`, the value withheld,
+exactly what `failure_transaction` records. A provenance record appended to an existing entity
+names its `fields` (`parameters.<name>.value` on the part, `evidence`, `level`, `result` and `tool`
+on the verification). The Xyce dialect has run against a Xyce 7.10 build. A run's bundle names a model by its relative
 path, or by `<digest12>/<path>` where two different files would share one.
 
 **The agent surface.** [fang/mcp.py](fang/mcp.py) serves the kernel over the Model Context Protocol,
@@ -243,7 +248,7 @@ keeps no separate RFC or design-note directory.
 [tests/test_acceptance.py](tests/test_acceptance.py) holds exactly one test per acceptance
 criterion, AT-R1..AT-R13 and AT-K1..AT-K10, and all 23 pass; AT-V1, AT-F1 and AT-F2 come from the
 changes in flight under `openspec/changes/`. The only skips in the suite are for optional binaries
-that may not be installed (NetworkX, the MCP SDK, ngspice, kicad-cli, copperhead, renode); each names what is missing. If a
+that may not be installed (NetworkX, the MCP SDK, ngspice, Xyce, kicad-cli, copperhead, renode); each names what is missing. If a
 criterion ever has to be deferred again, skip it with the reason named rather than weakening the
 assertion, so the suite reports what is actually demonstrated.
 

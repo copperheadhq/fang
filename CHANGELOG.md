@@ -53,6 +53,10 @@ tracked separately and moves only when the serialized form changes.
   hand-asserted `Verifies(..., result="PASS")` is now a question ngspice
   answers under full load, on an ideal power stage whose provenance is an
   assumption.
+- A provenance record that changes an existing entity names the fields it
+  changes (RFC 3 Section 14): `parameters.<name>.value` on the part a
+  measurement sets, and `evidence`, `level`, `result` and `tool` on a replaced
+  verification.
 - Diagnostic codes `SIM-0001` to `SIM-0008`, a `dB` unit, and the `GHz`, `nH`
   and `dB` literals. A decibel compares and converts only with decibels, and a
   return loss measures only into a parameter declared in dB (`UNIT-0001`).
@@ -206,6 +210,19 @@ tracked separately and moves only when the serialized form changes.
 
 ### Fixed
 
+- Renode's bundle no longer carries the snapshot hash, so a change elsewhere
+  in the design leaves an emulation job current (RFC 12 Section 12.8).
+- A statistic window (`PeakToPeak`, `Average`, `Maximum`, `Minimum`) that does
+  not start before it ends is refused where it is written (`SIM-0003`).
+- A rebuild carries a measurement that a since-tightened constraint now breaks
+  as that failure, the verification `FAIL` and the value withheld, so `build`
+  and `verify --commit` no longer stop until the design changes (RFC 12
+  Section 12.9).
+- Xyce aborts an AC deck that sets `TIMEINT METHOD`, so every AC question
+  routed to Xyce failed; AC decks no longer set it, and the dialect has run
+  against Xyce 7.10.
+- `examples/buck_regulator/`'s controller EN pin was floating; it is tied to
+  the input, as the TPS62130 datasheet shows.
 - The copperhead lowering drew diodes and LEDs backwards: KiCad numbers the
   cathode 1 and fang the anode. Pins are now placed by name, and
   `--drafter copperhead` draws the handbook's op amps, which it used to drop
