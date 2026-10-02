@@ -1908,10 +1908,10 @@ def measurement_transaction(
     Three kinds of operation: each measured parameter set to an inferred value
     whose source is the evidence, the evidence added, and the declared
     verification replaced under its own identity with the result, the
-    evidence, the level and the tool. Evidence already on the head -- a run
-    already recorded, whose measurements re-enter -- is cited as it stands
-    and not added again, and `record` is the provenance the verification
-    gains in place of the run's own.
+    evidence, the level and the tool. Evidence already on the head, that of
+    a run already recorded whose measurements re-enter, is cited as it
+    stands and not added again, and `record` is the provenance the
+    verification gains in place of the run's own.
     """
     from .graph import AddEntity, RemoveEntity, SetParameter, Transaction
     from .values import Value
@@ -2067,9 +2067,9 @@ def reenter(
 
     `recorded` is the evidence of a run already on the head, whose
     measurements re-enter rather than a new run's: the evidence is cited as
-    it stands, and where the gate decides as it did before -- the same
-    result, and the measured parameters as the head holds them -- nothing is
-    committed and the answer is `current`.
+    it stands, and where the gate decides what the head already says (the
+    same result, and the measured parameters as the head holds them),
+    nothing is committed and the answer is `current`.
     """
     from datetime import datetime, timezone
 
