@@ -899,3 +899,41 @@ def test_the_details_a_measure_reads_still_compile():
     })
     plan = compile_plan(result.snapshot, _Question(data), traits=result.traits)
     assert plan.measures["temps"]["matches"][0]["detail"] == {"contains": "temp="}
+
+
+def test_a_reversed_count_window_is_refused_where_it_is_declared():
+    # (2 s, 1 s) counted nothing, and `== 0` passed over an empty window.
+    from fang.diagnostics import FangError
+    from fang.emulation import Count, Rises
+    from fang.lang import s
+
+    with pytest.raises(FangError) as refused:
+        Count(Rises("mcu.status"), within=(2 * s, 1 * s))
+    assert refused.value.diagnostic.code == "SIM-0003" and "2 s" in str(refused.value)
+    with pytest.raises(FangError):
+        Count(Rises("mcu.status"), within=(1 * s, 1 * s))
+
+
+def test_a_count_window_bounded_by_anything_but_times_is_refused():
+    # (1 V, 2 V) was read as one second to two.
+    from fang.diagnostics import FangError
+    from fang.emulation import Count, Rises
+    from fang.lang import V, s
+
+    with pytest.raises(FangError) as refused:
+        Count(Rises("mcu.status"), within=(1 * V, 2 * V))
+    assert refused.value.diagnostic.code == "UNIT-0001" and "1 V" in str(refused.value)
+    with pytest.raises(FangError):
+        Count(Rises("mcu.status"), within=(1 * s, 2 * V))
+
+
+def test_a_reversed_window_in_a_question_is_refused_when_it_compiles():
+    from fang.emulation import EmulationError, compile_plan
+
+    result, paths = _board()
+    data = _startup_data(paths)
+    blinks = next(m for m in data["measures"] if m["name"] == "slow_blinks")
+    blinks["measure"]["within_ns"] = [2_000_000_000, 1_000_000_000]
+    with pytest.raises(EmulationError, match="slow_blinks") as refused:
+        compile_plan(result.snapshot, _Question(data), traits=result.traits)
+    assert refused.value.code == "measure"

@@ -456,20 +456,6 @@ _DETAILS: Mapping[str, frozenset[str]] = {
 }
 
 
-def _window_ns(within: Sequence[Quantity] | None) -> tuple[int, int] | None:
-    if within is None:
-        return None
-    start, end = within
-    return (_to_ns(start), _to_ns(end))
-
-
-def _to_ns(quantity: Quantity) -> int:
-    low, high = quantity.interval()
-    if low != high:
-        raise EmulationError(f"a window bound is a single time, not {quantity}")
-    return int((Decimal(low) * _NS).to_integral_value())
-
-
 # --------------------------------------------------------------------------
 # Measuring a run
 # --------------------------------------------------------------------------
@@ -1092,7 +1078,14 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
         if kind in ("first_at", "count"):
             out = {"kind": kind, "matches": [match_record(record["match"])]}
             if record.get("within_ns"):
-                out["within_ns"] = list(record["within_ns"])
+                start, end = (int(bound) for bound in record["within_ns"])
+                if not start < end:
+                    raise _refuse(
+                        f"{name} counts over [{start} ns, {end} ns), an empty window: "
+                        "it would count 0 whatever the firmware did",
+                        "measure",
+                    )
+                out["within_ns"] = [start, end]
         elif kind == "latency":
             out = {"kind": kind, "matches": [match_record(record["from"]), match_record(record["to"])]}
         elif kind == "uart_value":
@@ -1323,9 +1316,40 @@ def FirstAt(match: Match) -> FirstAtMeasure:
     return FirstAtMeasure(match.surface, match)
 
 
+def _window_ns(within: Sequence[Quantity] | None) -> tuple[int, int] | None:
+    """A count's window as integer nanoseconds: two single times, the start
+    before the end. Anything else is refused where it is declared, because
+    an empty window counts 0 whatever the firmware does, and a window in
+    volts would be read as seconds."""
+    if within is None:
+        return None
+    bounds = tuple(within)
+    if len(bounds) != 2:
+        raise error(
+            SIM_UNRESOLVED_SURFACE,
+            f"a Count window is a start and an end, not {len(bounds)} values",
+        )
+    for bound in bounds:
+        if not isinstance(bound, Quantity) or bound.dimension != _TIME:
+            raise error(
+                UNIT_DIMENSION_MISMATCH,
+                f"a Count window is bounded by times, and {bound} is not one",
+            )
+        low, high = bound.interval()
+        if low != high:
+            raise error(SIM_UNRESOLVED_SURFACE, f"a Count window's bound is one time, not {bound}")
+    start, end = (int((Decimal(b.interval()[0]) * _NS).to_integral_value()) for b in bounds)
+    if not start < end:
+        raise error(
+            SIM_UNRESOLVED_SURFACE,
+            f"the Count window ({bounds[0]}, {bounds[1]}) is empty: its start is not "
+            "before its end, so it would count 0 whatever the firmware did",
+        )
+    return (start, end)
+
+
 def Count(match: Match, *, within: Sequence[Quantity] | None = None) -> CountMeasure:
-    window = _window_ns(within)
-    return CountMeasure(match.surface, match, window)
+    return CountMeasure(match.surface, match, _window_ns(within))
 
 
 def Latency(from_: Match, to: Match) -> LatencyMeasure:
