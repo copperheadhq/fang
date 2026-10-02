@@ -18,7 +18,7 @@ it is never a persisted or public representation — and the MCP SDK, which only
 
 ```bash
 pip install -e ".[dev]"          # add ",analysis" for the NetworkX-backed queries, ",mcp" for `fang mcp`
-python -m pytest                 # whole suite (1602 tests): ~85s; ~7 min where Renode runs the emulations live
+python -m pytest                 # whole suite (1615 tests): ~85s; ~7 min where Renode runs the emulations live
 fang build examples/sensor_board/sensor_board.py   # the console script, after an editable install
 python -m pytest -rs             # also lists the acceptance tests deferred to later phases
 python -m pytest tests/test_graph.py::test_name -x
@@ -135,9 +135,15 @@ version, and the page is cut to leave the frame and the block their room.
 [fang/copperhead.py](fang/copperhead.py) is a second schematic lowering: it writes copperhead's
 netlist intent (`schematic.intent.json`) from a snapshot and runs `copperhead draft schematic`
 across the same kind of process boundary, and copperhead places and wires the sheet with KiCad's
-library symbols. A part is drawn with the symbol its designator prefix names, or the one it
-declares as `symbol = "library:name"` (which also reaches the netlist as its `libsource`). A
-part with no symbol, or a net left with fewer than two drawn pins, is reported as a loss.
+library symbols. A part is drawn with the symbol it declares as `symbol = "library:name"` (which
+also reaches the netlist as its `libsource`), else its part type's (op amps, diodes, meters,
+lamps), else `power:GND` for a ground marker, else its designator prefix's (`SYMBOL_OF_PREFIX`);
+each symbol maps the part's pins where KiCad numbers them differently, so pins land by name. The
+ground net's name, terminal names, short values and the date are explicit options, the same
+defaults for every caller. `examples/draw_figures.py` passes only those options to the same
+`compile_intent`, and test_handbook holds every committed figure intent to it byte for byte. A
+part with no symbol, a pin its symbol has no place for, or a net left with fewer than two drawn
+pins, is reported as a loss.
 
 **Firmware emulation.** [fang/emulation.py](fang/emulation.py) runs a board's compiled firmware
 against the board in Renode, as one more verification question: `Emulates` sits on the question
