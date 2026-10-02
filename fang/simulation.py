@@ -618,9 +618,13 @@ def model_path(component: Component, source: str) -> tuple[str, Path]:
     else:
         location = Path.cwd() / written
 
-    relative = PurePosixPath(source)
-    if relative.is_absolute() or ".." in relative.parts:
-        relative = PurePosixPath("models") / relative.name
+    # Judged by this machine's own path rules, then named the POSIX way: on
+    # Windows `C:\models\x.sub` has no leading slash, and read as a POSIX path
+    # it would be taken as relative and named in the workspace whole.
+    if written.is_absolute() or ".." in written.parts:
+        relative = PurePosixPath("models") / written.name
+    else:
+        relative = PurePosixPath(*written.parts)
     if not location.is_file():
         raise SimulationError(f"{component.id}'s model {source} is not a file at {location}")
     return relative.as_posix(), location
