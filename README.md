@@ -183,7 +183,7 @@ says so rather than substituting anything.
 ## Tests
 
 ```bash
-python -m pytest          # 1638 tests; those needing a binary skip by name
+python -m pytest          # 1639 tests; those needing a binary skip by name
 python -m pytest -rs      # names each environment-dependent skip
 ```
 

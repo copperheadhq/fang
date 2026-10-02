@@ -211,7 +211,9 @@ tracked separately and moves only when the serialized form changes.
 ### Fixed
 
 - Renode's bundle no longer carries the snapshot hash, so a change elsewhere
-  in the design leaves an emulation job current (RFC 12 Section 12.8).
+  in the design leaves an emulation job current (RFC 12 Section 12.8). The plan
+  schema is `fang.emulation/v2` for it; a v1 plan still reads, and a consumer of
+  v1 refuses v2 by its label rather than failing on the missing field.
 - A statistic window (`PeakToPeak`, `Average`, `Maximum`, `Minimum`) that does
   not start before it ends is refused where it is written (`SIM-0003`).
 - A rebuild carries a measurement that a since-tightened constraint now breaks

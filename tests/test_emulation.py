@@ -1615,3 +1615,20 @@ def test_a_circuit_measure_on_a_surface_of_several_signals_names_its_signal():
         )
 
     assert elaborate(Named, project_id="PRJ-EXAMPLES").ok
+
+
+def test_a_plan_is_read_back_by_its_schema():
+    """v2 is v1 without the snapshot. A v1 plan, snapshot and all, still
+    reads; a plan of a schema fang does not know is refused by its label."""
+    from fang.emulation import PLAN_SCHEMA, plan_from_dict
+
+    written = plan().as_dict()
+    assert written["schema"] == PLAN_SCHEMA == "fang.emulation/v2"
+    assert "snapshot" not in written
+    assert plan_from_dict(written).hash == plan().hash
+
+    older = dict(written, schema="fang.emulation/v1", snapshot="sha256:" + "0" * 64)
+    assert plan_from_dict(older).hash == plan().hash
+
+    with pytest.raises(ValueError, match="fang.emulation/v3"):
+        plan_from_dict(dict(written, schema="fang.emulation/v3"))

@@ -217,7 +217,7 @@ into a pass as surely as a verdict does.
 bus (controller from the port's `peripheral`, chosen pins and selectors from
 the lowered connections, open drain from the interface's `SignalSpec`, address
 from `resolve_address`), each observation point, each stimulus and fault, and
-the duration. It is written as canonical JSON, `fang.emulation/v1`, through
+the duration. It is written as canonical JSON, `fang.emulation/v2` (v1 carried the snapshot, which changed the job with every unrelated design change; a v1 plan still reads), through
 `fang.serialization`: mappings sorted, quantities as `Decimal` strings, times as
 integer nanoseconds. Its identity is its own content hash; the snapshot hash is
 recorded beside it but is not its identity, because the snapshot hash covers
@@ -416,7 +416,7 @@ where the measures are tested against them without Renode.
 ### Where copperhead takes over
 
 Three artifacts are the contract, and nothing else on the fang side changes
-when copperhead integrates: the plan schema `fang.emulation/v1`, the event
+when copperhead integrates: the plan schema `fang.emulation/v2`, the event
 schema `fang.events/v1`, and the bundle layout.
 
 The verdict and the run's outcome stay two things: the verification reads
