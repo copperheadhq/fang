@@ -196,7 +196,8 @@ different files declaring one subcircuit are refused, since a deck holds one
 definition of it. ngspice measures through a `.control` block, because in batch
 mode it ignores `.print op` and reports a deck-level `.meas ac` as a real part.
 Xyce gets the same circuit with deck-level `.MEASURE` lines, and is read from
-the measure file it writes.
+the measure file it writes. Its solver options are `TIMEINT` options, and an
+AC deck leaves out the integration method, which Xyce refuses in an AC sweep.
 
 ## Re-entry
 
