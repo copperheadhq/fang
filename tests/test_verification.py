@@ -1207,6 +1207,110 @@ def test_an_unrelated_rejection_records_nothing(tmp_path):
                    for e in graph.head.entities.values())
 
 
+# -- condition 5 excepts a question's measured parameters while it awaits ----
+
+
+def served(system=Filter):
+    """The program elaborated, with its constraints serving its requirement so
+    that a policy can mark the requirement must-be-decided. `require` names no
+    requirement, so the test sets it."""
+    from dataclasses import replace
+
+    from fang.constraints import Constraint
+
+    result = build(system)
+    requirement = next(
+        e.id for e in result.snapshot.entities.values() if isinstance(e, Requirement)
+    )
+    entities = {
+        key: replace(entity, source=requirement) if isinstance(entity, Constraint) else entity
+        for key, entity in result.snapshot.entities.items()
+    }
+    return result, result.snapshot.with_entities(entities, result.snapshot.revision_id), requirement
+
+
+def first_commit(snapshot, policy):
+    """The program proposed onto an empty head in one transaction, as a first
+    elaboration is: the transaction that declares the question."""
+    from fang.graph import AddEntity
+
+    graph = KernelGraph(snapshot.with_entities({}, "REV-000000"), checks=DEFAULT_CHECKS, policy=policy)
+    operations = tuple(
+        AddEntity(entity=entity, reason="elaborated")
+        for entity in sorted(snapshot.entities.values(), key=lambda e: e.id)
+    )
+    return graph.propose(Transaction(graph.head.hash, operations))
+
+
+def test_declaring_an_unanswered_question_does_not_block_a_must_be_decided_requirement():
+    _, snapshot, requirement = served()
+    proposal = first_commit(snapshot, Policy(must_be_decided=frozenset({requirement})))
+    # The constraints over the measured parameter are run and still undecided.
+    undecided = [r for r in proposal.checks if r.check == "constraint"]
+    assert len(undecided) == 2 and {r.status for r in undecided} == {CheckStatus.UNKNOWN}
+    assert proposal.accepted, [d.message for d in proposal.diagnostics]
+
+
+def test_an_undecided_constraint_over_an_ordinary_parameter_still_blocks():
+    from fang.constraints import Constraint, le
+
+    _, snapshot, requirement = served()
+    ordinary = Constraint(
+        authored("RULE-GAIN"),
+        constraint_kind="gain",
+        targets=(SYSTEM,),
+        expression=le(Ref(SYSTEM, "gain"), Literal.of(10)),
+        source=requirement,
+    )
+    entities = dict(snapshot.entities)
+    entities[ordinary.id] = ordinary
+    proposal = first_commit(
+        snapshot.with_entities(entities, snapshot.revision_id),
+        Policy(must_be_decided=frozenset({requirement})),
+    )
+    assert proposal.rejected
+    blocked = [d for d in proposal.diagnostics if d.code == diagnostics.TXN_UNDECIDED_BLOCKED]
+    # Only the ordinary one: the measured constraints are still excepted.
+    assert [d.entities[0] for d in blocked] == ["RULE-GAIN"]
+
+
+def test_recording_a_failed_verification_is_not_blocked_by_what_it_leaves_undecided(tmp_path):
+    result, snapshot, requirement = served(Tightened)
+    policy = Policy(
+        required_checks=frozenset({"constraint"}), must_be_decided=frozenset({requirement})
+    )
+    graph = KernelGraph(snapshot, checks=DEFAULT_CHECKS, policy=policy)
+    _, tools = canned()
+    outcome = answer(
+        graph, questions(graph.head)[0], traits=result.traits, tools=tools,
+        workspace=tmp_path, record_time=FIXED_TIME,
+    )
+    assert outcome.status == FAILED, outcome.message
+    assert graph.head.entities[outcome.question.id].result == "FAIL"
+    assert "set_parameter" not in [op.op for op in outcome.recorded.transaction.operations]
+    # The constraints stay undecided on the head, which is true: the design has
+    # no accepted value for them.
+    assert set(constraint_statuses(graph.head, outcome.question).values()) == {CheckStatus.UNKNOWN}
+
+
+def test_a_constraint_a_run_leaves_undecided_still_blocks(tmp_path):
+    # The run reports no corner, so it answers UNKNOWN and sets no parameter.
+    # The exception covers a question awaiting its answer or failed, not this.
+    result, snapshot, requirement = served()
+    policy = Policy(
+        required_checks=frozenset({"constraint"}), must_be_decided=frozenset({requirement})
+    )
+    graph = KernelGraph(snapshot, checks=DEFAULT_CHECKS, policy=policy)
+    _, tools = canned(FILTER_OUTPUT.replace("fang_m0             =  1.591612e+03\n", ""))
+    outcome = answer(
+        graph, questions(graph.head)[0], traits=result.traits, tools=tools,
+        workspace=tmp_path, record_time=FIXED_TIME,
+    )
+    assert outcome.status == REJECTED
+    assert any(d.code == diagnostics.TXN_UNDECIDED_BLOCKED for d in outcome.proposal.diagnostics)
+    assert len(graph.history) == 1
+
+
 def test_measurements_against_a_stale_head_are_refused(tmp_path):
     result, graph = graph_of()
     tool, _ = canned()
