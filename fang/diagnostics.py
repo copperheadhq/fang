@@ -169,6 +169,12 @@ IFACE_UNSATISFIABLE_SIGNAL = _allocate(
 IFACE_MEMBERSHIP_DISAGREEMENT = _allocate(
     "IFACE-0002", "two interfaces disagree on membership"
 )
+IFACE_SELECTOR_WITHOUT_EVIDENCE = _allocate(
+    "IFACE-0003", "a pin selector cites no evidence the part declares"
+)
+IFACE_STRAP_UNKNOWN_PIN = _allocate(
+    "IFACE-0004", "an address strap names a pin the part does not have"
+)
 
 # Import conditions.
 IMPORT_LOSSY = _allocate("IMPORT-0001", "adapter could not represent a construct")

@@ -6,14 +6,14 @@ version 1.5, Section 9.3
 
 ## 1. Diagnostics and records
 
-- [ ] 1.1 Allocate the two `IFACE` codes named in design.md with `_allocate` at
+- [x] 1.1 Allocate the two `IFACE` codes named in design.md with `_allocate` at
       the bottom of the `IFACE` block; verify the registry tests pass and no
       code was reused.
-- [ ] 1.2 Add optional `peripheral` and `address_strap` to `Port` and optional
+- [x] 1.2 Add optional `peripheral` and `address_strap` to `Port` and optional
       `selectors` to `Connection`, each omitted from `as_dict()` when absent;
       verify every example's committed outputs still match before any program
       is edited.
-- [ ] 1.3 Move `SCHEMA_VERSION` to 1.2; verify the serialization tests pass and
+- [x] 1.3 Move `SCHEMA_VERSION` to 1.2; verify the serialization tests pass and
       the examples suite still matches with the hash normalized.
 
 ## 2. Peripheral instances and selectors

@@ -31,7 +31,7 @@ engineering fact; deleting anything else does.
 
 ```json
 {
-  "schema_version": "1.1",
+  "schema_version": "1.2",
   "revision_id": "...",
   "compiler_version": "0.1.0",
   "snapshot": "...",
