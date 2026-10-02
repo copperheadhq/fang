@@ -11,7 +11,7 @@
   // the same settings. Because a configuration file turns automatic
   // configuration off, the build it used to run is stated here too.
   "name": "fang",
-  "compatibility_date": "2026-09-14",
+  "compatibility_date": "2026-10-01",
   "build": {
     "command": "npm run build"
   },
