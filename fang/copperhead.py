@@ -155,7 +155,49 @@ class DrafterUnavailable(Exception):
 
 
 class DraftRefused(Exception):
-    """copperhead read the intent and would not draw it; its findings say why."""
+    """copperhead read the intent and would not draw it, or drew something
+    whose connections are not the intent's; the message says which."""
+
+
+def drawn_connections(netlist_text: str) -> set[frozenset[str]]:
+    """Every net of two or more pins in a KiCad netlist, as `REF.PIN` strings.
+
+    KiCad names a power symbol `#PWR...`; those are left out, and the ground
+    net they sit on is still there through the pins it joins.
+    """
+    from .sexpr import Node, parse
+
+    found: set[frozenset[str]] = set()
+
+    def walk(node: Node) -> None:
+        for item in node.items:
+            if not isinstance(item, Node):
+                continue
+            if item.head != "net":
+                walk(item)
+                continue
+            pins = set()
+            for child in item.items:
+                if isinstance(child, Node) and child.head == "node":
+                    fields = {
+                        f.head: f.items[1].value
+                        for f in child.items
+                        if isinstance(f, Node) and f.head in ("ref", "pin")
+                    }
+                    if not fields["ref"].startswith("#"):
+                        pins.add(f"{fields['ref']}.{fields['pin']}")
+            if len(pins) > 1:
+                found.add(frozenset(pins))
+
+    walk(parse(netlist_text))
+    return found
+
+
+def intended_connections(intent: Intent) -> set[frozenset[str]]:
+    """The nets an intent asks for, each as the set of its `REF.PIN` strings."""
+    return {
+        frozenset(net["pins"]) for net in intent.document["nets"] if len(net["pins"]) > 1
+    }
 
 
 @dataclass
@@ -169,23 +211,46 @@ class CopperheadDrafter:
     """
 
     executable: str = "copperhead"
+    #: Reads each draft's connections back, so a sheet is returned only if
+    #: KiCad finds in it exactly the nets the intent asked for.
+    reader: str = "kicad-cli"
 
     def available(self) -> bool:
-        return shutil.which(self.executable) is not None
+        return shutil.which(self.executable) is not None and shutil.which(self.reader) is not None
+
+    def _command(self) -> str:
+        # The path `which` found, not the bare name: on Windows npm installs
+        # copperhead as a .cmd shim, which only its full path starts.
+        return shutil.which(self.executable) or self.executable
+
+    def _run(self, arguments: list[str], **options) -> subprocess.CompletedProcess:
+        """A run across the boundary, with its failures as refusals, not tracebacks."""
+        try:
+            return subprocess.run(
+                arguments, capture_output=True, text=True, encoding="utf-8",
+                errors="replace", **options,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise DraftRefused(f"{arguments[0]} did not finish within {exc.timeout} s") from exc
+        except OSError as exc:
+            raise DraftRefused(f"{arguments[0]} could not be started: {exc}") from exc
 
     def version(self) -> str:
-        if not self.available():
+        if shutil.which(self.executable) is None:
             raise DrafterUnavailable(f"{self.executable} is not installed")
-        completed = subprocess.run(
-            [self.executable, "--version"], capture_output=True, text=True, timeout=60
-        )
+        completed = self._run([self._command(), "--version"], timeout=60)
         return (completed.stdout or completed.stderr).strip()
 
     def draft(self, intent: Intent, *, workspace, name: str = "schematic") -> str:
-        if not self.available():
+        """Draft the intent, and return the sheet only if its connections are
+        the intent's: a drawing that joins two nets, or lands a pin on another
+        net's wire, is refused rather than returned."""
+        missing = [tool for tool in (self.executable, self.reader) if shutil.which(tool) is None]
+        if missing:
             raise DrafterUnavailable(
-                f"{self.executable} is not installed; the intent compiled but "
-                "no sheet was drafted from it"
+                f"{' and '.join(missing)} {'is' if len(missing) == 1 else 'are'} not "
+                "installed; the intent compiled but no sheet was drafted from it, "
+                "and none is returned unread"
             )
         # Absolute, because copperhead is run from inside it and named it too.
         workspace = Path(workspace).resolve()
@@ -195,10 +260,8 @@ class CopperheadDrafter:
             encoding="utf-8",
         )
         (workspace / "schematic.intent.json").write_text(intent.text(), encoding="utf-8")
-        completed = subprocess.run(
-            [self.executable, "--repo", str(workspace), "--plain", "draft", "schematic"],
-            capture_output=True,
-            text=True,
+        completed = self._run(
+            [self._command(), "--repo", str(workspace), "--plain", "draft", "schematic"],
             cwd=workspace,
             timeout=300,
         )
@@ -207,5 +270,33 @@ class CopperheadDrafter:
             raise DraftRefused(
                 f"{self.executable} did not draft the schematic: "
                 f"{(completed.stderr or completed.stdout).strip()}"
+            )
+
+        back = workspace / "read-back.net"
+        read = self._run(
+            [shutil.which(self.reader) or self.reader, "sch", "export", "netlist",
+             "-o", str(back), str(drafted)],
+            cwd=workspace,
+            timeout=120,
+        )
+        if read.returncode != 0 or not back.is_file():
+            raise DraftRefused(
+                f"{self.reader} could not read the drafted sheet back: "
+                f"{(read.stderr or read.stdout).strip()}"
+            )
+        found = drawn_connections(back.read_text(encoding="utf-8"))
+        wanted = intended_connections(intent)
+        if found != wanted:
+            extra = sorted(", ".join(sorted(net)) for net in found - wanted)
+            lacking = sorted(", ".join(sorted(net)) for net in wanted - found)
+            detail = "; ".join(
+                part for part in (
+                    f"it draws {' | '.join(extra)}" if extra else "",
+                    f"where the intent has {' | '.join(lacking)}" if lacking else "",
+                ) if part
+            )
+            raise DraftRefused(
+                f"{self.executable} drafted a sheet whose connections are not the "
+                f"intent's: {detail}"
             )
         return drafted.read_text(encoding="utf-8")
