@@ -19,6 +19,7 @@ script can rely on the exit code rather than parsing output.
 | `fang export` | Write a KiCad netlist |
 | `fang view` | Compile a view; render it to SVG with `-o` |
 | `fang sim` | Compile a simulation plan, lower it, run it |
+| `fang verify` | Route and run every declared question; persist only with `--commit` |
 | `fang graph` | Summarize the kernel graph |
 | `fang diff` | Diff a program against the persisted workspace |
 
@@ -43,7 +44,7 @@ every identifier in the design. It is not a label.
 | Code | Means |
 | --- | --- |
 | `0` | The work succeeded |
-| `1` | The work failed: a rejected gate, a failed check or a missing model |
+| `1` | The work failed: a rejected gate, a failed check, a missing model or a failed verification |
 | `2` | Usage error |
 
 A rejected commit is exit `1`, and the diagnostics that explain it go to output.
@@ -83,3 +84,29 @@ If a selected component has no compatible model and is not explicitly
 abstracted, the plan is **rejected with the reason** rather than run with a
 substitute. If ngspice is not installed, the plan still compiles and the command
 says no run was made.
+
+`fang sim` is the low-level command: it runs a deck and reports the run, and
+nothing it finds reaches the graph. To answer a question and decide the
+constraint over it, declare the question and use `fang verify`.
+
+## Verification
+
+```bash
+fang verify board.py              # route and run every question
+fang verify board.py --commit     # and persist the measurements
+```
+
+| Option | Default | Does |
+| --- | --- | --- |
+| `--commit` | off | Persist the new head into the existing workspace |
+
+Each declared question is routed to the cheapest level that decides it and
+printed with its level, its tool, its measurements and its result, or the
+reason it did not run. A failed verification exits `1`, and so does a question
+the program left unrunnable; a tool that is not installed is reported
+unsupported, by name, and is not by itself a failure. A program with no
+question says there is nothing to verify and exits `0`.
+
+Without `--commit` nothing is written, not even a scratch deck. `--commit`
+needs a workspace, so run `fang build` first. See
+[Verification](/reference/verification/).

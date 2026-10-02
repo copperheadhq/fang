@@ -11,6 +11,38 @@ tracked separately and moves only when the serialized form changes.
 
 ### Added
 
+- Verification questions (`fang-verification`, copperhead RFC 12 version 1.3,
+  Sections 12.7 to 12.10). `Simulates`, `Checks` and `Evaluates` declare a
+  question beside the requirement it serves: the parameters it measures into,
+  the measures that produce them, and for a circuit question the bench in full.
+  Each elaborates to a `Verification` whose result is `UNKNOWN`, and none
+  accepts a result. `route()` answers at the equation level when the
+  constraints over the measured parameters are already decided and otherwise
+  picks the first registered tool at the level the method names; a missing
+  tool is reported unsupported, by name, and nothing stands in for it.
+- Measurements re-enter through the commit gate: each measured parameter set to
+  an inferred value whose source is the run's `Evidence`, that evidence
+  carrying the measurement record of RFC 3 version 1.5 Section 14, and the
+  verification replaced under its own identifier with its result, level and
+  tool. A measured value that fails a hard constraint never reaches the head;
+  the failure is recorded as evidence and a `FAIL` verification instead.
+  Re-elaborating a program keeps what runs measured.
+- Four tools behind one protocol: ngspice (operating point, transient and AC,
+  measured through a `.control` block), Xyce (the same circuit with `.MEASURE`
+  lines, unsupported where not installed), KiCad's electrical rules check over
+  the schematic fang draws, with exclusions declared and recorded with their
+  reasons, and Touchstone models read in-tree for return loss through a
+  matching network, in closed form.
+- `fang verify`, which routes and runs every declared question and persists
+  the measurements only with `--commit`.
+- `examples/rc_filter/` and `examples/antenna_match/`, and `verification.txt`
+  among the outputs an example with a question ships. `buck_regulator/`'s
+  hand-asserted `Verifies(..., result="PASS")` is now a question ngspice
+  answers under full load, on an ideal power stage whose provenance is an
+  assumption.
+- Diagnostic codes `SIM-0001` to `SIM-0008`, a `dB` unit, and the `GHz`, `nH`
+  and `dB` literals.
+
 - Six worked examples beyond the divider and the sensor board: `blinky/`, `equations/`,
   `i2c_bus/`, `usb_uart_bridge/`, `buck_regulator/`, and `servo_drive/`,
   covering the ground atopile's own example set covers — a first board, design by
@@ -44,6 +76,9 @@ tracked separately and moves only when the serialized form changes.
 
 ### Changed
 
+- The constraint check's scope includes every entity a constraint's expression
+  reads, not only its targets, so setting a parameter that another module
+  constrains brings the check into the gate.
 - Views are drawn to be read. A node carries the name it has in the program
   rather than its class — `bridge_u.high`, not a third box saying `Transistor` —
   with the class underneath; rows within a layer are ordered to reduce crossings

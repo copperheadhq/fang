@@ -158,11 +158,11 @@ change.
 
 ## 11. Documents
 
-- [ ] 11.1 Add `site/docs/.../reference/verification.md` and
+- [x] 11.1 Add `site/docs/.../reference/verification.md` and
       `concepts/verification.md`; update `reference/cli.md` and
       `reference/simulation.md`; verify internal links resolve.
-- [ ] 11.2 Update `README.md`, `CLAUDE.md`, `CHANGELOG.md`,
+- [x] 11.2 Update `README.md`, `CLAUDE.md`, `CHANGELOG.md`,
       `openspec/ROADMAP.md` (stage 13) and `examples/README.md`; verify the
       counts quoted anywhere match the tree.
-- [ ] 11.3 Quote the requirement names in each new module's docstring; verify
+- [x] 11.3 Quote the requirement names in each new module's docstring; verify
       `openspec validate fang-verification --strict` passes.

@@ -3,7 +3,9 @@
 Spec: "Verification Questions Are Declared", "The Bench Is Explicit", "The
 Cheapest Verification Level Is Chosen And Recorded", "Verification Tools Sit
 Behind One Protocol", "Measurements Re-enter Through The Commit Gate", "A
-Failing Measurement Is Recorded And Not Applied", and "The Verify Command".
+Failing Measurement Is Recorded And Not Applied", "The Verify Command", and,
+for the declarations `fang.rulecheck` and `fang.rf` answer, "Rule Checks Are
+Evidence" and "A Touchstone Model Is Data".
 
 A question is a verification entity whose result is not known yet. A program
 declares it beside the requirement it serves -- the parameters it measures
@@ -23,10 +25,14 @@ A second kind of question plugs in without editing this module, through:
 - `METHOD_LEVELS` and `register_method`, which say what level a method routes
   to;
 - the `Tool` protocol and `register_tool`, with `Job` (a bundle of files and
-  what it rests on), `RawRun` and `Measurement` as what it trades in.
+  what it rests on), `RawRun` and `Measurement` as what it trades in, and an
+  optional `verdict(job, raw) -> Verdict` for a tool that judges rather than
+  measures.
 
-`route`, `answer` and `verify` are the runner; `reenter` is the way back in
-for a run made elsewhere, against the same head.
+The built-in tools, in routing order, are ngspice and xyce (`SpiceTool`, here),
+kicad-erc (`fang.rulecheck`) and touchstone (`fang.rf`). `route`, `answer` and
+`verify` are the runner; `reenter` is the way back in for a run made
+elsewhere, against the same head.
 """
 
 from __future__ import annotations

@@ -1,7 +1,9 @@
 # Fang delivery roadmap
 
-**All twelve stages are delivered.** The suite is green and every acceptance
-criterion in the combined spec is demonstrated rather than deferred.
+**All thirteen stages are delivered.** The suite is green and every acceptance
+criterion in the combined spec is demonstrated rather than deferred. Stage 13,
+`fang-verification`, is built and awaits archiving, which folds its delta
+spec, AT-V1 among it, into the combined spec.
 
 The full code-defined electronics toolchain, chunked into stages. Each stage is
 an OpenSpec change with its own proposal, delta spec, and tasks. Every stage
@@ -25,6 +27,7 @@ netlist a person can open.
 | 10 | ✅ `fang-rationale` | Requirement, evidence, decision, and calculation authoring from Fang; the verification graph; impact propagation |
 | 11 | ✅ `fang-cli` | The workspace (`.copperhead/`), the manifest, and `fang build`, `check`, `view`, `sim`, `export` |
 | 12 | ✅ `fang-mcp` | The agent surface: the kernel over the Model Context Protocol, with the agent's mutation path running through the same commit gate |
+| 13 | ✅ `fang-verification` | Verification questions beside requirements, explicit benches and measures, the tool protocol and level routing, measurements re-entering through the gate; ngspice, Xyce, KiCad ERC and Touchstone; `fang verify` |
 
 ## The vertical slice
 

@@ -18,11 +18,11 @@ it is never a persisted or public representation — and the MCP SDK, which only
 
 ```bash
 pip install -e ".[dev]"          # add ",analysis" for the NetworkX-backed queries, ",mcp" for `fang mcp`
-python -m pytest                 # whole suite (614 tests, ~16s); addopts = -q, testpaths = tests
+python -m pytest                 # whole suite (725 tests, ~20s); addopts = -q, testpaths = tests
 fang build examples/sensor_board/sensor_board.py   # the console script, after an editable install
 python -m pytest -rs             # also lists the acceptance tests deferred to later phases
 python -m pytest tests/test_graph.py::test_name -x
-python -m pytest -k "at_k7"      # acceptance criteria are named test_at_r*/test_at_k*
+python -m pytest -k "at_k7"      # acceptance criteria are named test_at_r*/test_at_k*/test_at_v*
 openspec list                    # OpenSpec CLI (v1.12) drives the change workflow
 python -m build                  # dist/*.whl and dist/*.tar.gz; twine check --strict them
 ```
@@ -134,6 +134,25 @@ change as electrical or presentation-only and propagates invalidation.
 `ELAB IFACE TOPO UNIT TXN SIM IMPORT MCP`; **codes are allocated, never reused, and retired rather
 than deleted** — add new ones via `_allocate` at the bottom of the relevant area block.
 
+**Verification.** [fang/verification.py](fang/verification.py) turns an undecided constraint into
+a decided one without a second way in. A question -- `Simulates`, `Checks`, `Evaluates`, all on
+`QuestionDeclaration` -- is a `Verification` entity whose result is `UNKNOWN`, carrying the
+canonical question in `extensions["question"]` with every surface resolved to pins at elaboration;
+a program cannot state its result. `route()` answers at the equation level when the constraints
+over the measured parameters are already decided, and otherwise picks the first registered tool at
+the level the method names (`METHOD_LEVELS`), installed or not, so a missing tool is reported
+unsupported rather than replaced. Tools sit behind the `Tool` protocol (`covers`, `available`,
+`version`, `prepare`, `run`, `read`, optionally `verdict`) and trade in a `Job` bundle, a `RawRun`
+and `Measurement`s; the built-ins, in routing order, are ngspice and Xyce (`SpiceTool` over the
+lowering in [fang/simulation.py](fang/simulation.py)), KiCad ERC ([fang/rulecheck.py](fang/rulecheck.py))
+and Touchstone ([fang/rf.py](fang/rf.py)), and `register_tool` adds more. A run's measurements
+re-enter as one transaction -- inferred `SetParameter`s sourced from the run's `Evidence`, that
+evidence with the measurement record, the verification replaced under its own identifier -- and the
+gate's constraint check decides; a measured value that fails a hard constraint never reaches the
+head and is recorded as a `FAIL` by a second transaction that sets no parameter.
+`carry_measurements` keeps a measurement across re-elaboration, which `fang build`, `diff` and
+`verify` rely on. `fang verify` writes nothing without `--commit`.
+
 **The agent surface.** [fang/mcp.py](fang/mcp.py) serves the kernel over the Model Context Protocol,
 as `fang mcp`. It is two layers, and the split is load-bearing: everything above `build_server` is a
 projection from kernel state to canonical-JSON-ready dictionaries and imports nothing from the SDK,
@@ -164,7 +183,8 @@ design was checked against go in the change's `design.md`, which is informative;
 keeps no separate RFC or design-note directory.
 
 [tests/test_acceptance.py](tests/test_acceptance.py) holds exactly one test per acceptance
-criterion, AT-R1..AT-R13 and AT-K1..AT-K10, and all 23 pass. The only skips in the suite are for
+criterion, AT-R1..AT-R13 and AT-K1..AT-K10, and all 23 pass; the `fang-verification` change adds
+AT-V1, which runs ngspice. The only skips in the suite are for
 optional binaries that may not be installed (NetworkX, ngspice, kicad-cli, copperhead); each names what is missing. If a
 criterion ever has to be deferred again, skip it with the reason named rather than weakening the
 assertion, so the suite reports what is actually demonstrated.
@@ -180,8 +200,11 @@ Tests import it as `from conftest import ...`.
 Every example under [examples/](examples/) is a folder: `<name>/<name>.py`, a
 `README.md` explaining what it is for, and the files `fang` produces from it
 under `out/` — the KiCad netlist, the netlist and check and graph listings, the
-views worth looking at, and a `rationale.md` for the examples that record any
-reasoning. `python examples/regenerate.py` rewrites them all;
+views worth looking at, a `rationale.md` for the examples that record any
+reasoning, and a `verification.txt` for the ones that declare a question: what
+`fang verify` finds, at three significant figures and without tool versions.
+That one is compared only where the question's tool is installed, and skipped
+by name where it is not. `python examples/regenerate.py` rewrites them all;
 [tests/test_examples.py](tests/test_examples.py) rebuilds them and compares, so
 a committed output cannot drift from the program beside it. An example named in
 `regenerate.SCHEMATICS` also ships a `.kicad_sch` and KiCad's render of it, so
@@ -195,10 +218,11 @@ and give it a `README.md` and an `out/`, or it is not an example.
 
 ## Work is organized as OpenSpec changes
 
-[openspec/ROADMAP.md](openspec/ROADMAP.md) chunks the toolchain into 12 stages, each an OpenSpec
-change with a proposal, a delta spec, and tasks. All twelve are archived under
-`openspec/changes/archive/<date>-<id>/`; a new stage starts with `/opsx:propose`. The ordering is a
-product ordering: stages 1–6 close the loop from a Fang program to a KiCad netlist. **All twelve
+[openspec/ROADMAP.md](openspec/ROADMAP.md) chunks the toolchain into 13 stages, each an OpenSpec
+change with a proposal, a delta spec, and tasks. The first twelve are archived under
+`openspec/changes/archive/<date>-<id>/`, and stage 13, `fang-verification`, is built and awaits
+archiving; a new stage starts with `/opsx:propose`. The ordering is a
+product ordering: stages 1–6 close the loop from a Fang program to a KiCad netlist. **All thirteen
 stages are delivered**, and every acceptance criterion in the spec is demonstrated rather than
 deferred. Every stage ships working code and tests — nothing is a placeholder.
 

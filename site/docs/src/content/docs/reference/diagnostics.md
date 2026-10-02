@@ -71,6 +71,24 @@ the interface says it requires.
 These are the [gate conditions](/concepts/the-commit-gate/). A rejection carries
 its code, its message and the diff it would have applied.
 
+## SIM: simulation and verification
+
+| Code | Means |
+| --- | --- |
+| `SIM-0001` | A question measures into a parameter its module does not declare |
+| `SIM-0002` | A question states its own result |
+| `SIM-0003` | A question names a surface or part that resolves to no pins |
+| `SIM-0004` | A circuit question names no bench |
+| `SIM-0005` | A load is neither a current nor a resistance |
+| `SIM-0006` | A model port the part's pin map does not reach |
+| `SIM-0007` | A frequency outside a model's range |
+| `SIM-0008` | A rule-check exclusion gives no reason |
+
+`SIM-0001`, `SIM-0002`, `SIM-0003`, `SIM-0005` and `SIM-0008` fail where the
+question is written or elaborated. The others are a question
+[`fang verify`](/reference/verification/) reports as not runnable, naming what
+is missing, rather than running it with something assumed in its place.
+
 ## IMPORT: CAD interchange
 
 | Code | Means |

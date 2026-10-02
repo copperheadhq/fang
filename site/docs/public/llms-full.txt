@@ -195,7 +195,7 @@ engineering fact.
 # Examples
 
 URL: https://fang.copperhead.sh/start/examples/
-Summary: Eleven programs in the repository, smallest first.
+Summary: Thirteen programs in the repository, smallest first.
 
 Every example in [`examples/`](https://github.com/copperheadhq/fang/tree/main/examples)
 elaborates and passes the gate. The test suite rebuilds each one and compares
@@ -207,12 +207,14 @@ program that has since changed.
 | Example | Shows |
 | --- | --- |
 | [`divider/`](/examples/divider/) | The smallest real board: two resistors and a capacitor |
+| [`rc_filter/`](/examples/rc_filter/) | One question, answered by ngspice and then at the equation level |
+| [`antenna_match/`](/examples/antenna_match/) | A Touchstone model through an L match, answered in closed form |
 | [`blinky/`](/examples/blinky/) | Declared surfaces, connections and a constraint stating intent rather than the answer |
 | [`equations/`](/examples/equations/) | Values chosen by equation and reuse by inheritance |
 | [`sensor_board/`](/examples/sensor_board/) | Interfaces lowering to pins, a recorded decision, a check left undecided |
 | [`i2c_bus/`](/examples/i2c_bus/) | A multi-drop bus, addresses as constrained parameters |
 | [`usb_uart_bridge/`](/examples/usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet |
-| [`buck_regulator/`](/examples/buck_regulator/) | Requirement, decision, calculations and verification beside the circuit |
+| [`buck_regulator/`](/examples/buck_regulator/) | Requirement, decision, calculations, and a question ngspice answers under load |
 | [`servo_drive/`](/examples/servo_drive/) | Composition: one `HalfBridge` block instantiated three times |
 | [`jee_advanced/problem_1/`](/examples/jee_advanced/problem_1/) | Not a board: four claimed currents, all four decided |
 | [`jee_advanced/problem_2/`](/examples/jee_advanced/problem_2/) | Not a board either: one claimed current, and the two branches that carry none |
@@ -238,6 +240,7 @@ fang view    examples/sensor_board/sensor_board.py ground -o ground.svg
 | `graph.txt` | What the elaborated graph contains, by entity kind | `fang graph` |
 | `views/*.svg` | The views worth looking at for that board | `fang view` |
 | `rationale.md` | The requirements, decisions, calculations and evidence in the graph | none |
+| `verification.txt` | What each declared question's tool found, at three significant figures | `fang verify` |
 
 `python examples/regenerate.py` rewrites them. They are built in the project
 namespace `PRJ-EXAMPLES`, which is where the identifiers in them come from. A
@@ -247,6 +250,17 @@ local `fang build` defaults to `PRJ-LOCAL` and derives its own.
 
 **`divider/`** is the smallest thing worth calling a board. Read it to learn
 the shape of a program and nothing else.
+
+**`rc_filter/`** is the smallest board with a question on it. The corner is a
+parameter with no value and the constraint over it is undecided, until ngspice
+measures it in an AC sweep and the number comes back through the gate. Asked
+again on the committed head, the same question is answered at the equation
+level and nothing runs.
+
+**`antenna_match/`** carries its antenna as data: a Touchstone file, synthetic
+and saying so. Its return loss through the L match is read and composed in
+closed form, with the matching values the graph holds, and the confidence is
+halved because the model is an assumption.
 
 **`blinky/`** adds the point about constraints. The series resistor is not
 written as a number that someone computed offstage. The LED current is written
@@ -272,10 +286,12 @@ than the class template. The logical part stays "a 3.3 V regulator". Which one
 was bought is a separate, cited fact.
 
 **`buck_regulator/`** puts the reasoning in the graph. The requirement, the
-part decision, the datasheet numbers behind it, two calculations and the
-verification that closes the requirement are all entities beside the inductor.
-`fang` can answer "why is this 4.7 µH?" without anyone writing a design
-document.
+part decision, the datasheet numbers behind it and two calculations are all
+entities beside the inductor, so `fang` can answer "why is this 4.7 µH?"
+without anyone writing a design document. The requirement is verified by a
+question rather than asserted: ngspice runs the rail under full load on an
+ideal power stage whose provenance is an assumption, and measures 3.29 V and
+1.90 mV of ripple.
 
 **`servo_drive/`** is composition at size. A `HalfBridge` owns its interior:
 its transistors, its shunt and its own constraints. The drive instantiates three
@@ -786,6 +802,107 @@ verification cannot rest on evidence the graph never saw.
 
 ---
 
+# Verification
+
+URL: https://fang.copperhead.sh/concepts/verification/
+Summary: How an undecided constraint gets decided by a tool, without a second way in.
+
+A hard constraint over a number nobody has -- a rail's ripple, a filter's
+corner, an antenna's return loss -- evaluates to
+[undecided](/concepts/values-and-undecided/) and stays there. Verification is
+how it stops being undecided: a question declared in the program, answered by a
+tool, with the answer returned through [the gate](/concepts/the-commit-gate/)
+like any other change.
+
+## A question is a verification with no result yet
+
+```python
+ripple = Parameter("mV")                        # no value: nobody has measured it
+
+under_load = Simulates(
+    "rail_tolerance",
+    measures={"ripple": PeakToPeak("rail_out.dc", after=1 * ms, until=1.2 * ms)},
+    supplies={"controller.vin": 12 * V},
+    loads={"rail_out.dc": 2.2 * Ohm},
+    analysis=Transient(stop="1.2ms", step="10ns"),
+)
+
+def constraints(self):
+    require(self.ripple <= 30 * mV)               # undecided until measured
+```
+
+The question elaborates to a `Verification` entity whose result is `UNKNOWN`.
+It is the same entity a verification by inspection is, before its result is
+known; coverage is still a join over the graph, and there is no second kind of
+thing to keep in step with the first.
+
+**A program cannot state the answer.** `Simulates(..., result="PASS")` is
+refused. A pass nobody computed, with two datasheet citations as its
+"evidence", is a citation and not a verification, and it is what this replaces.
+
+## The bench is part of the question
+
+The measured value depends on everything the run assumed, so the question says
+all of it: every supply and every load at a part surface, the analysis and its
+window, and the parts it deliberately leaves out. Nothing is defaulted. A
+question with no supply is not runnable, and the runner says so rather than
+choosing a source. Every bench item lands on the evidence as an assumption, and
+every part left out as a coverage gap.
+
+## The cheapest level that decides it
+
+The levels run cheapest first: equation, symbolic, behavioural, circuit,
+external. If the constraints over a question's parameters already decide --
+because a value reached the graph some other way, or because an earlier run's
+measurement is there -- the constraint evaluator is the answer and nothing
+runs. Otherwise the method names the level, and the first registered tool there
+answers. A question no tool covers is unroutable: a cheaper answer is not the
+same answer, so none is substituted. The level and the tool are written on the
+verification, so the graph says how the question was answered.
+
+## The answer comes back through the gate
+
+A run's measurements enter as one ordinary transaction:
+
+```text
+SetParameter(ripple, Value.inferred(1.90 mV, source=EVD-..., confidence=0.5))
+AddEntity(Evidence: tool, version, level, job hash, measures,
+                    assumptions, coverage gaps, input digests)
+RemoveEntity + AddEntity(Verification: result, evidence, level, tool)
+```
+
+The value is **inferred**, never explicit, and its source is the evidence. The
+constraint over it is decided by the gate's own constraint check -- there is no
+second resolver that consults evidence, which would be a second place a value
+could come from.
+
+**A measurement that breaks a hard constraint never reaches the head.** The
+gate rejects it, correctly, and the runner records what happened in a second
+transaction that sets no parameter: the evidence, and the verification with
+result `FAIL`. The design is on record as having failed, with the number that
+failed it, and the constraint stays undecided in the graph, which is true -- the
+design has no accepted value for it.
+
+## A finding, not a proof
+
+A pass is a finding with the confidence its models support. A run over an
+ideal switch standing in for a controller reports half the confidence of one
+over primitives, and lists the control loop it does not model among its
+coverage gaps. First-spin measurement remains the physical evidence.
+
+## Re-elaboration keeps the measurement
+
+The program declares a measured parameter without a value, so elaborating it
+again says nothing about the value and does not withdraw it. An unchanged
+program rebuilt after a commit is the committed snapshot, byte for byte; a
+changed question is answered afresh.
+
+The [verification reference](/reference/verification/) lists the declarations,
+the measures, the tools and the command.
+
+
+---
+
 # divider
 
 URL: https://fang.copperhead.sh/examples/divider/
@@ -910,6 +1027,468 @@ All of it, including the KiCad netlist, is in
 
 ```bash
 fang build examples/divider/divider.py
+```
+
+
+---
+
+# antenna_match
+
+URL: https://fang.copperhead.sh/examples/antenna_match/
+Summary: A 2.4 GHz chip antenna behind an L match, and the question of whether it is matched. It is the example of a part carrying its behaviour as data: a Touchstone…
+
+A 2.4 GHz chip antenna behind an L match, and the question of whether it is
+matched. It is the example of a part carrying its behaviour as data: a
+Touchstone file, read in-tree and composed in closed form. There is nothing to
+simulate, so the question is answered at the equation level.
+
+## The program
+
+[`antenna_match.py`](https://github.com/copperheadhq/fang/blob/main/examples/antenna_match/antenna_match.py) puts a 1.5 pF shunt capacitor at the
+connector and a 1.8 nH series inductor toward the antenna, and requires at
+least 10 dB of return loss at 2.44 GHz. The values come from the L-match
+formulas over the antenna's impedance there, recorded as a calculation.
+
+The antenna carries its model as a trait, with a provenance that says what the
+numbers are:
+
+```python
+self.antenna.add_trait(
+    Touchstone(
+        source="chip_antenna.s1p",
+        ports=("FEED",),
+        provenance=assumed_provenance("a synthetic series RLC resonator, ..."),
+    )
+)
+```
+
+[`chip_antenna.s1p`](https://github.com/copperheadhq/fang/blob/main/examples/antenna_match/chip_antenna.s1p) is **synthetic**, and says so in its
+header: a series RLC resonator (22 Ohm, 4 nH, about 1.01 pF) written by hand to
+stand in for the file an antenna vendor publishes. A real design would cite the
+vendor's file, or a network analyser's measurement of the board, and its
+provenance would say which.
+
+The question names the measure, the frequency, and the matching parts in order
+from the connector toward the antenna:
+
+```python
+matched = Evaluates(
+    "match_spec",
+    measures={"return_loss": ReturnLoss("antenna.rf", at=2.44 * GHz,
+                                        through=("shunt_c", "series_l"))},
+)
+```
+
+Which of the two parts is a shunt and which is in series is read from the
+graph -- the capacitor has a terminal on ground -- and each value is the one
+the graph holds.
+
+## What comes out
+
+4 parts, 3 nets, 36 entities, 1 check, undecided until the question is
+answered.
+
+[`out/verification.txt`](https://github.com/copperheadhq/fang/blob/main/examples/antenna_match/out/verification.txt) is the file to read: the
+touchstone tool reads the model, interpolates it at 2.44 GHz, composes the two
+parts, and finds 38.5 dB, so the verification passes at confidence 0.5 -- half,
+because the model it rests on is an assumption. The number enters the graph
+through the commit gate as an inferred value whose source is the run's
+evidence, and the evidence records the model file's digest, because the
+snapshot does not hold the file.
+
+- [`out/antenna_match.net`](https://github.com/copperheadhq/fang/blob/main/examples/antenna_match/out/antenna_match.net), [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/antenna_match/out/netlist.txt)
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/antenna_match/out/checks.txt), [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/antenna_match/out/graph.txt), [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/antenna_match/out/rationale.md)
+
+![the interconnect view](/examples/antenna_match/interconnect.svg)
+
+A frequency outside the file's 2.30 to 2.60 GHz is refused, naming the range;
+nothing is extrapolated. A matching part with no value leaves the question
+unanswered, naming the part.
+
+## Running it
+
+```bash
+fang verify examples/antenna_match/antenna_match.py
+```
+
+The reader is fang itself, so this needs no tool on the path.
+
+## The whole program
+
+```python title="examples/antenna_match/antenna_match.py"
+"""A 2.4 GHz chip antenna behind an L match, and whether it is matched.
+
+The antenna carries its network parameters as data: a one-port Touchstone
+file, `chip_antenna.s1p`, which is synthetic and says so -- a series RLC
+resonator written by hand, standing in for the vendor file a real design would
+cite. Between the connector and the antenna sit two parts: a 1.5 pF shunt
+capacitor at the connector and a 1.8 nH series inductor toward the antenna,
+worked out by hand from the antenna's impedance at 2.44 GHz.
+
+The requirement asks for 10 dB of return loss at 2.44 GHz. The program
+declares the return loss as a parameter with no value and a question that
+evaluates it: `fang verify` reads the file, interpolates it at 2.44 GHz,
+composes the two parts with the values the graph holds, and returns the
+number through the commit gate. It is answered at the equation level, in
+closed form: there is nothing to simulate.
+"""
+
+from fang.interfaces import AnalogIn, AnalogOut, Pin, PinMap
+from fang.lang import GHz, Parameter, Part, System, dB, nH, pF, require
+from fang.parts import Capacitor, Inductor
+from fang.rationale import Calculates, Requires
+from fang.traits import Touchstone
+from fang.verification import Evaluates, ReturnLoss, assumed_provenance
+
+
+class ChipAntenna(Part):
+    """A chip antenna: a feed and a ground, and a model of what it reflects."""
+
+    designator_prefix = "AE"
+
+    rf = AnalogIn()
+
+    FEED = Pin("FEED", role="analog", number="1")
+    GND = Pin("GND", role="ground", number="2")
+
+    pinmap = PinMap({"rf.signal": "FEED", "rf.ref": "GND"})
+
+
+class RFConnector(Part):
+    """Where the radio's 50 Ohm line arrives."""
+
+    designator_prefix = "J"
+
+    rf = AnalogOut()
+
+    SIG = Pin("SIG", role="analog", number="1")
+    GND = Pin("GND", role="ground", number="2")
+
+    pinmap = PinMap({"rf.signal": "SIG", "rf.ref": "GND"})
+
+
+class AntennaMatch(System):
+    """The antenna, its match, and the question that checks the match."""
+
+    match_spec = Requires(
+        "The antenna presents at least 10 dB of return loss at 2.44 GHz, the "
+        "middle of the 2.4 GHz band",
+        validation="analysis",
+    )
+    l_match = Calculates(
+        "Q = sqrt(R0 / RL - 1); X_series = Q RL - X_antenna; B_shunt = Q / R0",
+        inputs=("shunt_c", "series_l", "antenna"),
+        result="1.82 nH series and 1.47 pF shunt for 22 - j3.1 Ohm at 2.44 GHz; "
+        "fitted with 1.8 nH and 1.5 pF",
+        requirements=("match_spec",),
+    )
+
+    # No value: the program has not measured it, and a number written here
+    # would be a claim rather than a measurement.
+    return_loss = Parameter("dB", description="return loss at the connector, at 2.44 GHz")
+
+    feed = RFConnector(package="UFL")
+    shunt_c = Capacitor(capacitance=1.5 * pF, package="C_0402")
+    series_l = Inductor(inductance=1.8 * nH, package="L_0402")
+    antenna = ChipAntenna(package="Antenna_Chip_3216")
+
+    # The return loss looking in from the connector: through the shunt
+    # capacitor, then the series inductor, into the antenna's model.
+    matched = Evaluates(
+        "match_spec",
+        measures={
+            "return_loss": ReturnLoss(
+                "antenna.rf", at=2.44 * GHz, through=("shunt_c", "series_l")
+            ),
+        },
+    )
+
+    def __init__(self, **overrides):
+        super().__init__(**overrides)
+        self.antenna.add_trait(
+            Touchstone(
+                source="chip_antenna.s1p",
+                ports=("FEED",),
+                provenance=assumed_provenance(
+                    "a synthetic series RLC resonator, standing in for a vendor file"
+                ),
+            )
+        )
+
+    def architecture(self):
+        self.feed.rf.signal >> self.shunt_c.p1
+        self.feed.rf.signal >> self.series_l.p1
+        self.shunt_c.p2 >> self.feed.rf.ref
+        self.series_l.p2 >> self.antenna.rf.signal
+        self.antenna.rf.ref >> self.feed.rf.ref
+
+    def constraints(self):
+        require(self.return_loss >= 10 * dB)
+```
+
+## The files it writes
+
+The parts, then the nets and the pads on them.
+
+```text title="out/netlist.txt"
+AE1    ChipAntenna      Package:Antenna_Chip_3216
+C1     1.5 pF           Package:C_0402
+J1     RFConnector      Package:UFL
+L1     1.8 nH           Package:L_0402
+Net-(AE1-PadFEED)        AE1.FEED L1.2
+Net-(AE1-PadGND)         AE1.GND C1.2 J1.GND
+Net-(C1-Pad1)            C1.1 J1.SIG L1.1
+```
+
+Every check that ran, and every one left undecided.
+
+```text title="out/checks.txt"
+UNDECIDED constraint: declared on BLK-42978eb8675a
+1 checks, 0 failed, 1 undecided
+```
+
+What the elaborated graph contains, by entity kind.
+
+```text title="out/graph.txt"
+    1  block
+    1  calculation
+    4  component
+   10  connection
+    1  constraint
+    3  interface
+    8  pin
+    6  port
+    1  requirement
+    1  verification
+   36  total
+snapshot sha256:4130aa3cd92bfa772193b693c7143a2b103c62b9fd557bf3028ae63ad9c1de9b
+```
+
+All of it, including the KiCad netlist, is in
+[`examples/antenna_match/out/`](https://github.com/copperheadhq/fang/tree/main/examples/antenna_match/out/). Rebuild it with:
+
+```bash
+fang build examples/antenna_match/antenna_match.py
+```
+
+
+---
+
+# rc_filter
+
+URL: https://fang.copperhead.sh/examples/rc_filter/
+Summary: A first-order RC low-pass ahead of an ADC, and one question about it, asked twice. It is the smallest board that shows a constraint nobody can decide getting…
+
+A first-order RC low-pass ahead of an ADC, and one question about it, asked
+twice. It is the smallest board that shows a constraint nobody can decide
+getting decided: by a simulator, through the commit gate, and then by nothing
+more than the evaluator.
+
+## The program
+
+[`rc_filter.py`](https://github.com/copperheadhq/fang/blob/main/examples/rc_filter/rc_filter.py) puts 10 kOhm and 10 nF between two connectors
+and requires the -3 dB corner to lie between 1.5 and 1.7 kHz. The corner is a
+parameter with no value, because nothing on the page has measured it; the
+constraint over it is undecided, and `fang check` says so.
+
+The question is declared beside the requirement it serves, with its bench in
+full: 1 V driven into the input, an AC sweep from 10 Hz to 1 MHz, and the two
+connectors deliberately left out. The corner is where the output falls through
+1/sqrt(2) of the input.
+
+```python
+corner_check = Simulates(
+    "corner_spec",
+    measures={"corner": Crossing("adc.line", level=707.1 * mV, edge="falling")},
+    supplies={"source.line": 1 * V},
+    analysis=ACSweep(variation="dec", points=100, start="10", stop="1meg"),
+    abstracted=("source", "adc"),
+)
+```
+
+`Simulates` has no `result` argument. A question's result is produced by a run;
+a program that tries to state one is refused.
+
+## What comes out
+
+4 parts, 3 nets, 37 entities, 2 checks, none failed and both undecided -- until
+the question is answered.
+
+[`out/verification.txt`](https://github.com/copperheadhq/fang/blob/main/examples/rc_filter/out/verification.txt) is the file to read. On the
+elaborated program the constraint is undecided, so the question routes to the
+circuit level and ngspice answers it: 1590 Hz, inside the band, PASS. The
+measurement re-enters as a transaction -- the corner set to an inferred value
+whose source is the run's evidence -- and the gate's constraint check decides
+the constraint. Asked again on that committed head, the same question is
+answered at the equation level: the evaluator already decides the constraint,
+so nothing runs.
+
+- [`out/rc_filter.net`](https://github.com/copperheadhq/fang/blob/main/examples/rc_filter/out/rc_filter.net), [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/rc_filter/out/netlist.txt)
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/rc_filter/out/checks.txt): the two constraints over the corner, undecided
+- [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/rc_filter/out/graph.txt), [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/rc_filter/out/rationale.md)
+
+![the interconnect view](/examples/rc_filter/interconnect.svg)
+
+The listing gives three significant figures and no tool version, so it stays
+put when ngspice moves a number in its fourth figure. The evidence keeps every
+figure ngspice printed, the version, the hash of the deck, and the assumptions
+and coverage gaps listed above.
+
+## Running it
+
+```bash
+fang verify examples/rc_filter/rc_filter.py                 # nothing persists
+fang build  examples/rc_filter/rc_filter.py
+fang verify examples/rc_filter/rc_filter.py --commit        # the corner enters the workspace
+fang verify examples/rc_filter/rc_filter.py                 # answered at the equation level
+```
+
+`fang verify` needs ngspice on the path. Without it the question is reported
+unsupported, by name, and nothing else answers it.
+
+## The whole program
+
+```python title="examples/rc_filter/rc_filter.py"
+"""A first-order RC low-pass, and one question about it asked twice.
+
+An anti-aliasing filter ahead of an ADC: 10 kOhm and 10 nF put the -3 dB
+corner at 1 / (2 pi R C), about 1.59 kHz, and the requirement holds it between
+1.5 and 1.7 kHz. The program declares the corner as a parameter with no value,
+because nothing on this page has measured it, and a question that measures it:
+an AC sweep with 1 V driven into the input, the corner being where the output
+falls through 1/sqrt(2) of that.
+
+The first `fang verify` finds the constraint undecided and routes the question
+to the circuit level, where ngspice answers it; the measurement comes back
+through the commit gate. Asked again on the committed head, the same question
+is answered at the equation level: the evaluator already decides the
+constraint, so nothing runs.
+"""
+
+from fang.interfaces import AnalogIn, AnalogOut, Pin, PinMap
+from fang.lang import Parameter, Part, System, V, kHz, kOhm, mV, nF, require
+from fang.parts import Capacitor, Resistor
+from fang.rationale import Calculates, Requires
+from fang.simulation import ACSweep
+from fang.verification import Crossing, Simulates
+
+
+class SignalIn(Part):
+    """Where the signal arrives: a tip, and a sleeve that is ground."""
+
+    designator_prefix = "J"
+
+    line = AnalogOut()
+
+    TIP = Pin("TIP", role="analog", number="1")
+    SLEEVE = Pin("SLEEVE", role="ground", number="2")
+
+    pinmap = PinMap({"line.signal": "TIP", "line.ref": "SLEEVE"})
+
+
+class AdcInput(Part):
+    """Where the filtered signal leaves for the converter."""
+
+    designator_prefix = "J"
+
+    line = AnalogIn()
+
+    SIG = Pin("SIG", role="analog", number="1")
+    GND = Pin("GND", role="ground", number="2")
+
+    pinmap = PinMap({"line.signal": "SIG", "line.ref": "GND"})
+
+
+class RCFilter(System):
+    """The filter, the requirement on its corner, and the question that
+    measures it."""
+
+    corner_spec = Requires(
+        "The anti-aliasing filter's -3 dB corner lies between 1.5 kHz and 1.7 kHz",
+        validation="simulation",
+    )
+    by_hand = Calculates(
+        "f_c = 1 / (2 pi R C)",
+        inputs=("r", "c"),
+        result="1.59 kHz for 10 kOhm and 10 nF",
+        requirements=("corner_spec",),
+    )
+
+    # No value: the program does not know it, and a number written here would
+    # be a claim rather than a measurement.
+    corner = Parameter("Hz", description="the -3 dB corner, as measured")
+
+    source = SignalIn(package="PinHeader_1x02_P2.54mm")
+    adc = AdcInput(package="PinHeader_1x02_P2.54mm")
+    r = Resistor(resistance=10 * kOhm, package="R_0603")
+    c = Capacitor(capacitance=10 * nF, package="C_0603")
+
+    # The bench, in full: 1 V into the input, a sweep from 10 Hz to 1 MHz, and
+    # the two connectors left out -- they carry the signal and do nothing to it.
+    corner_check = Simulates(
+        "corner_spec",
+        measures={"corner": Crossing("adc.line", level=707.1 * mV, edge="falling")},
+        supplies={"source.line": 1 * V},
+        analysis=ACSweep(variation="dec", points=100, start="10", stop="1meg"),
+        abstracted=("source", "adc"),
+    )
+
+    def architecture(self):
+        self.source.line.signal >> self.r.p1
+        self.r.p2 >> self.c.p1
+        self.c.p2 >> self.source.line.ref
+        self.adc.line.signal >> self.c.p1
+        self.adc.line.ref >> self.c.p2
+
+    def constraints(self):
+        require(self.corner >= 1.5 * kHz)
+        require(self.corner <= 1.7 * kHz)
+```
+
+## The files it writes
+
+The parts, then the nets and the pads on them.
+
+```text title="out/netlist.txt"
+C1     10 nF            Package:C_0603
+J1     AdcInput         Package:PinHeader_1x02_P2.54mm
+J2     SignalIn         Package:PinHeader_1x02_P2.54mm
+R1     10 kOhm          Package:R_0603
+Net-(C1-Pad1)            C1.1 J1.SIG R1.2
+Net-(C1-Pad2)            C1.2 J1.GND J2.SLEEVE
+Net-(J2-PadTIP)          J2.TIP R1.1
+```
+
+Every check that ran, and every one left undecided.
+
+```text title="out/checks.txt"
+UNDECIDED constraint: declared on BLK-42978eb8675a
+UNDECIDED constraint: declared on BLK-42978eb8675a
+2 checks, 0 failed, 2 undecided
+```
+
+What the elaborated graph contains, by entity kind.
+
+```text title="out/graph.txt"
+    1  block
+    1  calculation
+    4  component
+   10  connection
+    2  constraint
+    3  interface
+    8  pin
+    6  port
+    1  requirement
+    1  verification
+   37  total
+snapshot sha256:f9a6c30fc3da9d3560702b4c95b64e41dc4fbdc04a8bc8f0072cd4c1539e937b
+```
+
+All of it, including the KiCad netlist, is in
+[`examples/rc_filter/out/`](https://github.com/copperheadhq/fang/tree/main/examples/rc_filter/out/). Rebuild it with:
+
+```bash
+fang build examples/rc_filter/rc_filter.py
 ```
 
 
@@ -3228,6 +3807,19 @@ out where an engineer expects them — `IN-` and `IN+` on the left, `OUT` on the
 right — because they are numbered 2, 3 and 6, the single-op-amp pinout, and
 the box takes the pins in the order the graph gives them.
 
+The same circuit is also drafted by copperhead, which places and wires parts
+instead of laying them on a grid. Fang writes copperhead's netlist intent,
+[`out/copperhead/schematic.intent.json`](https://github.com/copperheadhq/fang/blob/main/examples/noninverting_amp/out/copperhead/schematic.intent.json),
+and `copperhead draft schematic` turns it into
+[`out/copperhead/noninverting_amp.kicad_sch`](https://github.com/copperheadhq/fang/blob/main/examples/noninverting_amp/out/copperhead/noninverting_amp.kicad_sch).
+It draws with KiCad's library symbols, so the op amp names one: `symbol =
+"Amplifier_Operational:LM741"`, the standard single-op-amp drawing with pins 2,
+3 and 6. That sets how the part is drawn, not which part it is. The ground
+marker isn't drawn as a part; its net becomes a ground net, with the ground
+symbol on it.
+
+![the same circuit, drafted by copperhead and rendered by KiCad](/examples/noninverting_amp/copperhead/schematic.svg)
+
 ![the interconnect view](/examples/noninverting_amp/interconnect.svg)
 
 The interconnect view is fang's own projection, and it names the parts the way
@@ -3241,6 +3833,7 @@ fang check     examples/noninverting_amp/noninverting_amp.py
 fang netlist   examples/noninverting_amp/noninverting_amp.py
 fang view      examples/noninverting_amp/noninverting_amp.py interconnect -o interconnect.svg
 fang schematic examples/noninverting_amp/noninverting_amp.py -o board.kicad_sch --svg board.svg
+fang schematic examples/noninverting_amp/noninverting_amp.py --drafter copperhead -o board.kicad_sch
 
 python examples/noninverting_amp/solve.py     # needs ngspice on PATH
 ```
@@ -3380,6 +3973,10 @@ class OpAmp(Part):
     """
 
     designator_prefix = "U"
+    # The standard single-op-amp drawing, whose pins are numbered 2, 3 and 6 as
+    # these are. It says how the part is drawn, not which part it is: the
+    # value stays OpAmp and no manufacturer is named.
+    symbol = "Amplifier_Operational:LM741"
 
     inverting = AnalogIn()
     non_inverting = AnalogIn()
@@ -3680,7 +4277,7 @@ What the elaborated graph contains, by entity kind.
     1  requirement
     1  verification
   114  total
-snapshot sha256:ca5378f7c2ba74e2e336ac8164d4b12701d3d0041ee3f0df60db28b4bfccb27b
+snapshot sha256:4eb956ccefda6be26897809b9ffd988be0aaa15f3f387bdb48efc0788e3b1699
 ```
 
 All of it, including the KiCad netlist, is in
@@ -3712,11 +4309,11 @@ rail_tolerance = Requires("The 3V3 rail holds 3.3 V within 3% for 0 to 1.5 A ove
 part_choice    = Chooses("Which converter makes the 3V3 rail?", selected="TPS62130", ...)
 ripple_current = Cites("Recommended inductor ripple is 20 to 40% of the maximum output current", ...)
 inductor_value = Calculates("L = v_out * (1 - v_out / v_in) / (f_sw * ripple_current)", ...)
-load_regulation = Verifies("rail_tolerance", ...)
+under_load     = Simulates("rail_tolerance", measures={"ripple": ..., "output": ...}, ...)
 ```
 
 So "why is this 4.7 µH?" has an answer the graph can give: a calculation, over a
-datasheet claim, serving a requirement, which a verification closes. Nobody had
+datasheet claim, serving a requirement, which a question verifies. Nobody had
 to write a design document. Nothing here can drift from the design either,
 because it *is* the design. Change the evidence and the decision resting on it
 is flagged.
@@ -3725,9 +4322,35 @@ The output voltage is deliberately not a parameter of the controller. The
 feedback divider on the board sets it, which is why the divider carries the
 constraint that produces it.
 
+## The question
+
+The requirement used to be closed by a `Verifies(..., result="PASS")` whose
+evidence was two datasheet citations: a citation, not a verification. It is
+now a question, and the program cannot state its answer.
+
+`ripple` and `output` are parameters with no value, each with a constraint:
+ripple at most 30 mV, the output between 3.2 and 3.4 V. The question measures
+both on a bench it names in full -- 12 V on the controller's input, 2.2 Ohm
+across the rail header (1.5 A at 3.3 V), a transient to 1.2 ms measured over
+its last 0.2 ms -- and leaves out the input connector, the fuse, the reverse
+diode and the header, so the supply lands on the controller.
+
+The controller is simulated by [`ideal_buck.sub`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/ideal_buck.sub): two ideal
+switches at a fixed duty of 0.275. It is not a model of the TPS62130, and the
+program says so: the trait's provenance is an assumption, which halves the
+confidence of every number measured over it, and what it leaves out -- the
+control loop above all -- is recorded as a coverage gap on every run.
+
+[`out/verification.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/verification.txt) is what `fang verify` finds:
+3.29 V and 1.90 mV of ripple, both inside their constraints, so the
+verification passes at confidence 0.5. Those numbers enter the graph as
+inferred values whose source is the run's evidence, through the commit gate,
+and the constraints over them are decided by the gate's own constraint check.
+
 ## What comes out
 
-12 parts, 9 nets, 118 entities, 15 checks. None failed, one undecided.
+11 parts, 9 nets, 121 entities, 18 checks. None failed and four undecided:
+three are the rail's own numbers, until `fang verify` measures them.
 
 [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/rationale.md) is the file to read. It is the whole
 argument, projected out of the graph in identifier order:
@@ -3740,6 +4363,7 @@ argument, projected out of the graph in identifier order:
 >
 > - Over `system.inductor` — Inductor (`CMP-64dfc4cd840c`)
 
+- [`out/verification.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/verification.txt): the question, answered
 - [`out/buck_regulator.net`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/buck_regulator.net), [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/netlist.txt)
 - [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/checks.txt), [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/graph.txt)
 
@@ -3751,6 +4375,7 @@ argument, projected out of the graph in identifier order:
 
 ```bash
 fang check   examples/buck_regulator/buck_regulator.py
+fang verify  examples/buck_regulator/buck_regulator.py      # needs ngspice
 fang view    examples/buck_regulator/buck_regulator.py power -o power.svg
 ```
 
@@ -3761,15 +4386,17 @@ fang view    examples/buck_regulator/buck_regulator.py power -o power.svg
 
 The circuit is ordinary. What is not ordinary is that the requirement, the part
 decision, the datasheet numbers behind it, the two calculations, and the
-verification that closes the requirement are all entities in the same graph as
+question that verifies the requirement are all entities in the same graph as
 the inductor — so `fang` can answer "why is this 4.7 uH?" without anyone having
-written a design document.
+written a design document, and `fang verify` can find out whether the rail
+holds under load rather than take a hand-written PASS for it.
 """
 
 from fang.interfaces import AnalogIn, Pin, PinMap, PowerIn, PowerOut
 from fang.lang import (
     A,
     Electrical,
+    Ohm,
     Parameter,
     Part,
     Signal,
@@ -3782,13 +4409,17 @@ from fang.lang import (
     mOhm,
     mV,
     mW,
+    ms,
     nF,
     require,
     uF,
     uH,
 )
 from fang.parts import Capacitor, Diode, Fuse, Inductor, Resistor
-from fang.rationale import Calculates, Chooses, Cites, Requires, Verifies
+from fang.rationale import Calculates, Chooses, Cites, Requires
+from fang.simulation import Transient
+from fang.traits import Simulatable
+from fang.verification import Average, PeakToPeak, Simulates, assumed_provenance
 
 #: Dimensionless, for the divider ratio.
 ratio = UnitLiteral("1")
@@ -3918,6 +4549,12 @@ class Rail3V3(System):
     divider_min = Parameter("", default=3.03 * ratio)
     divider_max = Parameter("", default=3.22 * ratio)
 
+    # What the rail does under load. Declared without values: nothing on this
+    # page knows them, and a number written here would be a claim, not a
+    # measurement. `fang verify` measures them.
+    ripple = Parameter("mV", description="peak-to-peak on the rail at full load")
+    output = Parameter("V", description="the rail's average at full load")
+
     dc_in = InputTerminal(package="TerminalBlock_1x02_P5.08mm")
     rail_out = RailHeader(package="PinHeader_1x02_P2.54mm")
 
@@ -3951,12 +4588,22 @@ class Rail3V3(System):
     fb_top = Resistor(resistance=200 * kOhm, power_rating=63 * mW, package="R_0402")
     fb_bottom = Resistor(resistance=64 * kOhm, power_rating=63 * mW, package="R_0402")
 
-    # -- and what closes the requirement -------------------------------------
-    load_regulation = Verifies(
+    # -- and the question that verifies the requirement -----------------------
+    # Full load at the 12 V nominal input: 2.2 Ohm draws 1.5 A at 3.3 V. The
+    # window starts a millisecond in, once the output filter has settled from
+    # power-up. The input connector, the fuse and the reverse diode are left
+    # out deliberately, so the supply lands on the controller's input; the
+    # rail header is only where the load is applied.
+    under_load = Simulates(
         "rail_tolerance",
-        method="analysis",
-        evidence=("absolute_maximum", "ripple_current"),
-        result="PASS",
+        measures={
+            "ripple": PeakToPeak("rail_out.dc", after=1 * ms, until=1.2 * ms),
+            "output": Average("rail_out.dc", after=1 * ms, until=1.2 * ms),
+        },
+        supplies={"controller.vin": 12 * V},
+        loads={"rail_out.dc": 2.2 * Ohm},
+        analysis=Transient(stop="1.2ms", step="10ns"),
+        abstracted=("dc_in", "protection", "reverse", "rail_out"),
     )
 
     def __init__(self, **overrides):
@@ -3966,6 +4613,27 @@ class Rail3V3(System):
             "TPS62130RGTR",
             distributor_ids={"lcsc": "C77378"},
             datasheet="SRC-DS-TPS62130",
+        )
+        # The power stage the question runs is an ideal one, and says so: its
+        # provenance is an assumption, which lowers the confidence of every
+        # number measured over it, and what it leaves out is recorded as a
+        # coverage gap on every run.
+        self.controller.add_trait(
+            Simulatable(
+                backends=("ngspice",),
+                source="ideal_buck.sub",
+                pin_map={
+                    "VIN": "vin", "GND": "gnd", "SW": "sw",
+                    "BOOT": "boot", "FB": "fb", "EN": "en",
+                },
+                provenance=assumed_provenance(
+                    "an ideal switch pair at a fixed duty, standing in for the TPS62130"
+                ),
+                not_modelled=(
+                    "the control loop is not modelled; duty is fixed at 0.275",
+                    "no soft start, current limit or switching loss",
+                ),
+            )
         )
 
     def architecture(self):
@@ -4017,6 +4685,12 @@ class Rail3V3(System):
         # The input capacitor sees the input, and a hot-plugged supply rings.
         require(self.input_bulk.voltage_rating >= 25 * V)
         require(self.output_bulk.voltage_rating >= 10 * V)
+
+        # The rail's 3% at full load, and a ripple the loads can live with.
+        # Undecided until `fang verify` measures them.
+        require(self.ripple <= 30 * mV)
+        require(self.output >= 3.2 * V)
+        require(self.output <= 3.4 * V)
 ```
 
 ## The files it writes
@@ -4049,8 +4723,11 @@ Net-(R1-Pad1)            R1.1 R2.2 U1.FB
 Every check that ran, and every one left undecided.
 
 ```text title="out/checks.txt"
+UNDECIDED constraint: declared on BLK-42978eb8675a
+UNDECIDED constraint: declared on BLK-42978eb8675a
+UNDECIDED constraint: declared on BLK-42978eb8675a
 UNDECIDED interface_compatibility: current capability is undecided on power_input: current_demand unknown
-15 checks, 0 failed, 1 undecided
+18 checks, 0 failed, 4 undecided
 ```
 
 What the elaborated graph contains, by entity kind.
@@ -4060,7 +4737,7 @@ What the elaborated graph contains, by entity kind.
     2  calculation
    11  component
    34  connection
-    9  constraint
+   12  constraint
     1  decision
     2  evidence
     5  interface
@@ -4068,8 +4745,8 @@ What the elaborated graph contains, by entity kind.
    25  port
     1  requirement
     1  verification
-  118  total
-snapshot sha256:4e0d69731dab5362aad836d3303a37ed478175e4006576dd482e69484a1af9df
+  121  total
+snapshot sha256:9df90f2afc6f350c55b266b5e0a1dbc1ca45925ddd758c2717fb3d4b7d3b5dbf
 ```
 
 All of it, including the KiCad netlist, is in
@@ -4988,6 +5665,7 @@ script can rely on the exit code rather than parsing output.
 | `fang export` | Write a KiCad netlist |
 | `fang view` | Compile a view; render it to SVG with `-o` |
 | `fang sim` | Compile a simulation plan, lower it, run it |
+| `fang verify` | Route and run every declared question; persist only with `--commit` |
 | `fang graph` | Summarize the kernel graph |
 | `fang diff` | Diff a program against the persisted workspace |
 
@@ -5012,7 +5690,7 @@ every identifier in the design. It is not a label.
 | Code | Means |
 | --- | --- |
 | `0` | The work succeeded |
-| `1` | The work failed: a rejected gate, a failed check or a missing model |
+| `1` | The work failed: a rejected gate, a failed check, a missing model or a failed verification |
 | `2` | Usage error |
 
 A rejected commit is exit `1`, and the diagnostics that explain it go to output.
@@ -5052,6 +5730,32 @@ If a selected component has no compatible model and is not explicitly
 abstracted, the plan is **rejected with the reason** rather than run with a
 substitute. If ngspice is not installed, the plan still compiles and the command
 says no run was made.
+
+`fang sim` is the low-level command: it runs a deck and reports the run, and
+nothing it finds reaches the graph. To answer a question and decide the
+constraint over it, declare the question and use `fang verify`.
+
+## Verification
+
+```bash
+fang verify board.py              # route and run every question
+fang verify board.py --commit     # and persist the measurements
+```
+
+| Option | Default | Does |
+| --- | --- | --- |
+| `--commit` | off | Persist the new head into the existing workspace |
+
+Each declared question is routed to the cheapest level that decides it and
+printed with its level, its tool, its measurements and its result, or the
+reason it did not run. A failed verification exits `1`, and so does a question
+the program left unrunnable; a tool that is not installed is reported
+unsupported, by name, and is not by itself a failure. A program with no
+question says there is nothing to verify and exits `0`.
+
+Without `--commit` nothing is written, not even a scratch deck. `--commit`
+needs a workspace, so run `fang build` first. See
+[Verification](/reference/verification/).
 
 
 ---
@@ -5608,14 +6312,48 @@ the difference the plan records.
 
 ## Levels
 
-Verification levels run one to five, cheapest first. `select_level()` picks the
-cheapest level that can decide the question asked, so a question answerable by
-inspection does not pay for a transient run.
+Verification levels run one to five, cheapest first: equation, symbolic,
+behavioural, circuit, external. A declared question is routed by `route()`,
+which looks at the graph -- if the constraints over what it measures are
+already decided, the equation level answers it and nothing runs -- and the
+level and tool it chose are written on the verification. `select_level()`
+remains for a caller that knows the answers to its questions already. See
+[Verification](/reference/verification/).
+
+## Models in a question's deck
+
+A question's deck is written from the snapshot, the traits and the question.
+A part carrying a `Simulatable` model with a `.subckt` file is instantiated as
+an `X` device, its nodes in the order the model's `.subckt` line declares its
+ports, each the node of the pin the trait's `pin_map` lands on that port. A
+port no pin reaches is refused by name (`SIM-0006`). The model is included by
+path, never inlined, and its digest is recorded on the run's evidence because
+the snapshot does not hold the file.
+
+```python
+self.controller.add_trait(
+    Simulatable(
+        backends=("ngspice",),
+        source="ideal_buck.sub",            # beside the program
+        pin_map={"VIN": "vin", "GND": "gnd", "SW": "sw",
+                 "BOOT": "boot", "FB": "fb", "EN": "en"},
+        provenance=assumed_provenance("an ideal stand-in"),
+        not_modelled=("the control loop is not modelled; duty is fixed",),
+    )
+)
+```
+
+`not_modelled` items become coverage gaps on every run over the model, and the
+provenance bounds the run's confidence. A primitive is written with the value
+the graph holds, in SI units with no suffix; one with no value is refused, not
+written as 1.
 
 ## Backends
 
-`NgspiceBackend` reaches ngspice across a process boundary. It is optional and
-external, and fang finds it on `PATH`.
+`NgspiceBackend` reaches ngspice across a process boundary, and `XyceBackend`
+reaches Xyce the same way. Both are optional and external, and fang finds them
+on `PATH`. Xyce writes its measures to a file beside the netlist, which the run
+returns with what it printed.
 
 If it is not installed, `BackendUnavailable` is reported. The plan still
 compiles and the deck can still be written. The command says no run was made,
@@ -5635,6 +6373,9 @@ used and the assertions evaluated.
 Results re-enter canonical state as `Evidence`, through an ordinary transaction
 against the committed head, through [the gate](/concepts/the-commit-gate/).
 There is no path by which a simulation result becomes a fact without passing it.
+`fang sim` reports a run and stops there; a declared question answered by
+`fang verify` is what sets a measured parameter, as an inferred value whose
+source is that evidence.
 
 
 ---
@@ -5796,6 +6537,24 @@ the interface says it requires.
 These are the [gate conditions](/concepts/the-commit-gate/). A rejection carries
 its code, its message and the diff it would have applied.
 
+## SIM: simulation and verification
+
+| Code | Means |
+| --- | --- |
+| `SIM-0001` | A question measures into a parameter its module does not declare |
+| `SIM-0002` | A question states its own result |
+| `SIM-0003` | A question names a surface or part that resolves to no pins |
+| `SIM-0004` | A circuit question names no bench |
+| `SIM-0005` | A load is neither a current nor a resistance |
+| `SIM-0006` | A model port the part's pin map does not reach |
+| `SIM-0007` | A frequency outside a model's range |
+| `SIM-0008` | A rule-check exclusion gives no reason |
+
+`SIM-0001`, `SIM-0002`, `SIM-0003`, `SIM-0005` and `SIM-0008` fail where the
+question is written or elaborated. The others are a question
+[`fang verify`](/reference/verification/) reports as not runnable, naming what
+is missing, rather than running it with something assumed in its place.
+
 ## IMPORT: CAD interchange
 
 | Code | Means |
@@ -5811,3 +6570,228 @@ that says what it could not carry.
 New codes are allocated through `_allocate` at the bottom of the relevant area
 block in `fang/diagnostics.py`. Never renumber and never reuse a retired
 number.
+
+
+---
+
+# Verification
+
+URL: https://fang.copperhead.sh/reference/verification/
+Summary: Questions, benches, measures, the tools that answer them, and fang verify.
+
+A verification question is declared beside the requirement it serves. It names
+the parameters it measures into and the measures that produce them, and a
+program cannot state its answer. `fang verify` routes each question to the
+cheapest level that can decide it, runs the tool there, and brings the
+measurements back through [the commit gate](/concepts/the-commit-gate/).
+[Verification](/concepts/verification/) explains why it works this way; this
+page lists what there is.
+
+```bash
+fang verify board.py              # route and run every question; nothing persists
+fang verify board.py --commit     # persist the measurements into the workspace
+```
+
+## Declaring a question
+
+Three declarations, all from `fang.verification`, all filed with `Requires`
+and `Verifies` in a class body. Each elaborates to a `Verification` entity whose
+result is `UNKNOWN`, and each refuses a `result` argument with `SIM-0002`.
+
+| Declaration | Method | Answered by |
+| --- | --- | --- |
+| `Simulates` | `simulation` | a circuit simulator, on a bench the question names |
+| `Checks` | `rule check` | an external checker, over an artifact the kernel lowers |
+| `Evaluates` | `analysis` | a data model a part carries, in closed form |
+
+`Verifies(..., method="inspection", result="PASS")` stays for verifications by
+inspection and test: a person states the result, it is not a question, and
+nothing routes it.
+
+### Simulates
+
+```python
+ripple = Parameter("mV")
+output = Parameter("V")
+
+under_load = Simulates(
+    "rail_tolerance",
+    measures={
+        "ripple": PeakToPeak("rail_out.dc", after=1 * ms, until=1.2 * ms),
+        "output": Average("rail_out.dc", after=1 * ms, until=1.2 * ms),
+    },
+    supplies={"controller.vin": 12 * V},
+    loads={"rail_out.dc": 2.2 * Ohm},
+    analysis=Transient(stop="1.2ms", step="10ns"),
+    abstracted=("dc_in", "protection", "reverse", "rail_out"),
+)
+
+def constraints(self):
+    require(self.ripple <= 30 * mV)
+```
+
+| Argument | Is |
+| --- | --- |
+| `measures` | Parameter name to measure. Each name must be a parameter the module declares (`SIM-0001`), in a unit the measure produces (`UNIT-0001`) |
+| `supplies` | Part surface to voltage. Each becomes a `V` device |
+| `loads` | Part surface to a current, which becomes an `I` device, or a resistance, which becomes an `R`. Anything else is `SIM-0005` |
+| `analysis` | `OperatingPoint`, `Transient` or `ACSweep`. Under AC each supply is also the stimulus, at its own magnitude |
+| `abstracted` | Parts, or blocks of parts, left out on purpose. Each is a coverage gap |
+| `tool` | A tool to route to, if the question insists on one, such as `"xyce"` |
+
+**Nothing about a bench is defaulted.** A question with no supply or no
+analysis still elaborates, and is reported not runnable (`SIM-0004`) rather
+than run against a source nobody chose. Every bench item is recorded on the run
+as an assumption.
+
+### Measures
+
+A measure names a part surface the way the program does, `"rail_out.dc"`, and
+elaboration resolves it to pins through the part's pin map. A surface with a
+ground wire is measured from its signal pin to its return; a single-wire
+surface, against the simulator's ground; `"part.surface.signal"` names one wire.
+A system's own surface has no pins and is refused with `SIM-0003`.
+
+| Measure | Takes | Produces |
+| --- | --- | --- |
+| `PeakToPeak(surface, after=, until=)` | Highest minus lowest voltage in the window | volts |
+| `Average(surface, after=, until=)` | Mean voltage in the window | volts |
+| `Maximum(surface, after=, until=)` | Highest voltage in the window | volts |
+| `Minimum(surface, after=, until=)` | Lowest voltage in the window | volts |
+| `ValueAt(surface, at=)` | The voltage at a time, a frequency, or the operating point | volts |
+| `Crossing(surface, level=, edge=, occurrence=, after=)` | Where the voltage crosses a level | seconds, or hertz in an AC sweep |
+| `ReturnLoss(surface, at=, through=, reference=)` | -20 log10 \|Gamma\| through matching parts | dB |
+
+Windows are times in a transient and frequencies in an AC sweep; a window in the
+wrong dimension is refused where it is written. A filter's corner is a
+`Crossing` of the level 1/sqrt(2) of the drive, falling.
+
+### Checks
+
+```python
+sheet_rules = Checks(
+    "sheet_spec",
+    excluded={
+        "endpoint_off_grid": "fang draws its sheet on its own grid",
+        "lib_symbol_issues": "fang draws its own symbols",
+    },
+)
+```
+
+A rule check measures into no parameter. Errors fail the verification and
+warnings do not. An excluded rule does neither, and an exclusion without a
+reason is refused with `SIM-0008`. On a sheet fang draws, the two rules above
+fire on every symbol, which is why a question names them rather than the tool
+hiding them.
+
+### Evaluates
+
+```python
+self.antenna.add_trait(Touchstone(source="chip_antenna.s1p", ports=("FEED",),
+                                  provenance=...))
+
+matched = Evaluates(
+    "match_spec",
+    measures={"return_loss": ReturnLoss("antenna.rf", at=2.44 * GHz,
+                                        through=("shunt_c", "series_l"))},
+)
+```
+
+`through` names the matching parts in order from the port toward the model.
+Each is a shunt element when a terminal is on ground and a series element
+otherwise, and its value is the one the graph holds; a part with no value
+leaves the question unanswered, naming the part. A frequency outside the file is
+refused naming its range (`SIM-0007`).
+
+## Routing
+
+`route()` picks the level and the tool, cheapest first:
+
+1. If every constraint over the question's measured parameters already
+   evaluates to a decided result, the **equation** level answers it with the
+   constraint evaluator, and no tool is prepared or run.
+2. Otherwise the method names the level -- `simulation` is circuit, `rule
+   check` is external, `analysis` is equation -- and the first registered tool
+   at that level that covers the question is chosen, the one it names if it
+   names one.
+3. A question nothing covers is **unroutable**. It is not answered at another
+   level, because a cheaper answer is not the same answer.
+
+The route is the same on every machine: a tool is chosen whether or not it is
+installed, and one that is not installed is reported **unsupported** by name.
+Nothing stands in for it.
+
+## The tools
+
+| Tool | Level | Covers | Needs |
+| --- | --- | --- | --- |
+| `ngspice` | circuit | `Simulates`: operating point, transient, AC | `ngspice` on the path |
+| `xyce` | circuit | `Simulates`: transient, AC, when the question names it | `Xyce` on the path |
+| `kicad-erc` | external | `Checks` over the schematic | `kicad-cli` on the path |
+| `touchstone` | equation | `Evaluates` with `ReturnLoss` | nothing: it is fang |
+
+That is the routing order. A module that brings a tool adds it with
+`register_tool()`, after these, and a method with `register_method()`.
+
+Every tool sits behind one protocol: `covers`, `available`, `version`,
+`prepare(snapshot, question, traits=)`, `run(job, workspace=)` and
+`read(job, raw)`, with an optional `verdict(job, raw)` for a tool that judges
+rather than measures. Preparing is a lowering and is deterministic; running is
+the only step that leaves the process; reading produces decimal quantities and
+nothing the output did not contain.
+
+A SPICE deck instantiates each modelled part as an `X` device in its model's
+port order, through the trait's `pin_map`, and includes the model by path rather
+than inlining it. ngspice measures through a `.control` block, because in batch
+mode it ignores `.print op` and reports a deck-level `.meas ac` as a real part.
+Xyce gets the same circuit with deck-level `.MEASURE` lines, and is read from
+the measure file it writes.
+
+## Re-entry
+
+An answer enters as one transaction against the committed head:
+
+- each measured parameter set to an **inferred** value whose source is the
+  run's evidence, with the run's confidence;
+- one `Evidence` entity carrying the measurement record: the tool and its
+  version, the level, the job's hash, each measure with its value or the reason
+  it has none, the assumptions, the coverage gaps, and the digest of every input
+  file the snapshot does not hold;
+- the declared `Verification`, replaced under its own identifier with its
+  result, the evidence, the level and the tool.
+
+The gate's constraint check decides the constraint. If a hard constraint over a
+measured value fails, the head does not move; the evidence and the verification
+with result `FAIL` are recorded by a second transaction that sets no parameter.
+Any other rejection records nothing. Measurements prepared against a snapshot
+that is no longer the head are refused with `TXN-0001`.
+
+Confidence is bounded by the provenance of the models a run rests on: 1 for
+primitives and asserted models, 0.8 for inferred, 0.5 for unverified ones and
+for a model with no provenance at all. `assumed_provenance(reason)` states the
+last kind.
+
+## The command
+
+```bash
+fang verify board.py
+```
+
+Each question is printed with its level, its tool and version, its measurements
+at three significant figures, its assumptions, coverage gaps and confidence, and
+its result, or the reason it did not run.
+
+| Outcome | Exit |
+| --- | --- |
+| Every question answered and none failed | `0` |
+| A verification failed | `1` |
+| A question not runnable, or refused by the gate for another reason | `1` |
+| A tool not installed, or a question no tool covers | `0` |
+| No question declared: "nothing to verify" | `0` |
+
+Without `--commit` nothing is written: runs happen in a scratch directory and
+the workspace is left as it was. `--commit` persists the new head into an
+existing workspace, keeping each run's files under `.copperhead/simulations/`.
+`fang build`, `fang diff` and `fang verify` keep what earlier runs measured: a
+program declares a measured parameter without a value, so elaborating it again
+does not withdraw the measurement.
