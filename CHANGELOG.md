@@ -143,10 +143,17 @@ tracked separately and moves only when the serialized form changes.
   `fang.copperhead` writes copperhead's netlist intent from a snapshot and runs
   `copperhead draft schematic` across a process boundary, and the sheet is read
   back with `kicad-cli` and returned only if its nets are exactly the design's.
-  A part is drawn with the KiCad symbol its designator prefix names or the one
-  it declares as `symbol = "library:name"`, which also reaches the netlist as
-  its `libsource`. A part with no symbol, or a net with fewer than two drawn
-  pins, is reported as a loss. `noninverting_amp/` ships its draft.
+  A part is drawn with the symbol it declares as `symbol = "library:name"`
+  (which also reaches the netlist as its `libsource`), else the one its part
+  type names (op amps, diodes, meters, lamps), else `power:GND` for a ground
+  marker, else the one its designator prefix names; each symbol says where the
+  part's pins go when its numbering differs, so pins are placed by name. The
+  ground net's name, terminal names, short values and the title-block date are
+  explicit options. A part with no symbol, a pin its symbol has no place for,
+  or a net with fewer than two drawn pins is reported as a loss.
+  `noninverting_amp/` ships its draft, and `examples/draw_figures.py` draws
+  every textbook figure through the same `compile_intent`, which reproduces
+  each committed figure intent byte for byte.
 - `examples/sensor_node/firmware/`: bare-metal firmware for the board, with
   three deliberately broken builds, committed with the toolchain that builds
   them byte for byte. The board's two requirements are decided by running it.
@@ -199,6 +206,10 @@ tracked separately and moves only when the serialized form changes.
 
 ### Fixed
 
+- The copperhead lowering drew diodes and LEDs backwards: KiCad numbers the
+  cathode 1 and fang the anode. Pins are now placed by name, and
+  `--drafter copperhead` draws the handbook's op amps, which it used to drop
+  as a loss.
 - `examples/sensor_board/` declared a bulk capacitor and two pull-up resistors
   and never connected them.
 - `fang sim` reported every run as failed: it handed ngspice a relative
