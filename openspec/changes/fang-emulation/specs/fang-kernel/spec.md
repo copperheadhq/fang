@@ -194,10 +194,14 @@ measure stated at the bus.
 ### Requirement: Pin Configuration Is Measured
 
 Where the emulator does not route a peripheral through its pins'
-configuration, the run SHALL record the configuration registers of the pins
-each bus in scope uses, and a measure SHALL compare them with the mode,
-selector and output type the board requires, measuring the number of pins that
-differ. A probe SHALL NOT read a register that has read side effects.
+configuration, the run SHALL record the configuration the firmware gives the
+pins each bus in scope uses — every write to their configuration registers,
+and the registers' values at the end of the run where the model stores them —
+and a measure SHALL compare the result with the mode, selector and output type
+the board requires, measuring the number of pins that differ. A register the
+model accepts without storing SHALL be judged by the firmware's writes to it,
+never by a read-back. A probe SHALL NOT read a register that has read side
+effects.
 
 #### Scenario: Correctly configured pins measure zero
 
@@ -210,6 +214,12 @@ differ. A probe SHALL NOT read a register that has read side effects.
 - **WHEN** the firmware configures the I2C pins push-pull
 - **THEN** the pin-configuration measure counts both pins, though every bus
   transaction succeeded
+
+#### Scenario: An unstored register is judged by its writes
+
+- **WHEN** the model accepts writes to the output-type register without storing
+  them, and the firmware writes open drain for both I2C pins
+- **THEN** the measure counts neither pin, although the register reads back 0
 
 ### Requirement: Absence Is An Observation; An Incomplete Run Is Not
 

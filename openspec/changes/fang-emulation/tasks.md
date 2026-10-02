@@ -11,28 +11,28 @@ Run in a scratch directory outside the package. Only what graduates is
 committed — the firmware, the platform description, the probes, and the golden
 and recorded files the later tests read — each reviewed again as it lands.
 
-- [ ] 1.1 Install Renode 1.17.0 from the portable Linux tarball, recording its
+- [x] 1.1 Install Renode 1.17.0 from the portable Linux tarball, recording its
       digest, and `arm-none-eabi-gcc`; verify `renode --version` prints
       `Renode v1.17.0` and the compiler runs.
-- [ ] 1.2 Run upstream's `tests/peripherals/HS3001.robot` unchanged; verify it
+- [x] 1.2 Run upstream's `tests/peripherals/HS3001.robot` unchanged; verify it
       passes, confirming the install.
-- [ ] 1.3 Write the demo firmware as design.md describes it — register-level
+- [x] 1.3 Write the demo firmware as design.md describes it — register-level
       C, a Makefile, the three defect flags — and build all four ELFs; verify
       each builds and record the toolchain version.
-- [ ] 1.4 Write `stm32f401re.repl` by hand from upstream's `stm32f4.repl` and
+- [x] 1.4 Write `stm32f401re.repl` by hand from upstream's `stm32f4.repl` and
       the HS3001 hookup, with Renode's notice; verify the startup ELF boots and
       prints `temp=` lines.
-- [ ] 1.5 Write the I2C, GPIO and UART probes and the recorder, and produce
+- [x] 1.5 Write the I2C, GPIO and UART probes and the recorder, and produce
       `events.jsonl` with integer virtual nanoseconds; verify the record holds
       the boot line, the sensor's transactions and the LED's edges.
-- [ ] 1.6 Run the same script ten times; verify the ten event records are
+- [x] 1.6 Run the same script ten times; verify the ten event records are
       byte-identical.
-- [ ] 1.7 Confirm that Renode's configuration (virtual log timestamps,
+- [x] 1.7 Confirm that Renode's configuration (virtual log timestamps,
       synchronous logging) can be supplied per run, that the address NACK's
       warning carries an exact virtual timestamp under it, that the GPIO mode,
       output-type and alternate-function registers read without side effects,
       and that `"100ms"` is read as 100 s; record each result.
-- [ ] 1.8 Run each defective build and the absent-sensor case; verify which
+- [x] 1.8 Run each defective build and the absent-sensor case; verify which
       events differ from the startup run, as design.md's demo expects.
 - [ ] 1.9 Write the capability matrix — confirmed, refuted, not modelled — into
       design.md, revising any fact the spike refuted (and RFC 12 where it

@@ -1,0 +1,291 @@
+// STM32F401RE for fang's emulation plans.
+//
+// Derived from Renode's platforms/cpus/stm32f4.repl (Renode 1.17.0), which
+// describes an F40x superset. Changed so that firmware reaching for something
+// the F401 does not have fails here as it would on silicon:
+//   - 512 KB of flash and 96 KB of SRAM rather than 2 MB and 256 KB;
+//   - removed: USART3, UART4, UART5, CAN1, CAN2, Ethernet, the RNG, the FSMC
+//     bank, timers 6, 7, 8, 12, 13 and 14, and GPIO ports F, G, I, J and K,
+//     with every alternate-function connection that named them;
+//   - added: USART6, which the F401 has and the F40x description lacks;
+//   - SysTick and the timers run at 16 MHz, the HSI the part resets to, which
+//     is the core clock fang's platform descriptor assumes. Renode's clock
+//     controller is a stub, so firmware that configures the PLL is not
+//     modelled; the descriptor records that as a coverage gap;
+//   - no SVD is applied, so loading the platform never reaches the network.
+// Still not modelled, and listed by the descriptor: the clock tree, I2C DMA,
+// I2C acknowledgement bits beyond an absent target, SPI4.
+//
+// The original is Copyright (c) Antmicro <www.antmicro.com>, distributed
+// under the MIT licence; this derived description is distributed under the
+// same licence, whose text is in Renode's LICENSE.
+
+sram: Memory.MappedMemory @ sysbus 0x20000000
+    size: 0x00018000
+
+flash: Memory.MappedMemory @ sysbus 0x08000000
+    size: 0x80000
+
+flash_controller: MTD.STM32F4_FlashController @ {
+        sysbus 0x40023C00;
+        sysbus new Bus.BusMultiRegistration { address: 0x1FFFC000; size: 0x100; region: "optionBytes" }
+    }
+    flash: flash
+
+usart1: UART.STM32_UART @ sysbus <0x40011000, +0x100>
+    -> nvic@37
+
+usart2: UART.STM32_UART @ sysbus <0x40004400, +0x100>
+    -> nvic@38
+
+usart6: UART.STM32_UART @ sysbus <0x40011400, +0x100>
+    -> nvic@71
+
+nvic: IRQControllers.NVIC @ sysbus 0xE000E000
+    priorityMask: 0xF0
+    systickFrequency: 16000000
+    IRQ -> cpu@0
+
+cpu: CPU.CortexM @ sysbus
+    cpuType: "cortex-m4"
+    nvic: nvic
+
+pwr: Miscellaneous.STM32_PWR @ sysbus 0x40007000
+
+crc: CRC.STM32_CRC @ sysbus 0x40023000
+    series: STM32Series.F4
+
+exti: IRQControllers.STM32F4_EXTI @ sysbus 0x40013C00
+    numberOfOutputLines: 24
+    [0-4] -> nvic@[6-10]
+    [5-9] -> nvicInput23@[0-4]
+    [10-15] -> nvicInput40@[0-5]
+    [16, 17, 18, 22] -> nvic@[1, 41, 42, 3]
+
+nvicInput23: Miscellaneous.CombinedInput @ none
+    numberOfInputs: 5
+    -> nvic@23
+
+nvicInput40: Miscellaneous.CombinedInput @ none
+    numberOfInputs: 6
+    -> nvic@40
+
+gpioPortA: GPIOPort.STM32_GPIOPort @ sysbus <0x40020000, +0x400>
+    modeResetValue: 0xA8000000
+    outputSpeedResetValue: 0x0C000000
+    pullUpPullDownResetValue: 0x64000000
+    numberOfAFs: 16
+    invertedAFPins: [[5, 3], [7, 1, 3]]
+    [0-15] -> exti@[0-15]
+
+gpioPortB: GPIOPort.STM32_GPIOPort @ sysbus <0x40020400, +0x400>
+    modeResetValue: 0x00000280
+    outputSpeedResetValue: 0x000000C0
+    pullUpPullDownResetValue: 0x00000100
+    numberOfAFs: 16
+    invertedAFPins: [[0, 1, 3], [1, 1, 3], [13, 1], [14, 1, 3], [15, 1, 3]]
+    [0-15] -> exti@[0-15]
+
+gpioPortC: GPIOPort.STM32_GPIOPort @ sysbus <0x40020800, +0x400>
+    numberOfAFs: 16
+    [0-15] -> exti@[0-15]
+
+gpioPortD: GPIOPort.STM32_GPIOPort @ sysbus <0x40020C00, +0x400>
+    numberOfAFs: 16
+    [0-15] -> exti@[0-15]
+
+gpioPortE: GPIOPort.STM32_GPIOPort @ sysbus <0x40021000, +0x400>
+    numberOfAFs: 16
+    invertedAFPins: [[8, 1], [10, 1], [12, 1]]
+    [0-15] -> exti@[0-15]
+
+gpioPortH: GPIOPort.STM32_GPIOPort @ sysbus <0x40021c00, +0x400>
+    numberOfAFs: 16
+    [0-15] -> exti@[0-15]
+
+rom1: Memory.MappedMemory @ sysbus 0x1FFF0000
+    size: 0xC000
+
+rom2: Memory.MappedMemory @ sysbus 0x1FFFC400
+    size: 0x3C00
+
+spi1: SPI.STM32SPI @ sysbus 0x40013000
+    series: STM32Series.F4
+    IRQ->nvic@35
+
+spi2: SPI.STM32SPI @ sysbus 0x40003800
+    series: STM32Series.F4
+    IRQ->nvic@36
+    DMAReceive->dma1@3
+
+spi3: SPI.STM32SPI @ sysbus 0x40003C00
+    series: STM32Series.F4
+    IRQ->nvic@51
+
+i2c1: I2C.STM32F1_I2C @ sysbus 0x40005400
+    EventInterrupt -> nvic@31
+    ErrorInterrupt -> nvic@32
+
+i2c2: I2C.STM32F1_I2C @ sysbus 0x40005800
+    EventInterrupt -> nvic@33
+    ErrorInterrupt -> nvic@34
+
+i2c3: I2C.STM32F1_I2C @ sysbus 0x40005C00
+    EventInterrupt -> nvic@72
+    ErrorInterrupt -> nvic@73
+
+dma1: DMA.STM32DMA @ sysbus 0x40026000
+    [0-7] -> nvic@[11-17,47]
+
+dma2: DMA.STM32DMA @ sysbus 0x40026400
+    [0-7] -> nvic@[56-60,68-70]
+
+iwdg: Timers.STM32_IndependentWatchdog @ sysbus 0x40003000
+    frequency: 32000
+    windowOption: false
+    defaultPrescaler: 0x4
+
+rtc: Timers.STM32F4_RTC @ sysbus 0x40002800
+    AlarmIRQ -> nvic@41
+
+rcc: Miscellaneous.STM32F4_RCC @ sysbus 0x40023800
+    rtcPeripheral: rtc
+    Timer9Reset -> timer9@255
+
+timer1: Timers.STM32_Timer @ sysbus 0x40010000
+    BreakInterrupt -> nvic@24
+    UpdateInterrupt -> nvic@25
+    [TriggerInterrupt, CommutationInterrupt] -> nvic@[26, 26]
+    CaptureCompareInterrupt -> nvic@27
+    frequency: 16000000
+    initialLimit: 0xFFFF
+
+timer2: Timers.STM32_Timer @ sysbus 0x40000000
+    -> nvic@28
+    frequency: 16000000
+    initialLimit: 0xFFFFFFFF
+
+timer3: Timers.STM32_Timer @ sysbus 0x40000400
+    -> nvic@29
+    frequency: 16000000
+    initialLimit: 0xFFFF
+
+timer4: Timers.STM32_Timer @ sysbus 0x40000800
+    -> nvic@30
+    frequency: 16000000
+    initialLimit: 0xFFFF
+
+timer5: Timers.STM32_Timer @ sysbus 0x40000C00
+    -> nvic@50
+    frequency: 16000000
+    initialLimit: 0xFFFFFFFF
+
+timer9: Timers.STM32_Timer @ sysbus 0x40014000
+    -> nvic@24
+    frequency: 16000000
+    initialLimit: 0xFFFF
+
+timer10: Timers.STM32_Timer @ sysbus 0x40014400
+    -> nvic@25
+    frequency: 16000000
+    initialLimit: 0xFFFF
+
+timer11: Timers.STM32_Timer @ sysbus 0x40014800
+    -> nvic@26
+    frequency: 16000000
+    initialLimit: 0xFFFF
+
+// Alternate function mapping connections, as upstream, restricted to the
+// timers and ports the F401 has.
+timer1:
+    0 -> gpioPortA#08@01 | gpioPortE#09@01 | gpioPortA#07@01 | gpioPortB#13@01 | gpioPortE#08@01
+    1 -> gpioPortA#09@01 | gpioPortE#11@01 | gpioPortB#00@01 | gpioPortB#14@01 | gpioPortE#10@01
+    2 -> gpioPortA#10@01 | gpioPortE#13@01 | gpioPortB#01@01 | gpioPortB#15@01 | gpioPortE#12@01
+    3 -> gpioPortA#11@01 | gpioPortE#14@01
+
+timer2:
+    0 -> gpioPortA#00@01 | gpioPortA#05@01 | gpioPortA#15@01
+    1 -> gpioPortA#01@01 | gpioPortB#03@01
+    2 -> gpioPortA#02@01 | gpioPortB#10@01
+    3 -> gpioPortA#03@01 | gpioPortB#11@01
+
+timer3:
+    0 -> gpioPortA#06@02 | gpioPortB#04@02 | gpioPortC#06@02
+    1 -> gpioPortA#07@02 | gpioPortB#05@02 | gpioPortC#07@02
+    2 -> gpioPortB#00@02 | gpioPortC#08@02
+    3 -> gpioPortB#01@02 | gpioPortC#09@02
+
+timer4:
+    0 -> gpioPortB#06@02 | gpioPortD#12@02
+    1 -> gpioPortB#07@02 | gpioPortD#13@02
+    2 -> gpioPortB#08@02 | gpioPortD#14@02
+    3 -> gpioPortB#09@02 | gpioPortD#15@02
+
+timer5:
+    0 -> gpioPortA#00@02
+    1 -> gpioPortA#01@02
+    2 -> gpioPortA#02@02
+    3 -> gpioPortA#03@02
+
+timer9:
+    0 -> gpioPortA#02@03 | gpioPortE#05@03
+    1 -> gpioPortA#03@03 | gpioPortE#06@03
+
+timer10:
+    0 -> gpioPortB#08@03
+
+timer11:
+    0 -> gpioPortB#09@03
+
+gpioPortA:
+    0 -> timer2@00 | timer5@00
+    1 -> timer2@01 | timer5@01
+    2 -> timer2@02 | timer5@02 | timer9@00
+    3 -> timer2@03 | timer5@03 | timer9@01
+    5 -> timer2@00
+    6 -> timer3@00
+    7 -> timer1@00 | timer3@01
+    8 -> timer1@00
+    9 -> timer1@01
+    10 -> timer1@02
+    11 -> timer1@03
+    15 -> timer2@00
+
+gpioPortB:
+    0 -> timer1@01 | timer3@02
+    1 -> timer1@02 | timer3@03
+    3 -> timer2@01
+    4 -> timer3@00
+    5 -> timer3@01
+    6 -> timer4@00
+    7 -> timer4@01
+    8 -> timer4@02 | timer10@00
+    9 -> timer4@03 | timer11@00
+    10 -> timer2@02
+    11 -> timer2@03
+    13 -> timer1@00
+    14 -> timer1@01
+    15 -> timer1@02
+
+gpioPortC:
+    6 -> timer3@00
+    7 -> timer3@01
+    8 -> timer3@02
+    9 -> timer3@03
+
+gpioPortE:
+    5 -> timer9@00
+    6 -> timer9@01
+    8 -> timer1@00
+    9 -> timer1@00
+    10 -> timer1@01
+    11 -> timer1@01
+    12 -> timer1@02
+    13 -> timer1@02
+    14 -> timer1@03
+
+bitbandPeripherals: Miscellaneous.BitBanding @ sysbus <0x42000000, +0x2000000>
+    peripheralBase: 0x40000000
+
+bitbandSram: Miscellaneous.BitBanding @ sysbus <0x22000000, +0x200000>
+    peripheralBase: 0x20000000

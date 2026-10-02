@@ -45,6 +45,30 @@ the normative text, first.
 | `TimeInterval` parses with an unanchored pattern and no units: `"100ms"` is read as 100 seconds. | Every duration is written as decimal seconds (`"0.1"`) from the `Decimal` quantity, and a golden-file test pins the form. | `TimeInterval.cs:44` |
 | `renode --version` prints `Renode v1.17.0` and a build line carrying the build date and commit. | The first line is the version; the build line is recorded on the evidence and normalized in committed outputs. | `src/Renode/Program.cs:134-148` |
 
+### What the spike found (Renode 1.17.0, 2026-10-02)
+
+Run against the installed release (`renode` build `f1dd1b4af`, the portable
+Linux tarball, sha256 `4ba7c68b…605a5f`) with firmware built by Arm GNU
+Toolchain 15.2.Rel1. Upstream's `HS3001.robot` passes unchanged.
+
+| Fact | Status | Consequence |
+| --- | --- | --- |
+| No F401 platform; the F40x superset runs F401 firmware | confirmed | `stm32f401re.repl` derived and shipped |
+| Clock controller is a stub | confirmed | the firmware runs from the 16 MHz HSI it resets to and configures no PLL; SysTick and the timers are set to 16 MHz in the platform; clock configuration is a coverage gap |
+| I2C and UART ignore pin configuration; GPIO outputs honour the mode | confirmed | the PA6 board variant sees no edge while the firmware drives PA5 |
+| **The GPIO output-type register is not stored** | **added** | OTYPER is a tagged register: a write is accepted with a warning and reads back 0. Output type is measured from the firmware's *writes*, captured by a bus watchpoint (`register.write`), not from a read-back; mode and alternate function are read back too, and agree |
+| Only an absent device NACKs | confirmed | the controller's warning becomes `i2c.nack` |
+| The NACK's timestamp | confirmed, with a change | a log entry's own virtual time is the last sync point (it stamped the NACK at the boot line's 2020 ns); the recorder stamps it itself after synchronizing the CPU, giving 2340 ns. Renode's logger collapses a run of identical warnings, so a repeated NACK is recorded once |
+| **The I2C controller warns on every write to CCR, TRISE and ACK** | **added** | these fields are tagged — timing and acknowledgement are not modelled. The descriptor lists them as expected warnings and coverage gaps, so they do not withdraw measures; any other warning from a watched model does |
+| The HS3001 measurement request is a zero-length write | confirmed | the controller calls only `FinishTransmission()`, so the model logs nothing; the read hands back all four bytes at the address phase |
+| No I2C transaction log | confirmed | probes record transactions |
+| Seed per process; host input lands at sync points | confirmed | ten startup runs and three absent-sensor runs gave byte-identical event records |
+| `"100ms"` is read as 100 s | confirmed | `RunFor "1ms"` ran one second |
+| **Renode's launcher runs from its install directory** | **added** | relative paths in a script resolve there, including `@` paths to files that do not exist yet; the script names every file as `$ORIGIN/…` |
+| **Upstream's platform downloads an SVD at load** | **added** | `ApplySVD` fetches `STM32F40x.svd.gz` over the network on every load; the F401 platform drops it, so a run needs no network |
+| `--hide-log` hides errors as well as noise | added | the backend keeps Renode's log in the raw run instead of hiding it |
+| The firmware build is reproducible | confirmed | `make clean && make` reproduces the ELF byte for byte |
+
 ### Considered and set aside
 
 | Option | Why not |
@@ -150,7 +174,7 @@ self.mcu.add_trait(Simulatable(model_kind="renode_platform",
                                backends=("renode",), source="fang:stm32f401re"))
 self.env.add_trait(Simulatable(model_kind="renode_peripheral",
                                backends=("renode",), source="renode:Sensors.HS3001"))
-self.mcu.add_trait(Firmware("firmware/build/sensor_node.elf", target="stm32f401re"))
+self.mcu.add_trait(Firmware("firmware/elf/sensor_node.elf", target="stm32f401re"))
 ```
 
 ### The question
@@ -205,31 +229,42 @@ prepared for.
   decimal seconds from the `Decimal` quantity. The stimulus is also written
   into the event record when applied.
 - Renode's configuration makes log timestamps virtual and logging synchronous.
-- At the end of the run, and at any virtual time a measure names, the recorder
-  reads the mode, output-type and alternate-function registers of each GPIO
-  port the plan's buses use. Register addresses come from the platform
-  descriptor. The I2C status register, whose NACK flag clears on read, is never
-  read.
+- Before the firmware loads, the recorder installs a write watchpoint on the
+  mode, output-type and alternate-function registers of each GPIO port the
+  plan's buses use, recording every write the firmware makes; at the end of
+  the run it also reads back the mode and alternate-function registers. The
+  output-type register is not stored by Renode's model, so its writes are the
+  only evidence of it. Register addresses come from the platform descriptor.
+  The I2C status register, whose NACK flag clears on read, is never read.
+- Every file the script names is `$ORIGIN/…`, because Renode's launcher runs
+  from its install directory.
 - The script ends with `quit`. Only commands from this fixed set appear;
   surfaces are validated identifiers and values are `Decimal` strings, so no
   text from a program reaches the monitor or Renode's Python.
 
 ### Probes and events
 
-The I2C probe registers at the device's address, forwards every call to the
-real model, and records `Write`, `Read` and `FinishTransmission` with their
-bytes. The GPIO probe is a receiver on a port pin's output. The UART probe
-records each line the firmware transmits. One recorder writes `events.jsonl`
-synchronously, each line `{seq, t_ns, source, type, payload}`, with `source` an
-entity identifier the plan maps from the probe's name. The types are
-`run.start`, `stimulus`, `uart.line`, `gpio.edge`, `i2c.write`, `i2c.read`,
-`i2c.stop`, `i2c.nack`, `register.snapshot`, `model.warning` and `run.end`,
-whose payload gives `completed`, `timeout` or `crashed`.
+All probes live in one C# file, `fang_probes.cs`, compiled by Renode at load.
+The recorder registers on a GPIO port as a container child, like an LED, and is
+never connected, so the script can call it and the firmware cannot see it; it
+switches Renode's logger to synchronous and adds a log backend for the
+warnings of the peripherals it is told to watch. The I2C probe registers at
+the device's address, constructs the real model by its type name, forwards
+every call to it, and records `Write`, `Read` and `FinishTransmission` with
+their bytes; a stimulus is its `SetInput` method, given a decimal string. The
+GPIO probe is a receiver connected to a port pin's output. The UART probe
+listens to the UART's transmitter and records each line. The recorder writes
+`events.jsonl`, each line `{seq, t_ns, source, type, payload}`, with `source`
+an entity identifier the lowering writes into the probe, and each event stamped
+after synchronizing the CPU that caused it. The types are `run.start`,
+`stimulus`, `uart.line`, `gpio.edge`, `i2c.write`, `i2c.read`, `i2c.stop`,
+`i2c.nack`, `register.write`, `register.snapshot`, `model.warning` and
+`run.end`, whose payload gives `completed`; a run without `run.end` ended on a
+timeout or a crash, which the backend tells apart.
 
 The address NACK of an absent device reaches no probe, because no target is
-registered at that address; it is taken from the controller's warning in the
-engine log under synchronous logging and virtual timestamps, and the spike
-confirms its timestamp is exact before anything relies on it.
+registered at that address; it is taken from the controller's warning, which
+the recorder's log backend receives on the CPU thread that caused it.
 
 ### Measures
 
