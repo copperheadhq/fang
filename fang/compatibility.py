@@ -734,8 +734,47 @@ def compatibility_check(snapshot):
 
 
 def compatibility_scope(snapshot) -> set[str]:
+    """What the compatibility check covers: every link's connection and its
+    participants, and whatever decides the net of a participant's strap pin.
+
+    The addressing rule reads a strapped address off the net the strap pin is
+    on, so re-tying that pin, or removing a connection on its net, changes an
+    address without touching any port. For a participant with a strap, the
+    scope therefore holds the strap pin, the pins its map names, and every pin,
+    conductive connection and stated net on the strap pin's net; otherwise a
+    duplicate address could reach the head with the rule never run.
+    """
+    from .entities import Net
+    from .topology import CONDUCTIVE_KINDS
+
+    entities = snapshot.entities
     scope: set[str] = set()
-    for link in find_links(snapshot.entities):
+    strapped: list[Port] = []
+    for link in find_links(entities):
         scope.add(link.connection)
         scope.update(link.participants)
+        strapped.extend(
+            port
+            for port in (entities.get(pid) for pid in link.participants)
+            if isinstance(port, Port) and port.address_strap is not None
+        )
+    if not strapped:
+        return scope
+
+    nets = _nets_by_pin(entities)
+    on_strap_nets: set[str] = set()
+    for port in strapped:
+        pin = port.address_strap["pin"]
+        scope.add(pin)
+        scope.update(port.address_strap["by_pin"])
+        on_strap_nets.update(nets.get(pin, frozenset({pin})))
+    scope.update(on_strap_nets)
+    for entity in entities.values():
+        if isinstance(entity, Connection):
+            if entity.connection_kind in CONDUCTIVE_KINDS and (
+                entity.source in on_strap_nets or entity.target in on_strap_nets
+            ):
+                scope.add(entity.id)
+        elif isinstance(entity, Net) and on_strap_nets.intersection(entity.members):
+            scope.add(entity.id)
     return scope

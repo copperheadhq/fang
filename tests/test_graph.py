@@ -121,6 +121,27 @@ def test_the_default_required_set_is_every_check_whose_scope_intersects(kernel, 
     assert any(result.check == "constraint" for result in proposal.checks)
 
 
+def test_a_removal_requires_the_checks_whose_scope_held_what_it_removed(snapshot):
+    # A scope is read off a snapshot, and a removed entity is gone from the
+    # candidate's: only the head's scope says which checks covered it.
+    from fang.graph import CheckClass, CheckResult
+
+    kept = Component(authored("CMP-KEPT"))
+
+    def run(candidate):
+        present = kept.id in candidate.entities
+        return [CheckResult("kept", CheckStatus.PASS if present else CheckStatus.FAIL, kept.id)]
+
+    check = CheckClass("kept", run, lambda s: {kept.id} & set(s.entities))
+    graph = KernelGraph(snapshot, checks=(check,))
+    assert graph.apply(Transaction(graph.head.hash, (AddEntity(entity=kept),))).accepted
+
+    proposal = graph.propose(Transaction(graph.head.hash, (RemoveEntity(target=kept.id),)))
+    assert [r.check for r in proposal.checks] == ["kept"]
+    assert proposal.rejected
+    assert any(d.code == "TXN-0002" for d in proposal.diagnostics)
+
+
 def test_a_policy_narrows_the_required_set(kernel, power_constraint):
     transaction = Transaction(kernel.head.hash, (AddEntity(entity=power_constraint),))
     proposal = kernel.propose(transaction, policy=Policy(required_checks=frozenset()))

@@ -740,3 +740,67 @@ def test_a_controller_with_no_address_is_not_reported():
     # The rule is decided over the one device that is addressed.
     assert [r.status for r in results] == [CheckStatus.PASS]
     assert not any(host in r.message for r in results)
+
+
+# -- the gate brings the addressing rule in when a strap's net changes --------
+
+
+def strap_connection(snapshot):
+    addr_pin = pin_at(snapshot, "system.device.ADDR")
+    return next(
+        e for e in snapshot.entities.values()
+        if e.kind == "connection" and addr_pin in (e.source, e.target)
+    )
+
+
+def test_retying_a_strap_onto_a_taken_address_is_rejected_by_the_gate():
+    import dataclasses
+
+    from fang.checks import DEFAULT_CHECKS
+    from fang.graph import Connect, KernelGraph, Transaction
+
+    # Tied to its own supply the strap selects 0x49, clear of the other 0x48.
+    snapshot = snapshot_of(strapped_bus(lambda s: s.device.strap >> s.rail.dc.vcc, second=Fixed48))
+    assert [r.status for r in addressing(compatibility_check(snapshot))] == [CheckStatus.PASS]
+
+    # Moving the same connection to ground selects 0x48: a duplicate.
+    old = strap_connection(snapshot)
+    retied = dataclasses.replace(
+        old, source=pin_at(snapshot, "system.device.ADDR"), target=pin_at(snapshot, "system.device.GND")
+    )
+    graph = KernelGraph(snapshot, checks=DEFAULT_CHECKS)
+    proposal = graph.propose(Transaction(snapshot.hash, (Connect(connection=retied),)))
+    assert proposal.rejected
+    assert any(r.check == "interface_compatibility" for r in proposal.checks)
+    assert any(
+        d.code == "TXN-0002" and "0x48" in d.message for d in proposal.diagnostics
+    )
+    assert graph.head is snapshot
+
+
+def test_removing_a_strap_connection_runs_the_addressing_rule():
+    from fang.checks import DEFAULT_CHECKS
+    from fang.graph import KernelGraph, RemoveEntity, Transaction
+
+    snapshot = snapshot_of(strapped_bus(lambda s: s.device.strap >> s.rail.dc.vcc, second=Fixed48))
+    graph = KernelGraph(snapshot, checks=DEFAULT_CHECKS)
+    proposal = graph.propose(
+        Transaction(snapshot.hash, (RemoveEntity(target=strap_connection(snapshot).id),))
+    )
+    # The strap is left on no net: the rule is run and is undecided, naming the
+    # pin. Whether that blocks is the policy's decision, not the scope's.
+    results = addressing(proposal.checks)
+    assert [r.status for r in results] == [CheckStatus.UNKNOWN]
+    assert pin_at(snapshot, "system.device.ADDR") in results[0].message
+
+
+def test_the_compatibility_scope_holds_what_decides_a_strap_pin_net():
+    from fang.compatibility import compatibility_scope
+
+    snapshot = snapshot_of(strapped_bus(lambda s: s.device.strap >> s.rail.dc.vcc, second=Fixed48))
+    scope = compatibility_scope(snapshot)
+    assert strap_connection(snapshot).id in scope
+    for name in ("ADDR", "GND", "VDD", "SDA", "SCL"):
+        assert pin_at(snapshot, f"system.device.{name}") in scope
+    # The rail's own pin is on the strap's net, so a connection to it is too.
+    assert pin_at(snapshot, "system.rail.VCC") in scope

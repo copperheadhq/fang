@@ -397,12 +397,27 @@ class Policy:
     approvals_required: frozenset[str] = frozenset()
     approvals_granted: frozenset[str] = frozenset()
 
-    def required(self, available: Sequence[CheckClass], snapshot: Snapshot, affected: set[str]) -> list[CheckClass]:
+    def required(
+        self,
+        available: Sequence[CheckClass],
+        snapshot: Snapshot,
+        affected: set[str],
+        *,
+        base: Snapshot | None = None,
+    ) -> list[CheckClass]:
         if self.required_checks is not None:
             return [c for c in available if c.name in self.required_checks]
         # Absent a policy, the required set is structural validation together with
-        # every check class whose scope intersects the affected entities.
-        return [c for c in available if c.intersects(snapshot, affected)]
+        # every check class whose scope intersects the affected entities. A scope
+        # is read off a snapshot, and an entity a transaction removes is in the
+        # base's scope and gone from the candidate's, so both are consulted: a
+        # removal must bring in the checks that covered what it removed.
+        return [
+            c
+            for c in available
+            if c.intersects(snapshot, affected)
+            or (base is not None and c.intersects(base, affected))
+        ]
 
 
 DEFAULT_POLICY = Policy()
@@ -539,9 +554,11 @@ class KernelGraph:
         report = validate(candidate.entities)
         diagnostics.extend(report.diagnostics)
 
-        # Gate condition 3: every required check class has run.
+        # Gate condition 3: every required check class has run. The scope is
+        # taken over the head as well as the candidate, so what a removal takes
+        # away still counts as affected.
         affected = transaction.affected()
-        required = policy.required(self._checks, candidate, affected)
+        required = policy.required(self._checks, candidate, affected, base=self._head)
         results: list[CheckResult] = []
         for check in required:
             results.extend(check.run(candidate))
