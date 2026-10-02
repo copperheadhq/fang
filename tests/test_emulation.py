@@ -331,3 +331,135 @@ def test_a_live_run_reproduces_the_recorded_events():
     assert run.version == "1.17.0"
     assert run.outcome == "completed"
     assert run.events == (FIXTURES / "startup.jsonl").read_bytes()
+
+
+# -- compiling a plan from the sensor_node board ------------------------------
+
+
+def _board():
+    """sensor_node elaborated, with its emulation traits attached by hand."""
+    from fang.cli import load_system
+    from fang.elaborate import elaborate
+    from fang.emulation import EmulationModel, Firmware
+
+    result = elaborate(load_system(ROOT / "examples" / "sensor_node" / "sensor_node.py"), project_id="PRJ-EXAMPLES")
+    paths = {str(e.identity.path): e.id for e in result.snapshot.entities.values() if e.identity.path is not None}
+    result.traits.attach(paths["system.mcu"], EmulationModel(source="fang:stm32f401re"))
+    result.traits.attach(paths["system.mcu"], Firmware("firmware/elf/sensor_node.elf", target="stm32f401re"))
+    result.traits.attach(paths["system.env"], EmulationModel(source="renode:Sensors.HS3001"))
+    return result, paths
+
+
+class _Question:
+    def __init__(self, data):
+        self.id, self.verifies, self.data = "VER-startup", "REQ-sensor", data
+
+
+def _scalar(value, unit):
+    return {"kind": "scalar", "unit": unit, "value": value}
+
+
+def _startup_data(paths, *, abstracted=("scl_pullup", "sda_pullup", "series", "console"), faults=(), stimuli=None):
+    if stimuli is None:
+        stimuli = [{"at": _scalar("0", "ms"), "surface": "env", "input": "temperature", "quantity": _scalar("25", "degC")}]
+    return {
+        "method": "emulation",
+        "surfaces": {
+            "env": {"kind": "part", "component": paths["system.env"]},
+            "mcu.status": {"kind": "surface", "component": paths["system.mcu"], "port": paths["system.mcu.status"]},
+            "mcu.usart2": {"kind": "surface", "component": paths["system.mcu"], "port": paths["system.mcu.usart2"]},
+            "mcu.i2c1": {"kind": "surface", "component": paths["system.mcu"], "port": paths["system.mcu.i2c1"]},
+        },
+        "abstracted": [{"name": n, "component": paths[f"system.{n}"]} for n in abstracted],
+        "measures": [
+            {"name": "first_read", "parameter": "X.first_read", "unit": "s",
+             "measure": {"kind": "emulation.first_at", "surface": "env", "match": {"kind": "i2c.read", "surface": "env"}}},
+            {"name": "reported", "parameter": "X.reported", "unit": "degC",
+             "measure": {"kind": "emulation.uart_value", "surface": "mcu.usart2", "prefix": "temp=", "unit": "degC"}},
+            {"name": "slow_blinks", "parameter": "X.slow_blinks", "unit": "1",
+             "measure": {"kind": "emulation.count", "surface": "mcu.status",
+                         "match": {"kind": "gpio.rise", "surface": "mcu.status"}, "within_ns": [1_000_000_000, 2_000_000_000]}},
+            {"name": "mux_mismatches", "parameter": "X.mux_mismatches", "unit": "1",
+             "measure": {"kind": "emulation.pin_config", "surface": "mcu.i2c1"}},
+        ],
+        "scenario": {"run_until": _scalar("2", "s"), "seed": 0, "stimuli": stimuli, "faults": list(faults)},
+    }
+
+
+def test_the_plan_carries_the_boards_facts():
+    from fang.emulation import compile_plan
+
+    result, paths = _board()
+    plan = compile_plan(result.snapshot, _Question(_startup_data(paths)), traits=result.traits)
+    (bus,) = plan.buses
+    assert (bus.instance, bus.emulator) == ("I2C1", "i2c1")
+    assert [(p.vendor, p.signal, p.selector, p.open_drain) for p in bus.pins] == [
+        ("PB8", "scl", "AF4", True), ("PB9", "sda", "AF4", True),
+    ]
+    assert [(d.address, d.model) for d in bus.devices] == [(0x44, "renode:Sensors.HS3001")]
+    gpio = next(o for o in plan.observations if o.kind == "gpio")
+    assert (gpio.emulator, gpio.index) == ("gpioPortA", 5)
+    assert plan.stimuli[0].value == "25"
+    assert "scl_pullup is abstracted, not modelled" in plan.coverage_gaps
+
+
+def test_the_same_question_compiles_to_the_same_plan():
+    from fang.emulation import compile_plan
+
+    first, paths = _board()
+    second, _ = _board()
+    a = compile_plan(first.snapshot, _Question(_startup_data(paths)), traits=first.traits)
+    b = compile_plan(second.snapshot, _Question(_startup_data(paths)), traits=second.traits)
+    assert a.hash == b.hash and a.as_dict() == b.as_dict()
+
+
+def test_a_component_in_scope_with_no_model_and_no_abstraction_refuses_the_plan():
+    from fang.emulation import EmulationError, compile_plan
+
+    result, paths = _board()
+    with pytest.raises(EmulationError, match="scl_pullup"):
+        compile_plan(result.snapshot, _Question(_startup_data(paths, abstracted=("sda_pullup", "series", "console"))),
+                     traits=result.traits)
+
+
+def test_an_unsupported_fault_refuses_the_plan():
+    from fang.emulation import EmulationError, compile_plan
+
+    result, paths = _board()
+    data = _startup_data(paths, faults=[{"kind": "stuck_low", "surface": "env"}])
+    with pytest.raises(EmulationError):
+        compile_plan(result.snapshot, _Question(data), traits=result.traits)
+
+
+def test_a_stimulus_of_the_wrong_dimension_refuses_the_plan():
+    from fang.emulation import EmulationError, compile_plan
+
+    result, paths = _board()
+    stimuli = [{"at": _scalar("0", "ms"), "surface": "env", "input": "temperature", "quantity": _scalar("3", "V")}]
+    with pytest.raises(EmulationError, match="temperature"):
+        compile_plan(result.snapshot, _Question(_startup_data(paths, stimuli=stimuli)), traits=result.traits)
+
+
+def test_a_plan_without_a_duration_is_refused():
+    from fang.emulation import EmulationError, compile_plan
+
+    result, paths = _board()
+    data = _startup_data(paths)
+    del data["scenario"]["run_until"]
+    with pytest.raises(EmulationError, match="duration"):
+        compile_plan(result.snapshot, _Question(data), traits=result.traits)
+
+
+@needs_renode
+def test_a_plan_compiled_from_the_board_runs_and_measures():
+    from fang.emulation import compile_plan
+
+    result, paths = _board()
+    plan = compile_plan(result.snapshot, _Question(_startup_data(paths)), traits=result.traits)
+    firmware = (ROOT / "examples" / "sensor_node" / plan.firmware_path).read_bytes()
+    run = RenodeBackend().run(bundle(plan, firmware), timeout=180)
+    m = measured(plan, run_record(run.events, run.outcome))
+    assert m["first_read"].quantity.interval()[1] < Decimal("0.2")
+    assert m["reported"].quantity.value == Decimal("25.01")
+    assert m["slow_blinks"].quantity.value == 1
+    assert m["mux_mismatches"].quantity.value == 0

@@ -33,7 +33,9 @@ from functools import lru_cache
 from importlib import resources
 from typing import Any, Mapping, Sequence
 
+from .provenance import Provenance
 from .serialization import content_hash
+from .traits import Trait
 from .units import Quantity
 
 #: Billionths of a second in one: event times are integer nanoseconds.
@@ -693,3 +695,452 @@ def pin_mismatches(plan: EmulationPlan, record: RunRecord, port: str) -> int:
             ):
                 wrong += 1
     return wrong
+
+
+# --------------------------------------------------------------------------
+# Bindings
+# --------------------------------------------------------------------------
+
+
+@dataclass
+class EmulationModel(Trait):
+    """A component's emulation model: the descriptor fang ships for it.
+
+    Its own protocol rather than `Simulatable`'s, because the trait registry
+    holds one trait per protocol for an entity, so a part could otherwise not
+    carry a SPICE model and an emulation model at once, and the SPICE plan
+    would read an emulation model as one it cannot use.
+    """
+
+    protocol = "emulation_model"
+    source: str = ""
+    provenance: Provenance = field(default_factory=Provenance)
+
+
+@dataclass
+class Firmware(Trait):
+    """The firmware a component runs: a file relative to the project root, and
+    the target it was built for. Its digest is never part of the snapshot;
+    each run records it on its evidence."""
+
+    protocol = "firmware"
+    path: str = ""
+    target: str = ""
+
+
+# --------------------------------------------------------------------------
+# Compiling a question into a plan
+# --------------------------------------------------------------------------
+
+_PROBE = re.compile(r"[^A-Za-z0-9_]")
+
+
+def _probe_name(text: str) -> str:
+    """A Renode identifier for a probe. Prefixed so it can never redefine one of
+    the platform's own peripherals, whose names share the namespace."""
+    return "fang_" + _PROBE.sub("_", text)
+
+
+def _refuse(message: str, code: str) -> EmulationError:
+    return EmulationError(message, code=code)
+
+
+def _quantity_from(payload: Mapping[str, Any]) -> Quantity:
+    return Quantity.from_dict(payload) if hasattr(Quantity, "from_dict") else _rebuild_quantity(payload)
+
+
+def _rebuild_quantity(payload: Mapping[str, Any]) -> Quantity:
+    kind = payload.get("kind", "scalar")
+    unit = payload["unit"]
+    if kind == "scalar":
+        return Quantity.scalar(Decimal(payload["value"]), unit)
+    if kind == "range":
+        return Quantity.range(Decimal(payload["min"]), Decimal(payload["max"]), unit)
+    raise EmulationError(f"a {kind} quantity cannot be used here", code="quantity")
+
+
+def _nanoseconds(quantity: Quantity) -> int:
+    low, high = quantity.interval()
+    if low != high:
+        raise _refuse(f"a time in a scenario is one instant, not {quantity}", "quantity")
+    return int((Decimal(low) * _NS).to_integral_value())
+
+
+def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
+    """An emulation question as a plan, or a refusal naming what is missing.
+
+    `question` carries `id`, `verifies` and `data`, the canonical question
+    dictionary its declaration stored. Everything else comes from the snapshot
+    and the traits: the target and its firmware, the scope, every bus with its
+    controller, pins, selectors and addresses, every observation point, and
+    every stimulus and fault checked against the model it names. Nothing is
+    defaulted, and no part falls back to a generic model.
+    """
+    from collections import defaultdict
+
+    from .compatibility import resolve_address
+    from .entities import Component, Connection, Interface, Pin, Port
+    from .interfaces import CATALOGUE
+    from .netlist import infer_nets
+
+    entities = snapshot.entities
+    data = question.data
+    scenario = data.get("scenario", {})
+    surfaces = data.get("surfaces", {})
+
+    # -- the target --------------------------------------------------------
+    platforms = []
+    for entity_id in traits.entities_with("emulation_model"):
+        model = descriptor(traits.get(entity_id, "emulation_model").source)
+        if model.kind == "renode_platform":
+            platforms.append(entity_id)
+    bound = set(traits.entities_with("firmware"))
+    candidates = [p for p in platforms if p in bound] or platforms
+    if not candidates:
+        raise _refuse("no component carries a platform emulation model to run firmware on", "target")
+    if len(candidates) > 1:
+        raise _refuse(
+            "more than one component carries a platform emulation model and firmware: "
+            + ", ".join(sorted(candidates)),
+            "target",
+        )
+    target = candidates[0]
+    platform = descriptor(traits.get(target, "emulation_model").source)
+    binding = traits.get(target, "firmware")
+    firmware_path = scenario.get("firmware") or (binding.path if binding else None)
+    if not firmware_path:
+        raise _refuse(f"no firmware is bound to {_path(entities, target)} and the question names none", "firmware")
+    firmware_target = binding.target if binding else platform.document["target"]
+    if firmware_target != platform.document["target"]:
+        raise _refuse(
+            f"the firmware was built for {firmware_target!r} and the platform model "
+            f"describes {platform.document['target']!r}",
+            "firmware",
+        )
+
+    # -- the graph, indexed -------------------------------------------------
+    pins = {e.id: e for e in entities.values() if isinstance(e, Pin)}
+    ports = {e.id: e for e in entities.values() if isinstance(e, Port)}
+    interfaces = {e.id: e for e in entities.values() if isinstance(e, Interface)}
+    connections = sorted((e for e in entities.values() if isinstance(e, Connection)), key=lambda c: c.id)
+    lowered: dict[str, list] = defaultdict(list)
+    for connection in connections:
+        if connection.derived_from_interface:
+            lowered[connection.derived_from_interface].append(connection)
+    port_links = [c for c in connections if c.source in ports and c.target in ports]
+
+    def interface_type(port):
+        entity = interfaces.get(port.interface)
+        return entity.interface_type if entity is not None else ""
+
+    def target_pin(connection) -> str | None:
+        for end in (connection.source, connection.target):
+            pin = pins.get(end)
+            if pin is not None and pin.owner == target:
+                return end
+        return None
+
+    def mapped(pin_id: str) -> tuple[str, int]:
+        vendor = pins[pin_id].vendor_name
+        where = platform.document["pins"].get(vendor)
+        if where is None:
+            raise _refuse(
+                f"the platform model maps no emulator pin for {vendor}; a port is never "
+                "derived from a pin's name or pad number",
+                "pin",
+            )
+        return where["port"], int(where["index"])
+
+    def lowered_target_pins(port_id: str) -> list[tuple[str, str]]:
+        found = []
+        for link in port_links:
+            if port_id not in (link.source, link.target):
+                continue
+            for connection in lowered.get(link.id, ()):
+                pin = target_pin(connection)
+                if pin is not None:
+                    found.append((pin, str(connection.identity.path).rsplit(".", 1)[-1]))
+        return found
+
+    abstracted = {entry["component"]: entry["name"] for entry in data.get("abstracted", ())}
+
+    # -- what the question names --------------------------------------------
+    records = {entry["name"]: entry for entry in data.get("measures", ())}
+    devices_named: set[str] = set()
+    signal_surfaces: dict[str, str] = {}
+    uart_surfaces: dict[str, str] = {}
+    bus_ports_named: set[str] = set()
+
+    def resolved(name: str) -> Mapping[str, Any]:
+        found = surfaces.get(name)
+        if found is None:
+            raise _refuse(f"the question names {name!r}, which was not resolved", "surface")
+        return found
+
+    def note_match(match: Mapping[str, Any]) -> None:
+        where = resolved(match["surface"])
+        if match["kind"] in ("i2c.read", "i2c.write"):
+            devices_named.add(where["component"])
+        elif match["kind"] in ("gpio.rise", "gpio.fall"):
+            signal_surfaces[match["surface"]] = where["port"]
+        elif match["kind"] == "uart.line":
+            uart_surfaces[match["surface"]] = where["port"]
+
+    for entry in records.values():
+        record = entry["measure"]
+        kind = record["kind"]
+        if kind in ("emulation.first_at", "emulation.count"):
+            note_match(record["match"])
+        elif kind == "emulation.latency":
+            note_match(record["from"])
+            note_match(record["to"])
+        elif kind == "emulation.uart_value":
+            uart_surfaces[record["surface"]] = resolved(record["surface"])["port"]
+        elif kind == "emulation.pin_config":
+            bus_ports_named.add(resolved(record["surface"])["port"])
+        else:
+            raise _refuse(f"{entry['name']} is measured by {kind!r}, which no emulation measure is", "measure")
+    for stimulus in scenario.get("stimuli", ()):
+        devices_named.add(resolved(stimulus["surface"])["component"])
+    absent = set()
+    declared_faults: list[tuple[str, str]] = []
+    for fault in scenario.get("faults", ()):
+        component = resolved(fault["surface"])["component"]
+        devices_named.add(component)
+        declared_faults.append((component, fault["kind"]))
+        if fault["kind"] == "absent":
+            absent.add(component)
+
+    # -- buses ---------------------------------------------------------------
+    buses: list[PlanBus] = []
+    models: list[dict] = [_model_record(target, platform)]
+    device_descriptors: dict[str, Descriptor] = {}
+    for port in sorted((p for p in ports.values() if p.owner == target), key=lambda p: p.id):
+        if interface_type(port) != "i2c":
+            continue
+        peers = []
+        for link in port_links:
+            if port.id not in (link.source, link.target):
+                continue
+            other = ports[link.target if link.source == port.id else link.source]
+            if other.owner != target and interface_type(other) == "i2c":
+                peers.append((link, other))
+        if not peers:
+            continue
+        on_bus = {other.owner for _, other in peers}
+        if not (on_bus & devices_named) and port.id not in bus_ports_named:
+            continue
+        if not port.peripheral:
+            raise _refuse(f"{_path(entities, port.id)} names no peripheral instance", "bus")
+        emulator = platform.document["peripherals"].get(port.peripheral)
+        if emulator is None:
+            raise _refuse(f"the platform model has no {port.peripheral}", "bus")
+        spec = CATALOGUE.get("i2c")
+        plan_pins: dict[str, PlanPin] = {}
+        for link, _ in peers:
+            for connection in lowered.get(link.id, ()):
+                pin = target_pin(connection)
+                if pin is None or pin in plan_pins:
+                    continue
+                signal = str(connection.identity.path).rsplit(".", 1)[-1]
+                emulator_port, index = mapped(pin)
+                selector = connection.selectors.get(pin, {}).get("selector")
+                plan_pins[pin] = PlanPin(
+                    pin, pins[pin].vendor_name, signal, selector,
+                    spec.signal(signal).open_drain, emulator_port, index,
+                )
+        plan_devices = []
+        for _, other in sorted(peers, key=lambda pair: pair[1].owner):
+            component = other.owner
+            trait = traits.get(component, "emulation_model")
+            if trait is None:
+                if component in abstracted:
+                    continue
+                raise _refuse(
+                    f"{_path(entities, component)} is on {port.peripheral} with no emulation "
+                    "model and is not listed as abstracted",
+                    "scope",
+                )
+            model = descriptor(trait.source)
+            device_descriptors[component] = model
+            address = resolve_address(snapshot, other)
+            if address is None or not address.known or address.quantity is None:
+                reason = getattr(address, "rationale", None) or "it declares no address"
+                raise _refuse(f"the address of {_path(entities, component)} is not known: {reason}", "address")
+            low, high = address.quantity.interval()
+            if low != high:
+                raise _refuse(f"the address of {_path(entities, component)} is a range", "address")
+            plan_devices.append(
+                PlanDevice(component, _probe_name(_path(entities, component).rsplit(".", 1)[-1]),
+                           model.id, model.document["renode_type"], int(low), component in absent)
+            )
+            models.append(_model_record(component, model))
+        buses.append(PlanBus(port.id, port.peripheral, emulator,
+                             tuple(plan_pins[p] for p in sorted(plan_pins, key=lambda p: pins[p].vendor_name)),
+                             tuple(plan_devices)))
+
+    on_a_bus = {d.component for b in buses for d in b.devices}
+    for component in sorted(devices_named - on_a_bus):
+        raise _refuse(f"the question names {_path(entities, component)}, which is on no bus the plan reaches", "scope")
+    for component, kind in sorted(declared_faults):
+        model = device_descriptors.get(component)
+        if model is None or kind not in model.faults:
+            raise _refuse(
+                f"the model of {_path(entities, component)} does not support the fault {kind!r}; "
+                "one fault mechanism never stands in for another",
+                "fault",
+            )
+
+    # -- observations --------------------------------------------------------
+    observations: list[PlanObservation] = []
+    touched: set[str] = {p.pin for b in buses for p in b.pins}
+    for surface, port_id in sorted(signal_surfaces.items()):
+        found = lowered_target_pins(port_id)
+        if len(found) != 1:
+            raise _refuse(f"{surface} lands on {len(found)} pins of the target; an edge is observed on one", "surface")
+        pin, _ = found[0]
+        emulator_port, index = mapped(pin)
+        touched.add(pin)
+        observations.append(PlanObservation(_probe_name(surface), "gpio", port_id, surface, emulator_port, index))
+    for surface, port_id in sorted(uart_surfaces.items()):
+        port = ports[port_id]
+        emulator = platform.document["peripherals"].get(port.peripheral or "")
+        if emulator is None:
+            raise _refuse(f"{surface} names no UART the platform model has", "surface")
+        touched.update(pin for pin, _ in lowered_target_pins(port_id))
+        observations.append(PlanObservation(_probe_name(surface), "uart", port_id, surface, emulator))
+
+    # -- the scope -----------------------------------------------------------
+    modelled = set(traits.entities_with("emulation_model"))
+    in_scope: set[str] = set()
+    for net in infer_nets(entities):
+        if not touched & set(net):
+            continue
+        for pin in net:
+            owner = pins[pin].owner if pin in pins else None
+            if owner and owner != target:
+                in_scope.add(owner)
+    for component in sorted(in_scope):
+        if component not in modelled and component not in abstracted:
+            raise _refuse(
+                f"{_path(entities, component)} shares a net with a pin the question touches, "
+                "carries no emulation model, and is not listed as abstracted",
+                "scope",
+            )
+
+    # -- registers, watches, stimuli -----------------------------------------
+    registers: dict[tuple[str, str], PlanRegister] = {}
+    for bus in buses:
+        for pin in bus.pins:
+            table = platform.document["gpio"][pin.port]
+            names = ("MODER", "OTYPER", "AFRL" if pin.index < 8 else "AFRH")
+            for name in names:
+                entry = table["registers"][name]
+                registers[(pin.port, name)] = PlanRegister(
+                    target, pin.port, name, int(table["base"], 16) + int(entry["offset"], 16),
+                    int(entry["reset"], 16), bool(entry["stored"]),
+                )
+    watched = tuple(PlanWatch(_probe_name(f"{b.emulator}_warnings"), b.emulator, b.port) for b in buses)
+
+    stimuli = []
+    assumptions = [f"the core runs at {platform.document['core_clock_hz']} Hz, as the platform model assumes"]
+    for stimulus in scenario.get("stimuli", ()):
+        component = resolved(stimulus["surface"])["component"]
+        model = device_descriptors.get(component)
+        name = stimulus["input"]
+        if model is None or name not in model.inputs:
+            raise _refuse(f"the model of {_path(entities, component)} accepts no input {name!r}", "stimulus")
+        quantity = _quantity_from(stimulus["quantity"])
+        try:
+            converted, _ = quantity.converted_to(model.inputs[name]["unit"])
+        except Exception as exc:
+            raise _refuse(
+                f"{stimulus['surface']}.{name} takes {model.inputs[name]['unit']}, not {quantity}", "stimulus"
+            ) from exc
+        device = next(d for b in buses for d in b.devices if d.component == component)
+        at = _nanoseconds(_quantity_from(stimulus["at"]))
+        stimuli.append(PlanStimulus(at, component, device.probe, name, model.inputs[name]["property"],
+                                    format(converted.value.normalize(), "f"), model.inputs[name]["unit"]))
+        assumptions.append(f"{stimulus['surface']}.{name} is {quantity} from {_quantity_from(stimulus['at'])}")
+
+    if "run_until" not in scenario:
+        raise _refuse("the question names no run duration, and none is assumed", "duration")
+    run_until_ns = _nanoseconds(_quantity_from(scenario["run_until"]))
+
+    # -- measures ------------------------------------------------------------
+    def match_record(match: Mapping[str, Any]) -> dict:
+        where = resolved(match["surface"])
+        entity = where["component"] if match["kind"] in ("i2c.read", "i2c.write") else where["port"]
+        out = {"kind": match["kind"], "entity": entity}
+        if match.get("detail"):
+            out["detail"] = dict(match["detail"])
+        return out
+
+    measures: dict[str, dict] = {}
+    for name, entry in sorted(records.items()):
+        record = entry["measure"]
+        kind = record["kind"].removeprefix("emulation.")
+        if kind in ("first_at", "count"):
+            out = {"kind": kind, "matches": [match_record(record["match"])]}
+            if record.get("within_ns"):
+                out["within_ns"] = list(record["within_ns"])
+        elif kind == "latency":
+            out = {"kind": kind, "matches": [match_record(record["from"]), match_record(record["to"])]}
+        elif kind == "uart_value":
+            out = {"kind": kind, "entity": resolved(record["surface"])["port"],
+                   "prefix": record["prefix"], "unit": record["unit"]}
+        else:
+            out = {"kind": kind, "entity": resolved(record["surface"])["port"]}
+        measures[name] = out
+
+    gaps = set(platform.not_modelled)
+    expected = list(platform.expected_warnings)
+    for model in device_descriptors.values():
+        gaps.update(model.not_modelled)
+        expected.extend(model.expected_warnings)
+    for component, name in abstracted.items():
+        gaps.add(f"{name} is abstracted, not modelled")
+
+    return EmulationPlan(
+        question=question.id,
+        requirement=question.verifies,
+        snapshot=snapshot.hash,
+        machine="board",
+        platform=platform.id,
+        platform_file=platform.document["platform_file"],
+        recorder_port=platform.document["recorder_port"],
+        target=target,
+        firmware_path=firmware_path,
+        firmware_target=firmware_target,
+        core_clock_hz=int(platform.document["core_clock_hz"]),
+        seed=int(scenario.get("seed", 0)),
+        run_until_ns=run_until_ns,
+        buses=tuple(buses),
+        observations=tuple(observations),
+        watched=watched,
+        registers=tuple(registers[k] for k in sorted(registers)),
+        stimuli=tuple(stimuli),
+        faults=tuple({"kind": f["kind"], "component": resolved(f["surface"])["component"]}
+                     for f in scenario.get("faults", ())),
+        measures=measures,
+        models=tuple(sorted(models, key=lambda m: m["component"])),
+        abstracted=tuple(sorted(abstracted.values())),
+        assumptions=tuple(assumptions),
+        coverage_gaps=tuple(sorted(gaps)),
+        expected_warnings=tuple(expected),
+    )
+
+
+def _path(entities, entity_id: str) -> str:
+    entity = entities.get(entity_id)
+    path = getattr(getattr(entity, "identity", None), "path", None)
+    return str(path) if path is not None else entity_id
+
+
+def _model_record(component: str, model: Descriptor) -> dict:
+    return {
+        "component": component,
+        "descriptor": model.id,
+        "qualification": model.qualification,
+        "provenance": dict(model.provenance),
+    }
