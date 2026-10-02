@@ -1,5 +1,5 @@
 * time_delay_relay: k_half
-* plan for ngspice over sha256:7946b303cbec9cd67e4801f8a9b476a0bc0f4f9fefa9a7ee3403c6bd219b0635
+* plan for ngspice over sha256:ccc4deee4fa6bdd19d040d0e4ea453fab2772add2e29ac5f3c7736b0f685d2ef
 C1 1 2 10u
 * D1 abstracted; no device emitted
 * D2 abstracted; no device emitted

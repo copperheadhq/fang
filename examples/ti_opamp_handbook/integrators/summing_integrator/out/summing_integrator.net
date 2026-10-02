@@ -3,7 +3,7 @@
   (design
     (source "summing_integrator.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:2f28a345d2f185b3455b7fd90657a3e17a3283dbd986c8e4cc8d1f9b3eaecbb4")
+    (snapshot "sha256:97f7698c80f1e592121f4a2e134ae41a8733ffe425f12f489e840256170583cf")
     (project "PRJ-EXAMPLES")
   )
   (components

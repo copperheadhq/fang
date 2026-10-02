@@ -1,6 +1,6 @@
 # Examples
 
-Eleven programs, smallest first. Each one is a folder: the program, a document
+Fourteen programs, smallest first. Each one is a folder: the program, a document
 explaining what it is for and the files `fang` produces from it under `out/`.
 Every one elaborates, passes the gate and is built by
 [`tests/test_examples.py`](../tests/test_examples.py) on every run, so none of
@@ -8,14 +8,17 @@ them is a sketch that no longer works.
 
 | Example | Shows | Parts | Nets |
 | --- | --- | ---: | ---: |
-| [`divider/`](divider/) | The smallest real board: two resistors and a capacitor | 4 | 2 |
-| [`blinky/`](blinky/) | Declared surfaces, connections and a constraint that states intent | 6 | 4 |
-| [`equations/`](equations/) | Values chosen by equation, then reused by inheritance | 7 | 6 |
-| [`sensor_board/`](sensor_board/) | Interfaces lowering to pins, a recorded decision, a check left undecided | 7 | 4 |
-| [`i2c_bus/`](i2c_bus/) | A multi-drop bus, addresses as constrained parameters | 9 | 4 |
-| [`usb_uart_bridge/`](usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet | 17 | 11 |
-| [`buck_regulator/`](buck_regulator/) | Requirement, decision, calculation and verification beside the circuit | 12 | 9 |
-| [`servo_drive/`](servo_drive/) | Composition: one `HalfBridge` instantiated three times | 24 | 26 |
+| [`divider/`](divider/) | The smallest real board: two resistors and a capacitor | 3 | 2 |
+| [`rc_filter/`](rc_filter/) | One question, answered by ngspice and then at the equation level | 4 | 3 |
+| [`antenna_match/`](antenna_match/) | A Touchstone model through an L match, answered in closed form | 4 | 3 |
+| [`blinky/`](blinky/) | Declared surfaces, connections and a constraint that states intent | 5 | 4 |
+| [`equations/`](equations/) | Values chosen by equation, then reused by inheritance | 6 | 6 |
+| [`sensor_board/`](sensor_board/) | Interfaces lowering to pins, a recorded decision, a check left undecided | 6 | 4 |
+| [`i2c_bus/`](i2c_bus/) | A multi-drop bus, addresses as constrained parameters | 8 | 4 |
+| [`sensor_node/`](sensor_node/) | Ports that name their controller, cited pin selectors, an address the check reads, and its firmware run in Renode | 11 | 9 |
+| [`buck_regulator/`](buck_regulator/) | Requirement, decision, calculations, and a question ngspice answers under load | 11 | 9 |
+| [`usb_uart_bridge/`](usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet | 16 | 11 |
+| [`servo_drive/`](servo_drive/) | Composition: one `HalfBridge` instantiated three times | 23 | 26 |
 | [`jee_advanced/problem_1/`](jee_advanced/problem_1/) | Not a board: four claimed currents, all four decided | 11 | 7 |
 | [`jee_advanced/problem_2/`](jee_advanced/problem_2/) | Not a board either: one claimed current, and the two branches that carry none | 12 | 7 |
 | [`noninverting_amp/`](noninverting_amp/) | Not a board: two midband answers, and the reading of the figure they rest on | 13 | 8 |
@@ -26,7 +29,7 @@ each simulated in ngspice through `fang.simulation`, with 339 claims that all
 hold. The folder groups them by the handbook's sections, and its README lists
 each circuit and what the handbook got wrong about it.
 
-The last three are the odd ones out: eight boards, then two exam questions
+The last three are the odd ones out: eleven boards, then two exam questions
 and a textbook figure, because the kernel decides a claim about a circuit the
 same way whichever it is. The two exam questions share a folder.
 [`jee_advanced/`](jee_advanced/) groups them and is not itself an example,
@@ -49,10 +52,18 @@ two of these boards, to compare the two toolchains.
 | `graph.txt` | What the elaborated graph contains, by entity kind | `fang graph` |
 | `views/*.svg` | The views worth looking at for this board | `fang view` |
 | `rationale.md` | The requirements, decisions, calculations and evidence in the graph | none |
+| `verification.txt` | What each declared question's tool found, at three significant figures | `fang verify` |
 
 `rationale.md` is the one file with no command behind it. It is a projection of
 the reasoning entities, rendered by the script below, and only the examples that
 record any reasoning get one. A divider has nothing to explain.
+
+`verification.txt` is what `fang verify` finds, run twice: on the elaborated
+program, and again on the head the first run's measurements were committed to.
+Only an example that declares a question gets one: `rc_filter/`,
+`antenna_match/`, `buck_regulator/` and `sensor_node/`. It gives three
+significant figures and no tool version, so a simulator release that moves a
+number in its fourth figure moves nothing here.
 
 ## Running one
 
@@ -72,8 +83,11 @@ python examples/regenerate.py divider    # one of them
 ```
 
 An example that ships a schematic needs `kicad-cli` on the path to regenerate,
-because KiCad is what draws it. The two under `jee_advanced/` are the ones
-that do.
+because KiCad is what draws it. `noninverting_amp/` is the one that does, and
+it also ships copperhead's draft, which needs `copperhead` as well. An example whose questions route to a tool that is not installed
+(ngspice for `rc_filter/` and `buck_regulator/`, Renode for `sensor_node/`)
+keeps its committed `verification.txt`, and the suite skips comparing it,
+naming the tool.
 
 The committed outputs are built in the project namespace `PRJ-EXAMPLES`, which
 is where the identifiers in them come from. A local `fang build` defaults to

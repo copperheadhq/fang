@@ -130,6 +130,10 @@ class OpAmp(Part):
     """
 
     designator_prefix = "U"
+    # The standard single-op-amp drawing, whose pins are numbered 2, 3 and 6 as
+    # these are. It says how the part is drawn, not which part it is: the
+    # value stays OpAmp and no manufacturer is named.
+    symbol = "Amplifier_Operational:LM741"
 
     inverting = AnalogIn()
     non_inverting = AnalogIn()

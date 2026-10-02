@@ -1,5 +1,5 @@
 * averager: unused_input_open
-* plan for ngspice over sha256:379360277b11b971f445fb9e0292dfbeedfd1498fa57b4ebc6f3cdc8378397e7
+* plan for ngspice over sha256:0f8827f07b5a05680dba014eb88ec90912d0f16e105cb8dea83a92944bd8653e
 * GND1 abstracted; no device emitted
 R1 2 3 30k
 R2 4 3 30k

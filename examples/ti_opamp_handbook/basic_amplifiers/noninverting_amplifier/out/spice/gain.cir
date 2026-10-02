@@ -1,5 +1,5 @@
 * noninverting_amplifier: gain
-* plan for ngspice over sha256:4cafcab64312599875cb47a2cb81ca79bd13b2e9ac84ebdcca358517d96ee94d
+* plan for ngspice over sha256:711a679e7230d16e189c92026cff39c5a9cc64137f4a00248d48baa3054fbfa9
 * GND1 abstracted; no device emitted
 R1 2 0 10k
 R2 2 3 90k

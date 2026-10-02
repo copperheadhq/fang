@@ -1,5 +1,5 @@
 * full_wave_rectifier: sine
-* plan for ngspice over sha256:43e0f6f0358e90098b407a40090f53cbbff86e691b1a1f1dd685e12e6724aa28
+* plan for ngspice over sha256:ac52e06d6f5c72ac087377e21280cb9cc8ea37ad9b1f26e2756fa15eec1db4f2
 * D1 abstracted; no device emitted
 * D2 abstracted; no device emitted
 * GND1 abstracted; no device emitted

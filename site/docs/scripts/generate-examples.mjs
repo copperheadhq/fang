@@ -203,6 +203,11 @@ for (const { name, stem, dir, group } of await discover()) {
   const pictures = views.map((v) => join("out", "views", v));
   if (await exists(join(out, "schematic.svg"))) pictures.push(join("out", "schematic.svg"));
   if (await exists(join(dir, "figure", "schematic.svg"))) pictures.push(join("figure", "schematic.svg"));
+  // copperhead's draft of the same circuit, drafted by fang's own lowering,
+  // keeps its folder, so its render does not land on fang's schematic.svg.
+  if (await exists(join(out, "copperhead", "schematic.svg"))) {
+    pictures.push(join("out", "copperhead", "schematic.svg"));
+  }
   // A picture kept beside the program, such as the question as a paper
   // printed it, is published too.
   if (!group) {
@@ -241,7 +246,12 @@ for (const [index, example] of examples.entries()) {
   if (pictures.length) {
     await mkdir(join(PUBLIC, name), { recursive: true });
     for (const picture of pictures) {
-      await copyFile(join(dir, picture), join(PUBLIC, name, basename(picture)));
+      // Published where resolveLinks sends a README's link to it: a view or a
+      // schematic beside the page, anything in a folder of its own below out/
+      // still in that folder.
+      const published = join(PUBLIC, name, picture.replace(/^(?:out\/(?:views\/)?|figure\/)/, ""));
+      await mkdir(dirname(published), { recursive: true });
+      await copyFile(join(dir, picture), published);
     }
   }
 

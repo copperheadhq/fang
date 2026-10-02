@@ -1,5 +1,5 @@
 * linear_current_source: r3_100_ohm
-* plan for ngspice over sha256:44a326ee3ca0789911682f124b2c58e19d57fccfea1f1aba2811d2c5c5499a94
+* plan for ngspice over sha256:e0a0f562f869cc26fd3c552047accd79a68826607dd1efed867787298d7e34de
 C1 1 2 100p
 * GND1 abstracted; no device emitted
 R1 1 2 100k

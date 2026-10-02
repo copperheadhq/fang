@@ -1,5 +1,5 @@
 * inverting_buffer_adjustable_gain: wiper_at_input_end
-* plan for ngspice over sha256:d806c37dfb106eeb5e1964a25701d9871e068e6c2304c356b47df1d7966b97c6
+* plan for ngspice over sha256:e8443e2d26240564d445c4eb95ebd5e1ee415242ce97f4bed60fb11570de7383
 * GND1 abstracted; no device emitted
 R1 2 3 10k
 R2 4 5 10k

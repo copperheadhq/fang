@@ -3,7 +3,7 @@
   (design
     (source "reference_voltage_supply.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:f6fa92d69a424fa00e38cdeea104b90727022ae78fba3f93ec4a126cef320ad2")
+    (snapshot "sha256:3981944e7f74f9894b31bfb9a1f432faf96f00c292d1e3daacbca8694e72ce39")
     (project "PRJ-EXAMPLES")
   )
   (components

@@ -50,7 +50,7 @@ agent you talk to. Fang is what it writes and what checks the writing.
 
 - [Introduction](/start/introduction/): what fang is and what it won't guess
 - [Installation](/start/installation/): install it and build your first board
-- [Examples](/start/examples/): eleven programs, smallest first
+- [Examples](/start/examples/): fourteen programs, smallest first
 
 ## Concepts
 
@@ -195,7 +195,7 @@ engineering fact.
 # Examples
 
 URL: https://fang.copperhead.sh/start/examples/
-Summary: Eleven programs in the repository, smallest first.
+Summary: Fourteen programs in the repository, smallest first.
 
 Every example in [`examples/`](https://github.com/copperheadhq/fang/tree/main/examples)
 elaborates and passes the gate. The test suite rebuilds each one and compares
@@ -207,12 +207,15 @@ program that has since changed.
 | Example | Shows |
 | --- | --- |
 | [`divider/`](/examples/divider/) | The smallest real board: two resistors and a capacitor |
+| [`rc_filter/`](/examples/rc_filter/) | One question, answered by ngspice and then at the equation level |
+| [`antenna_match/`](/examples/antenna_match/) | A Touchstone model through an L match, answered in closed form |
 | [`blinky/`](/examples/blinky/) | Declared surfaces, connections and a constraint stating intent rather than the answer |
 | [`equations/`](/examples/equations/) | Values chosen by equation and reuse by inheritance |
 | [`sensor_board/`](/examples/sensor_board/) | Interfaces lowering to pins, a recorded decision, a check left undecided |
 | [`i2c_bus/`](/examples/i2c_bus/) | A multi-drop bus, addresses as constrained parameters |
+| [`sensor_node/`](/examples/sensor_node/) | Ports that name their controller, cited pin selectors, an address the check reads |
+| [`buck_regulator/`](/examples/buck_regulator/) | Requirement, decision, calculations, and a question ngspice answers under load |
 | [`usb_uart_bridge/`](/examples/usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet |
-| [`buck_regulator/`](/examples/buck_regulator/) | Requirement, decision, calculations and verification beside the circuit |
 | [`servo_drive/`](/examples/servo_drive/) | Composition: one `HalfBridge` block instantiated three times |
 | [`jee_advanced/problem_1/`](/examples/jee_advanced/problem_1/) | Not a board: four claimed currents, all four decided |
 | [`jee_advanced/problem_2/`](/examples/jee_advanced/problem_2/) | Not a board either: one claimed current, and the two branches that carry none |
@@ -238,6 +241,7 @@ fang view    examples/sensor_board/sensor_board.py ground -o ground.svg
 | `graph.txt` | What the elaborated graph contains, by entity kind | `fang graph` |
 | `views/*.svg` | The views worth looking at for that board | `fang view` |
 | `rationale.md` | The requirements, decisions, calculations and evidence in the graph | none |
+| `verification.txt` | What each declared question's tool found, at three significant figures | `fang verify` |
 
 `python examples/regenerate.py` rewrites them. They are built in the project
 namespace `PRJ-EXAMPLES`, which is where the identifiers in them come from. A
@@ -247,6 +251,17 @@ local `fang build` defaults to `PRJ-LOCAL` and derives its own.
 
 **`divider/`** is the smallest thing worth calling a board. Read it to learn
 the shape of a program and nothing else.
+
+**`rc_filter/`** is the smallest board with a question on it. The corner is a
+parameter with no value and the constraint over it is undecided, until ngspice
+measures it in an AC sweep and the number comes back through the gate. Asked
+again on the committed head, the same question is answered at the equation
+level and nothing runs.
+
+**`antenna_match/`** carries its antenna as data: a Touchstone file, synthetic
+and saying so. Its return loss through the L match is read and composed in
+closed form, with the matching values the graph holds, and the confidence is
+halved because the model is an assumption.
 
 **`blinky/`** adds the point about constraints. The series resistor is not
 written as a number that someone computed offstage. The LED current is written
@@ -267,15 +282,23 @@ to the same address" is a constraint the kernel decides rather than a linter
 rule. And the RTC's thresholds are recorded as an assumption, which leaves that
 link undecided rather than passed.
 
+**`sensor_node/`** puts on the board what the firmware otherwise holds alone.
+The STM32F401RE's `i2c1` port names I2C1, and each candidate pin carries the
+alternate function that routes the signal to it, cited from ST's table. The
+lowered pin connections carry AF4. The HS3001's port carries its address,
+0x44, and the compatibility check decides the addressing rule from it.
+
 **`usb_uart_bridge/`** shows part selection landing on the instance rather
 than the class template. The logical part stays "a 3.3 V regulator". Which one
 was bought is a separate, cited fact.
 
 **`buck_regulator/`** puts the reasoning in the graph. The requirement, the
-part decision, the datasheet numbers behind it, two calculations and the
-verification that closes the requirement are all entities beside the inductor.
-`fang` can answer "why is this 4.7 µH?" without anyone writing a design
-document.
+part decision, the datasheet numbers behind it and two calculations are all
+entities beside the inductor, so `fang` can answer "why is this 4.7 µH?"
+without anyone writing a design document. The requirement is verified by a
+question rather than asserted: ngspice runs the rail under full load on an
+ideal power stage whose provenance is an assumption, and measures 3.29 V and
+1.90 mV of ripple.
 
 **`servo_drive/`** is composition at size. A `HalfBridge` owns its interior:
 its transistors, its shunt and its own constraints. The drive instantiates three
@@ -545,11 +568,16 @@ rejected rather than merged.
 4. **Required checks have run.** Every `CheckClass` the policy requires has
    actually produced a result. Absent a project policy, the required set is
    structural validation plus every check class whose scope intersects the
-   affected entities. A check class is therefore defined by its scope as well as
-   by what it evaluates.
+   affected entities, taken over the head as well as the candidate, so that a
+   removal still brings in the checks whose scope held what it removed. A check
+   class is therefore defined by its scope as well as by what it evaluates.
 5. **No blocking result.** No check reported a blocking severity, or `TXN-0002`.
 6. **No undecided over a must-be-decided requirement**, or `TXN-0003`, and
-   policy approvals satisfied, or `TXN-0004`.
+   policy approvals satisfied, or `TXN-0004`. A constraint left undecided only
+   because a [verification question](/concepts/verification/) has not yet
+   measured its parameter, or because its measurement failed, does not block
+   here: the requirement's verification state already says so. A run that
+   answers and still leaves the constraint undecided does block.
 
 Only `commit()` advances the head. Rejection is correct by construction: the
 candidate copy is discarded, and canonical state was never touched.
@@ -786,6 +814,180 @@ verification cannot rest on evidence the graph never saw.
 
 ---
 
+# Verification
+
+URL: https://fang.copperhead.sh/concepts/verification/
+Summary: How an undecided constraint gets decided by a tool, without a second way in.
+
+A hard constraint over a number nobody has (a rail's ripple, a filter's
+corner, an antenna's return loss) evaluates to
+[undecided](/concepts/values-and-undecided/) and stays there. Verification is
+how it stops being undecided: a question declared in the program, answered by a
+tool, with the answer returned through [the gate](/concepts/the-commit-gate/)
+like any other change.
+
+## A question is a verification with no result yet
+
+```python
+ripple = Parameter("mV")                        # no value: nobody has measured it
+
+under_load = Simulates(
+    "rail_tolerance",
+    measures={"ripple": PeakToPeak("rail_out.dc", after=1 * ms, until=1.2 * ms)},
+    supplies={"controller.vin": 12 * V},
+    loads={"rail_out.dc": 2.2 * Ohm},
+    analysis=Transient(stop="1.2ms", step="10ns"),
+)
+
+def constraints(self):
+    require(self.ripple <= 30 * mV)               # undecided until measured
+```
+
+The question elaborates to a `Verification` entity whose result is `UNKNOWN`.
+It is the same entity a verification by inspection is, before its result is
+known; coverage is still a join over the graph, and there is no second kind of
+thing to keep in step with the first.
+
+**A program cannot state the answer.** `Simulates(..., result="PASS")` is
+refused. A pass nobody computed, with two datasheet citations as its
+"evidence", is a citation and not a verification, and it is what this replaces.
+
+## The bench is part of the question
+
+The measured value depends on everything the run assumed, so the question says
+all of it: every supply and every load at a part surface, the analysis and its
+window, and the parts it deliberately leaves out. Nothing is defaulted. A
+question with no supply is not runnable, and the runner says so rather than
+choosing a source. Every bench item lands on the evidence as an assumption, and
+every part left out as a coverage gap.
+
+## The cheapest level that decides it
+
+The levels run cheapest first: equation, symbolic, behavioural, circuit,
+external. If the constraints over a question's parameters already decide --
+because a value reached the graph some other way, or because an earlier run's
+measurement is there, the constraint evaluator is the answer and nothing
+runs. Otherwise the method names the level, and the first registered tool there
+answers. A question no tool covers is unroutable: a cheaper answer is not the
+same answer, so none is substituted. The level and the tool are written on the
+verification, so the graph says how the question was answered.
+
+## The answer comes back through the gate
+
+A run's measurements enter as one ordinary transaction:
+
+```text
+SetParameter(ripple, Value.inferred(1.90 mV, source=EVD-..., confidence=0.5))
+AddEntity(Evidence: tool, version, level, job hash, measures,
+                    assumptions, coverage gaps, input digests)
+RemoveEntity + AddEntity(Verification: result, evidence, level, tool)
+```
+
+The value is **inferred**, never explicit, and its source is the evidence. The
+constraint over it is decided by the gate's own constraint check; there is no
+second resolver that consults evidence, which would be a second place a value
+could come from.
+
+**A measurement that breaks a hard constraint never reaches the head.** The
+gate rejects it, correctly, and the runner records what happened in a second
+transaction that sets no parameter: the evidence, and the verification with
+result `FAIL`. The design is on record as having failed, with the number that
+failed it, and the constraint stays undecided in the graph, which is true: the
+design has no accepted value for it.
+
+## A finding, not a proof
+
+A pass is a finding with the confidence its models support. A run over an
+ideal switch standing in for a controller reports half the confidence of one
+over primitives, and lists the control loop it does not model among its
+coverage gaps. First-spin measurement remains the physical evidence.
+
+## Re-elaboration keeps the measurement
+
+The program declares a measured parameter without a value, so elaborating it
+again says nothing about the value and does not withdraw it. An unchanged
+program rebuilt after a commit is the committed snapshot, byte for byte; a
+changed question is answered afresh.
+
+The [verification reference](/reference/verification/) lists the declarations,
+the measures, the tools and the command.
+
+
+---
+
+# Firmware against the board
+
+URL: https://fang.copperhead.sh/concepts/firmware-emulation/
+Summary: Why emulation is a verification question, and why the board, not a second wiring description, decides what the emulator sees.
+
+A board can record which pin of a microcontroller carries SCL, and which of its
+controllers that pin belongs to, and still say nothing about the firmware that
+will drive it. The defects that live between the two, the wrong address, the
+wrong pin, a missing timeout, are the ones found at bring-up, on a fabricated
+board. Emulation asks about them earlier, and asks in the board's own terms.
+
+## The board is the wiring
+
+Nothing describes the emulated hardware but the graph. The plan reads the bus
+controller from the port, the pins and their alternate functions from the
+lowered connections, the address from the sensor's port, and the pin the LED
+hangs off from the connection the program made. There is no second, hand-kept
+wiring list for the emulator to drift from: change the board and the plan
+changes with it.
+
+## A question, not a report
+
+An emulation is a question in the same sense a circuit simulation is (see
+[Verification](/concepts/verification/)): declared beside the requirement it
+serves, compiled into a plan, run by a tool, and answered by measurements that re-enter the graph through the commit gate. The
+constraint the requirement states is decided by the constraint check the gate
+already runs. A measured value that breaks a hard constraint never reaches the
+head; the run is recorded as a failed verification, with the number that
+failed it.
+
+Because the question is in the graph, so is everything that could turn a
+failure into a pass. Widening an assertion window is a transaction with a
+diff and provenance, decided by the same policy as any other change.
+
+## Observed, not reported
+
+The emulator's probes record what a device was asked and answered, what a pin
+did, and what a UART carried, each at its virtual time. A line the firmware
+prints is its report of itself, and is recorded as one; it does not stand in
+for what the bus saw.
+
+## Honest about what was not seen
+
+Three rules carry the kernel's treatment of unknowns into a run. An event
+observed not to occur before a completed run's end is a measurement, the
+half-open range after the end, and decides a deadline; a run that ended early
+decides nothing. A model that warns of something it does not cover withdraws
+the measures that rest on it. And where the emulator does not route a
+peripheral through its pins' configuration, the configuration is measured from
+what the firmware wrote, instead of trusted.
+
+A measure that could only ever read one way is refused before anything runs:
+a count over an empty window, a read of a device the question has removed, a
+pin configuration over a port that carries no bus. Each would pass its
+constraint by construction, which is a pass nobody observed.
+
+## A finding, not a proof
+
+Every run lists what its models do not cover, and its confidence is bounded by
+how far those models have been qualified. Emulation narrows what first-spin
+validation has to find; it does not replace it.
+
+## Where it goes next
+
+The bundle a run executes (the plan, the platform description, the script,
+the probes, the firmware and a manifest of digests) is a function of the
+question and the firmware alone. A hosted runner can execute the same bundle
+in a sandbox, and fang reads its events with the same measures, so the verdict
+is the same code whichever machine ran it.
+
+
+---
+
 # Divider
 
 URL: https://fang.copperhead.sh/examples/divider/
@@ -898,7 +1100,7 @@ What the elaborated graph contains, by entity kind.
     6  pin
     9  port
    28  total
-snapshot sha256:90c7db82474e7a7ebee776d09ab5fe526e8a96efa87e59bc66e215101c30c402
+snapshot sha256:b9a24e84abebf4babb93d22dc622212f4474a266e4aece5ab4a8ff9395205c21
 ```
 
 All of it, including the KiCad netlist, is in
@@ -906,6 +1108,458 @@ All of it, including the KiCad netlist, is in
 
 ```bash
 fang build examples/divider/divider.py
+```
+
+
+---
+
+# Antenna match
+
+URL: https://fang.copperhead.sh/examples/antenna_match/
+Summary: A 2.4 GHz chip antenna behind an L match, and the question of whether it is matched. It is the example of a part carrying its behaviour as data: a Touchstone file, read in-tree and composed in closed form. There is nothing to simulate, so the question is answered at the equation level.
+
+<figure class="example-figure"><a href="/examples/antenna_match/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/antenna_match/interconnect.svg" alt="the interconnect view" loading="lazy" decoding="async" /></a><figcaption>The interconnect view</figcaption></figure>
+
+## The program
+
+[`antenna_match.py`](https://github.com/copperheadhq/fang/blob/main/examples/antenna_match/antenna_match.py) puts a 1.5 pF shunt capacitor at the
+connector and a 1.8 nH series inductor toward the antenna, and requires at
+least 10 dB of return loss at 2.44 GHz. The values come from the L-match
+formulas over the antenna's impedance there, recorded as a calculation.
+
+The antenna carries its model as a trait, with a provenance that says what the
+numbers are:
+
+```python
+self.antenna.add_trait(
+    Touchstone(
+        source="chip_antenna.s1p",
+        ports=("FEED",),
+        provenance=assumed_provenance("a synthetic series RLC resonator, ..."),
+    )
+)
+```
+
+[`chip_antenna.s1p`](https://github.com/copperheadhq/fang/blob/main/examples/antenna_match/chip_antenna.s1p) is **synthetic**, and says so in its
+header: a series RLC resonator (22 Ohm, 4 nH, about 1.01 pF) written by hand to
+stand in for the file an antenna vendor publishes. A real design would cite the
+vendor's file, or a network analyser's measurement of the board, and its
+provenance would say which.
+
+The question names the measure, the frequency, and the matching parts in order
+from the connector toward the antenna:
+
+```python
+matched = Evaluates(
+    "match_spec",
+    measures={"return_loss": ReturnLoss("antenna.rf", at=2.44 * GHz,
+                                        through=("shunt_c", "series_l"))},
+)
+```
+
+Which of the two parts is a shunt and which is in series is read from the
+graph (the capacitor has a terminal on ground) and each value is the one
+the graph holds.
+
+## What comes out
+
+4 parts, 3 nets, 36 entities, 1 check, undecided until the question is
+answered.
+
+[`out/verification.txt`](https://github.com/copperheadhq/fang/blob/main/examples/antenna_match/out/verification.txt) is the file to read: the
+touchstone tool reads the model, interpolates it at 2.44 GHz, composes the two
+parts, and finds 38.5 dB, so the verification passes at confidence 0.5: half,
+because the model it rests on is an assumption. The number enters the graph
+through the commit gate as an inferred value whose source is the run's
+evidence, and the evidence records the model file's digest, because the
+snapshot does not hold the file.
+
+- [`out/antenna_match.net`](https://github.com/copperheadhq/fang/blob/main/examples/antenna_match/out/antenna_match.net), [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/antenna_match/out/netlist.txt)
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/antenna_match/out/checks.txt), [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/antenna_match/out/graph.txt), [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/antenna_match/out/rationale.md)
+
+A frequency outside the file's 2.30 to 2.60 GHz is refused, naming the range;
+nothing is extrapolated. A matching part with no value leaves the question
+unanswered, naming the part.
+
+## Running it
+
+```bash
+fang verify examples/antenna_match/antenna_match.py
+```
+
+The reader is fang itself, so this needs no tool on the path.
+
+## The whole program
+
+```python title="examples/antenna_match/antenna_match.py"
+"""A 2.4 GHz chip antenna behind an L match, and whether it is matched.
+
+The antenna carries its network parameters as data: a one-port Touchstone
+file, `chip_antenna.s1p`, which is synthetic and says so -- a series RLC
+resonator written by hand, standing in for the vendor file a real design would
+cite. Between the connector and the antenna sit two parts: a 1.5 pF shunt
+capacitor at the connector and a 1.8 nH series inductor toward the antenna,
+worked out by hand from the antenna's impedance at 2.44 GHz.
+
+The requirement asks for 10 dB of return loss at 2.44 GHz. The program
+declares the return loss as a parameter with no value and a question that
+evaluates it: `fang verify` reads the file, interpolates it at 2.44 GHz,
+composes the two parts with the values the graph holds, and returns the
+number through the commit gate. It is answered at the equation level, in
+closed form: there is nothing to simulate.
+"""
+
+from fang.interfaces import AnalogIn, AnalogOut, Pin, PinMap
+from fang.lang import GHz, Parameter, Part, System, dB, nH, pF, require
+from fang.parts import Capacitor, Inductor
+from fang.rationale import Calculates, Requires
+from fang.traits import Touchstone
+from fang.verification import Evaluates, ReturnLoss, assumed_provenance
+
+
+class ChipAntenna(Part):
+    """A chip antenna: a feed and a ground, and a model of what it reflects."""
+
+    designator_prefix = "AE"
+
+    rf = AnalogIn()
+
+    FEED = Pin("FEED", role="analog", number="1")
+    GND = Pin("GND", role="ground", number="2")
+
+    pinmap = PinMap({"rf.signal": "FEED", "rf.ref": "GND"})
+
+
+class RFConnector(Part):
+    """Where the radio's 50 Ohm line arrives."""
+
+    designator_prefix = "J"
+
+    rf = AnalogOut()
+
+    SIG = Pin("SIG", role="analog", number="1")
+    GND = Pin("GND", role="ground", number="2")
+
+    pinmap = PinMap({"rf.signal": "SIG", "rf.ref": "GND"})
+
+
+class AntennaMatch(System):
+    """The antenna, its match, and the question that checks the match."""
+
+    match_spec = Requires(
+        "The antenna presents at least 10 dB of return loss at 2.44 GHz, the "
+        "middle of the 2.4 GHz band",
+        validation="analysis",
+    )
+    l_match = Calculates(
+        "Q = sqrt(R0 / RL - 1); X_series = Q RL - X_antenna; B_shunt = Q / R0",
+        inputs=("shunt_c", "series_l", "antenna"),
+        result="1.82 nH series and 1.47 pF shunt for 22 - j3.1 Ohm at 2.44 GHz; "
+        "fitted with 1.8 nH and 1.5 pF",
+        requirements=("match_spec",),
+    )
+
+    # No value: the program has not measured it, and a number written here
+    # would be a claim rather than a measurement.
+    return_loss = Parameter("dB", description="return loss at the connector, at 2.44 GHz")
+
+    feed = RFConnector(package="UFL")
+    shunt_c = Capacitor(capacitance=1.5 * pF, package="C_0402")
+    series_l = Inductor(inductance=1.8 * nH, package="L_0402")
+    antenna = ChipAntenna(package="Antenna_Chip_3216")
+
+    # The return loss looking in from the connector: through the shunt
+    # capacitor, then the series inductor, into the antenna's model.
+    matched = Evaluates(
+        "match_spec",
+        measures={
+            "return_loss": ReturnLoss(
+                "antenna.rf", at=2.44 * GHz, through=("shunt_c", "series_l")
+            ),
+        },
+    )
+
+    def __init__(self, **overrides):
+        super().__init__(**overrides)
+        self.antenna.add_trait(
+            Touchstone(
+                source="chip_antenna.s1p",
+                ports=("FEED",),
+                provenance=assumed_provenance(
+                    "a synthetic series RLC resonator, standing in for a vendor file"
+                ),
+            )
+        )
+
+    def architecture(self):
+        self.feed.rf.signal >> self.shunt_c.p1
+        self.feed.rf.signal >> self.series_l.p1
+        self.shunt_c.p2 >> self.feed.rf.ref
+        self.series_l.p2 >> self.antenna.rf.signal
+        self.antenna.rf.ref >> self.feed.rf.ref
+
+    def constraints(self):
+        require(self.return_loss >= 10 * dB)
+```
+
+## The files it writes
+
+The parts, then the nets and the pads on them.
+
+```text title="out/netlist.txt"
+AE1    ChipAntenna      Package:Antenna_Chip_3216
+C1     1.5 pF           Package:C_0402
+J1     RFConnector      Package:UFL
+L1     1.8 nH           Package:L_0402
+Net-(AE1-PadFEED)        AE1.FEED L1.2
+Net-(AE1-PadGND)         AE1.GND C1.2 J1.GND
+Net-(C1-Pad1)            C1.1 J1.SIG L1.1
+```
+
+Every check that ran, and every one left undecided.
+
+```text title="out/checks.txt"
+UNDECIDED constraint: declared on BLK-42978eb8675a
+1 checks, 0 failed, 1 undecided
+```
+
+What the elaborated graph contains, by entity kind.
+
+```text title="out/graph.txt"
+    1  block
+    1  calculation
+    4  component
+   10  connection
+    1  constraint
+    3  interface
+    8  pin
+    6  port
+    1  requirement
+    1  verification
+   36  total
+snapshot sha256:0929bae13a7c88649e7d19b4302b8f7ed88ee54540af0e38aede7ab4bfd2f235
+```
+
+All of it, including the KiCad netlist, is in
+[`examples/antenna_match/out/`](https://github.com/copperheadhq/fang/tree/main/examples/antenna_match/out/). Rebuild it with:
+
+```bash
+fang build examples/antenna_match/antenna_match.py
+```
+
+
+---
+
+# Rc filter
+
+URL: https://fang.copperhead.sh/examples/rc_filter/
+Summary: A first-order RC low-pass ahead of an ADC, and one question about it, asked twice. It is the smallest board that shows a constraint nobody can decide getting decided: by a simulator, through the commit gate, and then by nothing more than the evaluator.
+
+<figure class="example-figure"><a href="/examples/rc_filter/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/rc_filter/interconnect.svg" alt="the interconnect view" loading="lazy" decoding="async" /></a><figcaption>The interconnect view</figcaption></figure>
+
+## The program
+
+[`rc_filter.py`](https://github.com/copperheadhq/fang/blob/main/examples/rc_filter/rc_filter.py) puts 10 kOhm and 10 nF between two connectors
+and requires the -3 dB corner to lie between 1.5 and 1.7 kHz. The corner is a
+parameter with no value, because nothing on the page has measured it; the
+constraint over it is undecided, and `fang check` says so.
+
+The question is declared beside the requirement it serves, with its bench in
+full: 1 V driven into the input, an AC sweep from 10 Hz to 1 MHz, and the two
+connectors deliberately left out. The corner is where the output falls through
+1/sqrt(2) of the input.
+
+```python
+corner_check = Simulates(
+    "corner_spec",
+    measures={"corner": Crossing("adc.line", level=707.1 * mV, edge="falling")},
+    supplies={"source.line": 1 * V},
+    analysis=ACSweep(variation="dec", points=100, start="10", stop="1meg"),
+    abstracted=("source", "adc"),
+)
+```
+
+`Simulates` has no `result` argument. A question's result is produced by a run;
+a program that tries to state one is refused.
+
+## What comes out
+
+4 parts, 3 nets, 37 entities, 2 checks, none failed and both undecided, until
+the question is answered.
+
+[`out/verification.txt`](https://github.com/copperheadhq/fang/blob/main/examples/rc_filter/out/verification.txt) is the file to read. On the
+elaborated program the constraint is undecided, so the question routes to the
+circuit level and ngspice answers it: 1590 Hz, inside the band, PASS. The
+measurement re-enters as a transaction (the corner set to an inferred value
+whose source is the run's evidence) and the gate's constraint check decides
+the constraint. Asked again on that committed head, the same question is
+answered at the equation level: the evaluator already decides the constraint,
+so nothing runs.
+
+- [`out/rc_filter.net`](https://github.com/copperheadhq/fang/blob/main/examples/rc_filter/out/rc_filter.net), [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/rc_filter/out/netlist.txt)
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/rc_filter/out/checks.txt): the two constraints over the corner, undecided
+- [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/rc_filter/out/graph.txt), [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/rc_filter/out/rationale.md)
+
+The listing gives three significant figures and no tool version, so it stays
+put when ngspice moves a number in its fourth figure. The evidence keeps every
+figure ngspice printed, the version, the hash of the deck, and the assumptions
+and coverage gaps listed above.
+
+## Running it
+
+```bash
+fang verify examples/rc_filter/rc_filter.py                 # nothing persists
+fang build  examples/rc_filter/rc_filter.py
+fang verify examples/rc_filter/rc_filter.py --commit        # the corner enters the workspace
+fang verify examples/rc_filter/rc_filter.py                 # answered at the equation level
+```
+
+`fang verify` needs ngspice on the path. Without it the question is reported
+unsupported, by name, and nothing else answers it.
+
+## The whole program
+
+```python title="examples/rc_filter/rc_filter.py"
+"""A first-order RC low-pass, and one question about it asked twice.
+
+An anti-aliasing filter ahead of an ADC: 10 kOhm and 10 nF put the -3 dB
+corner at 1 / (2 pi R C), about 1.59 kHz, and the requirement holds it between
+1.5 and 1.7 kHz. The program declares the corner as a parameter with no value,
+because nothing on this page has measured it, and a question that measures it:
+an AC sweep with 1 V driven into the input, the corner being where the output
+falls through 1/sqrt(2) of that.
+
+The first `fang verify` finds the constraint undecided and routes the question
+to the circuit level, where ngspice answers it; the measurement comes back
+through the commit gate. Asked again on the committed head, the same question
+is answered at the equation level: the evaluator already decides the
+constraint, so nothing runs.
+"""
+
+from fang.interfaces import AnalogIn, AnalogOut, Pin, PinMap
+from fang.lang import Parameter, Part, System, V, kHz, kOhm, mV, nF, require
+from fang.parts import Capacitor, Resistor
+from fang.rationale import Calculates, Requires
+from fang.simulation import ACSweep
+from fang.verification import Crossing, Simulates
+
+
+class SignalIn(Part):
+    """Where the signal arrives: a tip, and a sleeve that is ground."""
+
+    designator_prefix = "J"
+
+    line = AnalogOut()
+
+    TIP = Pin("TIP", role="analog", number="1")
+    SLEEVE = Pin("SLEEVE", role="ground", number="2")
+
+    pinmap = PinMap({"line.signal": "TIP", "line.ref": "SLEEVE"})
+
+
+class AdcInput(Part):
+    """Where the filtered signal leaves for the converter."""
+
+    designator_prefix = "J"
+
+    line = AnalogIn()
+
+    SIG = Pin("SIG", role="analog", number="1")
+    GND = Pin("GND", role="ground", number="2")
+
+    pinmap = PinMap({"line.signal": "SIG", "line.ref": "GND"})
+
+
+class RCFilter(System):
+    """The filter, the requirement on its corner, and the question that
+    measures it."""
+
+    corner_spec = Requires(
+        "The anti-aliasing filter's -3 dB corner lies between 1.5 kHz and 1.7 kHz",
+        validation="simulation",
+    )
+    by_hand = Calculates(
+        "f_c = 1 / (2 pi R C)",
+        inputs=("r", "c"),
+        result="1.59 kHz for 10 kOhm and 10 nF",
+        requirements=("corner_spec",),
+    )
+
+    # No value: the program does not know it, and a number written here would
+    # be a claim rather than a measurement.
+    corner = Parameter("Hz", description="the -3 dB corner, as measured")
+
+    source = SignalIn(package="PinHeader_1x02_P2.54mm")
+    adc = AdcInput(package="PinHeader_1x02_P2.54mm")
+    r = Resistor(resistance=10 * kOhm, package="R_0603")
+    c = Capacitor(capacitance=10 * nF, package="C_0603")
+
+    # The bench, in full: 1 V into the input, a sweep from 10 Hz to 1 MHz, and
+    # the two connectors left out -- they carry the signal and do nothing to it.
+    corner_check = Simulates(
+        "corner_spec",
+        measures={"corner": Crossing("adc.line", level=707.1 * mV, edge="falling")},
+        supplies={"source.line": 1 * V},
+        analysis=ACSweep(variation="dec", points=100, start="10", stop="1meg"),
+        abstracted=("source", "adc"),
+    )
+
+    def architecture(self):
+        self.source.line.signal >> self.r.p1
+        self.r.p2 >> self.c.p1
+        self.c.p2 >> self.source.line.ref
+        self.adc.line.signal >> self.c.p1
+        self.adc.line.ref >> self.c.p2
+
+    def constraints(self):
+        require(self.corner >= 1.5 * kHz)
+        require(self.corner <= 1.7 * kHz)
+```
+
+## The files it writes
+
+The parts, then the nets and the pads on them.
+
+```text title="out/netlist.txt"
+C1     10 nF            Package:C_0603
+J1     AdcInput         Package:PinHeader_1x02_P2.54mm
+J2     SignalIn         Package:PinHeader_1x02_P2.54mm
+R1     10 kOhm          Package:R_0603
+Net-(C1-Pad1)            C1.1 J1.SIG R1.2
+Net-(C1-Pad2)            C1.2 J1.GND J2.SLEEVE
+Net-(J2-PadTIP)          J2.TIP R1.1
+```
+
+Every check that ran, and every one left undecided.
+
+```text title="out/checks.txt"
+UNDECIDED constraint: declared on BLK-42978eb8675a
+UNDECIDED constraint: declared on BLK-42978eb8675a
+2 checks, 0 failed, 2 undecided
+```
+
+What the elaborated graph contains, by entity kind.
+
+```text title="out/graph.txt"
+    1  block
+    1  calculation
+    4  component
+   10  connection
+    2  constraint
+    3  interface
+    8  pin
+    6  port
+    1  requirement
+    1  verification
+   37  total
+snapshot sha256:f00cdf8504de5fd30b9f7c48c7e47422dedc8143eb1948bb899831f732f1eb08
+```
+
+All of it, including the KiCad netlist, is in
+[`examples/rc_filter/out/`](https://github.com/copperheadhq/fang/tree/main/examples/rc_filter/out/). Rebuild it with:
+
+```bash
+fang build examples/rc_filter/rc_filter.py
 ```
 
 
@@ -1364,7 +2018,7 @@ What the elaborated graph contains, by entity kind.
     8  pin
     8  port
    38  total
-snapshot sha256:6ad7bc03ba1ca11075962772f094568489c1268475ce690bc5c732aeecfff596
+snapshot sha256:59c2e144d146b6c30cb82d608069d419104952da882738a3049c58a6b253e452
 ```
 
 All of it, including the KiCad netlist, is in
@@ -1618,7 +2272,7 @@ What the elaborated graph contains, by entity kind.
     9  pin
     9  port
    40  total
-snapshot sha256:fbe3a1f611488135baef86688c04540137f5b185783c75842cc0504489c5717d
+snapshot sha256:8114e0693bd3e59d6f593eeaee1515a859d5b1635ba27f6ca76f7af4b0d5e196
 ```
 
 All of it, including the KiCad netlist, is in
@@ -1881,7 +2535,7 @@ What the elaborated graph contains, by entity kind.
     8  pin
     8  port
    40  total
-snapshot sha256:2fe471893a6fa0a173596832dcfdb6fd8ab48a9739649b77f0228398e3563e07
+snapshot sha256:da447c3c5a68c37e20e7e375fff6f37d311e22a5e1954b92f0a7bb91aa5ab370
 ```
 
 All of it, including the KiCad netlist, is in
@@ -2163,7 +2817,7 @@ What the elaborated graph contains, by entity kind.
     9  pin
     9  port
    41  total
-snapshot sha256:de2edd452f833fa688802ab1ad4b2b6d1874e7f4e3e543f5cf5e4c317ba9a01c
+snapshot sha256:a5835a1fe695db61fbfaeb4e1a748fcbb74ce527e3666089b21d6ff72ea120c6
 ```
 
 All of it, including the KiCad netlist, is in
@@ -2390,7 +3044,7 @@ What the elaborated graph contains, by entity kind.
    10  pin
    10  port
    44  total
-snapshot sha256:1cc447b9bb7b138367efbb9bf8f811d9be4c68fbf5c55fe81f61ddb6c12ad3ef
+snapshot sha256:40d61acb4945d07baebb05221009f5568432848799e5d6e394e66ae650c196f7
 ```
 
 All of it, including the KiCad netlist, is in
@@ -2620,7 +3274,7 @@ What the elaborated graph contains, by entity kind.
    10  pin
    10  port
    45  total
-snapshot sha256:de3089bd950f9e1eb91a299f517b62728ef1a5a7043e3584b1fc57588fab4c63
+snapshot sha256:90fdbdd5e6dfc85266d9af0ab54257f27fb9e62b51c0542cb49361ecaeab75af
 ```
 
 All of it, including the KiCad netlist, is in
@@ -2892,7 +3546,7 @@ What the elaborated graph contains, by entity kind.
    10  pin
    10  port
    46  total
-snapshot sha256:09e154774b6fe1544c0642e2e4be5fee3a4d099c2fad2cedba0f697e76241c6d
+snapshot sha256:6cd12b7075f3c74eb6bf4ed5f6e6a5d54a3b9ef1a7ce8375487a7c027d6b75ee
 ```
 
 All of it, including the KiCad netlist, is in
@@ -3070,7 +3724,7 @@ What the elaborated graph contains, by entity kind.
    11  pin
    10  port
    47  total
-snapshot sha256:b9d3406a7ccee9d1cc9ca95191d79213a7d69e14e5a36b1112afadb62dffde74
+snapshot sha256:dab7fbedff03ec019e23be5984d535093cf576f8c12c787f2b41cd448315f8a3
 ```
 
 All of it, including the KiCad netlist, is in
@@ -3351,7 +4005,7 @@ What the elaborated graph contains, by entity kind.
    10  pin
    10  port
    47  total
-snapshot sha256:0cffdaf1b65c26d0dd44ecc1baf62db7e08f1547bc74972d34b1b93332467e77
+snapshot sha256:16000664b7de374db6c6857d6d547d2ff5f6e0fe7381d12bf60a339f567eb096
 ```
 
 All of it, including the KiCad netlist, is in
@@ -3626,7 +4280,7 @@ What the elaborated graph contains, by entity kind.
    10  pin
    10  port
    48  total
-snapshot sha256:8ccab848199e9fec70a8269bacfdf894545dd68c1dbd696a3b1b6be2cdd582a1
+snapshot sha256:25b388b1c6bf7dcb6f59d325eb7c983674249f30cd2f2b648dbeeb38b1d32eb4
 ```
 
 All of it, including the KiCad netlist, is in
@@ -3928,7 +4582,7 @@ What the elaborated graph contains, by entity kind.
    10  pin
    10  port
    49  total
-snapshot sha256:9671408cda80dc0941e7e131d5175c762e2b7126adffbe4bade68355f43656ee
+snapshot sha256:575c49c667b8614156490bcd298ca3256d9418a2812d3226773d032b88689142
 ```
 
 All of it, including the KiCad netlist, is in
@@ -4224,7 +4878,7 @@ What the elaborated graph contains, by entity kind.
    11  pin
    11  port
    50  total
-snapshot sha256:2829b0c91941f51d3480656c6adb39c6e8ed1b4bde555258cb450b048716ae89
+snapshot sha256:ed1f9631f3b3995525ac922d05ef3700909f90d820d0f69fd14751e072647997
 ```
 
 All of it, including the KiCad netlist, is in
@@ -4474,7 +5128,7 @@ What the elaborated graph contains, by entity kind.
    10  pin
    10  port
    50  total
-snapshot sha256:09d506ae97913ce476769b460407a319942e3bb1e3f68598abe528563314c098
+snapshot sha256:417c3f76b39a5186c91dd50d48b80b612bfaf7aceee4630512281d722bfeeaae
 ```
 
 All of it, including the KiCad netlist, is in
@@ -4777,7 +5431,7 @@ What the elaborated graph contains, by entity kind.
    11  pin
    11  port
    52  total
-snapshot sha256:1e661b427806bdb6f2d05622ab3c473fae585fb8fa66c30a29db37d915687c66
+snapshot sha256:ab6b1416c3168398c7c25765b6c8e7be918b89e4c7a38316b7da9eb2ee8ba8a7
 ```
 
 All of it, including the KiCad netlist, is in
@@ -5016,7 +5670,7 @@ What the elaborated graph contains, by entity kind.
    11  pin
    11  port
    52  total
-snapshot sha256:70df740ee18522b268c168035c689f987724c3ffa06dd7bb89e84bbeff3a6b4c
+snapshot sha256:728046891ba220bceecfc254ec7550752dfb0db90979cb3bed184e0590cde745
 ```
 
 All of it, including the KiCad netlist, is in
@@ -5273,7 +5927,7 @@ What the elaborated graph contains, by entity kind.
    12  pin
    12  port
    53  total
-snapshot sha256:20f3b623d8af07af2128e9119671e2fb8ef04f3386fa8ffa72c3d954e4a482ea
+snapshot sha256:e23c9a99939576a0d1410c4254158dfac432febd2fb99c1ae7d40045b7622aab
 ```
 
 All of it, including the KiCad netlist, is in
@@ -5566,7 +6220,7 @@ What the elaborated graph contains, by entity kind.
    12  pin
    12  port
    54  total
-snapshot sha256:fc2b5b42029ca938aaf0a050832b4c9cea2344145465c45019e8d06316f48650
+snapshot sha256:c8d966792e147c15d7778c3fa26d5dd7bcc7f5f3a90213c0da7bb1e1e9353516
 ```
 
 All of it, including the KiCad netlist, is in
@@ -5827,7 +6481,7 @@ What the elaborated graph contains, by entity kind.
    12  pin
    12  port
    54  total
-snapshot sha256:57604668c37906c9c8a24c3259522a37fe8460cfe0bd2419a3d673dc90b5fe42
+snapshot sha256:772cb918c912ddea56586ad60ed8897da6e1ff6795cbd6983bb6f04bbec8eca5
 ```
 
 All of it, including the KiCad netlist, is in
@@ -6079,7 +6733,7 @@ What the elaborated graph contains, by entity kind.
    12  pin
    12  port
    54  total
-snapshot sha256:5856eb26ec49a97fabe480752d6617b530d21dc92104c3a01635309051e8ae9d
+snapshot sha256:0e350f79f4cf2033caa90ee98cfebf0327cc9af403a56d79b96ccf0dc0e558ed
 ```
 
 All of it, including the KiCad netlist, is in
@@ -6315,7 +6969,7 @@ What the elaborated graph contains, by entity kind.
    12  pin
    12  port
    55  total
-snapshot sha256:4cafcab64312599875cb47a2cb81ca79bd13b2e9ac84ebdcca358517d96ee94d
+snapshot sha256:711a679e7230d16e189c92026cff39c5a9cc64137f4a00248d48baa3054fbfa9
 ```
 
 All of it, including the KiCad netlist, is in
@@ -6588,7 +7242,7 @@ What the elaborated graph contains, by entity kind.
    12  pin
    12  port
    55  total
-snapshot sha256:1e305e9f1f71d6aae4efbfc40152d3b276eb47dadd0e0aa16521fcaa04e8181d
+snapshot sha256:267449679105c3a3cbd89b5813289d93986c27da193d2e1e219562ea801d8948
 ```
 
 All of it, including the KiCad netlist, is in
@@ -6859,7 +7513,7 @@ What the elaborated graph contains, by entity kind.
    13  pin
    13  port
    57  total
-snapshot sha256:dc67ce2a66052a903c4811b543747d8431dea5e5d4a7cc767a6298a41cb31c45
+snapshot sha256:3c70aa708871d7221fad1eb5ad8bef0245285c1de2791e590e701978dd37953b
 ```
 
 All of it, including the KiCad netlist, is in
@@ -7158,7 +7812,7 @@ What the elaborated graph contains, by entity kind.
    13  pin
    13  port
    58  total
-snapshot sha256:1e778d3d187604d125fa88790ed5b830349b95a0d238b40f130d920b6b4f1f47
+snapshot sha256:fa7ec70fb421cb25fadc78a9a48aac4ca7f57eb1723125cadf61b835707b3e23
 ```
 
 All of it, including the KiCad netlist, is in
@@ -7445,7 +8099,7 @@ What the elaborated graph contains, by entity kind.
    13  pin
    13  port
    58  total
-snapshot sha256:065ae996025fdd748f88f4b328130b85108bd8fe3c0ec6c33e14baab64d24b02
+snapshot sha256:993f2b406555bbe5e71c9dfd024a6d98127ed7eff37978691a14c38c5ecc128d
 ```
 
 All of it, including the KiCad netlist, is in
@@ -7733,7 +8387,7 @@ What the elaborated graph contains, by entity kind.
    13  pin
    13  port
    59  total
-snapshot sha256:fc104865edfa66658b3d46e3412c0bc85a5d57669aa2d27f16dad63a97fad35c
+snapshot sha256:20a7ce65f1f45b9b2f57d471cda4483ada5daea4b6a396a123fed7368428262e
 ```
 
 All of it, including the KiCad netlist, is in
@@ -8065,7 +8719,7 @@ What the elaborated graph contains, by entity kind.
    14  pin
    14  port
    62  total
-snapshot sha256:ea339ecc46369c6d70380d83e5ad6d96cb7c03932a9368e9039198d6d1fd0b86
+snapshot sha256:32b1540bb6c6d4b7690b850b8e6766be976dae3f0eb9f44dc6b9e2b7f17798f1
 ```
 
 All of it, including the KiCad netlist, is in
@@ -8364,7 +9018,7 @@ What the elaborated graph contains, by entity kind.
    15  pin
    15  port
    63  total
-snapshot sha256:fb04da5a11dbeaf8e8cf271a4700eccd26a4a9054ca9aaff3081319d98d64939
+snapshot sha256:86d15ad0efc75f7b9a8090d83c25bdf3698cd9a7b5edc6f0feb190f186610fc9
 ```
 
 All of it, including the KiCad netlist, is in
@@ -8705,7 +9359,7 @@ What the elaborated graph contains, by entity kind.
    13  pin
    13  port
    64  total
-snapshot sha256:9392cfa48792b725d77bf9cea666d18f8002ab70b5f94ce63592737316f912b9
+snapshot sha256:8c24ff5f503fd7003f8f06734f6ecda5906e666a85c982f37852b57367dd2063
 ```
 
 All of it, including the KiCad netlist, is in
@@ -8976,7 +9630,7 @@ What the elaborated graph contains, by entity kind.
    15  pin
    15  port
    65  total
-snapshot sha256:7450470db2021c9726f0a73c9cc653f9df9f6dfa0b9e7bec4805063b64f4a6ce
+snapshot sha256:614afa90b47e39fe3d6a5156ad65b30e372cc4270f16d5a8c5fc5a374bbf10c0
 ```
 
 All of it, including the KiCad netlist, is in
@@ -9255,7 +9909,7 @@ What the elaborated graph contains, by entity kind.
    15  pin
    15  port
    66  total
-snapshot sha256:d806c37dfb106eeb5e1964a25701d9871e068e6c2304c356b47df1d7966b97c6
+snapshot sha256:e8443e2d26240564d445c4eb95ebd5e1ee415242ce97f4bed60fb11570de7383
 ```
 
 All of it, including the KiCad netlist, is in
@@ -9562,7 +10216,7 @@ What the elaborated graph contains, by entity kind.
    15  pin
    15  port
    66  total
-snapshot sha256:b1dd1ae3cb9f151013fd44561727d561d64d604333420f4081959a8478450571
+snapshot sha256:8e21a7b3f7b8fb983986c551771a6015b57eca84a9fbfc6473102d4179384d42
 ```
 
 All of it, including the KiCad netlist, is in
@@ -9847,7 +10501,7 @@ What the elaborated graph contains, by entity kind.
    15  pin
    15  port
    66  total
-snapshot sha256:451976839c250b4c40f9a658c2d36cdac8228ff9018348f2e299f033833d4230
+snapshot sha256:a34321c425312c392be865f080810aa8f371e6c8f3deeabf14792bec560324ca
 ```
 
 All of it, including the KiCad netlist, is in
@@ -10159,7 +10813,7 @@ What the elaborated graph contains, by entity kind.
    15  pin
    15  port
    66  total
-snapshot sha256:b9f06a2f7e65c2cc0ee33eb5df351df7e83ef6535033fb0654a8ebb72bebcf72
+snapshot sha256:80bb073afbe5b3e6c374c201d2f0228bcfe1f7b704e239d9d2ac11f7452f24a9
 ```
 
 All of it, including the KiCad netlist, is in
@@ -10447,7 +11101,7 @@ What the elaborated graph contains, by entity kind.
    15  pin
    15  port
    68  total
-snapshot sha256:570e491be35dbf37128a310c98928e68b81a71b907fccd1f1309bd7ec8f6bb7b
+snapshot sha256:8f80c31ca51cdfe192801f0aeabced58d61cbe27cb274ce9d1985451258e4fd7
 ```
 
 All of it, including the KiCad netlist, is in
@@ -10750,7 +11404,7 @@ What the elaborated graph contains, by entity kind.
    16  pin
    16  port
    69  total
-snapshot sha256:5b1fb9652b31f80096f48ae6af810afb579266be23049317f94de7afe05f62ed
+snapshot sha256:7216bdcc61dcb01a3b955775df96f902c470fb2497942ba9470adac4db7402ee
 ```
 
 All of it, including the KiCad netlist, is in
@@ -10978,7 +11632,7 @@ What the elaborated graph contains, by entity kind.
    16  pin
    16  port
    69  total
-snapshot sha256:19cbc9ce5748277885253b7954643ade799502fcd98a2350f3615508722ee8be
+snapshot sha256:5edee7bf6f32f2f0f5f097ee144b88931c5eaad512bad550f75ad0f4427d4199
 ```
 
 All of it, including the KiCad netlist, is in
@@ -11202,7 +11856,7 @@ What the elaborated graph contains, by entity kind.
    16  pin
    16  port
    69  total
-snapshot sha256:90f47a3704a04182a14689579dbbe374d7247c08e4d75b63638e71910c89d0f0
+snapshot sha256:d53408bb388f09984f7a3dd043386ff6cd40bcfcbd18a6f6b7f39af636526968
 ```
 
 All of it, including the KiCad netlist, is in
@@ -11484,7 +12138,7 @@ What the elaborated graph contains, by entity kind.
    15  pin
    15  port
    69  total
-snapshot sha256:10976bde9a429ac5be10a35d0ed0cdd4d0d0ce3aecf7a320c32db2b1c823fc01
+snapshot sha256:78302d128bc7071ac6de815293df4873bf30c865e4f3b9fbbb50ac88a40d51c9
 ```
 
 All of it, including the KiCad netlist, is in
@@ -11801,7 +12455,7 @@ What the elaborated graph contains, by entity kind.
    16  pin
    16  port
    70  total
-snapshot sha256:ad83dbfed154341ca78b95be095d947be0694f5a54aff482de2fc066bdb69e7c
+snapshot sha256:8a1cd66cc36ca2fccf2c8107d306a9d42e3d3627e8b4f135824320c665726755
 ```
 
 All of it, including the KiCad netlist, is in
@@ -12017,7 +12671,7 @@ What the elaborated graph contains, by entity kind.
    19  pin
    13  port
    71  total
-snapshot sha256:dc4883d4efd3f2ef664a4c330a88f2557a3f0cebb06cd3211ddf73e94b32ccf9
+snapshot sha256:8570fadf033061093c00daeccc09e24d78b137a9940d71a7206cb5b7e50ac56c
 ```
 
 All of it, including the KiCad netlist, is in
@@ -12321,7 +12975,7 @@ What the elaborated graph contains, by entity kind.
    16  pin
    16  port
    71  total
-snapshot sha256:ff85ed304892b10d272b25d20470df92525025bfe2278a0ddff667812eb0c3b4
+snapshot sha256:a8b6b7c6d2a4824ee3d88ed7b18504daf9f5c949d4d9c226d6bf30adca2e6167
 ```
 
 All of it, including the KiCad netlist, is in
@@ -12591,7 +13245,7 @@ What the elaborated graph contains, by entity kind.
    16  pin
    14  port
    72  total
-snapshot sha256:fb5cdccbc1e2853897ad576defd04c5573c25a242d5a5edb9016de8f89663611
+snapshot sha256:2c5c70a2cb2fc5cbddd9d7c98ff1050f605243738b1f7370a03a829a91eb4161
 ```
 
 All of it, including the KiCad netlist, is in
@@ -12943,7 +13597,7 @@ What the elaborated graph contains, by entity kind.
    16  pin
    16  port
    73  total
-snapshot sha256:2e7fd4f265f6462e9353c8439b900e08889157dd65be286a50e77ada3f30484c
+snapshot sha256:e3c8beaf35f4ce59ca0027cdf7bb3e8a6a01923c5155b440af00ee1926cfe7eb
 ```
 
 All of it, including the KiCad netlist, is in
@@ -13329,7 +13983,7 @@ What the elaborated graph contains, by entity kind.
    17  pin
    17  port
    75  total
-snapshot sha256:8935583c17619f39c6c5d9d52f68a503346b058ee0b0d4a4b4c52c318b31aabf
+snapshot sha256:262f4e219d3efe34486e49176be654df9e2b9af49f7a780f3e4e9449ee5819bd
 ```
 
 All of it, including the KiCad netlist, is in
@@ -13594,7 +14248,7 @@ What the elaborated graph contains, by entity kind.
    17  pin
    17  port
    75  total
-snapshot sha256:379360277b11b971f445fb9e0292dfbeedfd1498fa57b4ebc6f3cdc8378397e7
+snapshot sha256:0f8827f07b5a05680dba014eb88ec90912d0f16e105cb8dea83a92944bd8653e
 ```
 
 All of it, including the KiCad netlist, is in
@@ -13876,7 +14530,7 @@ What the elaborated graph contains, by entity kind.
    17  pin
    17  port
    76  total
-snapshot sha256:6fbb4fa6196eda8de1193ef04d6547fa5738379d802ee5eeb261e8cece3b9457
+snapshot sha256:16fe87a4d76917e44c633d56c67ca05ee6c7365f132d2c72d0f8dd8655bdab02
 ```
 
 All of it, including the KiCad netlist, is in
@@ -14153,7 +14807,7 @@ What the elaborated graph contains, by entity kind.
    18  pin
    18  port
    78  total
-snapshot sha256:188dfad74e3def689733825748b5f19bb4fb159502eb89d593a202edbcc1c2c8
+snapshot sha256:5aa1f1efd122fcca2459562a5230e5e42c8bb7181b321814c1c1548d4abbfebc
 ```
 
 All of it, including the KiCad netlist, is in
@@ -14395,7 +15049,7 @@ What the elaborated graph contains, by entity kind.
    17  pin
    17  port
    78  total
-snapshot sha256:010d7a344379e34ebe3655d8231dffe2f285ab1304c0bb21ffdf1ff90f4c9447
+snapshot sha256:415d4b23c1033a4299b2789cea9ad7184c14ebbf53f9e59aa580b9f457dbb862
 ```
 
 All of it, including the KiCad netlist, is in
@@ -14660,7 +15314,7 @@ What the elaborated graph contains, by entity kind.
    17  pin
    17  port
    78  total
-snapshot sha256:d03695113d922f697a55e2629961b30b48f2974a467c1c52e8245885abd11d27
+snapshot sha256:70c9bc4fdd1b37cdca07e256910a6d4fa341c94602f4279c98d8e04bc8f207fd
 ```
 
 All of it, including the KiCad netlist, is in
@@ -14950,7 +15604,7 @@ What the elaborated graph contains, by entity kind.
    18  pin
    18  port
    79  total
-snapshot sha256:c59ac8d72adc4bc43f55eab107df76256723efffcfeedb973362ce6ea4c5da2f
+snapshot sha256:b603d3da4785c8569fde1930a2dd5051f6cc5c2571892541af41eba98ec1a384
 ```
 
 All of it, including the KiCad netlist, is in
@@ -15218,7 +15872,7 @@ What the elaborated graph contains, by entity kind.
    18  pin
    18  port
    80  total
-snapshot sha256:2f28a345d2f185b3455b7fd90657a3e17a3283dbd986c8e4cc8d1f9b3eaecbb4
+snapshot sha256:97f7698c80f1e592121f4a2e134ae41a8733ffe425f12f489e840256170583cf
 ```
 
 All of it, including the KiCad netlist, is in
@@ -15640,7 +16294,7 @@ What the elaborated graph contains, by entity kind.
    17  pin
    17  port
    81  total
-snapshot sha256:f06a992d882b155d58c6256c2584be6ebe87e1636b3d9354860e0242212207e5
+snapshot sha256:a4e0a0da5548c4fa72ddeb903105d35c6fd4d44c19c0266879c7833196263074
 ```
 
 All of it, including the KiCad netlist, is in
@@ -15973,7 +16627,7 @@ What the elaborated graph contains, by entity kind.
    19  pin
    19  port
    82  total
-snapshot sha256:21522b7bf20d0705029f3b7fbcfe8174ac2019811f8c0a41c11cd390b63530d9
+snapshot sha256:15d6277cef85bcb7f90d135e2a9eb5b6a3b1583f84a84eb784d3a541cad5f1be
 ```
 
 All of it, including the KiCad netlist, is in
@@ -16261,7 +16915,7 @@ What the elaborated graph contains, by entity kind.
    18  pin
    18  port
    82  total
-snapshot sha256:3550f193cc86822ab9da8cac448203ac257f4032cc63eeab91ecf12c24db6fc9
+snapshot sha256:d3d14d4d12e3ed23f537911b6a93a73ac8b855ad0b7a3433c1f2a6395ed9d4df
 ```
 
 All of it, including the KiCad netlist, is in
@@ -16687,7 +17341,7 @@ What the elaborated graph contains, by entity kind.
    18  pin
    18  port
    84  total
-snapshot sha256:61b63a41056495231c88dcebbb6f64bdf0f5a972219607b4042620bd7b3225ec
+snapshot sha256:78878477150d92b145ca5e45f57ba8656e09c2c3cb6b250c5c1f8d800ff21afd
 ```
 
 All of it, including the KiCad netlist, is in
@@ -16993,7 +17647,7 @@ What the elaborated graph contains, by entity kind.
    18  pin
    18  port
    84  total
-snapshot sha256:ebb565d5f20503b94741ae7b185a68856e3b4b656a0637692eaaf8dd8758544a
+snapshot sha256:74bb0b9883944fdc28a6f5c5fc1dcb9700858563a981400a16ec047350be02ed
 ```
 
 All of it, including the KiCad netlist, is in
@@ -17296,7 +17950,7 @@ What the elaborated graph contains, by entity kind.
    20  pin
    20  port
    86  total
-snapshot sha256:a7bc3cafa9f5db735164b561241c4d635ef8d5c211454f58c6a09570602ac2af
+snapshot sha256:302584e608538e755a2c9aab860b8b7b5ab684658c137b02b4d24137ab1875ec
 ```
 
 All of it, including the KiCad netlist, is in
@@ -17601,7 +18255,7 @@ What the elaborated graph contains, by entity kind.
    20  pin
    20  port
    89  total
-snapshot sha256:a9558038cc9027002f2d5fea1407bc42164103d6ec8c6999042a087a461140af
+snapshot sha256:7c476fbdfc9a37117bf9c1afaedcb129a5cf2faeeaa4ac7609be6414b8873244
 ```
 
 All of it, including the KiCad netlist, is in
@@ -17924,7 +18578,7 @@ What the elaborated graph contains, by entity kind.
    20  pin
    20  port
    89  total
-snapshot sha256:bc74f442669f8ade44c7848c9d68e21e3a272c9e835df6d2d6c927ae25ba62ee
+snapshot sha256:d9043dafe5d5c7b910a192d4c3eab5a8b89612915ac39e64bb1973f70b4a1f48
 ```
 
 All of it, including the KiCad netlist, is in
@@ -18239,7 +18893,7 @@ What the elaborated graph contains, by entity kind.
    22  pin
    22  port
    96  total
-snapshot sha256:7f08181a776a537174f38dff34a0ebe068030e5cbdc1f83f4cce0f0ef2bd4a98
+snapshot sha256:20214dee37dcf3f266296f3aebc03dca0cfa37d0169d7ee8318571c970c640a2
 ```
 
 All of it, including the KiCad netlist, is in
@@ -18558,7 +19212,7 @@ What the elaborated graph contains, by entity kind.
    16  port
     1  requirement
    98  total
-snapshot sha256:65a2349925c351990730abf81c86db40412f80d932ca022e18595dad47d36c2f
+snapshot sha256:9e4a535546786b3ae49fa860a97230058fdc09d65224a7af83ce69fbf4f5973d
 ```
 
 All of it, including the KiCad netlist, is in
@@ -18863,7 +19517,7 @@ What the elaborated graph contains, by entity kind.
    22  pin
    22  port
    98  total
-snapshot sha256:f6fa92d69a424fa00e38cdeea104b90727022ae78fba3f93ec4a126cef320ad2
+snapshot sha256:3981944e7f74f9894b31bfb9a1f432faf96f00c292d1e3daacbca8694e72ce39
 ```
 
 All of it, including the KiCad netlist, is in
@@ -19437,7 +20091,7 @@ What the elaborated graph contains, by entity kind.
     1  requirement
     1  verification
    99  total
-snapshot sha256:d04f25ae669ba1bc938295dc24438c84d09d4383db9321f7f4308c60ebeeea4b
+snapshot sha256:02ff7f02837d33a59aa488d9d29f9e228673f664c3cbe3d108ad778b1436f073
 ```
 
 All of it, including the KiCad netlist, is in
@@ -19874,7 +20528,7 @@ What the elaborated graph contains, by entity kind.
    23  pin
    23  port
   100  total
-snapshot sha256:6924d586c9c54465f8bc46b207f4ed5f7593c1519aea30c4ac62f9206d3ec030
+snapshot sha256:ae5c00af0068a80df1e1b939c69051ce685708baaed2e95681df48edbd08400b
 ```
 
 All of it, including the KiCad netlist, is in
@@ -20208,7 +20862,7 @@ What the elaborated graph contains, by entity kind.
    24  pin
    24  port
   103  total
-snapshot sha256:44a326ee3ca0789911682f124b2c58e19d57fccfea1f1aba2811d2c5c5499a94
+snapshot sha256:e0a0f562f869cc26fd3c552047accd79a68826607dd1efed867787298d7e34de
 ```
 
 All of it, including the KiCad netlist, is in
@@ -20532,7 +21186,7 @@ What the elaborated graph contains, by entity kind.
    25  pin
    25  port
   105  total
-snapshot sha256:43e0f6f0358e90098b407a40090f53cbbff86e691b1a1f1dd685e12e6724aa28
+snapshot sha256:ac52e06d6f5c72ac087377e21280cb9cc8ea37ad9b1f26e2756fa15eec1db4f2
 ```
 
 All of it, including the KiCad netlist, is in
@@ -20954,7 +21608,7 @@ What the elaborated graph contains, by entity kind.
    24  pin
    24  port
   107  total
-snapshot sha256:742b50bd2960896d7646913031b11b24684c2d757cd1fdc8920fcd76a7f6fbd9
+snapshot sha256:e1be2efe806b42ae6038a2ab3d5ae5290561e137becc141bb4dd9495d38ee923
 ```
 
 All of it, including the KiCad netlist, is in
@@ -21518,7 +22172,7 @@ What the elaborated graph contains, by entity kind.
     1  requirement
     1  verification
   108  total
-snapshot sha256:dda4711d580e3954d45140d099b95fcf3f9fbf67c7dca354a532e1d7a43ae891
+snapshot sha256:bda827d7dd3d3ea608be39507cdcb7911a9cad66fa8c96672a565e905ea3d4b7
 ```
 
 All of it, including the KiCad netlist, is in
@@ -22020,7 +22674,7 @@ What the elaborated graph contains, by entity kind.
    24  pin
    24  port
   109  total
-snapshot sha256:f6de442046722b3f601b40b5cd508d31e26580953d4d8b003a696f2fccf6ff75
+snapshot sha256:8494709fc01d2bd30ae38b0ffb59c84ebbfdf6c5cd1a775e276231bde6247722
 ```
 
 All of it, including the KiCad netlist, is in
@@ -22427,7 +23081,7 @@ What the elaborated graph contains, by entity kind.
    25  pin
    25  port
   110  total
-snapshot sha256:614d9814628fee7e7fb51686c65f26bde65009c33ce2fc7ee0503ecda2c5d754
+snapshot sha256:4ff23d07c39ec07f82599a1ba528ba52c2d60d25acc127680711382a68edec2f
 ```
 
 All of it, including the KiCad netlist, is in
@@ -22799,7 +23453,7 @@ What the elaborated graph contains, by entity kind.
    24  pin
    24  port
   113  total
-snapshot sha256:4832a6226f90f2d5941286a5e25f87dfd9e1de9c6a1875cabd5ad30baec6ec45
+snapshot sha256:952ae00aad3d72b16242705e555640f1d9d22c0170c85d8d94cd74928975bd22
 ```
 
 All of it, including the KiCad netlist, is in
@@ -23112,7 +23766,7 @@ What the elaborated graph contains, by entity kind.
    24  pin
    24  port
   113  total
-snapshot sha256:b9496646325e3757497cd6ea91d22c959604db509a3acce603bf8b18ff9d69ba
+snapshot sha256:deae09cdcd73047907f46b680f850ac0e3c89b1a27ef6896b862bbfb89e50ad9
 ```
 
 All of it, including the KiCad netlist, is in
@@ -23284,6 +23938,19 @@ out where an engineer expects them, `IN-` and `IN+` on the left and `OUT` on
 the right, because they are numbered 2, 3 and 6, the single-op-amp pinout, and
 the box takes the pins in the order the graph gives them.
 
+The same circuit is also drafted by copperhead, which places and wires parts
+instead of laying them on a grid. Fang writes copperhead's netlist intent,
+[`out/copperhead/schematic.intent.json`](https://github.com/copperheadhq/fang/blob/main/examples/noninverting_amp/out/copperhead/schematic.intent.json),
+and `copperhead draft schematic` turns it into
+[`out/copperhead/noninverting_amp.kicad_sch`](https://github.com/copperheadhq/fang/blob/main/examples/noninverting_amp/out/copperhead/noninverting_amp.kicad_sch).
+It draws with KiCad's library symbols, so the op amp names one: `symbol =
+"Amplifier_Operational:LM741"`, the standard single-op-amp drawing with pins 2,
+3 and 6. That sets how the part is drawn, not which part it is. The ground
+marker isn't drawn as a part; its net becomes a ground net, with the ground
+symbol on it.
+
+<figure class="example-figure"><a href="/examples/noninverting_amp/copperhead/schematic.svg" target="_blank" rel="noopener"><img src="/examples/noninverting_amp/copperhead/schematic.svg" alt="the same circuit, drafted by copperhead and rendered by KiCad" loading="lazy" decoding="async" /></a><figcaption>The same circuit, drafted by copperhead and rendered by KiCad</figcaption></figure>
+
 <figure class="example-figure"><a href="/examples/noninverting_amp/interconnect.svg" target="_blank" rel="noopener"><img src="/examples/noninverting_amp/interconnect.svg" alt="the interconnect view" loading="lazy" decoding="async" /></a><figcaption>The interconnect view</figcaption></figure>
 
 The interconnect view is fang's own projection, and it names the parts the way
@@ -23297,6 +23964,7 @@ fang check     examples/noninverting_amp/noninverting_amp.py
 fang netlist   examples/noninverting_amp/noninverting_amp.py
 fang view      examples/noninverting_amp/noninverting_amp.py interconnect -o interconnect.svg
 fang schematic examples/noninverting_amp/noninverting_amp.py -o board.kicad_sch --svg board.svg
+fang schematic examples/noninverting_amp/noninverting_amp.py --drafter copperhead -o board.kicad_sch
 
 python examples/noninverting_amp/solve.py     # needs ngspice on PATH
 ```
@@ -23436,6 +24104,10 @@ class OpAmp(Part):
     """
 
     designator_prefix = "U"
+    # The standard single-op-amp drawing, whose pins are numbered 2, 3 and 6 as
+    # these are. It says how the part is drawn, not which part it is: the
+    # value stays OpAmp and no manufacturer is named.
+    symbol = "Amplifier_Operational:LM741"
 
     inverting = AnalogIn()
     non_inverting = AnalogIn()
@@ -23736,7 +24408,7 @@ What the elaborated graph contains, by entity kind.
     1  requirement
     1  verification
   114  total
-snapshot sha256:ca5378f7c2ba74e2e336ac8164d4b12701d3d0041ee3f0df60db28b4bfccb27b
+snapshot sha256:71c839dd1e08317242ec799984d00f9c773c76c896466cc6c0ffe4804a29173d
 ```
 
 All of it, including the KiCad netlist, is in
@@ -23766,11 +24438,11 @@ rail_tolerance = Requires("The 3V3 rail holds 3.3 V within 3% for 0 to 1.5 A ove
 part_choice    = Chooses("Which converter makes the 3V3 rail?", selected="TPS62130", ...)
 ripple_current = Cites("Recommended inductor ripple is 20 to 40% of the maximum output current", ...)
 inductor_value = Calculates("L = v_out * (1 - v_out / v_in) / (f_sw * ripple_current)", ...)
-load_regulation = Verifies("rail_tolerance", ...)
+under_load     = Simulates("rail_tolerance", measures={"ripple": ..., "output": ...}, ...)
 ```
 
 So "why is this 4.7 µH?" has an answer the graph can give: a calculation, over a
-datasheet claim, serving a requirement, which a verification closes. Nobody had
+datasheet claim, serving a requirement, which a question verifies. Nobody had
 to write a design document. Nothing here can drift from the design either,
 because it *is* the design. Change the evidence and the decision resting on it
 is flagged.
@@ -23779,9 +24451,35 @@ The output voltage is deliberately not a parameter of the controller. The
 feedback divider on the board sets it, which is why the divider carries the
 constraint that produces it.
 
+## The question
+
+The requirement used to be closed by a `Verifies(..., result="PASS")` whose
+evidence was two datasheet citations: a citation, not a verification. It is
+now a question, and the program cannot state its answer.
+
+`ripple` and `output` are parameters with no value, each with a constraint:
+ripple at most 30 mV, the output between 3.2 and 3.4 V. The question measures
+both on a bench it names in full: 12 V on the controller's input, 2.2 Ohm
+across the rail header (1.5 A at 3.3 V), and a transient to 1.2 ms measured
+over its last 0.2 ms. It leaves out the input connector, the fuse, the reverse
+diode and the header, so the supply lands on the controller.
+
+The controller is simulated by [`ideal_buck.sub`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/ideal_buck.sub): two ideal
+switches at a fixed duty of 0.275. It is not a model of the TPS62130, and the
+program says so: the trait's provenance is an assumption, which halves the
+confidence of every number measured over it, and what it leaves out, the
+control loop above all, is recorded as a coverage gap on every run.
+
+[`out/verification.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/verification.txt) is what `fang verify` finds:
+3.29 V and 1.90 mV of ripple, both inside their constraints, so the
+verification passes at confidence 0.5. Those numbers enter the graph as
+inferred values whose source is the run's evidence, through the commit gate,
+and the constraints over them are decided by the gate's own constraint check.
+
 ## What comes out
 
-12 parts, 9 nets, 118 entities, 15 checks. None failed, one undecided.
+11 parts, 9 nets, 121 entities, 18 checks. None failed and four undecided:
+three are the rail's own numbers, until `fang verify` measures them.
 
 [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/rationale.md) is the file to read. It is the whole
 argument, projected out of the graph in identifier order:
@@ -23794,6 +24492,7 @@ argument, projected out of the graph in identifier order:
 >
 > - Over `system.inductor` (Inductor, `CMP-64dfc4cd840c`)
 
+- [`out/verification.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/verification.txt): the question, answered
 - [`out/buck_regulator.net`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/buck_regulator.net), [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/netlist.txt)
 - [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/checks.txt), [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/buck_regulator/out/graph.txt)
 
@@ -23803,6 +24502,7 @@ argument, projected out of the graph in identifier order:
 
 ```bash
 fang check   examples/buck_regulator/buck_regulator.py
+fang verify  examples/buck_regulator/buck_regulator.py      # needs ngspice
 fang view    examples/buck_regulator/buck_regulator.py power -o power.svg
 ```
 
@@ -23812,16 +24512,18 @@ fang view    examples/buck_regulator/buck_regulator.py power -o power.svg
 """A 12 V to 3.3 V buck converter, with the reasoning kept beside the circuit.
 
 The circuit is ordinary. What is not ordinary is that the requirement, the part
-decision, the datasheet numbers behind it, the two calculations and the
-verification that closes the requirement are all entities in the same graph as
+decision, the datasheet numbers behind it, the two calculations, and the
+question that verifies the requirement are all entities in the same graph as
 the inductor, so `fang` can answer "why is this 4.7 uH?" without anyone having
-written a design document.
+written a design document, and `fang verify` can find out whether the rail
+holds under load rather than take a hand-written PASS for it.
 """
 
 from fang.interfaces import AnalogIn, Pin, PinMap, PowerIn, PowerOut
 from fang.lang import (
     A,
     Electrical,
+    Ohm,
     Parameter,
     Part,
     Signal,
@@ -23834,13 +24536,17 @@ from fang.lang import (
     mOhm,
     mV,
     mW,
+    ms,
     nF,
     require,
     uF,
     uH,
 )
 from fang.parts import Capacitor, Diode, Fuse, Inductor, Resistor
-from fang.rationale import Calculates, Chooses, Cites, Requires, Verifies
+from fang.rationale import Calculates, Chooses, Cites, Requires
+from fang.simulation import Transient
+from fang.traits import Simulatable
+from fang.verification import Average, PeakToPeak, Simulates, assumed_provenance
 
 #: Dimensionless, for the divider ratio.
 ratio = UnitLiteral("1")
@@ -23970,6 +24676,12 @@ class Rail3V3(System):
     divider_min = Parameter("", default=3.03 * ratio)
     divider_max = Parameter("", default=3.22 * ratio)
 
+    # What the rail does under load. Declared without values: nothing on this
+    # page knows them, and a number written here would be a claim, not a
+    # measurement. `fang verify` measures them.
+    ripple = Parameter("mV", description="peak-to-peak on the rail at full load")
+    output = Parameter("V", description="the rail's average at full load")
+
     dc_in = InputTerminal(package="TerminalBlock_1x02_P5.08mm")
     rail_out = RailHeader(package="PinHeader_1x02_P2.54mm")
 
@@ -24003,12 +24715,22 @@ class Rail3V3(System):
     fb_top = Resistor(resistance=200 * kOhm, power_rating=63 * mW, package="R_0402")
     fb_bottom = Resistor(resistance=64 * kOhm, power_rating=63 * mW, package="R_0402")
 
-    # -- and what closes the requirement -------------------------------------
-    load_regulation = Verifies(
+    # -- and the question that verifies the requirement -----------------------
+    # Full load at the 12 V nominal input: 2.2 Ohm draws 1.5 A at 3.3 V. The
+    # window starts a millisecond in, once the output filter has settled from
+    # power-up. The input connector, the fuse and the reverse diode are left
+    # out deliberately, so the supply lands on the controller's input; the
+    # rail header is only where the load is applied.
+    under_load = Simulates(
         "rail_tolerance",
-        method="analysis",
-        evidence=("absolute_maximum", "ripple_current"),
-        result="PASS",
+        measures={
+            "ripple": PeakToPeak("rail_out.dc", after=1 * ms, until=1.2 * ms),
+            "output": Average("rail_out.dc", after=1 * ms, until=1.2 * ms),
+        },
+        supplies={"controller.vin": 12 * V},
+        loads={"rail_out.dc": 2.2 * Ohm},
+        analysis=Transient(stop="1.2ms", step="10ns"),
+        abstracted=("dc_in", "protection", "reverse", "rail_out"),
     )
 
     def __init__(self, **overrides):
@@ -24018,6 +24740,27 @@ class Rail3V3(System):
             "TPS62130RGTR",
             distributor_ids={"lcsc": "C77378"},
             datasheet="SRC-DS-TPS62130",
+        )
+        # The power stage the question runs is an ideal one, and says so: its
+        # provenance is an assumption, which lowers the confidence of every
+        # number measured over it, and what it leaves out is recorded as a
+        # coverage gap on every run.
+        self.controller.add_trait(
+            Simulatable(
+                backends=("ngspice",),
+                source="ideal_buck.sub",
+                pin_map={
+                    "VIN": "vin", "GND": "gnd", "SW": "sw",
+                    "BOOT": "boot", "FB": "fb", "EN": "en",
+                },
+                provenance=assumed_provenance(
+                    "an ideal switch pair at a fixed duty, standing in for the TPS62130"
+                ),
+                not_modelled=(
+                    "the control loop is not modelled; duty is fixed at 0.275",
+                    "no soft start, current limit or switching loss",
+                ),
+            )
         )
 
     def architecture(self):
@@ -24069,6 +24812,12 @@ class Rail3V3(System):
         # The input capacitor sees the input, and a hot-plugged supply rings.
         require(self.input_bulk.voltage_rating >= 25 * V)
         require(self.output_bulk.voltage_rating >= 10 * V)
+
+        # The rail's 3% at full load, and a ripple the loads can live with.
+        # Undecided until `fang verify` measures them.
+        require(self.ripple <= 30 * mV)
+        require(self.output >= 3.2 * V)
+        require(self.output <= 3.4 * V)
 ```
 
 ## The files it writes
@@ -24101,8 +24850,11 @@ Net-(R1-Pad1)            R1.1 R2.2 U1.FB
 Every check that ran, and every one left undecided.
 
 ```text title="out/checks.txt"
+UNDECIDED constraint: declared on BLK-42978eb8675a
+UNDECIDED constraint: declared on BLK-42978eb8675a
+UNDECIDED constraint: declared on BLK-42978eb8675a
 UNDECIDED interface_compatibility: current capability is undecided on power_input: current_demand unknown
-15 checks, 0 failed, 1 undecided
+18 checks, 0 failed, 4 undecided
 ```
 
 What the elaborated graph contains, by entity kind.
@@ -24112,7 +24864,7 @@ What the elaborated graph contains, by entity kind.
     2  calculation
    11  component
    34  connection
-    9  constraint
+   12  constraint
     1  decision
     2  evidence
     5  interface
@@ -24120,8 +24872,8 @@ What the elaborated graph contains, by entity kind.
    25  port
     1  requirement
     1  verification
-  118  total
-snapshot sha256:4e0d69731dab5362aad836d3303a37ed478175e4006576dd482e69484a1af9df
+  121  total
+snapshot sha256:3a9b864feec14285d6a823110179d06344a0d3cc43b0f6566ca15acbc4fa99ee
 ```
 
 All of it, including the KiCad netlist, is in
@@ -24509,7 +25261,7 @@ What the elaborated graph contains, by entity kind.
    30  pin
    30  port
   129  total
-snapshot sha256:19868a28c163540244bf5e3719ded29fcb1b5ac4c4c9268bbdc7727a369748df
+snapshot sha256:3a6286496db7347c19dd85c01d78befeda899ea1d9652ef9b62bf0a1bd16c95b
 ```
 
 All of it, including the KiCad netlist, is in
@@ -24962,7 +25714,7 @@ What the elaborated graph contains, by entity kind.
    29  pin
    29  port
   132  total
-snapshot sha256:be9ea5222f8642b908b29776cd45313386e4c5aad6ca1aea591e2fafd307f14e
+snapshot sha256:c4f10de51d0312fc6bc5a515313acebfb468d993eabbbf2f96461292d6a366bd
 ```
 
 All of it, including the KiCad netlist, is in
@@ -25426,7 +26178,7 @@ What the elaborated graph contains, by entity kind.
    31  pin
    31  port
   133  total
-snapshot sha256:7946b303cbec9cd67e4801f8a9b476a0bc0f4f9fefa9a7ee3403c6bd219b0635
+snapshot sha256:ccc4deee4fa6bdd19d040d0e4ea453fab2772add2e29ac5f3c7736b0f685d2ef
 ```
 
 All of it, including the KiCad netlist, is in
@@ -25803,7 +26555,7 @@ What the elaborated graph contains, by entity kind.
    32  pin
    32  port
   133  total
-snapshot sha256:9a3be49982d91790cf74efaea2e2992d669cc468f76f63b0c1614fda19b7f57b
+snapshot sha256:e7303b8c6d06066da08676b15d67bccb4c1cac79da6c5cb799190d5c54c13b36
 ```
 
 All of it, including the KiCad netlist, is in
@@ -26343,7 +27095,7 @@ What the elaborated graph contains, by entity kind.
    31  pin
    31  port
   138  total
-snapshot sha256:6a176c8e200136013ae2b2d022c5b1e6609c9317eabee55e824d1ea6b2569a91
+snapshot sha256:61babec069b4eb318fd3a920c796d0225b9a5ae9bbfff65f6a742d69ee837319
 ```
 
 All of it, including the KiCad netlist, is in
@@ -26351,6 +27103,631 @@ All of it, including the KiCad netlist, is in
 
 ```bash
 fang build examples/ti_opamp_handbook/comparators/clamped_comparator/clamped_comparator.py
+```
+
+
+---
+
+# Sensor node
+
+URL: https://fang.copperhead.sh/examples/sensor_node/
+Summary: An STM32F401RE reading an HS3001 humidity sensor over I2C1, with a serial console on USART2 and a status LED on PA5. Read it after sensorboard/ and i2cbus/: it adds the two facts those boards leave to the firmware, which controller a port is and the address a device answers on. Then it runs the firmware: the board's own bare-metal firmware, in firmware/, executes in Renode against this board, and two requirements over what it does are decided by the run, through the commit gate.
+
+<figure class="example-figure"><a href="/examples/sensor_node/interfaces.svg" target="_blank" rel="noopener"><img src="/examples/sensor_node/interfaces.svg" alt="the interfaces view" loading="lazy" decoding="async" /></a><figcaption>The interfaces view</figcaption></figure>
+
+## The program
+
+[`sensor_node.py`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_node/sensor_node.py) declares both vendor parts itself. The MCU's
+ports each name the peripheral instance they are, and each candidate pin
+carries the alternate function that routes the signal to it:
+
+```python
+i2c1 = I2CPort(peripheral="I2C1", ...)
+usart2 = UARTPort(peripheral="USART2", ...)
+
+peripherals = PinMap(
+    {
+        "i2c1.scl": {"PB8": AF(4), "PB6": AF(4)},
+        "i2c1.sda": {"PB9": AF(4), "PB7": AF(4)},
+        "usart2.tx": {"PA2": AF(7)},
+        "usart2.rx": {"PA3": AF(7)},
+    },
+    evidence="af_table",
+)
+```
+
+`evidence="af_table"` names a `Cites` on the same part: ST's DS10086 Rev 5,
+table 9, the alternate function mapping. A pin map with selectors and no
+citation is refused at elaboration. Because `i2c1` is one controller, the
+connection `self.mcu.i2c1 >> self.env.i2c` can only lower onto I2C1's pins;
+SCL cannot land on I2C1 and SDA on I2C2. Each pin connection the lowering makes
+records the selector of the pin it chose and the evidence for it:
+
+```json
+"selectors": {"PIN-6093c2974cd4": {"evidence": "EVD-355c4bf2d94a", "selector": "AF4"}}
+```
+
+That is PB8, the preferred SCL candidate, at AF4. The choice of PB8/PB9 over
+PB6/PB7 is a decision entity, as on `sensor_board`.
+
+The sensor's port carries its address:
+
+```python
+i2c = I2CPort(address=0x44 * addr, ...)   # addr = UnitLiteral("1")
+```
+
+An address is a dimensionless quantity, so `address=0x44` is refused with
+`UNIT-0001` naming the parameter. The HS3001 has no strap pin; Renesas gives
+0x44 as the only address it answers on. The compatibility check reads it, and
+the addressing rule is decided: it passes, with the message
+`addresses on i2c are distinct: 0x44 (PORT-b794dc65bafa)`. The MCU's port
+declares no address. It is the controller, so it is not addressed and the rule
+says nothing about it.
+
+## What the datasheets say, and what they do not
+
+Every pad number, selector, address and level in the program is cited by table
+and page from ST's DS10086 Rev 5 and Renesas's R36DS0045EU0101 Rev 1.01.
+[`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_node/out/rationale.md) lists the ten citations.
+
+The HS3001 datasheet states no input or output logic levels for SCL and SDA, so
+the program states none. The logic-level check over I2C1 is undecided, naming
+the sensor's `voh_min`, rather than passed on a number nobody read.
+
+The MCU is reduced to the pins this board uses: one of its four VDD/VSS pairs,
+the two I2C1 pin pairs, PA2, PA3 and PA5. The other supply pairs and their
+capacitors, the 4.7 uF bulk capacitor, VCAP_1, VDDA, VBAT, NRST and BOOT0 are
+not modelled. This is a board for the checks and for running firmware against,
+not one to send to fabrication. The HS3001 is modelled whole, including its VC
+capacitor and the pull-ups its application circuit requires.
+
+## The firmware, run against the board
+
+[`firmware/src/main.c`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_node/firmware/src/main.c) is register-level C with no vendor
+HAL, running from the 16 MHz the part resets to. It prints a boot line on
+USART2, asks the HS3001 for a measurement every 100 ms and prints
+`temp=<degC>`, and toggles the LED on PA5 every 500 ms while readings succeed
+and every 100 ms while the sensor does not answer. The ELFs in
+[`firmware/elf/`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_node/firmware/elf) are committed, with the toolchain that built
+them in [`firmware/TOOLCHAIN`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_node/firmware/TOOLCHAIN), so nothing rebuilds them;
+`make` does, byte for byte.
+
+The board binds the firmware to the MCU and names an emulation model for each
+part that has one: fang's F401 platform, and Renode's own HS3001 model. Two
+questions are declared beside the requirements they serve:
+
+- **startup**: at 25 degC from reset, the first sensor read comes within
+  200 ms, the printed temperature is within 0.05 degC (the sensor's 14-bit
+  quantization reads 25 degC back as 25.01), the LED rises exactly once
+  between 1 s and 2 s, and no I2C1 pin is configured otherwise than the board
+  requires.
+- **sensor missing**: with the HS3001 absent, the LED rises at least four times
+  between 1 s and 2 s.
+
+The second question does not count reads of the sensor. An absent device has
+no probe, so nothing it is asked is recorded, and a count of its reads would be
+0 whatever the firmware did; a plan refuses a read or write match over a device
+its fault removes, rather than letting `== 0` pass by construction.
+
+Each compiles into a plan whose every bus, pin, alternate function and address
+comes from this graph, and nowhere else: I2C1 from the port, PB8 and PB9 at AF4
+and open drain from the lowered connections, 0x44 from the sensor's port, PA5
+from the status signal's connection. The pull-ups and the LED's resistor share
+nets with pins both questions touch, and the console header shares USART2's,
+which only startup reads. None has an emulation model, so each question names
+the ones it touches as abstracted, the console header in startup alone, and
+the evidence lists them as coverage gaps.
+
+`fang verify` answers both, and both pass: the firmware reads the sensor at
+40 ms, prints 25.01 degC, blinks once in that second and sets I2C1's pins up
+right; with the sensor gone it blinks five times. Three deliberately broken
+builds sit beside the good one, and the suite runs each against the board: the
+wrong address fails the first read, which is observed not to happen before the
+run ends; push-pull I2C pins fail the pin check while every transaction
+succeeds, because Renode does not route I2C through the pins; no timeout hangs
+when the sensor is missing. Moving the LED to PA6 on the board, with the
+firmware unchanged, fails the blink count.
+
+What the run does not show is listed with it: the clock tree, I2C DMA and
+timing, acknowledgement beyond an absent device, the sensor's conversion time.
+Nor does the missing-sensor run show how often the firmware asks for a sensor
+that is not there, since an absent device records nothing. A pass is a finding
+on models tested in emulation, at confidence 0.8. It is not the board working.
+
+## What comes out
+
+11 parts, 9 nets, 142 entities, 17 checks. None failed, **nine undecided**.
+
+One is the sensor's logic levels, above. Two are the console. The header passes
+USART2 through to a serial adapter, and the `vih_min` and `voh_min` on the far
+side of it are the adapter's. The header is this board's; the adapter is not,
+and its levels are not known. The other six are the constraints over what the
+firmware does, undecided until a run measures it.
+
+- [`out/sensor_node.net`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_node/out/sensor_node.net), [`out/netlist.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_node/out/netlist.txt)
+- [`out/checks.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_node/out/checks.txt): 17 checks, nine of them undecided
+- [`out/verification.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_node/out/verification.txt): what `fang verify` found, both
+  questions passing
+- [`out/renode/`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_node/out/renode): each question's plan, Renode platform
+  description and script
+- [`out/rationale.md`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_node/out/rationale.md): the two requirements, the four
+  lowering decisions and the datasheet citations
+- [`out/graph.txt`](https://github.com/copperheadhq/fang/blob/main/examples/sensor_node/out/graph.txt): 142 entities
+
+The MCU's three links: I2C1 to the sensor, USART2 to the console header, and
+the status signal to the LED's series resistor.
+
+<figure class="example-figure"><a href="/examples/sensor_node/power.svg" target="_blank" rel="noopener"><img src="/examples/sensor_node/power.svg" alt="the power view" loading="lazy" decoding="async" /></a><figcaption>The power view</figcaption></figure>
+
+The rail from the header to both parts and the pull-ups, with each part's
+decoupling hung off its own supply pins. The VC capacitor joins the sensor's VC
+pin to ground and touches no supply pin, so this view leaves it below the rule.
+
+## Running it
+
+```bash
+fang check   examples/sensor_node/sensor_node.py
+fang netlist examples/sensor_node/sensor_node.py
+fang view    examples/sensor_node/sensor_node.py interfaces -o interfaces.svg
+fang verify  examples/sensor_node/sensor_node.py    # needs renode 1.17.0
+fang emulate examples/sensor_node/sensor_node.py --bundle-only -o bundles
+make -C examples/sensor_node/firmware               # needs arm-none-eabi-gcc
+```
+
+## The whole program
+
+```python title="examples/sensor_node/sensor_node.py"
+"""An STM32F401RE reading an HS3001 over I2C1, with a console on USART2.
+
+It records two facts the other examples cannot state: which of the
+microcontroller's controllers a port is, with the alternate function that
+routes each signal to its pin, and the address the sensor answers on. Both
+decide whether the firmware meets a working bus, and both are read off the
+vendors' datasheets and cited, never inferred from a pin's name.
+
+The MCU is reduced to the pins this board uses. Three of its four VDD/VSS
+pairs and their capacitors, the 4.7 uF bulk capacitor, VCAP_1, VDDA, VBAT,
+NRST and BOOT0 are left out, so this is a board for the checks and for running
+firmware against, not one to send to fabrication.
+"""
+
+from fang.emulation import (
+    Absent,
+    At,
+    Count,
+    EmulationModel,
+    Emulates,
+    Firmware,
+    FirstAt,
+    I2CRead,
+    PinConfig,
+    Rises,
+    UartValue,
+)
+from fang.interfaces import AF, I2CPort, Pin, PinMap, PowerIn, PowerOut, UARTPort
+from fang.lang import (
+    Electrical,
+    Ground,
+    Ohm,
+    Parameter,
+    Part,
+    Signal,
+    System,
+    UnitLiteral,
+    V,
+    degC,
+    kHz,
+    kOhm,
+    ms,
+    nF,
+    require,
+    s,
+)
+from fang.parts import LED, DecouplingCapacitor, Resistor
+from fang.rationale import Cites, Requires
+
+#: Dimensionless, for a bus address: a count, not a measure.
+addr = UnitLiteral("1")
+#: Dimensionless, for events counted in an emulated run.
+count = UnitLiteral("1")
+
+#: The two datasheets every number below was read from.
+ST = "SRC-DS-STM32F401"            # ST DS10086, STM32F401xD/xE, Rev 5
+RENESAS = "SRC-DS-HS3XXX"          # Renesas R36DS0045EU0101, HS3xxx, Rev 1.01
+
+
+class STM32F401RE(Part):
+    """The STM32F401RE in LQFP64, with I2C1 and USART2 as named instances.
+
+    I2C1 can reach PB8/PB9 or PB6/PB7, both at AF4; the pair is a recorded
+    decision, PB8/PB9 preferred. USART2 is PA2/PA3 at AF7. Each port names its
+    instance, so a connection to `i2c1` cannot land on I2C2's pins, and each
+    candidate carries the selector the firmware has to write.
+    """
+
+    designator_prefix = "U"
+
+    power = PowerIn(voltage=3.3 * V)
+    # Levels at VDD = 3.3 V: VIH 0.7 VDD and VIL 0.3 VDD for an FT pin; VOL
+    # 0.4 V and VOH VDD - 0.4 V for a CMOS output at 8 mA. Fast mode is the
+    # most the I2C controller supports.
+    i2c1 = I2CPort(
+        peripheral="I2C1",
+        voltage=3.3 * V,
+        vih_min=2.31 * V,
+        vil_max=0.99 * V,
+        vol_max=0.4 * V,
+        bit_rate=400 * kHz,
+    )
+    usart2 = UARTPort(
+        peripheral="USART2",
+        voltage=3.3 * V,
+        voh_min=2.9 * V,
+        vol_max=0.4 * V,
+        vih_min=2.31 * V,
+        vil_max=0.99 * V,
+    )
+    status = Signal()
+
+    # Vendor names and LQFP64 pad numbers, kept apart: the pad number is the
+    # package's, and nothing derives a port pin from it.
+    VDD = Pin("VDD", role="power", number="64")
+    VSS = Pin("VSS", role="ground", number="63")
+    PA2 = Pin("PA2", role="data", number="16")
+    PA3 = Pin("PA3", role="data", number="17")
+    PA5 = Pin("PA5", role="data", number="21")
+    PB6 = Pin("PB6", role="clock", number="58")
+    PB7 = Pin("PB7", role="data", number="59")
+    PB8 = Pin("PB8", role="clock", number="61")
+    PB9 = Pin("PB9", role="data", number="62")
+
+    pinout = Cites(
+        "LQFP64 pins: PA2 16, PA3 17, PA5 21, PB6 58, PB7 59, PB8 61, PB9 62, "
+        "VSS 63, VDD 64; PA2, PA3, PA5 and PB6 to PB9 are 5 V tolerant (FT) I/O",
+        document=ST,
+        locator="DS10086 Rev 5, table 8 (pin definitions), pp. 38-44; "
+        "figure 12 (LQFP64 pinout), p. 35",
+    )
+    af_table = Cites(
+        "I2C1_SCL is AF4 on PB6 and PB8, I2C1_SDA is AF4 on PB7 and PB9; "
+        "USART2_TX is AF7 on PA2 and USART2_RX is AF7 on PA3",
+        document=ST,
+        locator="DS10086 Rev 5, table 9 (alternate function mapping), pp. 45-46",
+    )
+    io_levels = Cites(
+        "FT I/O, 1.7 V <= VDD <= 3.6 V: VIL max 0.3 VDD, VIH min 0.7 VDD. "
+        "CMOS port at IIO = 8 mA, 2.7 V <= VDD <= 3.6 V: VOL max 0.4 V, "
+        "VOH min VDD - 0.4 V",
+        document=ST,
+        locator="DS10086 Rev 5, table 54 (I/O static characteristics), p. 91; "
+        "table 55 (output voltage characteristics), p. 94",
+    )
+    i2c_rate = Cites(
+        "The I2C interface supports standard mode, up to 100 kHz, and fast "
+        "mode, up to 400 kHz",
+        document=ST,
+        locator="DS10086 Rev 5, section 6.3.19 (I2C interface characteristics), p. 98",
+    )
+    part_number = Cites(
+        "STM32F401RET6 is 64 pins (R), 512 Kbytes of Flash (E), LQFP (T), "
+        "-40 to 85 C (6)",
+        document=ST,
+        locator="DS10086 Rev 5, table 87 (ordering information scheme), p. 132; "
+        "table 88 (device order codes), p. 133",
+    )
+
+    pinmap = PinMap(
+        {"power.vcc": "VDD", "power.gnd": "VSS", "status.line": "PA5"},
+        evidence="pinout",
+    )
+    # Candidates in preference order, each with the alternate function that
+    # routes the signal to it. The lowering picks one pair and records why.
+    peripherals = PinMap(
+        {
+            "i2c1.scl": {"PB8": AF(4), "PB6": AF(4)},
+            "i2c1.sda": {"PB9": AF(4), "PB7": AF(4)},
+            "usart2.tx": {"PA2": AF(7)},
+            "usart2.rx": {"PA3": AF(7)},
+        },
+        evidence="af_table",
+    )
+
+
+class HS3001(Part):
+    """Renesas's HS3001 humidity and temperature sensor, at its fixed address.
+
+    The datasheet states no input or output logic levels for SCL and SDA, so
+    none is written here, and the logic-level check over the bus is undecided
+    rather than passed on a number nobody read.
+    """
+
+    designator_prefix = "U"
+
+    power = PowerIn(voltage=3.3 * V)
+    # 0x44 is the only address the part answers on; there is no strap pin.
+    # The pull-ups to VDD are the ones its application circuit requires.
+    i2c = I2CPort(
+        address=0x44 * addr,
+        voltage=3.3 * V,
+        bit_rate=400 * kHz,
+        pull_up_resistance=2.2 * kOhm,
+        pull_up_supply=3.3 * V,
+    )
+    vc = Electrical()
+
+    SCL = Pin("SCL", role="clock", number="1")
+    SDA = Pin("SDA", role="data", number="2")
+    VC = Pin("VC", role="unknown", number="3")
+    VDD = Pin("VDD", role="power", number="4")
+    # Do not connect: declared so the pinout is whole, and left unconnected.
+    NC = Pin("NC", role="unknown", number="5")
+    VSS = Pin("VSS", role="ground", number="6")
+
+    fixed_address = Cites(
+        "The HS3xxx series I2C address is 0x44, and the device responds only "
+        "to this 7-bit address; a custom address is available on request",
+        document=RENESAS,
+        locator="R36DS0045EU0101 Rev 1.01, section 7.2 (sensor slave address), p. 10",
+    )
+    pinout = Cites(
+        "6-LGA, 3.0 x 2.41 mm: 1 SCL, 2 SDA, 3 VC (0.1 uF to ground), 4 VDD, "
+        "5 NC (do not connect), 6 VSS",
+        document=RENESAS,
+        locator="R36DS0045EU0101 Rev 1.01, section 1.2 and figure 1 "
+        "(pin assignments), p. 4",
+    )
+    application = Cites(
+        "Pull-up resistors to VDD are required on SCL and SDA, 2.2 kOhm typical; "
+        "0.1 uF from VC to ground and 0.1 uF from VDD to ground",
+        document=RENESAS,
+        locator="R36DS0045EU0101 Rev 1.01, section 6, figure 13 "
+        "(application circuit), p. 9; section 7, p. 10",
+    )
+    i2c_rate = Cites(
+        "SCL clock frequency up to 400 kHz",
+        document=RENESAS,
+        locator="R36DS0045EU0101 Rev 1.01, table 1 (I2C timing parameters), p. 10",
+    )
+
+    pinmap = PinMap(
+        {
+            "power.vcc": "VDD",
+            "power.gnd": "VSS",
+            "i2c.scl": "SCL",
+            "i2c.sda": "SDA",
+            "vc.line": "VC",
+        },
+        evidence="pinout",
+    )
+
+
+class PowerHeader(Part):
+    """Where the 3.3 V rail arrives. What supplies it is not this board's."""
+
+    designator_prefix = "J"
+
+    dc = PowerOut(voltage=3.3 * V)
+
+    VCC = Pin("VCC", role="power", number="1")
+    GND = Pin("GND", role="ground", number="2")
+
+    pinmap = PinMap({"dc.vcc": "VCC", "dc.gnd": "GND"})
+
+
+class ConsoleHeader(Part):
+    """Where USART2 leaves the board, for a 3.3 V serial adapter.
+
+    A connector passes the board's signals through, so its pins carry the
+    board's names: TXD is what the MCU transmits, and the adapter's cable
+    crosses it. The levels on the far side are the adapter's, and not known.
+    """
+
+    designator_prefix = "J"
+
+    uart = UARTPort(voltage=3.3 * V)
+    ground = Ground()
+
+    TXD = Pin("TXD", role="data", number="1")
+    RXD = Pin("RXD", role="data", number="2")
+    GND = Pin("GND", role="ground", number="3")
+
+    pinmap = PinMap({"uart.tx": "TXD", "uart.rx": "RXD", "ground.gnd": "GND"})
+
+
+class SensorNode(System):
+    """A sensor on I2C1, a console on USART2 and a status LED on PA5.
+
+    The firmware in `firmware/` is run against this board in Renode, and two
+    questions are asked of it: whether it reads the sensor, reports what it
+    read and shows a good reading on the LED, and whether it keeps running
+    and shows the fault when the sensor is missing. Each is a requirement the
+    board is verified against, by emulation, through the commit gate.
+    """
+
+    sensor_ready = Requires(
+        "Within 200 ms of reset the firmware reads the HS3001, reports the "
+        "temperature it read on the console, and blinks the status LED slowly "
+        "while readings succeed",
+        validation="emulation",
+    )
+    survives_missing_sensor = Requires(
+        "With the HS3001 missing the firmware keeps running and blinks the "
+        "status LED fast",
+        validation="emulation",
+    )
+
+    first_read = Parameter("s", description="when the firmware first reads the sensor")
+    reported = Parameter("degC", description="the temperature the firmware prints")
+    slow_blinks = Parameter("", description="status LED rises between 1 s and 2 s, sensor present")
+    mux_mismatches = Parameter("", description="I2C1 pins configured otherwise than the board requires")
+    fast_blinks = Parameter("", description="status LED rises between 1 s and 2 s, sensor missing")
+
+    # The sensor is at 25 degC from reset. The pull-ups, the LED's resistor and
+    # the console header share nets with the pins the question touches and
+    # carry no emulation model, so they are named as abstracted.
+    startup = Emulates(
+        "sensor_ready",
+        run_until=2 * s,
+        stimuli=[At(0 * ms, "env.temperature", 25 * degC)],
+        measures={
+            "first_read": FirstAt(I2CRead("env")),
+            "reported": UartValue("mcu.usart2", prefix="temp=", unit=degC),
+            "slow_blinks": Count(Rises("mcu.status"), within=(1 * s, 2 * s)),
+            "mux_mismatches": PinConfig("mcu.i2c1"),
+        },
+        abstracted=("scl_pullup", "sda_pullup", "series", "console"),
+    )
+    sensor_missing = Emulates(
+        "survives_missing_sensor",
+        run_until=2 * s,
+        faults=[Absent("env")],
+        measures={"fast_blinks": Count(Rises("mcu.status"), within=(1 * s, 2 * s))},
+        abstracted=("scl_pullup", "sda_pullup", "series"),
+    )
+
+    decoupling = Cites(
+        "Each VDD/VSS pair is decoupled with ceramic capacitors close to the "
+        "pins; the scheme shows 6 x 100 nF and 1 x 4.7 uF across the VDD pins",
+        document=ST,
+        locator="DS10086 Rev 5, figure 18 (power supply scheme), section 6.1.6, p. 57",
+    )
+
+    header = PowerHeader(package="PinHeader_1x02_P2.54mm")
+    mcu = STM32F401RE(package="LQFP-64")
+    env = HS3001(package="LGA-6")
+    console = ConsoleHeader(package="PinHeader_1x03_P2.54mm")
+
+    # 2.2k to VDD, as the sensor's application circuit draws them.
+    scl_pullup = Resistor(resistance=2.2 * kOhm, package="R_0402")
+    sda_pullup = Resistor(resistance=2.2 * kOhm, package="R_0402")
+
+    # The one MCU supply pair this board models, decoupled at its pins.
+    bypass = DecouplingCapacitor(capacitance=100 * nF, package="C_0402")
+    # The sensor's two, from its application circuit.
+    env_bypass = DecouplingCapacitor(capacitance=100 * nF, package="C_0402")
+    vc_bypass = DecouplingCapacitor(capacitance=100 * nF, package="C_0402")
+
+    series = Resistor(resistance=1 * kOhm, package="R_0402")
+    indicator = LED(package="LED_0603")
+
+    def __init__(self, **overrides):
+        super().__init__(**overrides)
+        # The selection lands on the instance, not the class template.
+        self.mcu.select("STMicroelectronics", "STM32F401RET6", datasheet=ST)
+        self.env.select("Renesas", "HS3001", datasheet=RENESAS)
+        # What the emulator runs: fang's F401 platform model, the firmware
+        # beside this program, and Renode's own HS3001 model.
+        self.mcu.add_trait(EmulationModel(source="fang:stm32f401re"))
+        self.mcu.add_trait(Firmware("firmware/elf/sensor_node.elf", target="stm32f401re"))
+        self.env.add_trait(EmulationModel(source="renode:Sensors.HS3001"))
+
+    def architecture(self):
+        self.header.dc >> self.mcu.power
+        self.header.dc >> self.env.power
+
+        # One connection, one controller: every signal comes from i2c1's
+        # candidates, and the pin connections carry AF4.
+        self.mcu.i2c1 >> self.env.i2c
+        self.header.dc.vcc >> self.scl_pullup.p1
+        self.scl_pullup.p2 >> self.mcu.i2c1.scl
+        self.header.dc.vcc >> self.sda_pullup.p1
+        self.sda_pullup.p2 >> self.mcu.i2c1.sda
+
+        # The header passes USART2 through; PA2 and PA3 carry AF7.
+        self.mcu.usart2 >> self.console.uart
+        self.header.dc.gnd >> self.console.ground
+
+        self.mcu.status >> self.series.p1
+        self.series.p2 >> self.indicator.p1
+        self.indicator.p2 >> self.header.dc.gnd
+
+        self.mcu.power.vcc >> self.bypass.p1
+        self.mcu.power.gnd >> self.bypass.p2
+        self.env.power.vcc >> self.env_bypass.p1
+        self.env.power.gnd >> self.env_bypass.p2
+        self.env.vc >> self.vc_bypass.p1
+        self.env.power.gnd >> self.vc_bypass.p2
+
+    def constraints(self):
+        # 3.3 V / 8 mA: whatever the LED drops, PA5 never sources more than the
+        # current its output levels are specified at.
+        require(self.series.resistance >= 412.5 * Ohm)
+
+        # What the firmware has to do, decided by emulation. 0.05 degC allows
+        # the sensor's 14-bit quantization: 25 degC reads back as 25.01.
+        require(self.first_read <= 200 * ms)
+        require(self.reported >= 24.95 * degC)
+        require(self.reported <= 25.05 * degC)
+        require(self.slow_blinks == 1 * count)
+        require(self.mux_mismatches == 0 * count)
+        require(self.fast_blinks >= 4 * count)
+```
+
+## The files it writes
+
+The parts, then the nets and the pads on them.
+
+```text title="out/netlist.txt"
+C1     100 nF           Package:C_0402
+C2     100 nF           Package:C_0402
+C3     100 nF           Package:C_0402
+DS1    LED              Package:LED_0603
+J1     ConsoleHeader    Package:PinHeader_1x03_P2.54mm
+J2     PowerHeader      Package:PinHeader_1x02_P2.54mm
+R1     2.2 kOhm         Package:R_0402
+R2     2.2 kOhm         Package:R_0402
+R3     1 kOhm           Package:R_0402
+U1     HS3001           Package:LGA-6
+U2     STM32F401RE      Package:LQFP-64
+Net-(C1-Pad1)            C1.1 C2.1 J2.VCC R1.1 R2.1 U1.VDD U2.VDD
+Net-(C1-Pad2)            C1.2 C2.2 C3.2 DS1.K J1.GND J2.GND U1.VSS U2.VSS
+Net-(C3-Pad1)            C3.1 U1.VC
+Net-(DS1-PadA)           DS1.A R3.2
+Net-(J1-PadRXD)          J1.RXD U2.PA3
+Net-(J1-PadTXD)          J1.TXD U2.PA2
+Net-(R1-Pad2)            R1.2 U1.SCL U2.PB8
+Net-(R2-Pad2)            R2.2 U1.SDA U2.PB9
+Net-(R3-Pad1)            R3.1 U2.PA5
+```
+
+Every check that ran, and every one left undecided.
+
+```text title="out/checks.txt"
+UNDECIDED constraint: declared on BLK-42978eb8675a
+UNDECIDED constraint: declared on BLK-42978eb8675a
+UNDECIDED constraint: declared on BLK-42978eb8675a
+UNDECIDED constraint: declared on BLK-42978eb8675a
+UNDECIDED constraint: declared on BLK-42978eb8675a
+UNDECIDED constraint: declared on BLK-42978eb8675a
+UNDECIDED interface_compatibility: logic high margin is undecided on i2c: voh_min unknown
+UNDECIDED interface_compatibility: logic high margin is undecided on uart: vih_min unknown
+UNDECIDED interface_compatibility: logic high margin is undecided on uart: voh_min unknown
+17 checks, 0 failed, 9 undecided
+```
+
+What the elaborated graph contains, by entity kind.
+
+```text title="out/graph.txt"
+    1  block
+   11  component
+   40  connection
+    7  constraint
+    4  decision
+   10  evidence
+    7  interface
+   34  pin
+   24  port
+    2  requirement
+    2  verification
+  142  total
+snapshot sha256:aca66030ef6b081a28f85f582734528421ac3f66be5be80ceba982f30a319bea
+```
+
+All of it, including the KiCad netlist, is in
+[`examples/sensor_node/out/`](https://github.com/copperheadhq/fang/tree/main/examples/sensor_node/out/). Rebuild it with:
+
+```bash
+fang build examples/sensor_node/sensor_node.py
 ```
 
 
@@ -26840,7 +28217,7 @@ What the elaborated graph contains, by entity kind.
    34  pin
    34  port
   143  total
-snapshot sha256:6bc285156e9d126c6bdd52693e10377115c1a0ecdd05dca13ee3d2c12b88b3ac
+snapshot sha256:6b3be0a9f8b0acc62886ec5d32bef0c814d5c03cbdffe2a78eeb23ebc727f452
 ```
 
 All of it, including the KiCad netlist, is in
@@ -27233,7 +28610,7 @@ What the elaborated graph contains, by entity kind.
    35  pin
    35  port
   144  total
-snapshot sha256:00e2572805ea6ef18caa4f06bb6cb36a8a1a81da6c2aa04ace3c7c1eb94d6a98
+snapshot sha256:a939b2b91975d1566a671f922ee7bb25874216fec83178a345c9c79f19f31fed
 ```
 
 All of it, including the KiCad netlist, is in
@@ -27607,7 +28984,7 @@ What the elaborated graph contains, by entity kind.
    32  port
     1  requirement
   162  total
-snapshot sha256:a09c3395b358268df190e81ec7f84d868acc2adcdca77557c9f6856ecb85ed9d
+snapshot sha256:e177c0af52dc5310c666927a43bed97461e2b60a4bf6b5ed9f308482d3c35227
 ```
 
 All of it, including the KiCad netlist, is in
@@ -28114,7 +29491,7 @@ What the elaborated graph contains, by entity kind.
    71  port
     1  requirement
   310  total
-snapshot sha256:578528203fe550618e1e5957f7febeaf5a50a6dfb7be4a9074ef6f90e896c6ce
+snapshot sha256:6152eb4b83c6e72fee27e2648015dbfd9c795e1a8ddf01a30110a1bfd47a50db
 ```
 
 All of it, including the KiCad netlist, is in
@@ -28143,9 +29520,13 @@ script can rely on the exit code rather than parsing output.
 | `fang netlist` | Print the compiled components and nets |
 | `fang export` | Write a KiCad netlist |
 | `fang view` | Compile a view; render it to SVG with `-o` |
+| `fang schematic` | Compile a KiCad schematic; render it with `--svg`, or have copperhead draft it |
 | `fang sim` | Compile a simulation plan, lower it, run it |
+| `fang verify` | Route and run every declared question; persist only with `--commit` |
+| `fang emulate` | Run the firmware in Renode and print what each emulation question measured |
 | `fang graph` | Summarize the kernel graph |
 | `fang diff` | Diff a program against the persisted workspace |
+| `fang mcp` | Serve the kernel to an agent over the Model Context Protocol, on stdio |
 
 ## Options
 
@@ -28168,7 +29549,7 @@ every identifier in the design. It is not a label.
 | Code | Means |
 | --- | --- |
 | `0` | The work succeeded |
-| `1` | The work failed: a rejected gate, a failed check or a missing model |
+| `1` | The work failed: a rejected gate, a failed check, a missing model or a failed verification |
 | `2` | Usage error |
 
 A rejected commit is exit `1`, and the diagnostics that explain it go to output.
@@ -28187,6 +29568,36 @@ The six views are `system`, `interconnect`, `power`, `ground`, `interfaces` and
 Each answers one engineering question and is generated only from facts in the
 graph. Each also reports its own incompleteness rather than hiding it: a node
 carrying unknown parameters is drawn with a dashed border.
+
+## Schematic
+
+```bash
+fang schematic board.py -o board.kicad_sch --svg board.svg
+fang schematic board.py --drafter copperhead -o board.kicad_sch
+```
+
+| Option | Default | Does |
+| --- | --- | --- |
+| `-o`, `--output` | stdout | Where to write the `.kicad_sch` |
+| `--svg` | none | Also render the sheet here, with `kicad-cli` |
+| `--drafter` | `fang` | Who draws the sheet: `fang`, a grid joined by labels, or `copperhead`, placed and wired |
+
+fang's own sheet needs no tool; `--svg` needs `kicad-cli`. A copperhead draft
+needs `copperhead` and `kicad-cli`: the sheet is read back with KiCad and
+returned only if its nets are exactly the design's, and refused, naming the
+difference, otherwise. A part with no KiCad symbol, or a net left with fewer
+than two drawn pins, is reported as a loss rather than dropped silently.
+
+## Agent surface
+
+```bash
+fang mcp board.py
+```
+
+Serves the kernel over the Model Context Protocol on stdio, bound to the
+project directory, with the agent's changes going through the same commit gate
+as everything else. It needs the `mcp` extra, `pip install "copperhead-fang[mcp]"`,
+and refuses with `MCP-0005` without it.
 
 ## Simulation
 
@@ -28208,6 +29619,58 @@ If a selected component has no compatible model and is not explicitly
 abstracted, the plan is **rejected with the reason** rather than run with a
 substitute. If ngspice is not installed, the plan still compiles and the command
 says no run was made.
+
+`fang sim` is the low-level command: it runs a deck and reports the run, and
+nothing it finds reaches the graph. To answer a question and decide the
+constraint over it, declare the question and use `fang verify`.
+
+## Verification
+
+```bash
+fang verify board.py              # route and run every question
+fang verify board.py --commit     # and persist the measurements
+```
+
+| Option | Default | Does |
+| --- | --- | --- |
+| `--commit` | off | Persist the new head into the existing workspace |
+
+Each declared question is routed to the cheapest level that decides it and
+printed with its level, its tool, its measurements and its result, or the
+reason it did not run. A failed verification exits `1`, and so does a question
+the program left unrunnable; a tool that is not installed is reported
+unsupported, by name, and is not by itself a failure. A program with no
+question says there is nothing to verify and exits `0`.
+
+Without `--commit` nothing is written, not even a scratch deck. `--commit`
+needs a workspace, so run `fang build` first. It persists measurements and
+nothing else: where the program has changed since that build, it refuses
+before anything runs and exits `1`, saying to run `fang build` again. A model
+or firmware file changed since a run is not a change to the program, and its
+question runs again and is committed. See
+[Verification](/reference/verification/).
+
+## Emulation
+
+```bash
+fang emulate board.py
+fang emulate board.py -o bundles
+fang emulate board.py --bundle-only -o bundles
+```
+
+| Option | Does |
+| --- | --- |
+| `-o`, `--output` | Write each question's bundle into a folder of its own here |
+| `--bundle-only` | Write the bundles and run nothing |
+
+`fang emulate` is the low-level command, as `fang sim` is for SPICE: it prints
+what each measure read and takes nothing through the gate, and it changes no
+workspace. `fang verify` answers emulation questions with every other kind and
+takes the measurements back through the gate. A question the program left
+unrunnable exits `1`, and so does a run that timed out or crashed, whose
+measures have no value. Without Renode 1.17.0 on the path, each question is
+reported unsupported and nothing is fabricated, which is not by itself a
+failure. See [Emulation](/reference/emulation/).
 
 
 ---
@@ -28463,6 +29926,9 @@ check that needed it [undecided](/concepts/values-and-undecided/).
 | `pull_up_resistance` | Ohm | Pull-up value, where the protocol needs one |
 | `pull_up_supply` | V | What the pull-ups are pulled to |
 
+`i2c` also declares `address`, unit `1`: the device's bus address. See
+[Addresses](#addresses) below.
+
 **Power interfaces**, meaning `power`, `power_input`, `power_output` and
 `motor_phase` (which omits `ripple`):
 
@@ -28505,6 +29971,104 @@ self.pullup_scl.p2 >> self.mcu.i2c.scl
 
 A signal surface keeps the nature of the wire it is. A `power` signal stays
 power, a `ground` signal stays ground and anything else is plain electrical.
+
+## Peripheral instances and selectors
+
+A port can name the peripheral instance it is. A part with I2C on two
+controllers declares two ports, and a connection to one of them lowers only
+onto that controller's candidate pins:
+
+```python
+i2c1 = I2CPort(peripheral="I2C1", voltage=3.3 * V)
+i2c2 = I2CPort(peripheral="I2C2", voltage=3.3 * V)
+```
+
+`peripheral` is recorded on the port entity. It is not a parameter.
+
+A candidate pin can carry the selector that routes the port's signal to it.
+`Selector("...")` takes the vendor's own spelling; `AF(n)` is the STM32
+family's alternate function, and `AF(4) == Selector("AF4")`. A pin map that
+carries any selector names, as `evidence`, the `Cites` declaration on the same
+part that the selectors were read from:
+
+```python
+from fang.interfaces import AF, PinMap
+from fang.rationale import Cites
+
+af_table = Cites("I2C1_SCL is AF4 on PB6 and PB8, I2C1_SDA is AF4 on PB7 and PB9",
+                 document="SRC-DS-STM32F401", locator="table 9")
+peripherals = PinMap(
+    {"i2c1.scl": {"PB8": AF(4), "PB6": AF(4)},
+     "i2c1.sda": {"PB9": AF(4), "PB7": AF(4)}},
+    evidence="af_table",
+)
+```
+
+The mapping's order is the preference order, as a list's is, and a candidate
+may map to `None` for no selector. Elaboration refuses a pin map with
+selectors that names no evidence, names nothing the part declares, or names an
+assumption rather than a citation (`IFACE-0003`). The list form is unchanged.
+
+When the lowering chooses a pin that carries a selector, the pin connection it
+records carries it too, keyed by the pin's identifier, with the evidence:
+
+```json
+"selectors": {"PIN-6093c2974cd4": {"evidence": "EVD-355c4bf2d94a", "selector": "AF4"}}
+```
+
+Only the side or sides whose chosen pin declared a selector appear. The
+selector belongs to the assignment rather than to the pin, because one pin
+serves several ports at different selectors.
+
+## Addresses
+
+An addressed bus device's port carries its address, as a dimensionless
+quantity:
+
+```python
+addr = UnitLiteral("1")
+i2c = I2CPort(address=0x44 * addr)
+```
+
+`address=0x44` is refused with `UNIT-0001` naming the parameter: a bare number
+says nothing about what it counts. So is a fixed address given as a range or a
+tolerance: a device answers at one address, and one that might be any of several
+is a strap the program has not stated.
+
+Where a strap pin selects the address, `Strap` keys each address by one of the
+device's own pins, which is how a datasheet states it:
+
+```python
+from fang.interfaces import Strap
+
+i2c = I2CPort(address=Strap("ADDR", {"GND": 0x48 * addr, "VDD": 0x49 * addr,
+                                     "SDA": 0x4A * addr, "SCL": 0x4B * addr}))
+```
+
+The names are the part's vendor pin names; one the part does not have is
+`IFACE-0004`. The port stores the strap with the names resolved to pin
+identifiers and carries no `address` parameter beside it.
+
+`fang.compatibility.resolve_address(snapshot, port)` reads the address. A fixed
+one comes back as recorded; a fixed address holding conflicting values comes
+back as the chosen one once the conflict is resolved, and as an unknown value
+naming the candidates' sources until then. A strap is resolved from the inferred nets: the one
+pin of its map that shares the strap pin's net selects the address, returned as
+an inferred value. A strap pin on no net, on a net none of those pins shares,
+or on a net two of them share gives an unknown value whose reason names the
+strap pin, and both pins when two share it. A port with neither, such as a
+controller's, gives `None`: it is not addressed.
+
+The compatibility check's addressing rule reads every participant of a
+multi-drop bus through that function and compares the addresses by overlap. Two
+devices at one address fail, naming both. Addresses that overlap without being
+the same, and an unresolved strap or conflict, leave the rule undecided, naming
+the ports or the pin. A port with no address is not reported. The rule passes
+only when every addressed device is known and none overlap.
+
+Because the rule reads the strap pin's net, its scope covers that net: re-tying
+or removing the strap's connection brings the rule into the commit gate, so two
+devices cannot end up at one address without the check running.
 
 ## Roles
 
@@ -28777,14 +30341,48 @@ the difference the plan records.
 
 ## Levels
 
-Verification levels run one to five, cheapest first. `select_level()` picks the
-cheapest level that can decide the question asked, so a question answerable by
-inspection does not pay for a transient run.
+Verification levels run one to five, cheapest first: equation, symbolic,
+behavioural, circuit, external. A declared question is routed by `route()`,
+which looks at the graph (if the constraints over what it measures are
+already decided, the equation level answers it and nothing runs) and the
+level and tool it chose are written on the verification. `select_level()`
+remains for a caller that knows the answers to its questions already. See
+[Verification](/reference/verification/).
+
+## Models in a question's deck
+
+A question's deck is written from the snapshot, the traits and the question.
+A part carrying a `Simulatable` model with a `.subckt` file is instantiated as
+an `X` device, its nodes in the order the model's `.subckt` line declares its
+ports, each the node of the pin the trait's `pin_map` lands on that port. A
+port no pin reaches is refused by name (`SIM-0006`). The model is included by
+path, never inlined, and its digest is recorded on the run's evidence because
+the snapshot does not hold the file.
+
+```python
+self.controller.add_trait(
+    Simulatable(
+        backends=("ngspice",),
+        source="ideal_buck.sub",            # beside the program
+        pin_map={"VIN": "vin", "GND": "gnd", "SW": "sw",
+                 "BOOT": "boot", "FB": "fb", "EN": "en"},
+        provenance=assumed_provenance("an ideal stand-in"),
+        not_modelled=("the control loop is not modelled; duty is fixed",),
+    )
+)
+```
+
+`not_modelled` items become coverage gaps on every run over the model, and the
+provenance bounds the run's confidence. A primitive is written with the value
+the graph holds, in SI units with no suffix; one with no value is refused, not
+written as 1.
 
 ## Backends
 
-`NgspiceBackend` reaches ngspice across a process boundary. It is optional and
-external, and fang finds it on `PATH`.
+`NgspiceBackend` reaches ngspice across a process boundary, and `XyceBackend`
+reaches Xyce the same way. Both are optional and external, and fang finds them
+on `PATH`. Xyce writes its measures to a file beside the netlist, which the run
+returns with what it printed.
 
 If it is not installed, `BackendUnavailable` is reported. The plan still
 compiles and the deck can still be written. The command says no run was made,
@@ -28804,6 +30402,493 @@ used and the assertions evaluated.
 Results re-enter canonical state as `Evidence`, through an ordinary transaction
 against the committed head, through [the gate](/concepts/the-commit-gate/).
 There is no path by which a simulation result becomes a fact without passing it.
+`fang sim` reports a run and stops there; a declared question answered by
+`fang verify` is what sets a measured parameter, as an inferred value whose
+source is that evidence.
+
+
+---
+
+# Verification
+
+URL: https://fang.copperhead.sh/reference/verification/
+Summary: Questions, benches, measures, the tools that answer them, and fang verify.
+
+A verification question is declared beside the requirement it serves. It names
+the parameters it measures into and the measures that produce them, and a
+program cannot state its answer. `fang verify` routes each question to the
+cheapest level that can decide it, runs the tool there, and brings the
+measurements back through [the commit gate](/concepts/the-commit-gate/).
+[Verification](/concepts/verification/) explains why it works this way; this
+page lists what there is.
+
+```bash
+fang verify board.py              # route and run every question; nothing persists
+fang verify board.py --commit     # persist the measurements into the workspace
+```
+
+## Declaring a question
+
+Three declarations from `fang.verification`, and `Emulates` from
+`fang.emulation`, all filed with `Requires` and `Verifies` in a class body. Each elaborates to a `Verification` entity whose
+result is `UNKNOWN`, and each refuses a `result` argument with `SIM-0002`.
+
+| Declaration | Method | Answered by |
+| --- | --- | --- |
+| `Simulates` | `simulation` | a circuit simulator, on a bench the question names |
+| `Checks` | `rule check` | an external checker, over an artifact the kernel lowers |
+| `Evaluates` | `analysis` | a data model a part carries, in closed form |
+| `Emulates` | `emulation` | the board's firmware, run in an emulator ([Emulation](/reference/emulation/)) |
+
+`Verifies(..., method="inspection", result="PASS")` stays for verifications by
+inspection and test: a person states the result, it is not a question, and
+nothing routes it.
+
+### Simulates
+
+```python
+ripple = Parameter("mV")
+output = Parameter("V")
+
+under_load = Simulates(
+    "rail_tolerance",
+    measures={
+        "ripple": PeakToPeak("rail_out.dc", after=1 * ms, until=1.2 * ms),
+        "output": Average("rail_out.dc", after=1 * ms, until=1.2 * ms),
+    },
+    supplies={"controller.vin": 12 * V},
+    loads={"rail_out.dc": 2.2 * Ohm},
+    analysis=Transient(stop="1.2ms", step="10ns"),
+    abstracted=("dc_in", "protection", "reverse", "rail_out"),
+)
+
+def constraints(self):
+    require(self.ripple <= 30 * mV)
+```
+
+| Argument | Is |
+| --- | --- |
+| `measures` | Parameter name to measure. Each name must be a parameter the module declares (`SIM-0001`), in a unit the measure produces (`UNIT-0001`) |
+| `supplies` | Part surface to voltage. Each becomes a `V` device |
+| `loads` | Part surface to a current, which becomes an `I` device, or a resistance, which becomes an `R`. Anything else is `SIM-0005` |
+| `analysis` | `OperatingPoint`, `Transient` or `ACSweep`. Under AC each supply is also the stimulus, at its own magnitude |
+| `abstracted` | Parts, or blocks of parts, left out on purpose. Each is a coverage gap |
+| `tool` | A tool to route to, if the question insists on one, such as `"xyce"` |
+
+**Nothing about a bench is defaulted.** A question with no supply or no
+analysis still elaborates, and is reported not runnable (`SIM-0004`) rather
+than run against a source nobody chose. Every bench item is recorded on the run
+as an assumption.
+
+### Measures
+
+A measure names a part surface the way the program does, `"rail_out.dc"`, and
+elaboration resolves it to pins through the part's pin map. A surface with a
+ground wire is measured from its signal pin to its return; a single-wire
+surface, against the simulator's ground; `"part.surface.signal"` names one wire.
+A system's own surface has no pins and is refused with `SIM-0003`.
+
+| Measure | Takes | Produces |
+| --- | --- | --- |
+| `PeakToPeak(surface, after=, until=)` | Highest minus lowest voltage in the window | volts |
+| `Average(surface, after=, until=)` | Mean voltage in the window | volts |
+| `Maximum(surface, after=, until=)` | Highest voltage in the window | volts |
+| `Minimum(surface, after=, until=)` | Lowest voltage in the window | volts |
+| `ValueAt(surface, at=)` | The voltage at a time, a frequency, or the operating point | volts |
+| `Crossing(surface, level=, edge=, occurrence=, after=)` | Where the voltage crosses a level | seconds, or hertz in an AC sweep |
+| `ReturnLoss(surface, at=, through=, reference=)` | -20 log10 \|Gamma\| through matching parts | dB |
+
+Windows are times in a transient and frequencies in an AC sweep; a window in the
+wrong dimension is refused where it is written. A filter's corner is a
+`Crossing` of the level 1/sqrt(2) of the drive, falling.
+
+### Checks
+
+```python
+sheet_rules = Checks(
+    "sheet_spec",
+    excluded={
+        "endpoint_off_grid": "fang draws its sheet on its own grid",
+        "lib_symbol_issues": "fang draws its own symbols",
+    },
+)
+```
+
+A rule check measures into no parameter. Errors fail the verification and
+warnings do not. An excluded rule does neither, and an exclusion without a
+reason is refused with `SIM-0008`. On a sheet fang draws, the two rules above
+fire on every symbol, which is why a question names them rather than the tool
+hiding them.
+
+The report is read as kicad-cli 10.0.6 writes it, schema `erc.v1`. A report of
+another schema, or one missing a field the reader reads (the sheets, their
+violations, and each violation's rule, severity, description and items), fails
+the run with the reason: no verdict is drawn and the verification stays
+unknown, where read as empty it would have passed.
+
+### Evaluates
+
+```python
+self.antenna.add_trait(Touchstone(source="chip_antenna.s1p", ports=("FEED",),
+                                  provenance=...))
+
+matched = Evaluates(
+    "match_spec",
+    measures={"return_loss": ReturnLoss("antenna.rf", at=2.44 * GHz,
+                                        through=("shunt_c", "series_l"))},
+)
+```
+
+`through` names the matching parts in order from the port toward the model.
+Each is a shunt element when a terminal is on ground and a series element
+otherwise, and its value is the one the graph holds; a part with no value
+leaves the question unanswered, naming the part. The parts must be the ladder
+the graph connects: counted back from the model's port 1, each shunt part
+joins the node reached so far to ground and each series part joins it to the
+next node toward the port. The first part that does not, named out of order or
+off the chain, is refused by name with `SIM-0003`. A frequency outside the file
+is refused naming its range (`SIM-0007`).
+
+## Routing
+
+`route()` picks the level and the tool, cheapest first:
+
+1. If every constraint over the question's measured parameters already
+   evaluates to a decided result, the **equation** level answers it with the
+   constraint evaluator, and no tool is prepared or run.
+2. Otherwise the method names the level (`simulation` is circuit, `rule
+   check` is external, `analysis` is equation, `emulation` is behavioural) and the first registered tool
+   at that level that covers the question is chosen, the one it names if it
+   names one.
+3. A question nothing covers is **unroutable**. It is not answered at another
+   level, because a cheaper answer is not the same answer.
+
+The route is the same on every machine: a tool is chosen whether or not it is
+installed, and one that is not installed is reported **unsupported** by name.
+Nothing stands in for it.
+
+## The tools
+
+| Tool | Level | Covers | Needs |
+| --- | --- | --- | --- |
+| `ngspice` | circuit | `Simulates`: operating point, transient, AC | `ngspice` on the path |
+| `xyce` | circuit | `Simulates`: transient, AC, when the question names it | `Xyce` on the path |
+| `kicad-erc` | external | `Checks` over the schematic | `kicad-cli` on the path |
+| `touchstone` | equation | `Evaluates` with `ReturnLoss` | nothing: it is fang |
+| `renode` | behavioural | `Emulates` | Renode 1.17.0 on the path |
+
+That is the routing order. A module that brings a tool adds it with
+`register_tool()`, after the built-ins, and a method with `register_method()`;
+`fang.emulation` adds `renode` and the `emulation` method that way when it is
+imported.
+
+Every tool sits behind one protocol: `covers`, `available`, `version`,
+`prepare(snapshot, question, traits=)`, `run(job, workspace=)` and
+`read(job, raw)`, with an optional `verdict(job, raw)` for a tool that judges
+rather than measures. Preparing is a lowering and is deterministic; running is
+the only step that leaves the process; reading produces decimal quantities and
+nothing the output did not contain.
+
+A SPICE deck instantiates each modelled part as an `X` device in its model's
+port order, through the trait's `pin_map`, and includes the model by path rather
+than inlining it. Several pins may land on one port, as a part's ground pins
+do; pins on different nets are refused with `SIM-0006`, naming the part, the
+port and the nets, because an instance reaches a port through one node. A
+model is named in the run's bundle by its path relative to the program that
+declared the part. Where two different files would share that name, from parts
+declared in different folders, each is named under the first twelve hex digits
+of its own digest instead, and Touchstone files are named the same way; two
+different files declaring one subcircuit are refused, since a deck holds one
+definition of it. ngspice measures through a `.control` block, because in batch
+mode it ignores `.print op` and reports a deck-level `.meas ac` as a real part.
+Xyce gets the same circuit with deck-level `.MEASURE` lines, and is read from
+the measure file it writes.
+
+## Re-entry
+
+An answer enters as one transaction against the committed head:
+
+- each measured parameter set to an **inferred** value whose source is the
+  run's evidence, with the run's confidence;
+- one `Evidence` entity carrying the measurement record: the tool and its
+  version, the level, the job's hash, each measure with its value or the reason
+  it has none, the assumptions, the coverage gaps, and the digest of every input
+  file the snapshot does not hold;
+- the declared `Verification`, replaced under its own identifier with its
+  result, the evidence, the level and the tool.
+
+The gate's constraint check decides the constraint. If a hard constraint over a
+measured value fails, the head does not move; the evidence and the verification
+with result `FAIL` are recorded by a second transaction that sets no parameter.
+Any other rejection records nothing. Measurements prepared against a snapshot
+that is no longer the head are refused with `TXN-0001`.
+
+Confidence is bounded by the provenance of the models a run rests on: 1 for
+primitives and asserted models, 0.8 for inferred, 0.5 for unverified ones and
+for a model with no provenance at all. `assumed_provenance(reason)` states the
+last kind.
+
+## The command
+
+```bash
+fang verify board.py
+```
+
+Each question is printed with its level, its tool and version, its measurements
+at three significant figures, its assumptions, coverage gaps and confidence, and
+its result, or the reason it did not run.
+
+| Outcome | Exit |
+| --- | --- |
+| Every question answered and none failed | `0` |
+| A verification failed | `1` |
+| A question not runnable, or refused by the gate for another reason | `1` |
+| A tool not installed, or a question no tool covers | `0` |
+| No question declared: "nothing to verify" | `0` |
+
+Without `--commit` nothing is written: runs happen in a scratch directory and
+the workspace is left as it was. `--commit` persists the new head into an
+existing workspace, keeping each run's files under `.copperhead/simulations/`.
+`fang build`, `fang diff` and `fang verify` keep what earlier runs measured: a
+program declares a measured parameter without a value, so elaborating it again
+does not withdraw the measurement.
+
+`--commit` persists measurements and nothing else. If the program has changed
+since its design was built, a part retuned or a constraint tightened, it
+refuses before anything runs and says to run `fang build` first, which is the
+command that persists an edit through its gate and its tool plan. A
+measurement made stale by a file the program reads but does not hold, an
+edited model or a rebuilt firmware image, is not an edit: its question runs
+again and the answer is committed.
+
+
+---
+
+# Emulation
+
+URL: https://fang.copperhead.sh/reference/emulation/
+Summary: Running a board's compiled firmware in Renode, and what a run can and cannot show.
+
+An emulation question runs the board's compiled firmware in an emulator and
+measures what the emulator observes. It is a
+[verification question](/reference/verification/) like a circuit one: declared
+beside the requirement it serves, routed to a tool, and answered through the
+commit gate. The tool is [Renode](https://renode.io), run
+across a process boundary.
+
+```bash
+fang verify board.py                 # answer every question, emulation included
+fang emulate board.py                # run the firmware and print what it measured
+fang emulate board.py -o bundles     # also write each question's bundle
+fang emulate board.py --bundle-only -o bundles   # write the bundles, run nothing
+```
+
+`fang emulate` exits non-zero when a question is not runnable or a run timed
+out or crashed; Renode not being installed is reported, and is not by itself
+a failure.
+
+A pass says the declared behaviour was observed on models whose limits the
+evidence lists. It does not say the fabricated board works.
+
+## Binding the firmware and the models
+
+```python
+from fang.emulation import EmulationModel, Firmware
+
+class SensorNode(System):
+    def __init__(self, **overrides):
+        super().__init__(**overrides)
+        self.mcu.add_trait(EmulationModel(source="fang:stm32f401re"))
+        self.mcu.add_trait(Firmware("firmware/elf/sensor_node.elf", target="stm32f401re"))
+        self.env.add_trait(EmulationModel(source="renode:Sensors.HS3001"))
+```
+
+`EmulationModel` names a descriptor fang ships. There is no generic model to
+fall back to: a model naming no descriptor refuses the plan. Two descriptors
+ship today.
+
+| Descriptor | Stands for | Qualification |
+| --- | --- | --- |
+| `fang:stm32f401re` | The STM32F401RE, on a platform description derived from Renode's F4 one | tested in emulation |
+| `renode:Sensors.HS3001` | Renesas's HS3001, on Renode's own model | tested in emulation |
+
+`Firmware` names an ELF relative to the program that declares the part, and
+the target it was built for; a question's own `firmware` is relative to the
+question's program. Its digest is not part of the snapshot, because
+rebuilding firmware is not a design change; every run records the digest on
+its evidence, and `fang verify` reports a verification whose evidence names a
+different digest as stale. The staleness check reads the same file the run
+read, wherever the question is declared.
+
+## Declaring a question
+
+```python
+from fang.emulation import (
+    Absent, At, Count, Emulates, FirstAt, I2CRead, PinConfig, Rises, UartValue,
+)
+
+startup = Emulates(
+    "sensor_ready",
+    run_until=2 * s,
+    stimuli=[At(0 * ms, "env.temperature", 25 * degC)],
+    measures={
+        "first_read": FirstAt(I2CRead("env")),
+        "reported": UartValue("mcu.usart2", prefix="temp=", unit=degC),
+        "slow_blinks": Count(Rises("mcu.status"), within=(1 * s, 2 * s)),
+        "mux_mismatches": PinConfig("mcu.i2c1"),
+    },
+    abstracted=("scl_pullup", "sda_pullup", "series", "console"),
+)
+```
+
+Each measure writes into a parameter the system declares, and constraints over
+those parameters are what the run decides. Everything is named by part surface
+(`env`, `mcu.status`, `mcu.usart2`), never by an emulator name. The question
+is part of the graph, so widening a window is a transaction with a diff, not an
+edit nobody sees.
+
+| Field | Means |
+| --- | --- |
+| `run_until` | The run's virtual duration, a positive time. There is no default. |
+| `stimuli` | `At(time, "<device>.<input>", value)`: a model input set to one value at a virtual time within the run |
+| `faults` | `Absent(device)`: the device is not on its bus, so its address goes unanswered, and it records nothing |
+| `abstracted` | Parts in scope deliberately left without a model, each a coverage gap |
+| `firmware` | An ELF for this question only, in place of the part's binding |
+| `seed` | The emulator's random seed; `0` unless named |
+
+### Measures
+
+| Measure | Measures | Unit |
+| --- | --- | --- |
+| `FirstAt(match)` | The virtual time of the first matching event | time |
+| `Count(match, within=(a, b))` | Matching events in `[a, b)` | dimensionless |
+| `Latency(from_, to)` | Time from the first `from_` to the first `to` after it | time |
+| `UartValue(uart, prefix=, unit=)` | The number after `prefix` on the first matching line | the stated unit |
+| `PinConfig(port)` | Pins configured otherwise than the board requires | dimensionless |
+
+The matches are `I2CRead(device)`, `I2CWrite(device, data=)`,
+`Rises(surface)`, `Falls(surface)` and `UartLine(uart, contains=)`. An
+ordering requirement is a latency.
+
+A measure that would read the same whatever the firmware did is refused, not
+measured:
+
+- A `Count` window is two times, its start before its end. `(2 * s, 1 * s)`
+  would count nothing and `(1 * V, 2 * V)` is no window; both are refused
+  where `Count` is declared.
+- `I2CRead` matches a read by its device alone. The probes record a read's
+  bytes, not the register it follows, so a plan refuses `register=` rather
+  than count every read as that register's.
+- `PinConfig` names an I2C port of the target with a device on it. Over the
+  status signal, a UART or an unconnected I2C port there would be no pin to
+  count.
+- A read or write of a device a fault makes absent is refused, and so is a
+  stimulus on it: an absent device has no probe, so a count of its reads is 0
+  whatever the firmware does.
+
+## The plan
+
+Before anything runs, the question compiles into a plan in which everything is
+resolved from the graph: the component that runs the firmware and the target
+its firmware was built for; the scope, being every component sharing a net with
+a pin the question touches; each bus's controller (the port's `peripheral`),
+its chosen pins and their selectors, open drain from the interface, and each
+device's address from `resolve_address`; each observed pin through the
+platform model's own pin table; and each stimulus and fault against the model
+it names. A plan that cannot be resolved is refused, naming what is missing.
+
+| Code | Refused because |
+| --- | --- |
+| `SIM-0003` | A surface that resolves to nothing, or a measure that would read the same whatever the firmware did: a match detail no measure filters on, an empty count window, a read or write of an absent device |
+| `SIM-0009` | A part's model names a descriptor fang does not ship; the refusal names the part |
+| `SIM-0010` | A component in scope has neither a model nor an abstraction |
+| `SIM-0011` | A fault the device's model does not support |
+| `SIM-0012` | A stimulus names an input its model lacks, gives a value of the wrong dimension or more than one value, falls outside the run, or sets a device a fault removes |
+| `SIM-0013` | A pin the platform model does not map, a port never being derived from a pin's name, or a pin selector it does not read: the F401 reads `AF0` to `AF15` |
+| `SIM-0014` | No run duration, or one that is not positive, which `Emulates` already refuses where it is written |
+| `SIM-0015` | No firmware is bound, or it was built for another target |
+| `SIM-0016` | A bus device's controller or address cannot be resolved, its address is a range or no whole number, or `PinConfig` names a port that is no bus |
+
+The plan is canonical JSON, identified by the hash of its own canonical form,
+so two machines preparing the same question produce the same plan.
+
+## The run
+
+The plan lowers into Renode's own input: a platform description, a script, and
+probes compiled by Renode at load. A bundle holds all of it with the firmware
+and a manifest of digests, and runs on its own:
+
+```bash
+fang emulate board.py --bundle-only -o bundles
+cd bundles/startup && renode --console --disable-gui run.resc
+```
+
+The script fixes the seed first, applies every stimulus at its virtual time
+from inside the script, writes every duration as decimal seconds, and takes no
+input once the run starts. Each probe is named from the whole path of what it
+observes, and a plan that would give two probes one name is refused. Renode
+1.17.0 is the version the lowering was checked against; another installed
+version reports unsupported, naming itself. Renode's monitor splits a path at
+a space, so a run cannot be made from a temporary directory whose path has
+one: it reports unsupported before Renode starts, and `TMPDIR` (`TEMP` on
+Windows) names another. A run that outlives its wall-clock limit is ended with
+every process it started, and its partial events are kept.
+
+Renode always runs from a temporary copy of the bundle. What the run leaves
+is then kept in the workspace the run is given: `fang verify --commit` keeps
+each run's bundle, its `events.jsonl`, Renode's `renode.log` and an
+`outcome.json` under `.copperhead/simulations/renode-<job>/`, a crashed run's
+log among them. Without `--commit`, and under `fang emulate`, they go to a
+scratch directory removed afterwards, so the project is left as it was.
+
+## What a run can see
+
+Events come from probes in the emulator (what a device was asked and
+answered, what a pin did, what a UART carried), never from the firmware's
+account of itself. A number read from the console is recorded as the
+firmware's report.
+
+Three rules keep a measure honest:
+
+- **Absence is an observation; an incomplete run is not.** An event that did
+  not occur in a completed run is measured as the half-open range after the
+  run's end, so `first_read <= 200 ms` fails after a two-second run and stays
+  undecided after a 100 ms one. A run that timed out or crashed measures
+  nothing.
+- **A model warning withdraws what rests on it.** A warning the model's
+  descriptor does not expect means the firmware did something the model does
+  not cover; every measure over that model has no value, and the evidence
+  names the warning. A warning the descriptor expects is the coverage gap it
+  stands for. A warning is matched only against the descriptor of the model
+  that raised it, so text the platform expects from its I2C controller still
+  withdraws the measures over the sensor when the sensor's model reports it.
+- **Pin configuration is measured.** Renode's I2C and UART controllers do not
+  consult the pins' configuration, so firmware with the wrong pin setup would
+  pass every bus measure. `PinConfig` reads what the firmware wrote to the
+  mode, alternate-function and output-type registers, judging the output-type
+  register by its writes because Renode does not store it. A selector the
+  platform does not read refuses the plan, so a pin's alternate function is
+  never left unchecked.
+
+## Evidence
+
+Each run's evidence names Renode's version and build, the firmware's digest,
+the plan's hash, the seed, the digest of every file in the bundle, that the
+run was local, the assumptions, and every coverage gap. Confidence is bounded
+by the models' qualification: `0.8` for a model only tested in emulation.
+
+## What is not modelled
+
+The descriptors list it, and every run reports it: the clock tree (the core is
+taken to run at the 16 MHz the part resets to), I2C DMA, I2C acknowledgement
+beyond an absent device, I2C bus timing, the HS3001's conversion time, and the
+GPIO output-type register's storage. After an address NACK Renode's I2C model
+keeps STOP set where silicon clears it, so firmware that sets START by
+read-modify-write of `CR1` has its next transaction swallowed.
+
+[`examples/sensor_node/`](https://github.com/copperheadhq/fang/tree/main/examples/sensor_node/)
+is the worked example: the board, its firmware with three deliberately broken
+builds, and the two questions it is verified against.
 
 
 ---
@@ -28837,7 +30922,7 @@ engineering fact; deleting anything else does.
 
 ```json
 {
-  "schema_version": "1.1",
+  "schema_version": "1.2",
   "revision_id": "...",
   "compiler_version": "0.1.0",
   "snapshot": "...",
@@ -28905,7 +30990,7 @@ Diagnostic codes are stable. They are **allocated, never reused and retired
 rather than deleted**, so a code in an old log means today what it meant then,
 and searching for one never lands on a different problem.
 
-Seven areas exist: `ELAB`, `IFACE`, `TOPO`, `UNIT`, `TXN`, `SIM`, `IMPORT`.
+Eight areas exist: `ELAB`, `IFACE`, `TOPO`, `UNIT`, `TXN`, `SIM`, `IMPORT`, `MCP`.
 
 ## UNIT: units and dimensions
 
@@ -28948,9 +31033,17 @@ a program that could observe a tool's result would not be reproducible.
 | --- | --- |
 | `IFACE-0001` | A required interface signal has no pin |
 | `IFACE-0002` | Two interfaces disagree on membership |
+| `IFACE-0003` | A pin selector cites no evidence the part declares |
+| `IFACE-0004` | An address strap names a pin the part does not have |
 
 An optional signal with no pin is not an error. `IFACE-0001` is about signals
 the interface says it requires.
+
+`IFACE-0003` refuses a `PinMap` whose [selectors](/reference/interfaces/#peripheral-instances-and-selectors)
+name no `Cites` declaration on the same part. An address given as a bare
+number is `UNIT-0001`, as any bare-number parameter is. A strap that resolves
+to no address is not a diagnostic at all: the board is legal, and the
+compatibility check reports the address as undecided.
 
 ## TXN: transactions and the gate
 
@@ -28965,6 +31058,35 @@ the interface says it requires.
 These are the [gate conditions](/concepts/the-commit-gate/). A rejection carries
 its code, its message and the diff it would have applied.
 
+## SIM: simulation and verification
+
+| Code | Means |
+| --- | --- |
+| `SIM-0001` | A question measures into a parameter its module does not declare |
+| `SIM-0002` | A question states its own result |
+| `SIM-0003` | A question names a surface or part that resolves to no pins |
+| `SIM-0004` | A circuit question names no bench |
+| `SIM-0005` | A load is neither a current nor a resistance |
+| `SIM-0006` | A model port the part's pin map does not reach |
+| `SIM-0007` | A frequency outside a model's range |
+| `SIM-0008` | A rule-check exclusion gives no reason |
+| `SIM-0009` | An emulation model names a descriptor fang does not ship |
+| `SIM-0010` | A component an emulation touches has neither a model nor an abstraction |
+| `SIM-0011` | A fault the device's emulation model does not support |
+| `SIM-0012` | A stimulus names an input its model lacks, or a value of the wrong dimension |
+| `SIM-0013` | A pin the emulation platform does not map |
+| `SIM-0014` | An emulation names no run duration, or one that is not positive |
+| `SIM-0015` | No firmware is bound, or it was built for another target |
+| `SIM-0016` | A bus device's controller or address cannot be resolved |
+
+`SIM-0001`, `SIM-0002`, `SIM-0003`, `SIM-0005` and `SIM-0008` fail where the
+question is written or elaborated, and so does `SIM-0014` for a run that is not
+positive. The others are a question
+[`fang verify`](/reference/verification/) reports as not runnable, naming what
+is missing, rather than running it with something assumed in its place.
+`SIM-0009` to `SIM-0016` are an emulation plan refused before anything runs;
+[Emulation](/reference/emulation/) has the detail.
+
 ## IMPORT: CAD interchange
 
 | Code | Means |
@@ -28974,6 +31096,20 @@ its code, its message and the diff it would have applied.
 Reported in `import-report.json` rather than raised, because an import that
 stopped at the first unrepresentable construct would be less useful than one
 that says what it could not carry.
+
+## MCP: the agent surface
+
+| Code | Means |
+| --- | --- |
+| `MCP-0001` | A path outside the bound project root was named |
+| `MCP-0002` | No tool by that name is exposed |
+| `MCP-0003` | An argument did not parse |
+| `MCP-0004` | Commit named a proposal the gate did not accept |
+| `MCP-0005` | The protocol dependency is not installed |
+| `MCP-0006` | The operation kind is not one the commit gate evaluates |
+
+A refusal at the protocol boundary is its own area: it describes the boundary,
+not the transaction the boundary was asked about.
 
 ## Adding a code
 

@@ -2,7 +2,8 @@
 
 Spec: "Simulation Is A Compiler Target", "Simulation Plan Validation", "SPICE
 Lowering", "Backends Are Reached Across A Process Boundary", "Normalized
-Simulation Results", and "Verification Level Selection".
+Simulation Results", "Verification Level Selection", and, for a question's
+deck, "Verification Tools Sit Behind One Protocol".
 
 Components expose models; the kernel compiles a scope into a simulator's native
 input and normalizes what comes back. A pass is a finding with the confidence its
@@ -11,6 +12,7 @@ model provenance supports, never proof of physical correctness.
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass, field
@@ -28,7 +30,15 @@ from .values import Value
 
 
 class SimulationError(Exception):
-    """A plan that cannot be satisfied. Never run with a substitute."""
+    """A plan that cannot be satisfied. Never run with a substitute.
+
+    Where the refusal is one the diagnostic registry names, it carries that
+    code, so a caller can report it as the diagnostic it is.
+    """
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        super().__init__(message)
+        self.code = code
 
 
 class Level(Enum):
@@ -137,6 +147,42 @@ class ACSweep(Analysis):
         out = super().as_dict()
         out.update({"variation": self.variation, "points": self.points, "start": self.start, "stop": self.stop})
         return out
+
+
+def analysis_from_dict(payload: Mapping) -> Analysis:
+    """Read an analysis back from its record. The inverse of `as_dict`.
+
+    A question stores its analysis in the graph, and the runner rebuilds it
+    from there with nothing but the snapshot in hand.
+    """
+    kind = payload.get("kind")
+    probes = tuple(payload.get("probes", ()))
+    if kind == "operating_point":
+        return OperatingPoint(probes=probes)
+    if kind == "transient":
+        return Transient(
+            probes=probes,
+            stop=payload["stop"],
+            step=payload["step"],
+            initial_conditions=dict(payload.get("initial_conditions", {})),
+        )
+    if kind == "dc":
+        return DCSweep(
+            probes=probes,
+            source=payload["source"],
+            start=payload["start"],
+            stop=payload["stop"],
+            step=payload["step"],
+        )
+    if kind == "ac":
+        return ACSweep(
+            probes=probes,
+            variation=payload["variation"],
+            points=int(payload["points"]),
+            start=payload["start"],
+            stop=payload["stop"],
+        )
+    raise ValueError(f"no analysis is defined for kind {kind!r}")
 
 
 # --------------------------------------------------------------------------
@@ -455,6 +501,657 @@ def _spice_value(value: str) -> str:
 
 
 # --------------------------------------------------------------------------
+# Lowering for a question: what a real run needs
+# --------------------------------------------------------------------------
+#
+# A question's deck is written from the snapshot, the traits and the question
+# alone. Every magnitude is written as a plain decimal in SI base units, so no
+# SPICE suffix -- where "M" is milli and "MEG" is mega -- can change what a
+# number means, and every line is a function of its inputs, so two
+# preparations of one question are byte-identical.
+
+
+def spice_number(magnitude: Decimal) -> str:
+    """A decimal magnitude as SPICE reads it, without a suffix."""
+    from .units import _decimal_str
+
+    return _decimal_str(magnitude)
+
+
+def si_magnitude(quantity: Quantity) -> Decimal:
+    """The one magnitude a device is written with, in SI base units.
+
+    A scalar is its value and a tolerance its nominal; a range is its typical
+    value when it has one. A range with no typical value has no one magnitude,
+    and choosing its midpoint would be inventing one, so it is refused.
+    """
+    if quantity.kind == "scalar":
+        magnitude = quantity.value
+    elif quantity.kind == "tolerance":
+        magnitude = quantity.nominal
+    elif quantity.typical is not None:
+        magnitude = quantity.typical
+    else:
+        raise SimulationError(
+            f"{quantity} is a range with no typical value; a device is written "
+            "with one magnitude and none is chosen for it"
+        )
+    return quantity._to_base(magnitude)
+
+
+@dataclass(frozen=True)
+class Subcircuit:
+    """A model's `.subckt` line: its name and its ports in declared order."""
+
+    name: str
+    ports: tuple[str, ...]
+
+
+def read_subcircuit(text: str, *, source: str = "the model") -> Subcircuit:
+    """Read the first `.subckt` line of a model file.
+
+    The ports are the model's own order, which is the order an instance must
+    list its nodes in; the part's pin map says which pin lands on which port.
+    Continuation lines are joined and parameters after the ports are ignored.
+    """
+    logical: list[str] = []
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("*"):
+            continue
+        for marker in (";", "$ "):
+            if marker in line:
+                line = line.split(marker, 1)[0].rstrip()
+        if line.startswith("+") and logical:
+            logical[-1] += " " + line[1:].strip()
+        else:
+            logical.append(line)
+    for line in logical:
+        tokens = line.split()
+        if tokens and tokens[0].lower() == ".subckt":
+            if len(tokens) < 2:
+                break
+            ports = []
+            for token in tokens[2:]:
+                if "=" in token or token.lower() in ("params:", "param:"):
+                    break
+                ports.append(token)
+            return Subcircuit(tokens[1], tuple(ports))
+    raise SimulationError(f"{source} declares no .subckt line")
+
+
+@dataclass(frozen=True)
+class ModelFile:
+    """A model a question's deck includes, and the facts the evidence keeps.
+
+    `path` is how the deck names the file, relative to the run's workspace;
+    `location` is where it is read from on this machine, which is not part of
+    any record; `digest` is what the evidence records, because the snapshot
+    does not hold the file.
+    """
+
+    component: str
+    path: str
+    location: str
+    digest: str
+    subcircuit: Subcircuit
+
+
+def model_path(component: Component, source: str) -> tuple[str, Path]:
+    """Where a part's model file is, and how a run's workspace names it.
+
+    A relative source is resolved against the folder of the program that
+    declared the part, which its source location gives, and is named in the
+    workspace by that same relative path, so nothing machine-specific reaches
+    a job, its hash or the evidence. An absolute or escaping path is named
+    `models/<file>`.
+    """
+    from pathlib import PurePosixPath
+
+    if not source:
+        raise SimulationError(f"{component.id}'s model names no file")
+    written = Path(source)
+    if written.is_absolute():
+        location = written
+    elif component.source_location is not None:
+        location = Path(component.source_location.file).parent / written
+    else:
+        location = Path.cwd() / written
+
+    # Judged by this machine's own path rules, then named the POSIX way: on
+    # Windows `C:\models\x.sub` has no leading slash, and read as a POSIX path
+    # it would be taken as relative and named in the workspace whole.
+    if written.is_absolute() or ".." in written.parts:
+        relative = PurePosixPath("models") / written.name
+    else:
+        relative = PurePosixPath(*written.parts)
+    if not location.is_file():
+        raise SimulationError(f"{component.id}'s model {source} is not a file at {location}")
+    return relative.as_posix(), location
+
+
+def bundle_paths(files: Iterable[tuple[str, str]]) -> dict[tuple[str, str], str]:
+    """How a run's bundle names each file it reads, by (path, digest).
+
+    A file keeps the path `model_path` gives it, relative to the program that
+    declared it, which is the same on every machine. Two different files
+    declared at one relative path, by parts in different folders, would share
+    that name, and one part would be given the other's file: each is then
+    named under a folder of its own digest's first twelve hex digits, which
+    is as machine-independent and differs exactly when the files do. The same
+    file named twice is one entry.
+    """
+    from pathlib import PurePosixPath
+
+    digests: dict[str, set[str]] = {}
+    for path, digest in files:
+        digests.setdefault(path, set()).add(digest)
+    named: dict[tuple[str, str], str] = {}
+    for path, found in digests.items():
+        for digest in found:
+            named[(path, digest)] = path if len(found) == 1 else (
+                PurePosixPath(digest.partition(":")[2][:12]) / path
+            ).as_posix()
+    return named
+
+
+def bundle_models(
+    models: Mapping[str, ModelFile], names: Mapping[str, str] | None = None
+) -> dict[str, ModelFile]:
+    """The models one deck includes, by component, each under a name of its own.
+
+    Named by `bundle_paths`, so two different files never share an include.
+    Two different files declaring one subcircuit are refused, naming the
+    parts: a deck includes both, and SPICE keeps one definition for every
+    instance (ngspice warns of the redefinition and ignores it), so one part
+    would run the other's model. `names` gives each component's designator
+    for the refusal.
+    """
+    from dataclasses import replace
+
+    named = bundle_paths((model.path, model.digest) for model in models.values())
+    out = {
+        component: replace(model, path=named[(model.path, model.digest)])
+        for component, model in models.items()
+    }
+    declared: dict[str, dict[str, list[str]]] = {}
+    for component, model in sorted(out.items()):
+        declared.setdefault(model.subcircuit.name.lower(), {}).setdefault(model.path, []).append(
+            (names or {}).get(component, component)
+        )
+    for subcircuit, files in sorted(declared.items()):
+        if len(files) > 1:
+            which = "; ".join(
+                f"{', '.join(parts)} from {path}" for path, parts in sorted(files.items())
+            )
+            raise SimulationError(
+                f"two different model files declare subcircuit {subcircuit} ({which}); "
+                "a deck holds one definition of a subcircuit, so one part would run "
+                "the other's model"
+            )
+    return out
+
+
+def load_model(component: Component, trait: Simulatable) -> ModelFile:
+    """Find, digest and read the subcircuit model a part's trait names."""
+    import hashlib
+
+    relative, location = model_path(component, trait.source)
+    data = location.read_bytes()
+    subcircuit = read_subcircuit(data.decode("utf-8", errors="replace"), source=trait.source)
+    return ModelFile(
+        component.id,
+        relative,
+        str(location),
+        "sha256:" + hashlib.sha256(data).hexdigest(),
+        subcircuit,
+    )
+
+
+def subcircuit_instance(
+    designator: str,
+    model: ModelFile,
+    pin_map: Mapping[str, str],
+    node_of_pin: Mapping[str, str],
+    net_of_pin: Mapping[str, str] | None = None,
+) -> str:
+    """An `X` device instantiating a part's model.
+
+    The nodes are listed in the model's port order, each the node of the pin
+    the part's pin map lands on that port. A port no pin reaches is refused by
+    name, as is a pin mapped onto a port the model does not declare: either
+    would be a deck whose wiring nobody chose.
+
+    Several pins may land on one port, as a part's ground pins do, and the
+    instance reaches the port through one node. That is the circuit only
+    while those pins share a node, so pins on different nodes are refused,
+    naming the port and the nets; a deck through one of them would leave the
+    others out unseen. `net_of_pin` names the net each connected pin is on.
+    A pin on no net carries nothing and takes no part: the port is reached
+    through a pin on a net where the part has one.
+    """
+    from .diagnostics import SIM_MODEL_PORT_UNREACHED
+
+    pins_of: dict[str, list[str]] = {}
+    for pin, port in sorted(pin_map.items()):
+        pins_of.setdefault(port, []).append(pin)
+    unreached = [port for port in model.subcircuit.ports if port not in pins_of]
+    if unreached:
+        raise SimulationError(
+            f"{designator}'s model {model.subcircuit.name} has port"
+            f"{'s' if len(unreached) > 1 else ''} {', '.join(unreached)} that no pin "
+            "of the part's pin map reaches",
+            code=SIM_MODEL_PORT_UNREACHED,
+        )
+    undeclared = sorted(set(pins_of) - set(model.subcircuit.ports))
+    if undeclared:
+        raise SimulationError(
+            f"{designator}'s pin map lands on {', '.join(undeclared)}, which "
+            f"{model.subcircuit.name} does not declare",
+            code=SIM_MODEL_PORT_UNREACHED,
+        )
+    nodes = []
+    for port in model.subcircuit.ports:
+        pins = pins_of[port]
+        if net_of_pin is not None:
+            pins = [pin for pin in pins if pin in net_of_pin] or pins
+        reached = {node_of_pin[pin] for pin in pins}
+        if len(reached) > 1:
+            where = ", ".join(
+                f"{pin} on {(net_of_pin or {}).get(pin, 'node ' + node_of_pin[pin])}"
+                for pin in pins
+            )
+            raise SimulationError(
+                f"{designator}'s pin map lands {', '.join(pins)} on port {port} of "
+                f"{model.subcircuit.name}, but they are on different nets ({where}); "
+                "an instance reaches a port through one node, so all but one would "
+                "be left out",
+                code=SIM_MODEL_PORT_UNREACHED,
+            )
+        nodes.append(node_of_pin[pins[0]])
+    return f"X{designator} {' '.join(nodes)} {model.subcircuit.name}"
+
+
+def primitive_device(component: Component, designator: str, nodes: Sequence[str]) -> str:
+    """A device SPICE knows natively, written from the value the graph holds.
+
+    A primitive with no known value is refused: a resistor of unknown
+    resistance is not a one-ohm resistor.
+    """
+    from .netlist import VALUE_PARAMETERS
+
+    prefix = component.extensions.get("designator_prefix")
+    parameter = VALUE_PARAMETERS.get(prefix)
+    value = component.parameters.get(parameter) if parameter else None
+    if not isinstance(value, Value) or not value.known or value.quantity is None:
+        raise SimulationError(
+            f"{designator}'s {parameter or 'value'} is unknown; a device is not "
+            "written with a value nobody gave it"
+        )
+    magnitude = spice_number(si_magnitude(value.quantity))
+    if prefix == "V":
+        return f"{designator} {nodes[0]} {nodes[1]} DC {magnitude}"
+    return f"{designator} {nodes[0]} {nodes[1]} {magnitude}"
+
+
+@dataclass(frozen=True)
+class BenchItem:
+    """One supply or load, at the nodes its surface resolved to."""
+
+    role: str               # "supply" or "load"
+    surface: str
+    quantity: Quantity
+    positive: str
+    negative: str
+
+
+def bench_device(item: BenchItem, index: int, *, ac: bool = False) -> str:
+    """A bench item as a device: a supply is a `V`, a load an `I` or an `R`.
+
+    Which, for a load, is decided by its dimension, and a load of any other
+    dimension is refused. Under an AC analysis a supply is also the
+    stimulus, at its own magnitude, and the question's assumptions say so.
+    """
+    from .diagnostics import SIM_LOAD_DIMENSION
+    from .units import Unit
+
+    magnitude = spice_number(si_magnitude(item.quantity))
+    nodes = f"{item.positive} {item.negative}"
+    if item.role == "supply":
+        if item.quantity.dimension != Unit.parse("V").dimension:
+            raise SimulationError(f"the supply at {item.surface} is not a voltage")
+        stimulus = f" AC {magnitude}" if ac else ""
+        return f"Vfang_supply{index} {nodes} DC {magnitude}{stimulus}"
+    if item.quantity.dimension == Unit.parse("A").dimension:
+        # Current flows from the first node through the source to the second:
+        # out of the surface's signal, into its return.
+        return f"Ifang_load{index} {nodes} DC {magnitude}"
+    if item.quantity.dimension == Unit.parse("Ohm").dimension:
+        return f"Rfang_load{index} {nodes} {magnitude}"
+    raise SimulationError(
+        f"the load at {item.surface} is {item.quantity}; a load is a current "
+        "drawn or a resistance, nothing else",
+        code=SIM_LOAD_DIMENSION,
+    )
+
+
+@dataclass(frozen=True)
+class DeckMeasure:
+    """One measure as a deck sees it: a slot, two nodes, and what to take.
+
+    Magnitudes are decimals in SI base units: a window in seconds or hertz,
+    a level in volts.
+    """
+
+    slot: str
+    kind: str
+    positive: str
+    negative: str = "0"
+    after: Decimal | None = None
+    until: Decimal | None = None
+    at: Decimal | None = None
+    level: Decimal | None = None
+    edge: str = "either"
+    occurrence: int = 1
+
+
+class SpiceDialect:
+    """What differs between SPICE simulators: analysis, measurement, output.
+
+    Everything else in a question's deck -- the devices, the subcircuit
+    instances, the bench -- is shared, which is what lets a second simulator
+    answer the same question with the same circuit.
+    """
+
+    name: str = ""
+    #: The analysis kinds the dialect can lower a measure over.
+    analyses: frozenset[str] = frozenset()
+
+    def options(self, options: Mapping[str, str]) -> list[str]:
+        """The solver options, in the simulator's own form."""
+        return [f".options {name}={value}" for name, value in sorted(options.items())]
+
+    def analysis_lines(self, analysis: Analysis, measures: Sequence[DeckMeasure]) -> list[str]:
+        """The analysis and a measurement line for each measure."""
+        raise NotImplementedError
+
+    def parse(
+        self,
+        output: str,
+        measures: Sequence[DeckMeasure],
+        *,
+        outputs: Mapping[str, str] | None = None,
+    ) -> dict[str, Decimal | str]:
+        """Each slot's number, or the reason the output gives none.
+
+        `output` is what the simulator printed and `outputs` the files it
+        wrote; a dialect reads whichever its simulator reports measures in.
+        """
+        raise NotImplementedError
+
+
+#: ngspice's name for each measure's statistic.
+_NGSPICE_STATISTIC = {
+    "peak_to_peak": "PP",
+    "average": "AVG",
+    "maximum": "MAX",
+    "minimum": "MIN",
+}
+
+_NGSPICE_EDGE = {"rising": "RISE", "falling": "FALL", "either": "CROSS"}
+
+
+class NgspiceDialect(SpiceDialect):
+    """ngspice in batch mode, measuring through a `.control` block.
+
+    Both choices are forced by the installed ngspice (45.2): batch mode
+    ignores `.print op`, so an operating-point value is printed from the
+    control block; and a deck-level `.meas ac` reports the real part of a node
+    voltage where the same line in a control block reports its magnitude --
+    an RC corner came back as 1024 Hz against the correct 1592 Hz.
+    """
+
+    name = "ngspice"
+    analyses = frozenset({"operating_point", "transient", "ac"})
+
+    _MEASURED = re.compile(r"^\s*(fang_m\d+)\s*=\s*([-+0-9.eE]+)", re.MULTILINE)
+    _FAILED = re.compile(r"^\s*meas\s+\w+\s+(fang_m\d+)\b.*failed!", re.MULTILINE | re.IGNORECASE)
+
+    @staticmethod
+    def _signal(measure: DeckMeasure, analysis: str) -> str:
+        def voltage(node: str) -> str:
+            return "0" if node == "0" else f"v({node})"
+
+        if measure.positive == "0" and measure.negative == "0":
+            raise SimulationError(
+                f"{measure.slot} would measure ground against ground"
+            )
+        if measure.negative == "0":
+            expression = voltage(measure.positive)
+        else:
+            expression = f"{voltage(measure.positive)}-{voltage(measure.negative)}"
+        return f"mag({expression})" if analysis == "ac" else expression
+
+    def analysis_lines(self, analysis: Analysis, measures: Sequence[DeckMeasure]) -> list[str]:
+        if analysis.kind not in self.analyses:
+            raise SimulationError(f"ngspice does not measure over a {analysis.kind} analysis here")
+        if getattr(analysis, "initial_conditions", None):
+            raise SimulationError("initial conditions are not lowered for a question")
+        lines = [".control", analysis.directive().lstrip(".")]
+        sweep = {"transient": "tran", "ac": "ac"}.get(analysis.kind)
+        for index, measure in enumerate(measures):
+            signal = self._signal(measure, analysis.kind)
+            if analysis.kind == "operating_point":
+                if measure.kind != "value_at" or measure.at is not None:
+                    raise SimulationError(
+                        f"an operating point has one value per node; {measure.kind} "
+                        "needs a sweep"
+                    )
+                lines.append(f"let {measure.slot} = {signal}")
+                lines.append(f"print {measure.slot}")
+                continue
+            vector = f"fang_s{index}"
+            lines.append(f"let {vector} = {signal}")
+            if measure.kind in _NGSPICE_STATISTIC:
+                window = "".join(
+                    f" {name}={spice_number(value)}"
+                    for name, value in (("from", measure.after), ("to", measure.until))
+                    if value is not None
+                )
+                lines.append(
+                    f"meas {sweep} {measure.slot} {_NGSPICE_STATISTIC[measure.kind]} "
+                    f"{vector}{window}"
+                )
+            elif measure.kind == "value_at":
+                if measure.at is None:
+                    raise SimulationError(f"{measure.slot} names no point to take the value at")
+                lines.append(
+                    f"meas {sweep} {measure.slot} FIND {vector} AT={spice_number(measure.at)}"
+                )
+            elif measure.kind == "crossing":
+                after = f" FROM={spice_number(measure.after)}" if measure.after is not None else ""
+                lines.append(
+                    f"meas {sweep} {measure.slot} WHEN {vector}={spice_number(measure.level)} "
+                    f"{_NGSPICE_EDGE[measure.edge]}={measure.occurrence}{after}"
+                )
+            else:
+                raise SimulationError(f"ngspice has no lowering for a {measure.kind} measure")
+        lines.append(".endc")
+        return lines
+
+    def parse(
+        self,
+        output: str,
+        measures: Sequence[DeckMeasure],
+        *,
+        outputs: Mapping[str, str] | None = None,
+    ) -> dict[str, Decimal | str]:
+        """Read `name = value` lines into decimals, and nothing else.
+
+        A measure ngspice reports as failed, or does not report at all, gets a
+        reason and no number: the parser contains nothing the output did not.
+        """
+        found: dict[str, Decimal | str] = {}
+        for slot in self._FAILED.findall(output):
+            found[slot.lower()] = "ngspice reported the measure as failed"
+        for slot, text in self._MEASURED.findall(output):
+            slot = slot.lower()
+            if slot in found:
+                continue
+            try:
+                found[slot] = Decimal(text)
+            except Exception:
+                found[slot] = f"ngspice printed {text!r}, which is not a number"
+        return {
+            measure.slot: found.get(measure.slot, "ngspice's output does not report it")
+            for measure in measures
+        }
+
+
+#: Xyce's name for each measure's statistic, which is SPICE's.
+_XYCE_STATISTIC = dict(_NGSPICE_STATISTIC)
+
+_XYCE_EDGE = dict(_NGSPICE_EDGE)
+
+#: Which of the solver options Xyce takes, and in which of its packages.
+_XYCE_TIMEINT = ("abstol", "method", "reltol")
+
+
+class XyceDialect(SpiceDialect):
+    """Xyce: deck-level `.MEASURE` lines, read back from its measure file.
+
+    Written from the Xyce Reference Guide, not against a binary, because Xyce
+    is not installed where this was built: Xyce takes `.MEASURE` at the deck
+    level and writes each result to a measure file beside the netlist --
+    `<netlist>.mt0` for a transient, `<netlist>.ma0` for an AC sweep -- one
+    `NAME = value` line per measure, with `FAILED` in place of a value for a
+    measure that could not be taken. An AC measure reads the magnitude, `VM`.
+    Solver options belong to packages; the tolerances and the integration
+    method are `TIMEINT` options, and an option with no Xyce counterpart is
+    named in a comment rather than written as something it is not.
+    """
+
+    name = "xyce"
+    analyses = frozenset({"transient", "ac"})
+
+    _MEASURED = re.compile(r"^\s*(fang_m\d+)\s*=\s*(\S+)", re.MULTILINE | re.IGNORECASE)
+    _MEASURE_FILE = re.compile(r"\.m[a-z]\d+$")
+
+    def options(self, options: Mapping[str, str]) -> list[str]:
+        timeint = [
+            f"{name.upper()}={value}"
+            for name, value in sorted(options.items())
+            if name in _XYCE_TIMEINT
+        ]
+        lines = [".OPTIONS TIMEINT " + " ".join(timeint)] if timeint else []
+        lines += [
+            f"* {name}={value} has no Xyce option and is not written"
+            for name, value in sorted(options.items())
+            if name not in _XYCE_TIMEINT
+        ]
+        return lines
+
+    @staticmethod
+    def _signal(measure: DeckMeasure, analysis: str) -> str:
+        if measure.positive == "0" and measure.negative == "0":
+            raise SimulationError(f"{measure.slot} would measure ground against ground")
+        nodes = measure.positive if measure.negative == "0" else f"{measure.positive},{measure.negative}"
+        return f"VM({nodes})" if analysis == "ac" else f"V({nodes})"
+
+    def analysis_lines(self, analysis: Analysis, measures: Sequence[DeckMeasure]) -> list[str]:
+        if analysis.kind not in self.analyses:
+            raise SimulationError(f"Xyce does not measure over a {analysis.kind} analysis here")
+        if getattr(analysis, "initial_conditions", None):
+            raise SimulationError("initial conditions are not lowered for a question")
+        sweep = {"transient": "TRAN", "ac": "AC"}[analysis.kind]
+        lines = [analysis.directive()]
+        for measure in measures:
+            signal = self._signal(measure, analysis.kind)
+            head = f".MEASURE {sweep} {measure.slot}"
+            if measure.kind in _XYCE_STATISTIC:
+                window = "".join(
+                    f" {name}={spice_number(value)}"
+                    for name, value in (("FROM", measure.after), ("TO", measure.until))
+                    if value is not None
+                )
+                lines.append(f"{head} {_XYCE_STATISTIC[measure.kind]} {signal}{window}")
+            elif measure.kind == "value_at":
+                if measure.at is None:
+                    raise SimulationError(f"{measure.slot} names no point to take the value at")
+                lines.append(f"{head} FIND {signal} AT={spice_number(measure.at)}")
+            elif measure.kind == "crossing":
+                after = f" FROM={spice_number(measure.after)}" if measure.after is not None else ""
+                lines.append(
+                    f"{head} WHEN {signal}={spice_number(measure.level)} "
+                    f"{_XYCE_EDGE[measure.edge]}={measure.occurrence}{after}"
+                )
+            else:
+                raise SimulationError(f"Xyce has no lowering for a {measure.kind} measure")
+        return lines
+
+    def parse(
+        self,
+        output: str,
+        measures: Sequence[DeckMeasure],
+        *,
+        outputs: Mapping[str, str] | None = None,
+    ) -> dict[str, Decimal | str]:
+        """Read the measure file's `NAME = value` lines into decimals.
+
+        `FAILED` is a measure Xyce could not take; a measure the file does not
+        name is not reported. Either gets a reason and no number.
+        """
+        found: dict[str, Decimal | str] = {}
+        for path, text in sorted((outputs or {}).items()):
+            if not self._MEASURE_FILE.search(path):
+                continue
+            for slot, value in self._MEASURED.findall(text):
+                slot = slot.lower()
+                if value.upper() == "FAILED":
+                    found[slot] = "Xyce reported the measure as failed"
+                    continue
+                try:
+                    found[slot] = Decimal(value)
+                except Exception:
+                    found[slot] = f"Xyce wrote {value!r}, which is not a number"
+        return {
+            measure.slot: found.get(measure.slot, "Xyce's measure file does not report it")
+            for measure in measures
+        }
+
+
+def lower_question(
+    *,
+    title: Sequence[str],
+    devices: Sequence[str],
+    bench: Sequence[BenchItem],
+    models: Sequence[ModelFile],
+    analysis: Analysis,
+    measures: Sequence[DeckMeasure],
+    dialect: SpiceDialect,
+    options: Mapping[str, str] = DETERMINISTIC_OPTIONS,
+) -> str:
+    """Write a question's deck: shared circuit, then the dialect's lines.
+
+    The circuit -- devices, subcircuit instances and bench -- is the same for
+    every SPICE dialect; only the options, the analysis and the measurement
+    lines are the dialect's. Each model is included by path, never inlined.
+    """
+    ac = analysis.kind == "ac"
+    lines = [f"* {line}" for line in title]
+    lines.extend(devices)
+    for role in ("supply", "load"):
+        items = [item for item in bench if item.role == role]
+        lines.extend(bench_device(item, index, ac=ac) for index, item in enumerate(items))
+    for path in sorted({model.path for model in models}):
+        lines.append(f".include {path}")
+    lines.extend(dialect.options(options))
+    lines.extend(dialect.analysis_lines(analysis, measures))
+    lines.append(".end")
+    return "\n".join(lines) + "\n"
+
+
+# --------------------------------------------------------------------------
 # Backends
 # --------------------------------------------------------------------------
 
@@ -470,6 +1167,8 @@ class RawResult:
     stdout: str
     exit_status: int
     netlist: str
+    #: Files the run wrote beside its input, by name: Xyce's measure files.
+    outputs: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -509,6 +1208,9 @@ class NgspiceBackend:
                 f"{self.executable} is not installed; the run reports unsupported "
                 "rather than producing a substitute result"
             )
+        # Absolute, because ngspice runs from inside the workspace and is also
+        # handed the deck's path: a relative path would be resolved twice.
+        workspace = Path(workspace).resolve()
         workspace.mkdir(parents=True, exist_ok=True)
         deck = workspace / "deck.cir"
         deck.write_text(netlist)
@@ -521,6 +1223,64 @@ class NgspiceBackend:
         )
         return RawResult(
             self.name, self.version(), completed.stdout, completed.returncode, netlist
+        )
+
+
+@dataclass
+class XyceBackend:
+    """Xyce, reached across a process boundary as ngspice is.
+
+    Xyce writes its measures to files beside the netlist rather than to its
+    output, so a run returns those files with what it printed. Where Xyce is
+    not installed it says so, by name, and nothing runs in its place.
+    """
+
+    name: str = "xyce"
+    executable: str = "Xyce"
+
+    def available(self) -> bool:
+        return shutil.which(self.executable) is not None
+
+    def version(self) -> str:
+        if not self.available():
+            raise BackendUnavailable(f"{self.executable} is not installed")
+        completed = subprocess.run(
+            [self.executable, "-v"], capture_output=True, text=True, timeout=30
+        )
+        printed = [line.strip() for line in (completed.stdout or completed.stderr).splitlines()]
+        for line in printed:
+            if self.name in line.lower():
+                return line
+        return next((line for line in printed if line), "unknown")
+
+    def run(self, netlist: str, *, workspace: Path, timeout: int = 60) -> RawResult:
+        if not self.available():
+            raise BackendUnavailable(
+                f"{self.executable} is not installed; the run reports unsupported "
+                "rather than producing a substitute result"
+            )
+        # Absolute, for the reason ngspice's is: Xyce runs from inside the
+        # workspace and is handed the deck's path, and writes its measure
+        # files beside that path.
+        workspace = Path(workspace).resolve()
+        workspace.mkdir(parents=True, exist_ok=True)
+        deck = workspace / "deck.cir"
+        deck.write_text(netlist)
+        completed = subprocess.run(
+            [self.executable, str(deck)],
+            capture_output=True,
+            text=True,
+            cwd=workspace,
+            timeout=timeout,
+        )
+        outputs = {
+            path.name: path.read_text(errors="replace")
+            for path in sorted(workspace.glob(f"{deck.name}.m*"))
+            if path.is_file()
+        }
+        return RawResult(
+            self.name, self.version(), completed.stdout, completed.returncode, netlist,
+            outputs=outputs,
         )
 
 

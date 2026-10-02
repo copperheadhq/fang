@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="328" viewBox="0 0 720 328" font-family="Helvetica, Arial, sans-serif">
+<title>interconnect: What is connected to what?</title>
+<defs><marker id="arrow" viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0.8 L8,4 L0,7.2 Z" fill="#000000"/></marker></defs>
+<g transform="translate(0,0)">
+<line x1="28" y1="126" x2="692" y2="126" stroke="#000000" stroke-width="0.6" stroke-dasharray="2 4"/>
+<text x="28" y="119" font-size="9" fill="#000000">NOTHING IN THIS VIEW CONNECTS TO THESE</text>
+<polyline points="54.4,88.0 54.4,106.0 216.0,106.0 216.0,88.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>ground: NET-4519b17f8f99</title></polyline>
+<polyline points="80.8,88.0 80.8,113.0 232.0,113.0 232.0,88.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-542450c0631a</title></polyline>
+<polyline points="248.0,88.0 248.0,120.0 107.2,120.0 107.2,88.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-601435c64e5a</title></polyline>
+<polyline points="264.0,88.0 264.0,127.0 133.6,127.0 133.6,88.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-dd1fe7b3f522</title></polyline>
+<polyline points="280.0,88.0 280.0,134.0 410.4,134.0 410.4,88.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-0d0c279fcba8</title></polyline>
+<polyline points="296.0,88.0 296.0,141.0 436.8,141.0 436.8,88.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-59321d691cbc</title></polyline>
+<polyline points="463.2,88.0 463.2,148.0 637.6,148.0 637.6,88.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-58788eea8844</title></polyline>
+<polyline points="489.6,88.0 489.6,155.0 664.8,155.0 664.8,88.0" fill="none" stroke="#000000" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>electrical: NET-b6046db85658</title></polyline>
+<polyline points="583.2,88.0 583.2,162.0 312.0,162.0 312.0,88.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>ground: NET-4d1ca10e619c</title></polyline>
+<polyline points="610.4,88.0 610.4,169.0 328.0,169.0 328.0,88.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3" marker-start="url(#arrow)" marker-end="url(#arrow)"><title>ground: NET-5f99949bd7a1</title></polyline>
+<g><rect x="28" y="152" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="94" y="181.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">ANTENNAMATCH</text><text x="94" y="194.0" text-anchor="middle" font-size="9" fill="#000000">(BLOCK)</text><title>BLK-42978eb8675a, unknown: return_loss</title></g>
+<g><rect x="28" y="28" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="94" y="57.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">SHUNT_C</text><text x="94" y="70.0" text-anchor="middle" font-size="9" fill="#000000">(CAPACITOR)</text><title>CMP-4e8847eff69d, unknown: tolerance_pct, voltage_rating</title></g>
+<g><rect x="200" y="28" width="144" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="272" y="57.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">FEED</text><text x="272" y="70.0" text-anchor="middle" font-size="9" fill="#000000">(RFCONNECTOR)</text><title>CMP-ae0dd20b2b9f</title></g>
+<g><rect x="384" y="28" width="132" height="60" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="5 3"/><text x="450" y="57.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">SERIES_L</text><text x="450" y="70.0" text-anchor="middle" font-size="9" fill="#000000">(INDUCTOR)</text><title>CMP-c56bbd49ae4f, unknown: current_rating, dc_resistance</title></g>
+<g><rect x="556" y="28" width="136" height="60" fill="none" stroke="#000000" stroke-width="1.2"/><text x="624" y="57.0" text-anchor="middle" font-size="12" font-weight="bold" fill="#000000">ANTENNA</text><text x="624" y="70.0" text-anchor="middle" font-size="9" fill="#000000">(CHIPANTENNA)</text><title>CMP-eae764b0bc08</title></g>
+<text x="57.4" y="97.0" text-anchor="start" font-size="8" fill="#000000">RF</text>
+<text x="83.8" y="97.0" text-anchor="start" font-size="8" fill="#000000">GND</text>
+<text x="251.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">SIG</text>
+<text x="267.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">RF</text>
+<text x="283.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">SIG</text>
+<text x="299.0" y="97.0" text-anchor="start" font-size="8" fill="#000000">RF</text>
+<text x="466.2" y="97.0" text-anchor="start" font-size="8" fill="#000000">RF</text>
+<text x="492.6" y="97.0" text-anchor="start" font-size="8" fill="#000000">FEED</text>
+<text x="586.2" y="97.0" text-anchor="start" font-size="8" fill="#000000">RF</text>
+<text x="613.4" y="97.0" text-anchor="start" font-size="8" fill="#000000">GND</text>
+<line x1="28" y1="240" x2="54" y2="240" stroke="#000000" stroke-width="1"/>
+<text x="60" y="243.5" font-size="9.5" fill="#000000">ELECTRICAL</text>
+<line x1="140" y1="240" x2="166" y2="240" stroke="#000000" stroke-width="1.4" stroke-dasharray="6 3"/>
+<text x="172" y="243.5" font-size="9.5" fill="#000000">GROUND</text>
+<text x="28" y="270" font-size="9.5" fill="#000000">3 node(s) carry unknown parameters; a dashed border marks them</text>
+</g>
+<text x="360.0" y="300" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="0.08em" fill="#000000">INTERCONNECT</text>
+<text x="360.0" y="316" text-anchor="middle" font-size="10" font-style="italic" fill="#000000">What is connected to what?</text>
+</svg>

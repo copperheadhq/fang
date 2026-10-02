@@ -3,7 +3,7 @@
   (design
     (source "lag_element.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:1e305e9f1f71d6aae4efbfc40152d3b276eb47dadd0e0aa16521fcaa04e8181d")
+    (snapshot "sha256:267449679105c3a3cbd89b5813289d93986c27da193d2e1e219562ea801d8948")
     (project "PRJ-EXAMPLES")
   )
   (components

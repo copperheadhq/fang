@@ -1,5 +1,5 @@
 * presettable_voltage_source: five_volts
-* plan for ngspice over sha256:9392cfa48792b725d77bf9cea666d18f8002ab70b5f94ce63592737316f912b9
+* plan for ngspice over sha256:8c24ff5f503fd7003f8f06734f6ecda5906e666a85c982f37852b57367dd2063
 * GND1 abstracted; no device emitted
 R1 2 0 1018.3
 * RV1 abstracted; no device emitted

@@ -1,13 +1,16 @@
 """Spec: Deterministic Pin Assignment; A Pin Choice Is A Recorded Decision;
-An Incomplete Lowering Fails Explicitly."""
+An Incomplete Lowering Fails Explicitly; A Port May Be One Peripheral
+Instance."""
 
 import pytest
 
 from fang.diagnostics import FangError
 from fang.elaborate import elaborate
-from fang.entities import Connection, Decision, Pin as PinEntity
-from fang.interfaces import I2CPort, Pin, PinMap, SPIPort, UARTPort
+from fang.entities import Connection, Decision, Evidence, Pin as PinEntity, Port as PortEntity
+from fang.identity import derive
+from fang.interfaces import AF, I2CPort, Pin, PinMap, SPIPort, UARTPort
 from fang.lang import Part, System, V, kOhm
+from fang.rationale import Assumes, Cites
 from fang.serialization import canonical_bytes
 
 PROJECT = "PRJ-LOWER"
@@ -334,3 +337,211 @@ def test_naming_a_signal_the_interface_does_not_have_is_refused():
 
     with pytest.raises(AttributeError, match="no signal"):
         Rail().vout.not_a_wire
+
+
+# -- peripheral instances and selectors ------------------------------------
+
+
+class Controller(Part):
+    """Two I2C controllers, each a port, each with its own cited candidates."""
+
+    i2c1 = I2CPort(peripheral="I2C1", voh_min=2.4 * V)
+    i2c2 = I2CPort(peripheral="I2C2", voh_min=2.4 * V)
+    PB8 = Pin("PB8", role="clock")
+    PB6 = Pin("PB6", role="clock")
+    PB9 = Pin("PB9", role="data")
+    PB7 = Pin("PB7", role="data")
+    PB10 = Pin("PB10", role="clock")
+    PB3 = Pin("PB3", role="data")
+
+    af_table = Cites("I2C1 and I2C2 at AF4, I2C2_SDA on PB3 at AF9", document="SRC-DS-TEST")
+    pinmap = PinMap(
+        {
+            "i2c1.scl": {"PB8": AF(4), "PB6": AF(4)},
+            "i2c1.sda": {"PB9": AF(4), "PB7": AF(4)},
+            "i2c2.scl": {"PB10": AF(4)},
+            "i2c2.sda": {"PB3": AF(9)},
+        },
+        evidence="af_table",
+    )
+
+
+class RoutedBoard(System):
+    mcu = Controller()
+    imu = IMU()
+
+    def architecture(self):
+        self.mcu.i2c1 >> self.imu.i2c
+
+
+def ports(result):
+    return {
+        str(e.identity.path): e
+        for e in result.snapshot.entities.values()
+        if isinstance(e, PortEntity)
+    }
+
+
+def test_the_instance_is_recorded_on_the_port():
+    result = elaborate(RoutedBoard, project_id=PROJECT)
+    assert result.ok, [d.message for d in result.diagnostics]
+    by_path = ports(result)
+    assert by_path["system.mcu.i2c1"].peripheral == "I2C1"
+    assert by_path["system.mcu.i2c1"].as_dict()["peripheral"] == "I2C1"
+    assert "peripheral" not in by_path["system.mcu.i2c1"].parameters
+    # A port that names no instance says nothing about one.
+    assert by_path["system.imu.i2c"].peripheral is None
+    assert "peripheral" not in by_path["system.imu.i2c"].as_dict()
+
+
+def test_the_chosen_pins_selector_reaches_the_graph():
+    result = elaborate(RoutedBoard, project_id=PROJECT)
+    names = pin_names(result)
+    evidence = derive(PROJECT, "evidence", "system.mcu.af_table").id
+    assert isinstance(result.snapshot.entities[evidence], Evidence)
+
+    by_signal = {names[c.source]: c for c in lowered(result)}
+    scl = by_signal["PB8"]
+    assert scl.selectors == {scl.source: {"selector": "AF4", "evidence": evidence}}
+    # Only the side that declared a selector carries one: the IMU's pin has none.
+    assert scl.target not in scl.selectors
+    assert scl.as_dict()["selectors"] == {
+        scl.source: {"evidence": evidence, "selector": "AF4"}
+    }
+    assert evidence in scl.references()
+
+
+def test_a_selector_without_evidence_is_refused_naming_the_part():
+    class Uncited(Part):
+        i2c1 = I2CPort(peripheral="I2C1")
+        PB8 = Pin("PB8", role="clock")
+        PB9 = Pin("PB9", role="data")
+        pinmap = PinMap({"i2c1.scl": {"PB8": AF(4)}, "i2c1.sda": {"PB9": AF(4)}})
+
+    class Lonely(System):
+        mcu = Uncited()
+
+    result = elaborate(Lonely, project_id=PROJECT)
+    assert not result.ok and result.snapshot is None
+    assert result.diagnostics[0].code == "IFACE-0003"
+    assert "Uncited" in result.diagnostics[0].message
+
+
+def test_a_selector_citing_what_the_part_does_not_declare_is_refused():
+    class Miscited(Part):
+        i2c1 = I2CPort(peripheral="I2C1")
+        PB8 = Pin("PB8", role="clock")
+        PB9 = Pin("PB9", role="data")
+        hunch = Assumes("I2C1 is on AF4 everywhere")
+        pinmap = PinMap(
+            {"i2c1.scl": {"PB8": AF(4)}, "i2c1.sda": {"PB9": AF(4)}}, evidence="af_table"
+        )
+
+    class Misnamed(Miscited):
+        pinmap = PinMap(
+            {"i2c1.scl": {"PB8": AF(4)}, "i2c1.sda": {"PB9": AF(4)}}, evidence="hunch"
+        )
+
+    for part, phrase in ((Miscited, "declares nothing"), (Misnamed, "not a citation")):
+        class Lonely(System):
+            mcu = part()
+
+        result = elaborate(Lonely, project_id=PROJECT)
+        assert not result.ok
+        assert result.diagnostics[0].code == "IFACE-0003"
+        assert part.__name__ in result.diagnostics[0].message
+        assert phrase in result.diagnostics[0].message
+
+
+def test_candidates_without_selectors_lower_exactly_as_before():
+    """The list form and a mapping that routes nothing give the same bytes, and
+    neither puts a selectors key on any connection."""
+
+    class Unrouted(Part):
+        i2c = I2CPort(voh_min=2.4 * V)
+        PB8 = Pin("PB8", role="clock")
+        PB6 = Pin("PB6", role="clock")
+        PB9 = Pin("PB9", role="data")
+        PB7 = Pin("PB7", role="data")
+        pinmap = PinMap(
+            {"i2c.scl": {"PB8": None, "PB6": None}, "i2c.sda": {"PB9": None, "PB7": None}}
+        )
+
+    class UnroutedBoard(System):
+        mcu = Unrouted()
+        imu = IMU()
+
+        def architecture(self):
+            self.mcu.i2c >> self.imu.i2c
+
+    listed = elaborate(Board, project_id=PROJECT)
+    mapped = elaborate(UnroutedBoard, project_id=PROJECT)
+    for result in (listed, mapped):
+        for connection in lowered(result):
+            assert connection.selectors == {}
+            assert "selectors" not in connection.as_dict()
+
+    def shape(result):
+        # Source locations differ between the two classes; the lowering does not.
+        names = pin_names(result)
+        return sorted(
+            canonical_bytes(
+                {
+                    "pins": [names[c.source], names[c.target]],
+                    "connection": {
+                        k: v
+                        for k, v in c.as_dict().items()
+                        if k not in ("provenance", "source_location")
+                    },
+                }
+            )
+            for c in lowered(result)
+        ) + sorted(
+            canonical_bytes(
+                {k: v for k, v in d.as_dict().items() if k not in ("provenance", "source_location")}
+            )
+            for d in result.snapshot.entities.values()
+            if isinstance(d, Decision)
+        )
+
+    assert shape(listed) == shape(mapped)
+
+
+def test_two_controllers_are_two_ports():
+    """A connection to one controller lowers onto that controller's pins only."""
+
+    class OnI2C2(System):
+        mcu = Controller()
+        imu = IMU()
+
+        def architecture(self):
+            self.mcu.i2c2 >> self.imu.i2c
+
+    result = elaborate(OnI2C2, project_id=PROJECT)
+    assert result.ok, [d.message for d in result.diagnostics]
+    names = pin_names(result)
+    assigned = sorted(names[c.source] for c in lowered(result))
+    assert assigned == ["PB10", "PB3"]
+    selectors = sorted(
+        entry["selector"] for c in lowered(result) for entry in c.selectors.values()
+    )
+    assert selectors == ["AF4", "AF9"]
+
+    class Both(System):
+        mcu = Controller()
+        near = IMU()
+        far = IMU()
+
+        def architecture(self):
+            self.mcu.i2c1 >> self.near.i2c
+            self.mcu.i2c2 >> self.far.i2c
+
+    result = elaborate(Both, project_id=PROJECT)
+    assert result.ok, [d.message for d in result.diagnostics]
+    names = pin_names(result)
+    by_bus = {}
+    for connection in lowered(result):
+        by_bus.setdefault(connection.derived_from_interface, set()).add(
+            names[connection.source]
+        )
+    assert sorted(map(sorted, by_bus.values())) == [["PB10", "PB3"], ["PB8", "PB9"]]

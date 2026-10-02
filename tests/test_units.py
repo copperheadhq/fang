@@ -76,3 +76,21 @@ def test_an_unrecognized_symbol_is_rejected():
     with pytest.raises(FangError) as caught:
         Unit.parse("bogons")
     assert caught.value.diagnostic.code == "UNIT-0002"
+
+
+def test_a_decibel_converts_only_to_a_decibel():
+    """dB is dimensionless by the seven bases and still not a linear ratio:
+    10 dB is not 1000 percent, and nothing converts it into one."""
+    loss = Quantity.scalar("10", "dB")
+    assert Unit.parse("dB").logarithmic and not Unit.parse("percent").logarithmic
+    for linear in ("percent", "1", "ppm", "rad"):
+        with pytest.raises(FangError) as caught:
+            loss.converted_to(linear)
+        assert caught.value.diagnostic.code == "UNIT-0001"
+        with pytest.raises(FangError):
+            Quantity.scalar("50", linear).converted_to("dB")
+    converted, exact = loss.converted_to("dB")
+    assert converted == loss and exact
+    with pytest.raises(FangError) as caught:
+        require_same_dimension(loss, Quantity.scalar("50", "percent"), "comparison")
+    assert caught.value.diagnostic.code == "UNIT-0001"

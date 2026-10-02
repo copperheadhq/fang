@@ -3,7 +3,7 @@
   (design
     (source "voltage_follower.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:6ad7bc03ba1ca11075962772f094568489c1268475ce690bc5c732aeecfff596")
+    (snapshot "sha256:59c2e144d146b6c30cb82d608069d419104952da882738a3049c58a6b253e452")
     (project "PRJ-EXAMPLES")
   )
   (components

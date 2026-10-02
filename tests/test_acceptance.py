@@ -1,7 +1,8 @@
 """The acceptance criteria of the combined spec.
 
 One test per acceptance criterion. AT-R1 to AT-R13 are the representation tests;
-AT-K1 to AT-K10 are the kernel tests. A criterion whose subject is not built yet
+AT-K1 to AT-K10 are the kernel tests; AT-V1 is the verification test, which
+needs ngspice and is skipped, naming it, where ngspice is not installed. A criterion whose subject is not built yet
 is skipped with the delivery phase that owns it named, so the suite reports what
 is actually demonstrated rather than implying more.
 """
@@ -546,3 +547,223 @@ def test_at_k10_a_simulation_result_names_its_plan_backend_models_and_gaps():
     assert isinstance(rendered["coverage_gaps"], list)
     # And the pass is a finding, never a proof.
     assert "not proof of physical correctness" in rendered["finding"]["caveat"]
+
+
+# ==========================================================================
+# Verification acceptance test
+# ==========================================================================
+
+
+def _ngspice_installed() -> bool:
+    from fang.verification import NGSPICE
+
+    return NGSPICE.available()
+
+
+@pytest.mark.skipif(not _ngspice_installed(), reason="ngspice is not installed here")
+def test_at_v1_an_undecided_constraint_is_decided_by_a_run_that_entered_through_the_gate(
+    tmp_path,
+):
+    """AT-V1: a parameter with no value, a hard constraint over it, and a
+    circuit question measuring into it with an explicit bench. The run's
+    measurement enters through the gate and decides the constraint on the
+    committed head; tightened past the measured value, the measurement never
+    reaches the head and the verification reads failed, with the same
+    evidence."""
+    from fang.checks import DEFAULT_CHECKS
+    from fang.cli import load_system
+    from fang.elaborate import elaborate
+    from fang.lang import kHz, require
+    from fang.values import ValueStatus
+    from fang.verification import NGSPICE, constraint_statuses, questions, verify
+
+    program = load_system(EXAMPLES / "rc_filter" / "rc_filter.py")
+    result = elaborate(program, project_id="PRJ-AT-V1")
+    graph = KernelGraph(result.snapshot, checks=DEFAULT_CHECKS)
+    question = questions(graph.head)[0]
+    entity, attr = question.parameters[0]
+    assert not graph.head.entities[entity].parameters[attr].known
+    assert set(constraint_statuses(graph.head, question).values()) == {CheckStatus.UNKNOWN}
+
+    (answered,) = verify(graph, traits=result.traits, workspace=tmp_path / "pass")
+
+    # The constraint that was undecided is decided on the committed head.
+    head = graph.head
+    assert set(constraint_statuses(head, question).values()) == {CheckStatus.PASS}
+    # The parameter's value is inferred, with the run's evidence as its source.
+    value = head.entities[entity].parameters[attr]
+    assert value.status is ValueStatus.INFERRED
+    assert value.source == answered.evidence
+    # The verification names its level and tool; the evidence names the version.
+    verification = head.entities[question.id]
+    assert (verification.result, verification.level, verification.tool) == (
+        "PASS", "circuit", "ngspice",
+    )
+    record = head.entities[answered.evidence].extensions["measurement"]
+    assert record["tool"] == {"name": "ngspice", "version": NGSPICE.version()}
+
+    class Tightened(program):
+        def constraints(self):
+            require(self.corner >= 1 * kHz)
+            require(self.corner <= 1.2 * kHz)
+
+    tightened = elaborate(Tightened, project_id="PRJ-AT-V1")
+    graph = KernelGraph(tightened.snapshot, checks=DEFAULT_CHECKS)
+    before = graph.head
+    (failed,) = verify(graph, traits=tightened.traits, workspace=tmp_path / "fail")
+
+    # The measurement transaction was refused, and the head never held the value.
+    assert failed.proposal.rejected
+    assert not graph.head.entities[entity].parameters[attr].known
+    assert graph.head.entities[entity].as_dict() == before.entities[entity].as_dict()
+    # The verification reads failed, with the same evidence the passing run had.
+    verification = graph.head.entities[question.id]
+    assert verification.result == "FAIL"
+    assert verification.evidence == (failed.evidence,) == (answered.evidence,)
+
+
+# -- AT-F1 and AT-F2: firmware emulation -----------------------------------------
+
+
+def _renode_installed() -> bool:
+    """Renode is on the path, at a version the lowering was checked against."""
+    from fang.emulation import RENODE
+    from fang.verification import ToolUnavailable
+
+    if not RENODE.available():
+        return False
+    try:
+        RENODE.version()
+    except ToolUnavailable:
+        return False
+    return True
+
+
+def _sensor_node():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "sensor_node_for_acceptance", EXAMPLES / "sensor_node" / "sensor_node.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _asked(snapshot, attribute):
+    """One question of the board, by the attribute that declares it."""
+    from fang.verification import questions
+
+    return next(q for q in questions(snapshot) if q.label.endswith(f".{attribute}"))
+
+
+@pytest.mark.skipif(not _renode_installed(), reason="renode 1.17.0 is not installed here")
+def test_at_f1_a_requirement_over_firmware_behaviour_is_decided_through_the_gate(tmp_path):
+    """AT-F1: the demo board, its firmware and the startup question. The run's
+    measurements enter through the gate and decide every constraint over them
+    on the committed head, each parameter inferred with the run's evidence as
+    its source, the evidence naming the emulator, the firmware and the plan.
+    Run against the wrong-address build instead, the head does not move and
+    the verification reads failed, with the first read observed absent."""
+    from fang.checks import DEFAULT_CHECKS
+    from fang.elaborate import elaborate
+    from fang.emulation import RENODE, Emulates
+    from fang.values import ValueStatus
+    from fang.verification import answer, constraint_statuses, questions
+
+    board = _sensor_node()
+
+    result = elaborate(board.SensorNode, project_id="PRJ-AT-F1")
+    graph = KernelGraph(result.snapshot, checks=DEFAULT_CHECKS)
+    question = _asked(graph.head, "startup")
+    assert set(constraint_statuses(graph.head, question).values()) == {CheckStatus.UNKNOWN}
+
+    outcome = answer(graph, question, traits=result.traits, workspace=tmp_path / "pass")
+
+    head = graph.head
+    assert set(constraint_statuses(head, question).values()) == {CheckStatus.PASS}
+    for entity, attr in question.parameters:
+        value = head.entities[entity].parameters[attr]
+        assert value.status is ValueStatus.INFERRED and value.source == outcome.evidence
+    verification = head.entities[question.id]
+    assert (verification.result, verification.level, verification.tool) == ("PASS", "behavioural", "renode")
+    record = head.entities[outcome.evidence].extensions["measurement"]
+    assert record["tool"] == {"name": "renode", "version": RENODE.version()}
+    assert record["inputs"][0]["path"] == "firmware/elf/sensor_node.elf"
+    assert record["inputs"][0]["hash"].startswith("sha256:")
+    assert record["plan"].startswith("sha256:")
+
+    original = board.SensorNode.startup
+
+    class WrongAddress(board.SensorNode):
+        startup = Emulates(
+            "sensor_ready", run_until=original.run_until, stimuli=original.stimuli,
+            measures=original.measures, abstracted=original.abstracted,
+            firmware=str(EXAMPLES / "sensor_node" / "firmware" / "elf" / "wrong_address.elf"),
+        )
+
+    result = elaborate(WrongAddress, project_id="PRJ-AT-F1")
+    graph = KernelGraph(result.snapshot, checks=DEFAULT_CHECKS)
+    question = _asked(graph.head, "startup")
+    before = {entity: graph.head.entities[entity].as_dict() for entity, _ in question.parameters}
+    failed = answer(graph, question, traits=result.traits, workspace=tmp_path / "fail")
+    assert failed.status == "failed"
+    for entity, attr in question.parameters:
+        assert not graph.head.entities[entity].parameters[attr].known
+        assert graph.head.entities[entity].as_dict() == before[entity]
+    verification = graph.head.entities[question.id]
+    assert verification.result == "FAIL"
+    measures = graph.head.entities[failed.evidence].extensions["measurement"]["measures"]
+    first_read = next(m for m in measures if m["name"] == "first_read")
+    assert first_read["max"] == "Infinity"
+
+
+@pytest.mark.skipif(not _renode_installed(), reason="renode 1.17.0 is not installed here")
+def test_at_f2_what_cannot_be_modelled_cannot_pass(tmp_path):
+    """AT-F2: with the sensor's model removed and the sensor not abstracted,
+    or a fault its model does not declare, the plan is refused naming what is
+    missing and nothing runs; and the startup plan run ten times gives ten
+    byte-identical event records."""
+    from fang.elaborate import elaborate
+    from fang.emulation import RENODE, EmulationModel, Emulates, Fault, Firmware
+    from fang.lang import System
+    from fang.verification import NotRunnable, questions
+
+    board = _sensor_node()
+
+    class NoSensorModel(board.SensorNode):
+
+        def __init__(self, **overrides):
+            System.__init__(self, **overrides)
+            self.mcu.add_trait(EmulationModel(source="fang:stm32f401re"))
+            self.mcu.add_trait(Firmware("firmware/elf/sensor_node.elf", target="stm32f401re"))
+
+    result = elaborate(NoSensorModel, project_id="PRJ-AT-F2")
+    question = _asked(result.snapshot, "startup")
+    with pytest.raises(NotRunnable) as refused:
+        RENODE.prepare(result.snapshot, question, traits=result.traits)
+    assert refused.value.code == "SIM-0010" and "system.env" in str(refused.value)
+
+    original = board.SensorNode.sensor_missing
+
+    class StuckBus(board.SensorNode):
+        sensor_missing = Emulates(
+            "survives_missing_sensor", run_until=original.run_until,
+            faults=[Fault("env", "stuck_low")], measures=original.measures,
+            abstracted=original.abstracted,
+        )
+
+    result = elaborate(StuckBus, project_id="PRJ-AT-F2")
+    question = _asked(result.snapshot, "sensor_missing")
+    with pytest.raises(NotRunnable) as refused:
+        RENODE.prepare(result.snapshot, question, traits=result.traits)
+    assert refused.value.code == "SIM-0011" and "stuck_low" in str(refused.value)
+
+    result = elaborate(board.SensorNode, project_id="PRJ-AT-F2")
+    question = _asked(result.snapshot, "startup")
+    job = RENODE.prepare(result.snapshot, question, traits=result.traits)
+    records = {
+        bytes(RENODE.run(job, workspace=tmp_path / f"run-{n}").outputs["events.jsonl"])
+        for n in range(10)
+    }
+    assert len(records) == 1

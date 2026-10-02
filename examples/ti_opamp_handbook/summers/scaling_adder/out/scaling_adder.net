@@ -3,7 +3,7 @@
   (design
     (source "scaling_adder.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:d03695113d922f697a55e2629961b30b48f2974a467c1c52e8245885abd11d27")
+    (snapshot "sha256:70c9bc4fdd1b37cdca07e256910a6d4fa341c94602f4279c98d8e04bc8f207fd")
     (project "PRJ-EXAMPLES")
   )
   (components

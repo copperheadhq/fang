@@ -20,8 +20,10 @@ from fang.lang import (
     System,
     V,
     between,
+    dB,
     kOhm,
     mA,
+    percent,
     require,
     tolerance,
     uF,
@@ -171,6 +173,33 @@ def test_a_dimension_mismatch_in_a_constraint_is_caught_where_it_is_written():
     with pytest.raises(FangError) as caught:
         resistor.resistance <= 3.3 * V
     assert caught.value.diagnostic.code == "UNIT-0001"
+
+
+def test_a_decibel_parameter_is_compared_only_with_decibels():
+    """A parameter declared in dB is a ratio on a logarithmic scale: a
+    constraint comparing it with a linear ratio, or a value in one, is
+    refused where it is written, though both are dimensionless."""
+
+    class Matched(Part):
+        return_loss = Parameter("dB")
+        efficiency = Parameter("percent")
+
+    part = Matched()
+    part._entity_id = "CMP-1"
+    for written in (
+        lambda: part.return_loss >= 50 * percent,
+        lambda: part.efficiency <= 10 * dB,
+        lambda: part.return_loss >= part.efficiency,
+        lambda: part.return_loss <= part.return_loss + part.efficiency,
+        lambda: Matched(return_loss=50 * percent),
+        lambda: Parameter("dB", default=50 * percent),
+    ):
+        with pytest.raises(FangError) as caught:
+            written()
+        assert caught.value.diagnostic.code == "UNIT-0001"
+    assert isinstance(part.return_loss >= 10 * dB, Comparison)
+    assert isinstance(part.efficiency >= 50 * percent, Comparison)
+    assert str(Matched(return_loss=12 * dB).value_of("return_loss").quantity) == "12 dB"
 
 
 def test_require_outside_elaboration_is_refused():

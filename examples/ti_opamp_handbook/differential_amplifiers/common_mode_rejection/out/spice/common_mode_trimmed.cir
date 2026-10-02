@@ -1,5 +1,5 @@
 * common_mode_rejection: common_mode_trimmed
-* plan for ngspice over sha256:742b50bd2960896d7646913031b11b24684c2d757cd1fdc8920fcd76a7f6fbd9
+* plan for ngspice over sha256:e1be2efe806b42ae6038a2ab3d5ae5290561e137becc141bb4dd9495d38ee923
 * GND1 abstracted; no device emitted
 R1 2 3 100k
 R2 4 2 10k

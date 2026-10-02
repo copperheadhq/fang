@@ -3,7 +3,7 @@
   (design
     (source "servo_drive.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:5cf75165d15820beb2238d6ce91de17614fd970df5bb8838275c92feb0ee3eae")
+    (snapshot "sha256:6152eb4b83c6e72fee27e2648015dbfd9c795e1a8ddf01a30110a1bfd47a50db")
     (project "PRJ-EXAMPLES")
   )
   (components

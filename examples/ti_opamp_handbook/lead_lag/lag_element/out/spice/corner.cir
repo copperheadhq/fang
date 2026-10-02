@@ -1,5 +1,5 @@
 * lag_element: corner
-* plan for ngspice over sha256:1e305e9f1f71d6aae4efbfc40152d3b276eb47dadd0e0aa16521fcaa04e8181d
+* plan for ngspice over sha256:267449679105c3a3cbd89b5813289d93986c27da193d2e1e219562ea801d8948
 C1 1 2 10u
 * GND1 abstracted; no device emitted
 R1 4 1 1Meg

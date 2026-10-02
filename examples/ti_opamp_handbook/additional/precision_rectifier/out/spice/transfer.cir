@@ -1,5 +1,5 @@
 * precision_rectifier: transfer
-* plan for ngspice over sha256:5b1fb9652b31f80096f48ae6af810afb579266be23049317f94de7afe05f62ed
+* plan for ngspice over sha256:7216bdcc61dcb01a3b955775df96f902c470fb2497942ba9470adac4db7402ee
 * D1 abstracted; no device emitted
 * D2 abstracted; no device emitted
 * GND1 abstracted; no device emitted

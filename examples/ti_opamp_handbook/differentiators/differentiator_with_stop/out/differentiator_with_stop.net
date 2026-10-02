@@ -3,7 +3,7 @@
   (design
     (source "differentiator_with_stop.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:fc104865edfa66658b3d46e3412c0bc85a5d57669aa2d27f16dad63a97fad35c")
+    (snapshot "sha256:20a7ce65f1f45b9b2f57d471cda4483ada5daea4b6a396a123fed7368428262e")
     (project "PRJ-EXAMPLES")
   )
   (components

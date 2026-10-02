@@ -1,5 +1,5 @@
 * augmented_differentiator: input_term
-* plan for ngspice over sha256:570e491be35dbf37128a310c98928e68b81a71b907fccd1f1309bd7ec8f6bb7b
+* plan for ngspice over sha256:8f80c31ca51cdfe192801f0aeabced58d61cbe27cb274ce9d1985451258e4fd7
 C1 1 2 0.1u
 * GND1 abstracted; no device emitted
 R1 4 0 50k

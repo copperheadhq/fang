@@ -3,7 +3,7 @@
   (design
     (source "presettable_voltage_source.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:9392cfa48792b725d77bf9cea666d18f8002ab70b5f94ce63592737316f912b9")
+    (snapshot "sha256:8c24ff5f503fd7003f8f06734f6ecda5906e666a85c982f37852b57367dd2063")
     (project "PRJ-EXAMPLES")
   )
   (components

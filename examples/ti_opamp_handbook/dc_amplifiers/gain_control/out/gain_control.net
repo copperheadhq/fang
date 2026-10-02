@@ -3,7 +3,7 @@
   (design
     (source "gain_control.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:fbe3a1f611488135baef86688c04540137f5b185783c75842cc0504489c5717d")
+    (snapshot "sha256:8114e0693bd3e59d6f593eeaee1515a859d5b1635ba27f6ca76f7af4b0d5e196")
     (project "PRJ-EXAMPLES")
   )
   (components

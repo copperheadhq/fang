@@ -1,5 +1,5 @@
 * scaling_adder: e3_alone
-* plan for ngspice over sha256:d03695113d922f697a55e2629961b30b48f2974a467c1c52e8245885abd11d27
+* plan for ngspice over sha256:70c9bc4fdd1b37cdca07e256910a6d4fa341c94602f4279c98d8e04bc8f207fd
 * GND1 abstracted; no device emitted
 R1 2 3 100k
 R2 4 2 1k

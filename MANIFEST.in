@@ -6,6 +6,8 @@ include CLAUDE.md
 graft tests
 graft examples
 graft openspec
+# The emulator's data files ship inside the package; the sdist carries them too.
+recursive-include fang/renode *.repl *.cs *.json
 prune site
 prune packages
 exclude package.json

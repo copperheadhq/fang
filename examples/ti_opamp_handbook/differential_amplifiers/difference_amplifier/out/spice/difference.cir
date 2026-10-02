@@ -1,5 +1,5 @@
 * difference_amplifier: difference
-* plan for ngspice over sha256:19cbc9ce5748277885253b7954643ade799502fcd98a2350f3615508722ee8be
+* plan for ngspice over sha256:5edee7bf6f32f2f0f5f097ee144b88931c5eaad512bad550f75ad0f4427d4199
 * GND1 abstracted; no device emitted
 R1 2 3 1k
 R2 4 5 1k

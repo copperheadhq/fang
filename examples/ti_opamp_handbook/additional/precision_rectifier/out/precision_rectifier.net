@@ -3,7 +3,7 @@
   (design
     (source "precision_rectifier.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:5b1fb9652b31f80096f48ae6af810afb579266be23049317f94de7afe05f62ed")
+    (snapshot "sha256:7216bdcc61dcb01a3b955775df96f902c470fb2497942ba9470adac4db7402ee")
     (project "PRJ-EXAMPLES")
   )
   (components

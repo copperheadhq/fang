@@ -1,5 +1,5 @@
 * gain_control: k_002
-* plan for ngspice over sha256:fbe3a1f611488135baef86688c04540137f5b185783c75842cc0504489c5717d
+* plan for ngspice over sha256:8114e0693bd3e59d6f593eeaee1515a859d5b1635ba27f6ca76f7af4b0d5e196
 * GND1 abstracted; no device emitted
 * RV1 abstracted; no device emitted
 * TP1 abstracted; no device emitted

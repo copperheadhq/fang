@@ -1,5 +1,5 @@
 * differentiator: peak
-* plan for ngspice over sha256:1e661b427806bdb6f2d05622ab3c473fae585fb8fa66c30a29db37d915687c66
+* plan for ngspice over sha256:ab6b1416c3168398c7c25765b6c8e7be918b89e4c7a38316b7da9eb2ee8ba8a7
 C1 1 2 0.1u
 * GND1 abstracted; no device emitted
 R1 2 4 100k

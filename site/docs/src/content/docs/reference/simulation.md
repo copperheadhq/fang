@@ -49,14 +49,48 @@ the difference the plan records.
 
 ## Levels
 
-Verification levels run one to five, cheapest first. `select_level()` picks the
-cheapest level that can decide the question asked, so a question answerable by
-inspection does not pay for a transient run.
+Verification levels run one to five, cheapest first: equation, symbolic,
+behavioural, circuit, external. A declared question is routed by `route()`,
+which looks at the graph (if the constraints over what it measures are
+already decided, the equation level answers it and nothing runs) and the
+level and tool it chose are written on the verification. `select_level()`
+remains for a caller that knows the answers to its questions already. See
+[Verification](/reference/verification/).
+
+## Models in a question's deck
+
+A question's deck is written from the snapshot, the traits and the question.
+A part carrying a `Simulatable` model with a `.subckt` file is instantiated as
+an `X` device, its nodes in the order the model's `.subckt` line declares its
+ports, each the node of the pin the trait's `pin_map` lands on that port. A
+port no pin reaches is refused by name (`SIM-0006`). The model is included by
+path, never inlined, and its digest is recorded on the run's evidence because
+the snapshot does not hold the file.
+
+```python
+self.controller.add_trait(
+    Simulatable(
+        backends=("ngspice",),
+        source="ideal_buck.sub",            # beside the program
+        pin_map={"VIN": "vin", "GND": "gnd", "SW": "sw",
+                 "BOOT": "boot", "FB": "fb", "EN": "en"},
+        provenance=assumed_provenance("an ideal stand-in"),
+        not_modelled=("the control loop is not modelled; duty is fixed",),
+    )
+)
+```
+
+`not_modelled` items become coverage gaps on every run over the model, and the
+provenance bounds the run's confidence. A primitive is written with the value
+the graph holds, in SI units with no suffix; one with no value is refused, not
+written as 1.
 
 ## Backends
 
-`NgspiceBackend` reaches ngspice across a process boundary. It is optional and
-external, and fang finds it on `PATH`.
+`NgspiceBackend` reaches ngspice across a process boundary, and `XyceBackend`
+reaches Xyce the same way. Both are optional and external, and fang finds them
+on `PATH`. Xyce writes its measures to a file beside the netlist, which the run
+returns with what it printed.
 
 If it is not installed, `BackendUnavailable` is reported. The plan still
 compiles and the deck can still be written. The command says no run was made,
@@ -76,3 +110,6 @@ used and the assertions evaluated.
 Results re-enter canonical state as `Evidence`, through an ordinary transaction
 against the committed head, through [the gate](/concepts/the-commit-gate/).
 There is no path by which a simulation result becomes a fact without passing it.
+`fang sim` reports a run and stops there; a declared question answered by
+`fang verify` is what sets a measured parameter, as an inferred value whose
+source is that evidence.

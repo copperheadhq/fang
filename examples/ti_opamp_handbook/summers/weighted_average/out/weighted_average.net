@@ -3,7 +3,7 @@
   (design
     (source "weighted_average.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:bc74f442669f8ade44c7848c9d68e21e3a272c9e835df6d2d6c927ae25ba62ee")
+    (snapshot "sha256:d9043dafe5d5c7b910a192d4c3eab5a8b89612915ac39e64bb1973f70b4a1f48")
     (project "PRJ-EXAMPLES")
   )
   (components

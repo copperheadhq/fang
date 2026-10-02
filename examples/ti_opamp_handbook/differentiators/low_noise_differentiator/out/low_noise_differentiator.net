@@ -3,7 +3,7 @@
   (design
     (source "low_noise_differentiator.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:10976bde9a429ac5be10a35d0ed0cdd4d0d0ce3aecf7a320c32db2b1c823fc01")
+    (snapshot "sha256:78302d128bc7071ac6de815293df4873bf30c865e4f3b9fbbb50ac88a40d51c9")
     (project "PRJ-EXAMPLES")
   )
   (components

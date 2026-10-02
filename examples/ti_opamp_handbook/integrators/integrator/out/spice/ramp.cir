@@ -1,5 +1,5 @@
 * integrator: ramp
-* plan for ngspice over sha256:0cffdaf1b65c26d0dd44ecc1baf62db7e08f1547bc74972d34b1b93332467e77
+* plan for ngspice over sha256:16000664b7de374db6c6857d6d547d2ff5f6e0fe7381d12bf60a339f567eb096
 C1 1 2 0.1u
 * GND1 abstracted; no device emitted
 R1 4 1 10k

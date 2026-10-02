@@ -3,7 +3,7 @@
   (design
     (source "time_delay.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:b9496646325e3757497cd6ea91d22c959604db509a3acce603bf8b18ff9d69ba")
+    (snapshot "sha256:deae09cdcd73047907f46b680f850ac0e3c89b1a27ef6896b862bbfb89e50ad9")
     (project "PRJ-EXAMPLES")
   )
   (components

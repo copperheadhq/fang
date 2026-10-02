@@ -1,6 +1,8 @@
 """Elaboration: a Fang program becomes a graph snapshot and a tool plan.
 
-Spec: "Deterministic Sandboxed Elaboration" and "The Elaboration Result".
+Spec: "Deterministic Sandboxed Elaboration", "The Elaboration Result", "A Port
+May Be One Peripheral Instance", and "An Addressed Bus Device Carries Its
+Address".
 
 Elaboration builds a graph. It never mutates geometry and never calls a tool.
 Its output is data: the Python object graph is not reachable from the snapshot
@@ -17,10 +19,14 @@ from . import SCHEMA_VERSION, __version__
 from .constraints import Constraint, ConstraintClass, Enforcement, Node
 from .diagnostics import (
     ELAB_UNTYPED_CONNECTION,
+    IFACE_SELECTOR_WITHOUT_EVIDENCE,
+    IFACE_STRAP_UNKNOWN_PIN,
+    UNIT_DIMENSION_MISMATCH,
     Diagnostic,
     FangError,
     Severity,
     SourceLocation,
+    error,
 )
 from .entities import (
     Assumption,
@@ -40,7 +46,7 @@ from .entities import (
 )
 from .graph import Snapshot
 from .identity import Identity, Origin, Path, derive, transliterate_siblings
-from .interfaces import InterfacePort
+from .interfaces import InterfacePort, Strap
 from .lowering import emit as emit_lowering, lower
 from .lang import ElaborationContext, Module, Surface, System, class_location
 from .provenance import Actor, ActorKind, Input, Provenance, ProvenanceOrigin, ProvenanceRecord
@@ -48,6 +54,7 @@ from .sandbox import Inputs, Sandbox, SandboxViolation
 from .toolplan import ToolPlan
 from .traits import TraitRegistry
 from .validation import ValidationReport, validate
+from .units import DIMENSIONLESS, Quantity, Unit, _decimal_str
 from .values import Value
 
 #: The default build time. Fixed rather than wall-clock, so reproducibility is
@@ -301,6 +308,17 @@ def _build_entities(
         for trait in module.traits:
             traits.attach(entity.id, trait)
 
+        # A selector is read off a table, so the table has to be cited before
+        # anything is lowered onto the pins it routes.
+        _check_selector_evidence(module)
+
+        # Pins by the name the part's datasheet gives them, which is how a strap
+        # names them; the identifiers are the ones the pin entities get below.
+        pins_by_name = {
+            pin.name: derive(project_id, "pin", f"{path}.{name}").id
+            for name, pin in sorted(module.pins().items(), key=lambda kv: kv[1]._order)
+        }
+
         # One interface entity per surface type in use; a port instance per
         # declared surface. Stage 3 replaces these with the full catalogue.
         for name, surface in sorted(module.surfaces().items(), key=lambda kv: kv[1]._order):
@@ -334,6 +352,8 @@ def _build_entities(
                 provenance=_provenance(revision_id, built_at, surface._source),
                 source_location=surface._source,
                 direction=surface.direction,
+                peripheral=getattr(surface, "peripheral", None),
+                address_strap=_address_strap(surface, module, pins_by_name),
             )
             entities[port.id] = port
 
@@ -354,7 +374,13 @@ def _build_entities(
         )
         for name, declaration in declarations:
             rationale_entity = _rationale_entity(
-                declaration, f"{path}.{name}", project_id, revision_id, built_at, scope
+                declaration,
+                f"{path}.{name}",
+                project_id,
+                revision_id,
+                built_at,
+                scope,
+                module=module,
             )
             entities[rationale_entity.id] = rationale_entity
 
@@ -449,31 +475,146 @@ def _signal_specs(surface: Surface) -> tuple[SignalSpec, ...]:
 
 
 def _port_parameters(surface: Surface) -> dict[str, Value]:
-    """The electrical parameters a port declares, validated against its type."""
+    """The electrical parameters a port declares, validated against its type.
+
+    A bare number is refused naming the parameter, as `Parameter` refuses one:
+    `address=0x44` says nothing about what 0x44 counts, and `0x44 * addr` does.
+    A fixed address is one scalar, as each address of a strap is: a device
+    answers on one address, so a range is no address, and one the board selects
+    is written as a `Strap`.
+    """
     if not isinstance(surface, InterfacePort):
         return {}
     declared = surface.interface.parameters
     parameters: dict[str, Value] = {}
     for name, quantity in sorted(surface.parameter_values.items()):
         if isinstance(quantity, Value):
+            if name == "address" and quantity.quantity is not None:
+                _refuse_non_scalar_address(surface, quantity.quantity)
             parameters[name] = quantity
             continue
         expected = declared.get(name)
+        if not isinstance(quantity, Quantity):
+            dimensionless = (
+                expected is not None and Unit.parse(expected).dimension == DIMENSIONLESS
+            )
+            raise error(
+                UNIT_DIMENSION_MISMATCH,
+                f"{surface.interface.name}.{name} takes a quantity with an explicit "
+                f"unit, not {quantity!r}; a bare number is not a parameter"
+                + (' (a dimensionless one is written n * UnitLiteral("1"))'
+                   if dimensionless else ""),
+                location=surface._source,
+            )
         if expected is not None:
-            from .units import Unit
-
             if quantity.dimension != Unit.parse(expected).dimension:
-                raise FangError(
-                    Diagnostic(
-                        "UNIT-0001",
-                        Severity.ERROR,
-                        f"{surface.interface.name}.{name} is declared in {expected} "
-                        f"but was given {quantity.unit}",
-                        location=surface._source,
-                    )
+                raise error(
+                    UNIT_DIMENSION_MISMATCH,
+                    f"{surface.interface.name}.{name} is declared in {expected} "
+                    f"but was given {quantity.unit}",
+                    location=surface._source,
                 )
+        if name == "address":
+            _refuse_non_scalar_address(surface, quantity)
         parameters[name] = Value.explicit(quantity)
     return parameters
+
+
+def _refuse_non_scalar_address(surface: Surface, quantity: Quantity) -> None:
+    """Refuse a fixed address that is a range or a tolerance, under the code
+    that already refuses a strap's non-scalar address."""
+    if quantity.kind == "scalar":
+        return
+    low, high = (_decimal_str(bound) for bound in quantity.interval())
+    raise error(
+        UNIT_DIMENSION_MISMATCH,
+        f"{surface.interface.name}.address takes one dimensionless quantity, not a "
+        f"{quantity.kind} from {low} to {high}; a device answers on one address, and "
+        "an address the board selects is written as a Strap",
+        location=surface._source,
+    )
+
+
+def _check_selector_evidence(module: Module) -> None:
+    """Refuse a pin map whose selectors cite nothing the part declares.
+
+    A selector copied wrongly from a datasheet is a board that does not work, so
+    each one names the `Cites` declaration on the same part it was read from.
+    """
+    declared = module.rationale()
+    part = type(module).__name__
+    for pin_map in sorted(type(module)._pin_maps.values(), key=lambda m: m._order):
+        selectors = getattr(pin_map, "selectors", None)
+        evidence = getattr(pin_map, "evidence", None)
+        if not selectors and evidence is None:
+            continue
+        cited = declared.get(evidence) if evidence else None
+        if cited is not None and cited.entity_kind == "evidence":
+            continue
+        if evidence is None:
+            message = (
+                f"{part} ({module._path}) declares pin selectors and names no "
+                "evidence for them; a PinMap with selectors names the Cites "
+                "declaration they were read from, as evidence=..."
+            )
+        elif cited is None:
+            message = (
+                f"{part} ({module._path}) names {evidence!r} as the evidence for "
+                "its pin selectors and declares nothing by that name"
+            )
+        else:
+            message = (
+                f"{part} ({module._path}) names {evidence!r} as the evidence for "
+                f"its pin selectors, and that is an {cited.entity_kind}, not a "
+                "citation"
+            )
+        raise error(
+            IFACE_SELECTOR_WITHOUT_EVIDENCE,
+            message,
+            entities=[module._entity_id],
+            location=pin_map._source,
+        )
+
+
+def _address_strap(
+    surface: Surface, module: Module, pins_by_name: Mapping[str, str]
+) -> dict | None:
+    """A port's address strap with its pin names resolved to pin identifiers.
+
+    The addresses are kept as decimal strings, and the address the strap selects
+    is not resolved here: elaboration does not infer nets, and the strap is the
+    one place the fact lives.
+    """
+    strap = getattr(surface, "address_strap", None)
+    if not isinstance(strap, Strap):
+        return None
+    part = type(module).__name__
+    for name in (strap.pin, *strap.by_pin):
+        if name not in pins_by_name:
+            raise error(
+                IFACE_STRAP_UNKNOWN_PIN,
+                f"the address strap on {part}.{surface.attribute} ({module._path}) "
+                f"names pin {name!r}, which {part} does not have; a strap names the "
+                "part's own pins by their vendor names",
+                entities=[module._entity_id],
+                location=surface._source,
+            )
+    by_pin: dict[str, str] = {}
+    for name, address in strap.by_pin.items():
+        if (
+            not isinstance(address, Quantity)
+            or address.dimension != DIMENSIONLESS
+            or address.kind != "scalar"
+        ):
+            raise error(
+                UNIT_DIMENSION_MISMATCH,
+                f"{surface.interface.name}.address strapped to {name} takes one "
+                f"dimensionless quantity, not {address!r}; a bare number is not a "
+                'parameter (an address is written n * UnitLiteral("1"))',
+                location=surface._source,
+            )
+        by_pin[pins_by_name[name]] = _decimal_str(address.interval()[0])
+    return {"pin": pins_by_name[strap.pin], "by_pin": by_pin}
 
 
 def _build_lowerings(
@@ -536,6 +677,11 @@ def _part_extensions(module: Module) -> dict:
         extensions["manufacturer"] = manufacturer
     if mpn:
         extensions["mpn"] = mpn
+    # Stored under the key an imported design's symbol reference already uses,
+    # so the netlist carries an authored symbol exactly as it carries one read in.
+    symbol = getattr(module, "symbol", None)
+    if symbol:
+        extensions["libsource"] = symbol
     return extensions
 
 
@@ -546,12 +692,20 @@ def _rationale_entity(
     revision_id: str,
     built_at: datetime,
     scope: Mapping[str, str],
+    *,
+    module: Module | None = None,
 ) -> Entity:
     """Turn one rationale declaration into its entity.
 
     A name that matches something declared beside it resolves to that entity's
     identifier; anything else is left alone, because it names a document or an
     entity outside this module.
+
+    A verification declared as a question carries the canonical question in
+    its extensions. The declaration builds it, through its own
+    `elaborate_question`, from the module that declares it: pin maps live on
+    part classes and are gone once the snapshot exists, so every surface the
+    question names is resolved here.
     """
 
     def ref(name: str) -> str:
@@ -610,12 +764,17 @@ def _rationale_entity(
             **common,
         )
     if kind == "verification":
+        extensions: dict = {}
+        elaborate_question = getattr(declaration, "elaborate_question", None)
+        if elaborate_question is not None and module is not None:
+            extensions["question"] = elaborate_question(module, project_id=project_id)
         return Verification(
             identity,
             verifies=ref(declaration.verifies),
             method=declaration.method,
             evidence=refs(declaration.evidence),
             result=declaration.result,
+            extensions=extensions,
             **common,
         )
     raise ValueError(f"no entity is defined for rationale kind {kind!r}")

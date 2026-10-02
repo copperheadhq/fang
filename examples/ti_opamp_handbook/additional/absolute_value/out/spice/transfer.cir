@@ -1,5 +1,5 @@
 * absolute_value: transfer
-* plan for ngspice over sha256:ea339ecc46369c6d70380d83e5ad6d96cb7c03932a9368e9039198d6d1fd0b86
+* plan for ngspice over sha256:32b1540bb6c6d4b7690b850b8e6766be976dae3f0eb9f44dc6b9e2b7f17798f1
 * D1 abstracted; no device emitted
 * D2 abstracted; no device emitted
 * GND1 abstracted; no device emitted

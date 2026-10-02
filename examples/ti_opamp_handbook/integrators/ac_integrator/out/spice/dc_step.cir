@@ -1,5 +1,5 @@
 * ac_integrator: dc_step
-* plan for ngspice over sha256:8935583c17619f39c6c5d9d52f68a503346b058ee0b0d4a4b4c52c318b31aabf
+* plan for ngspice over sha256:262f4e219d3efe34486e49176be654df9e2b9af49f7a780f3e4e9449ee5819bd
 C1 1 0 100u
 C2 3 4 0.01u
 * GND1 abstracted; no device emitted

@@ -1,0 +1,13 @@
+The ELFs in elf/ were built with `make` from this folder by:
+
+  arm-none-eabi-gcc (Arm GNU Toolchain 15.2.Rel1 (Build arm-15.86)) 15.2.1 20251203
+  arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-eabi.tar.xz
+  sha256 597893282ac8c6ab1a4073977f2362990184599643b4c5ee34870a8215783a16
+
+The build embeds no path, date or build ID, so the same toolchain rebuilds them
+byte for byte from any directory:
+
+  66cf0b7b9f61d265c54610a5774bf1c5e7e361ca6b30dba86c1658bad5e7aacf  elf/sensor_node.elf
+  69798e6a652b672c1efeca768981f85eb63557f0f5f59631263bd44ce5248d4b  elf/wrong_address.elf
+  b2ab7d61441c9456bbf6fad7dd94df1a51bd52ba05629279ce243ee287b771b8  elf/push_pull.elf
+  ddca35adbe4765747439d9bdf5142e4176a87764c90e414671e24dc02a7db014  elf/no_timeout.elf

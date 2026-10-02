@@ -1,0 +1,41 @@
+{
+  "bus": "i2c",
+  "events": [
+    "i2c.write",
+    "i2c.read",
+    "i2c.stop",
+    "stimulus",
+    "model.warning"
+  ],
+  "expected_warnings": [],
+  "faults": [
+    "absent"
+  ],
+  "id": "renode:Sensors.HS3001",
+  "inputs": {
+    "humidity": {
+      "property": "Humidity",
+      "unit": "percent"
+    },
+    "temperature": {
+      "property": "Temperature",
+      "unit": "degC"
+    }
+  },
+  "kind": "renode_peripheral",
+  "not_modelled": [
+    "conversion time: a read returns the present value at once, with no measurement delay",
+    "the sleep, heater and alert behaviour of the HS300x family"
+  ],
+  "parts": [
+    "HS3001"
+  ],
+  "provenance": {
+    "engine": "Renode 1.17.0 (1.17.0+20260907gitf1dd1b4af)",
+    "licence": "MIT, Copyright (c) Antmicro",
+    "source": "renode-infrastructure src/Emulator/Peripherals/Peripherals/Sensors/HS3001.cs"
+  },
+  "qualification": "tested in emulation",
+  "renode_type": "Antmicro.Renode.Peripherals.Sensors.HS3001",
+  "schema": "fang.emulation-model/v1"
+}

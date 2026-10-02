@@ -1,5 +1,5 @@
 * power_booster: step
-* plan for ngspice over sha256:be9ea5222f8642b908b29776cd45313386e4c5aad6ca1aea591e2fafd307f14e
+* plan for ngspice over sha256:c4f10de51d0312fc6bc5a515313acebfb468d993eabbbf2f96461292d6a366bd
 C1 1 2 47p
 C2 3 4 10p
 * GND1 abstracted; no device emitted

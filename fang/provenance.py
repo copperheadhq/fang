@@ -97,6 +97,29 @@ class ProvenanceRecord:
             out["confidence"] = self.confidence.value
         return out
 
+    @classmethod
+    def from_dict(cls, payload) -> "ProvenanceRecord":
+        """Read a record back. The inverse of `as_dict`, timestamp included."""
+        actor = payload["actor"]
+        location = payload.get("source_location")
+        confidence = payload.get("confidence")
+        created = payload["created_at"]
+        if isinstance(created, str):
+            created = datetime.fromisoformat(created.replace("Z", "+00:00"))
+        return cls(
+            ProvenanceOrigin(payload["origin"]),
+            payload["activity"],
+            Actor(ActorKind(actor["kind"]), actor["id"], actor.get("version")),
+            payload["revision_id"],
+            created,
+            derived_from=tuple(payload.get("derived_from", ())),
+            inputs=tuple(Input(i["id"], i["hash"]) for i in payload.get("inputs", ())),
+            source_location=(
+                SourceLocation.from_dict(location) if location is not None else None
+            ),
+            confidence=Confidence(confidence) if confidence is not None else None,
+        )
+
 
 class Provenance:
     """An append-only list of records, ordered oldest first."""
@@ -138,3 +161,8 @@ class Provenance:
 
     def as_list(self) -> list[dict]:
         return [record.as_dict() for record in self._records]
+
+    @classmethod
+    def from_list(cls, payload: Iterable) -> "Provenance":
+        """Read a chain back, oldest first, exactly as it was written."""
+        return cls(ProvenanceRecord.from_dict(record) for record in payload)

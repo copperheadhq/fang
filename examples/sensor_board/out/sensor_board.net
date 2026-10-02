@@ -3,7 +3,7 @@
   (design
     (source "sensor_board.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:d53bb3c1899e0ae2fdf6df4b150b34afe2b2ecf7fdbd8474807444f36e1cc911")
+    (snapshot "sha256:8570fadf033061093c00daeccc09e24d78b137a9940d71a7206cb5b7e50ac56c")
     (project "PRJ-EXAMPLES")
   )
   (components

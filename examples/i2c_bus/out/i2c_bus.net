@@ -3,7 +3,7 @@
   (design
     (source "i2c_bus.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:8b8d5a326e7b716d2ed3e33f1267c4b55ebdd35cf953b3bde1bd5d837ff96ec1")
+    (snapshot "sha256:9e4a535546786b3ae49fa860a97230058fdc09d65224a7af83ce69fbf4f5973d")
     (project "PRJ-EXAMPLES")
   )
   (components

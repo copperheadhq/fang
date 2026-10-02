@@ -1,5 +1,5 @@
 * feedback_loop: load_10000_ohm
-* plan for ngspice over sha256:09e154774b6fe1544c0642e2e4be5fee3a4d099c2fad2cedba0f697e76241c6d
+* plan for ngspice over sha256:6cd12b7075f3c74eb6bf4ed5f6e6a5d54a3b9ef1a7ce8375487a7c027d6b75ee
 * GND1 abstracted; no device emitted
 R1 2 3 1k
 * RL1 abstracted; no device emitted

@@ -1,5 +1,5 @@
 * lead_lag: dc_gain
-* plan for ngspice over sha256:ad83dbfed154341ca78b95be095d947be0694f5a54aff482de2fc066bdb69e7c
+* plan for ngspice over sha256:8a1cd66cc36ca2fccf2c8107d306a9d42e3d3627e8b4f135824320c665726755
 C1 1 0 10u
 C2 3 0 10u
 * GND1 abstracted; no device emitted

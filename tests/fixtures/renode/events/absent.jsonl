@@ -1,0 +1,69 @@
+{"seq":0,"t_ns":0,"source":"","type":"run.start","payload":{}}
+{"seq":1,"t_ns":190,"source":"mcu","type":"register.write","payload":{"address":"0x40020400","peripheral":"gpioPortB","register":"MODER","value":"0x000A0280"}}
+{"seq":2,"t_ns":450,"source":"mcu","type":"register.write","payload":{"address":"0x40020404","peripheral":"gpioPortB","register":"OTYPER","value":"0x00000300"}}
+{"seq":3,"t_ns":480,"source":"mcu","type":"register.write","payload":{"address":"0x40020424","peripheral":"gpioPortB","register":"AFRH","value":"0x00000044"}}
+{"seq":4,"t_ns":570,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x1C. Unhandled bits: [4, 6] when writing value 0x50. Tags: CCR (0x50)."}}
+{"seq":5,"t_ns":570,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x20. Unhandled bits: [0, 4] when writing value 0x11. Tags: TRISE (0x11)."}}
+{"seq":6,"t_ns":2020,"source":"mcu.usart2","type":"uart.line","payload":{"text":"sensor_node boot"}}
+{"seq":7,"t_ns":2350,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":8,"t_ns":2450,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x14. Unhandled bits: [3-5, 8-9, 11-31] when writing value 0xFFFFFBFF. Tags: ADD10 (0x1), STOPF (0x1), RESERVED (0x1), BERR (0x1), ARLO (0x1), OVR (0x1), PECERR (0x1), RESERVED (0x1), TIMEOUT (0x1), SMBALERT (0x1), RESERVED (0xFFFF)."}}
+{"seq":9,"t_ns":3750,"source":"mcu.usart2","type":"uart.line","payload":{"text":"sensor absent"}}
+{"seq":10,"t_ns":99994610,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":11,"t_ns":99994710,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x14. Unhandled bits: [3-5, 8-9, 11-31] when writing value 0xFFFFFBFF. Tags: ADD10 (0x1), STOPF (0x1), RESERVED (0x1), BERR (0x1), ARLO (0x1), OVR (0x1), PECERR (0x1), RESERVED (0x1), TIMEOUT (0x1), SMBALERT (0x1), RESERVED (0xFFFF)."}}
+{"seq":12,"t_ns":199988410,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":13,"t_ns":199988510,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x14. Unhandled bits: [3-5, 8-9, 11-31] when writing value 0xFFFFFBFF. Tags: ADD10 (0x1), STOPF (0x1), RESERVED (0x1), BERR (0x1), ARLO (0x1), OVR (0x1), PECERR (0x1), RESERVED (0x1), TIMEOUT (0x1), SMBALERT (0x1), RESERVED (0xFFFF)."}}
+{"seq":14,"t_ns":299982210,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":15,"t_ns":299982310,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x14. Unhandled bits: [3-5, 8-9, 11-31] when writing value 0xFFFFFBFF. Tags: ADD10 (0x1), STOPF (0x1), RESERVED (0x1), BERR (0x1), ARLO (0x1), OVR (0x1), PECERR (0x1), RESERVED (0x1), TIMEOUT (0x1), SMBALERT (0x1), RESERVED (0xFFFF)."}}
+{"seq":16,"t_ns":399976010,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":17,"t_ns":399976110,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x14. Unhandled bits: [3-5, 8-9, 11-31] when writing value 0xFFFFFBFF. Tags: ADD10 (0x1), STOPF (0x1), RESERVED (0x1), BERR (0x1), ARLO (0x1), OVR (0x1), PECERR (0x1), RESERVED (0x1), TIMEOUT (0x1), SMBALERT (0x1), RESERVED (0xFFFF)."}}
+{"seq":18,"t_ns":499969810,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":19,"t_ns":499969910,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x14. Unhandled bits: [3-5, 8-9, 11-31] when writing value 0xFFFFFBFF. Tags: ADD10 (0x1), STOPF (0x1), RESERVED (0x1), BERR (0x1), ARLO (0x1), OVR (0x1), PECERR (0x1), RESERVED (0x1), TIMEOUT (0x1), SMBALERT (0x1), RESERVED (0xFFFF)."}}
+{"seq":20,"t_ns":499970100,"source":"mcu.status","type":"gpio.edge","payload":{"level":1}}
+{"seq":21,"t_ns":599963610,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":22,"t_ns":599963710,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x14. Unhandled bits: [3-5, 8-9, 11-31] when writing value 0xFFFFFBFF. Tags: ADD10 (0x1), STOPF (0x1), RESERVED (0x1), BERR (0x1), ARLO (0x1), OVR (0x1), PECERR (0x1), RESERVED (0x1), TIMEOUT (0x1), SMBALERT (0x1), RESERVED (0xFFFF)."}}
+{"seq":23,"t_ns":599963900,"source":"mcu.status","type":"gpio.edge","payload":{"level":0}}
+{"seq":24,"t_ns":699957410,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":25,"t_ns":699957510,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x14. Unhandled bits: [3-5, 8-9, 11-31] when writing value 0xFFFFFBFF. Tags: ADD10 (0x1), STOPF (0x1), RESERVED (0x1), BERR (0x1), ARLO (0x1), OVR (0x1), PECERR (0x1), RESERVED (0x1), TIMEOUT (0x1), SMBALERT (0x1), RESERVED (0xFFFF)."}}
+{"seq":26,"t_ns":699957700,"source":"mcu.status","type":"gpio.edge","payload":{"level":1}}
+{"seq":27,"t_ns":799951210,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":28,"t_ns":799951310,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x14. Unhandled bits: [3-5, 8-9, 11-31] when writing value 0xFFFFFBFF. Tags: ADD10 (0x1), STOPF (0x1), RESERVED (0x1), BERR (0x1), ARLO (0x1), OVR (0x1), PECERR (0x1), RESERVED (0x1), TIMEOUT (0x1), SMBALERT (0x1), RESERVED (0xFFFF)."}}
+{"seq":29,"t_ns":799951500,"source":"mcu.status","type":"gpio.edge","payload":{"level":0}}
+{"seq":30,"t_ns":899945010,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":31,"t_ns":899945110,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x14. Unhandled bits: [3-5, 8-9, 11-31] when writing value 0xFFFFFBFF. Tags: ADD10 (0x1), STOPF (0x1), RESERVED (0x1), BERR (0x1), ARLO (0x1), OVR (0x1), PECERR (0x1), RESERVED (0x1), TIMEOUT (0x1), SMBALERT (0x1), RESERVED (0xFFFF)."}}
+{"seq":32,"t_ns":899945300,"source":"mcu.status","type":"gpio.edge","payload":{"level":1}}
+{"seq":33,"t_ns":999938810,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":34,"t_ns":999938910,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x14. Unhandled bits: [3-5, 8-9, 11-31] when writing value 0xFFFFFBFF. Tags: ADD10 (0x1), STOPF (0x1), RESERVED (0x1), BERR (0x1), ARLO (0x1), OVR (0x1), PECERR (0x1), RESERVED (0x1), TIMEOUT (0x1), SMBALERT (0x1), RESERVED (0xFFFF)."}}
+{"seq":35,"t_ns":999939100,"source":"mcu.status","type":"gpio.edge","payload":{"level":0}}
+{"seq":36,"t_ns":1099932610,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":37,"t_ns":1099932710,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x14. Unhandled bits: [3-5, 8-9, 11-31] when writing value 0xFFFFFBFF. Tags: ADD10 (0x1), STOPF (0x1), RESERVED (0x1), BERR (0x1), ARLO (0x1), OVR (0x1), PECERR (0x1), RESERVED (0x1), TIMEOUT (0x1), SMBALERT (0x1), RESERVED (0xFFFF)."}}
+{"seq":38,"t_ns":1099932900,"source":"mcu.status","type":"gpio.edge","payload":{"level":1}}
+{"seq":39,"t_ns":1199926410,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":40,"t_ns":1199926510,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x14. Unhandled bits: [3-5, 8-9, 11-31] when writing value 0xFFFFFBFF. Tags: ADD10 (0x1), STOPF (0x1), RESERVED (0x1), BERR (0x1), ARLO (0x1), OVR (0x1), PECERR (0x1), RESERVED (0x1), TIMEOUT (0x1), SMBALERT (0x1), RESERVED (0xFFFF)."}}
+{"seq":41,"t_ns":1199926700,"source":"mcu.status","type":"gpio.edge","payload":{"level":0}}
+{"seq":42,"t_ns":1299920210,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":43,"t_ns":1299920310,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x14. Unhandled bits: [3-5, 8-9, 11-31] when writing value 0xFFFFFBFF. Tags: ADD10 (0x1), STOPF (0x1), RESERVED (0x1), BERR (0x1), ARLO (0x1), OVR (0x1), PECERR (0x1), RESERVED (0x1), TIMEOUT (0x1), SMBALERT (0x1), RESERVED (0xFFFF)."}}
+{"seq":44,"t_ns":1299920500,"source":"mcu.status","type":"gpio.edge","payload":{"level":1}}
+{"seq":45,"t_ns":1399914010,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":46,"t_ns":1399914110,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x14. Unhandled bits: [3-5, 8-9, 11-31] when writing value 0xFFFFFBFF. Tags: ADD10 (0x1), STOPF (0x1), RESERVED (0x1), BERR (0x1), ARLO (0x1), OVR (0x1), PECERR (0x1), RESERVED (0x1), TIMEOUT (0x1), SMBALERT (0x1), RESERVED (0xFFFF)."}}
+{"seq":47,"t_ns":1399914300,"source":"mcu.status","type":"gpio.edge","payload":{"level":0}}
+{"seq":48,"t_ns":1499907810,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":49,"t_ns":1499907910,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x14. Unhandled bits: [3-5, 8-9, 11-31] when writing value 0xFFFFFBFF. Tags: ADD10 (0x1), STOPF (0x1), RESERVED (0x1), BERR (0x1), ARLO (0x1), OVR (0x1), PECERR (0x1), RESERVED (0x1), TIMEOUT (0x1), SMBALERT (0x1), RESERVED (0xFFFF)."}}
+{"seq":50,"t_ns":1499908100,"source":"mcu.status","type":"gpio.edge","payload":{"level":1}}
+{"seq":51,"t_ns":1599901610,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":52,"t_ns":1599901710,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x14. Unhandled bits: [3-5, 8-9, 11-31] when writing value 0xFFFFFBFF. Tags: ADD10 (0x1), STOPF (0x1), RESERVED (0x1), BERR (0x1), ARLO (0x1), OVR (0x1), PECERR (0x1), RESERVED (0x1), TIMEOUT (0x1), SMBALERT (0x1), RESERVED (0xFFFF)."}}
+{"seq":53,"t_ns":1599901900,"source":"mcu.status","type":"gpio.edge","payload":{"level":0}}
+{"seq":54,"t_ns":1699895410,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":55,"t_ns":1699895510,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x14. Unhandled bits: [3-5, 8-9, 11-31] when writing value 0xFFFFFBFF. Tags: ADD10 (0x1), STOPF (0x1), RESERVED (0x1), BERR (0x1), ARLO (0x1), OVR (0x1), PECERR (0x1), RESERVED (0x1), TIMEOUT (0x1), SMBALERT (0x1), RESERVED (0xFFFF)."}}
+{"seq":56,"t_ns":1699895700,"source":"mcu.status","type":"gpio.edge","payload":{"level":1}}
+{"seq":57,"t_ns":1799889210,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":58,"t_ns":1799889310,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x14. Unhandled bits: [3-5, 8-9, 11-31] when writing value 0xFFFFFBFF. Tags: ADD10 (0x1), STOPF (0x1), RESERVED (0x1), BERR (0x1), ARLO (0x1), OVR (0x1), PECERR (0x1), RESERVED (0x1), TIMEOUT (0x1), SMBALERT (0x1), RESERVED (0xFFFF)."}}
+{"seq":59,"t_ns":1799889500,"source":"mcu.status","type":"gpio.edge","payload":{"level":0}}
+{"seq":60,"t_ns":1899883010,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":61,"t_ns":1899883110,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x14. Unhandled bits: [3-5, 8-9, 11-31] when writing value 0xFFFFFBFF. Tags: ADD10 (0x1), STOPF (0x1), RESERVED (0x1), BERR (0x1), ARLO (0x1), OVR (0x1), PECERR (0x1), RESERVED (0x1), TIMEOUT (0x1), SMBALERT (0x1), RESERVED (0xFFFF)."}}
+{"seq":62,"t_ns":1899883300,"source":"mcu.status","type":"gpio.edge","payload":{"level":1}}
+{"seq":63,"t_ns":1999876810,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":64,"t_ns":1999876910,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x14. Unhandled bits: [3-5, 8-9, 11-31] when writing value 0xFFFFFBFF. Tags: ADD10 (0x1), STOPF (0x1), RESERVED (0x1), BERR (0x1), ARLO (0x1), OVR (0x1), PECERR (0x1), RESERVED (0x1), TIMEOUT (0x1), SMBALERT (0x1), RESERVED (0xFFFF)."}}
+{"seq":65,"t_ns":1999877100,"source":"mcu.status","type":"gpio.edge","payload":{"level":0}}
+{"seq":66,"t_ns":2000000000,"source":"mcu","type":"register.snapshot","payload":{"address":"0x40020400","peripheral":"gpioPortB","register":"MODER","value":"0x000A0280"}}
+{"seq":67,"t_ns":2000000000,"source":"mcu","type":"register.snapshot","payload":{"address":"0x40020424","peripheral":"gpioPortB","register":"AFRH","value":"0x00000044"}}
+{"seq":68,"t_ns":2000000000,"source":"","type":"run.end","payload":{"reason":"completed"}}

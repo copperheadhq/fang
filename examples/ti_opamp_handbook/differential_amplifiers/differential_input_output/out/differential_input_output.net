@@ -3,7 +3,7 @@
   (design
     (source "differential_input_output.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:c59ac8d72adc4bc43f55eab107df76256723efffcfeedb973362ce6ea4c5da2f")
+    (snapshot "sha256:b603d3da4785c8569fde1930a2dd5051f6cc5c2571892541af41eba98ec1a384")
     (project "PRJ-EXAMPLES")
   )
   (components

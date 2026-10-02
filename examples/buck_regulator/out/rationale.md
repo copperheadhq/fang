@@ -12,9 +12,7 @@ design; it is the design.
 
 MUST, state KNOWN, validation by analysis.
 
-- Verified by `system.load_regulation` (`VER-b8aa7b6feb2f`): **PASS** by analysis
-  - on `system.ripple_current` (`EVD-b4e90b2ab592`)
-  - on `system.absolute_maximum` (`EVD-ff1f80f58e6b`)
+- Verified by `system.under_load` (`VER-a3e2d0467631`): **UNKNOWN** by simulation
 
 ## Decisions
 

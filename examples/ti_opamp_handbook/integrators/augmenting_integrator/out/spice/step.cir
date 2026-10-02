@@ -1,5 +1,5 @@
 * augmenting_integrator: step
-* plan for ngspice over sha256:57604668c37906c9c8a24c3259522a37fe8460cfe0bd2419a3d673dc90b5fe42
+* plan for ngspice over sha256:772cb918c912ddea56586ad60ed8897da6e1ff6795cbd6983bb6f04bbec8eca5
 C1 1 2 10u
 * GND1 abstracted; no device emitted
 R1 4 5 10k

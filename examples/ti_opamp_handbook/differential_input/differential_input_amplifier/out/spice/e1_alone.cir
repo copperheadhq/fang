@@ -1,5 +1,5 @@
 * differential_input_amplifier: e1_alone
-* plan for ngspice over sha256:b9f06a2f7e65c2cc0ee33eb5df351df7e83ef6535033fb0654a8ebb72bebcf72
+* plan for ngspice over sha256:80bb073afbe5b3e6c374c201d2f0228bcfe1f7b704e239d9d2ac11f7452f24a9
 * GND1 abstracted; no device emitted
 R1 2 3 10k
 R2 4 5 10k

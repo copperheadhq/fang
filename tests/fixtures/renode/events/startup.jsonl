@@ -1,0 +1,115 @@
+{"seq":0,"t_ns":0,"source":"","type":"run.start","payload":{}}
+{"seq":1,"t_ns":0,"source":"env","type":"stimulus","payload":{"input":"Temperature","value":"25"}}
+{"seq":2,"t_ns":190,"source":"mcu","type":"register.write","payload":{"address":"0x40020400","peripheral":"gpioPortB","register":"MODER","value":"0x000A0280"}}
+{"seq":3,"t_ns":450,"source":"mcu","type":"register.write","payload":{"address":"0x40020404","peripheral":"gpioPortB","register":"OTYPER","value":"0x00000300"}}
+{"seq":4,"t_ns":480,"source":"mcu","type":"register.write","payload":{"address":"0x40020424","peripheral":"gpioPortB","register":"AFRH","value":"0x00000044"}}
+{"seq":5,"t_ns":570,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x1C. Unhandled bits: [4, 6] when writing value 0x50. Tags: CCR (0x50)."}}
+{"seq":6,"t_ns":570,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x20. Unhandled bits: [0, 4] when writing value 0x11. Tags: TRISE (0x11)."}}
+{"seq":7,"t_ns":2020,"source":"mcu.usart2","type":"uart.line","payload":{"text":"sensor_node boot"}}
+{"seq":8,"t_ns":2480,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":9,"t_ns":39998180,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x0. Unhandled bits: [10] when writing value 0x401. Tags: ACK (0x1)."}}
+{"seq":10,"t_ns":39998340,"source":"env","type":"i2c.read","payload":{"data":[0,0,100,220]}}
+{"seq":11,"t_ns":40200180,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":12,"t_ns":40201620,"source":"mcu.usart2","type":"uart.line","payload":{"text":"temp=25.01"}}
+{"seq":13,"t_ns":99994740,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":14,"t_ns":139991980,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x0. Unhandled bits: [10] when writing value 0x401. Tags: ACK (0x1)."}}
+{"seq":15,"t_ns":139992140,"source":"env","type":"i2c.read","payload":{"data":[0,0,100,220]}}
+{"seq":16,"t_ns":140200190,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":17,"t_ns":140201630,"source":"mcu.usart2","type":"uart.line","payload":{"text":"temp=25.01"}}
+{"seq":18,"t_ns":199988540,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":19,"t_ns":239985780,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x0. Unhandled bits: [10] when writing value 0x401. Tags: ACK (0x1)."}}
+{"seq":20,"t_ns":239985940,"source":"env","type":"i2c.read","payload":{"data":[0,0,100,220]}}
+{"seq":21,"t_ns":240200200,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":22,"t_ns":240201640,"source":"mcu.usart2","type":"uart.line","payload":{"text":"temp=25.01"}}
+{"seq":23,"t_ns":299982340,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":24,"t_ns":339979580,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x0. Unhandled bits: [10] when writing value 0x401. Tags: ACK (0x1)."}}
+{"seq":25,"t_ns":339979740,"source":"env","type":"i2c.read","payload":{"data":[0,0,100,220]}}
+{"seq":26,"t_ns":340200120,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":27,"t_ns":340201560,"source":"mcu.usart2","type":"uart.line","payload":{"text":"temp=25.01"}}
+{"seq":28,"t_ns":399976140,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":29,"t_ns":439973380,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x0. Unhandled bits: [10] when writing value 0x401. Tags: ACK (0x1)."}}
+{"seq":30,"t_ns":439973540,"source":"env","type":"i2c.read","payload":{"data":[0,0,100,220]}}
+{"seq":31,"t_ns":440200130,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":32,"t_ns":440201570,"source":"mcu.usart2","type":"uart.line","payload":{"text":"temp=25.01"}}
+{"seq":33,"t_ns":499969940,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":34,"t_ns":539967180,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x0. Unhandled bits: [10] when writing value 0x401. Tags: ACK (0x1)."}}
+{"seq":35,"t_ns":539967340,"source":"env","type":"i2c.read","payload":{"data":[0,0,100,220]}}
+{"seq":36,"t_ns":540200140,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":37,"t_ns":540201580,"source":"mcu.usart2","type":"uart.line","payload":{"text":"temp=25.01"}}
+{"seq":38,"t_ns":540201680,"source":"mcu.status","type":"gpio.edge","payload":{"level":1}}
+{"seq":39,"t_ns":599963740,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":40,"t_ns":639960980,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x0. Unhandled bits: [10] when writing value 0x401. Tags: ACK (0x1)."}}
+{"seq":41,"t_ns":639961140,"source":"env","type":"i2c.read","payload":{"data":[0,0,100,220]}}
+{"seq":42,"t_ns":640200150,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":43,"t_ns":640201590,"source":"mcu.usart2","type":"uart.line","payload":{"text":"temp=25.01"}}
+{"seq":44,"t_ns":699957540,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":45,"t_ns":739954780,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x0. Unhandled bits: [10] when writing value 0x401. Tags: ACK (0x1)."}}
+{"seq":46,"t_ns":739954940,"source":"env","type":"i2c.read","payload":{"data":[0,0,100,220]}}
+{"seq":47,"t_ns":740200160,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":48,"t_ns":740201600,"source":"mcu.usart2","type":"uart.line","payload":{"text":"temp=25.01"}}
+{"seq":49,"t_ns":799951340,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":50,"t_ns":839948580,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x0. Unhandled bits: [10] when writing value 0x401. Tags: ACK (0x1)."}}
+{"seq":51,"t_ns":839948740,"source":"env","type":"i2c.read","payload":{"data":[0,0,100,220]}}
+{"seq":52,"t_ns":840200170,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":53,"t_ns":840201610,"source":"mcu.usart2","type":"uart.line","payload":{"text":"temp=25.01"}}
+{"seq":54,"t_ns":899945140,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":55,"t_ns":939942380,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x0. Unhandled bits: [10] when writing value 0x401. Tags: ACK (0x1)."}}
+{"seq":56,"t_ns":939942540,"source":"env","type":"i2c.read","payload":{"data":[0,0,100,220]}}
+{"seq":57,"t_ns":940200180,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":58,"t_ns":940201620,"source":"mcu.usart2","type":"uart.line","payload":{"text":"temp=25.01"}}
+{"seq":59,"t_ns":999938940,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":60,"t_ns":1039936180,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x0. Unhandled bits: [10] when writing value 0x401. Tags: ACK (0x1)."}}
+{"seq":61,"t_ns":1039936340,"source":"env","type":"i2c.read","payload":{"data":[0,0,100,220]}}
+{"seq":62,"t_ns":1040200190,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":63,"t_ns":1040201630,"source":"mcu.usart2","type":"uart.line","payload":{"text":"temp=25.01"}}
+{"seq":64,"t_ns":1040201730,"source":"mcu.status","type":"gpio.edge","payload":{"level":0}}
+{"seq":65,"t_ns":1099932740,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":66,"t_ns":1139929980,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x0. Unhandled bits: [10] when writing value 0x401. Tags: ACK (0x1)."}}
+{"seq":67,"t_ns":1139930140,"source":"env","type":"i2c.read","payload":{"data":[0,0,100,220]}}
+{"seq":68,"t_ns":1140200200,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":69,"t_ns":1140201640,"source":"mcu.usart2","type":"uart.line","payload":{"text":"temp=25.01"}}
+{"seq":70,"t_ns":1199926540,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":71,"t_ns":1239923780,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x0. Unhandled bits: [10] when writing value 0x401. Tags: ACK (0x1)."}}
+{"seq":72,"t_ns":1239923940,"source":"env","type":"i2c.read","payload":{"data":[0,0,100,220]}}
+{"seq":73,"t_ns":1240200120,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":74,"t_ns":1240201560,"source":"mcu.usart2","type":"uart.line","payload":{"text":"temp=25.01"}}
+{"seq":75,"t_ns":1299920340,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":76,"t_ns":1339917580,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x0. Unhandled bits: [10] when writing value 0x401. Tags: ACK (0x1)."}}
+{"seq":77,"t_ns":1339917740,"source":"env","type":"i2c.read","payload":{"data":[0,0,100,220]}}
+{"seq":78,"t_ns":1340200130,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":79,"t_ns":1340201570,"source":"mcu.usart2","type":"uart.line","payload":{"text":"temp=25.01"}}
+{"seq":80,"t_ns":1399914140,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":81,"t_ns":1439911380,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x0. Unhandled bits: [10] when writing value 0x401. Tags: ACK (0x1)."}}
+{"seq":82,"t_ns":1439911540,"source":"env","type":"i2c.read","payload":{"data":[0,0,100,220]}}
+{"seq":83,"t_ns":1440200140,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":84,"t_ns":1440201580,"source":"mcu.usart2","type":"uart.line","payload":{"text":"temp=25.01"}}
+{"seq":85,"t_ns":1499907940,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":86,"t_ns":1539905180,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x0. Unhandled bits: [10] when writing value 0x401. Tags: ACK (0x1)."}}
+{"seq":87,"t_ns":1539905340,"source":"env","type":"i2c.read","payload":{"data":[0,0,100,220]}}
+{"seq":88,"t_ns":1540200150,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":89,"t_ns":1540201590,"source":"mcu.usart2","type":"uart.line","payload":{"text":"temp=25.01"}}
+{"seq":90,"t_ns":1540201690,"source":"mcu.status","type":"gpio.edge","payload":{"level":1}}
+{"seq":91,"t_ns":1599901740,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":92,"t_ns":1639898980,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x0. Unhandled bits: [10] when writing value 0x401. Tags: ACK (0x1)."}}
+{"seq":93,"t_ns":1639899140,"source":"env","type":"i2c.read","payload":{"data":[0,0,100,220]}}
+{"seq":94,"t_ns":1639901720,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":95,"t_ns":1639903160,"source":"mcu.usart2","type":"uart.line","payload":{"text":"temp=25.01"}}
+{"seq":96,"t_ns":1699895540,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":97,"t_ns":1739892780,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x0. Unhandled bits: [10] when writing value 0x401. Tags: ACK (0x1)."}}
+{"seq":98,"t_ns":1739892940,"source":"env","type":"i2c.read","payload":{"data":[0,0,100,220]}}
+{"seq":99,"t_ns":1740100180,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":100,"t_ns":1740101620,"source":"mcu.usart2","type":"uart.line","payload":{"text":"temp=25.01"}}
+{"seq":101,"t_ns":1799889340,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":102,"t_ns":1839886580,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x0. Unhandled bits: [10] when writing value 0x401. Tags: ACK (0x1)."}}
+{"seq":103,"t_ns":1839886740,"source":"env","type":"i2c.read","payload":{"data":[0,0,100,220]}}
+{"seq":104,"t_ns":1840100190,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":105,"t_ns":1840101630,"source":"mcu.usart2","type":"uart.line","payload":{"text":"temp=25.01"}}
+{"seq":106,"t_ns":1899883140,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":107,"t_ns":1939880380,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x0. Unhandled bits: [10] when writing value 0x401. Tags: ACK (0x1)."}}
+{"seq":108,"t_ns":1939880540,"source":"env","type":"i2c.read","payload":{"data":[0,0,100,220]}}
+{"seq":109,"t_ns":1940100200,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":110,"t_ns":1940101640,"source":"mcu.usart2","type":"uart.line","payload":{"text":"temp=25.01"}}
+{"seq":111,"t_ns":1999876940,"source":"env","type":"i2c.stop","payload":{}}
+{"seq":112,"t_ns":2000000000,"source":"mcu","type":"register.snapshot","payload":{"address":"0x40020400","peripheral":"gpioPortB","register":"MODER","value":"0x000A0280"}}
+{"seq":113,"t_ns":2000000000,"source":"mcu","type":"register.snapshot","payload":{"address":"0x40020424","peripheral":"gpioPortB","register":"AFRH","value":"0x00000044"}}
+{"seq":114,"t_ns":2000000000,"source":"","type":"run.end","payload":{"reason":"completed"}}

@@ -3,7 +3,7 @@
   (design
     (source "linear_gain_control.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:2829b0c91941f51d3480656c6adb39c6e8ed1b4bde555258cb450b048716ae89")
+    (snapshot "sha256:ed1f9631f3b3995525ac922d05ef3700909f90d820d0f69fd14751e072647997")
     (project "PRJ-EXAMPLES")
   )
   (components

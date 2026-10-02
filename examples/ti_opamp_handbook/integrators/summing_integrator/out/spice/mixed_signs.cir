@@ -1,5 +1,5 @@
 * summing_integrator: mixed_signs
-* plan for ngspice over sha256:2f28a345d2f185b3455b7fd90657a3e17a3283dbd986c8e4cc8d1f9b3eaecbb4
+* plan for ngspice over sha256:97f7698c80f1e592121f4a2e134ae41a8733ffe425f12f489e840256170583cf
 C1 1 2 1u
 * GND1 abstracted; no device emitted
 R1 4 1 100k

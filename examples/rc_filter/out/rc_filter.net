@@ -1,0 +1,93 @@
+(export
+  (version "E")
+  (design
+    (source "rc_filter.py")
+    (tool "fang 0.1.0")
+    (snapshot "sha256:f00cdf8504de5fd30b9f7c48c7e47422dedc8143eb1948bb899831f732f1eb08")
+    (project "PRJ-EXAMPLES")
+  )
+  (components
+    (comp
+      (ref "C1")
+      (value "10 nF")
+      (footprint "Package:C_0603")
+      (property
+        (name "fang_id")
+        (value "CMP-95c5a91616a7")
+      )
+    )
+    (comp
+      (ref "J1")
+      (value "AdcInput")
+      (footprint "Package:PinHeader_1x02_P2.54mm")
+      (property
+        (name "fang_id")
+        (value "CMP-ea02c0cebe19")
+      )
+    )
+    (comp
+      (ref "J2")
+      (value "SignalIn")
+      (footprint "Package:PinHeader_1x02_P2.54mm")
+      (property
+        (name "fang_id")
+        (value "CMP-3219377790fa")
+      )
+    )
+    (comp
+      (ref "R1")
+      (value "10 kOhm")
+      (footprint "Package:R_0603")
+      (property
+        (name "fang_id")
+        (value "CMP-cebf1455e844")
+      )
+    )
+  )
+  (nets
+    (net
+      (code "1")
+      (name "Net-(C1-Pad1)")
+      (node
+        (ref "C1")
+        (pin "1")
+      )
+      (node
+        (ref "J1")
+        (pin "SIG")
+      )
+      (node
+        (ref "R1")
+        (pin "2")
+      )
+    )
+    (net
+      (code "2")
+      (name "Net-(C1-Pad2)")
+      (node
+        (ref "C1")
+        (pin "2")
+      )
+      (node
+        (ref "J1")
+        (pin "GND")
+      )
+      (node
+        (ref "J2")
+        (pin "SLEEVE")
+      )
+    )
+    (net
+      (code "3")
+      (name "Net-(J2-PadTIP)")
+      (node
+        (ref "J2")
+        (pin "TIP")
+      )
+      (node
+        (ref "R1")
+        (pin "1")
+      )
+    )
+  )
+)

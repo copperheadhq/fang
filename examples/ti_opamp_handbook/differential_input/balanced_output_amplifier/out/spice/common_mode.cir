@@ -1,5 +1,5 @@
 * balanced_output_amplifier: common_mode
-* plan for ngspice over sha256:188dfad74e3def689733825748b5f19bb4fb159502eb89d593a202edbcc1c2c8
+* plan for ngspice over sha256:5aa1f1efd122fcca2459562a5230e5e42c8bb7181b321814c1c1548d4abbfebc
 * GND1 abstracted; no device emitted
 R1 2 3 10k
 R2 4 5 10k

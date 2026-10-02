@@ -158,6 +158,19 @@ out where an engineer expects them, `IN-` and `IN+` on the left and `OUT` on
 the right, because they are numbered 2, 3 and 6, the single-op-amp pinout, and
 the box takes the pins in the order the graph gives them.
 
+The same circuit is also drafted by copperhead, which places and wires parts
+instead of laying them on a grid. Fang writes copperhead's netlist intent,
+[`out/copperhead/schematic.intent.json`](out/copperhead/schematic.intent.json),
+and `copperhead draft schematic` turns it into
+[`out/copperhead/noninverting_amp.kicad_sch`](out/copperhead/noninverting_amp.kicad_sch).
+It draws with KiCad's library symbols, so the op amp names one: `symbol =
+"Amplifier_Operational:LM741"`, the standard single-op-amp drawing with pins 2,
+3 and 6. That sets how the part is drawn, not which part it is. The ground
+marker isn't drawn as a part; its net becomes a ground net, with the ground
+symbol on it.
+
+![the same circuit, drafted by copperhead and rendered by KiCad](out/copperhead/schematic.svg)
+
 ![the interconnect view](out/views/interconnect.svg)
 
 The interconnect view is fang's own projection, and it names the parts the way
@@ -171,6 +184,7 @@ fang check     examples/noninverting_amp/noninverting_amp.py
 fang netlist   examples/noninverting_amp/noninverting_amp.py
 fang view      examples/noninverting_amp/noninverting_amp.py interconnect -o interconnect.svg
 fang schematic examples/noninverting_amp/noninverting_amp.py -o board.kicad_sch --svg board.svg
+fang schematic examples/noninverting_amp/noninverting_amp.py --drafter copperhead -o board.kicad_sch
 
 python examples/noninverting_amp/solve.py     # needs ngspice on PATH
 ```

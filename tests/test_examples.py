@@ -13,26 +13,32 @@ compared, because an output nobody checks is an output that quietly stops
 being true.
 """
 
+import functools
 import re
 from pathlib import Path
 
 import pytest
 
 from examples.regenerate import (
+    DRAFTED,
     PROJECT,
-    schematic_of,
+    answerable,
     examples as example_names,
-    render,
+    render as regenerate,
+    schematic_of,
     simulated,
+    verification_tools,
 )
 from fang.checks import DEFAULT_CHECKS
 from fang.cli import load_system
 from fang.constraints import CheckStatus
+from fang.copperhead import CopperheadDrafter
 from fang.elaborate import elaborate
 from fang.kicad import emit_netlist
 from fang.netlist import compile_netlist
 from fang.schematic import KicadRenderer
 from fang.simulation import NgspiceBackend
+from fang.verification import TOOLS, questions
 
 ROOT = Path(__file__).resolve().parent.parent / "examples"
 
@@ -58,6 +64,16 @@ def stable(text: str) -> str:
     return text
 
 
+#: An example's outputs, rendered once per run: writing verification.txt runs
+#: a simulator, and three tests read the same set.
+render = functools.lru_cache(maxsize=None)(regenerate)
+
+#: The one output that depends on a tool being installed rather than on the
+#: design alone: what `fang verify` finds. It is compared where the tool its
+#: questions route to is installed, and skipped by name where it is not.
+VERIFICATION = "verification.txt"
+
+
 def build(path: Path):
     result = elaborate(load_system(path), project_id=PROJECT)
     assert result.ok, [d.message for d in result.diagnostics]
@@ -70,20 +86,35 @@ def name(request):
     return request.param
 
 
-#: KiCad's render of a schematic, the one output only `kicad-cli` can make.
+#: KiCad's render of a schematic, which only `kicad-cli` can make.
 RENDER = "schematic.svg"
+#: copperhead's draft and KiCad's render of it, which need both tools. The
+#: intent beside them needs neither, and is compared everywhere.
+DRAFT = ("copperhead/schematic.svg",)
+
+
+def _drafted(relative: str) -> bool:
+    return relative in DRAFT or (
+        relative.startswith("copperhead/") and relative.endswith(".kicad_sch")
+    )
 
 
 @pytest.fixture
-def renderable(name):
-    """Whether this example's outputs can all be made here. One that ships a
-    schematic ships KiCad's render of it, which needs `kicad-cli`; without it
-    that one file is left out and every other output is still checked. One
-    that carries a bench ships what ngspice measured, and nothing of that can
-    be checked without `ngspice`."""
+def tools(name):
+    """Which tool-made outputs can be made here, as (render, draft). One that
+    ships a schematic ships KiCad's render of it, which needs `kicad-cli`;
+    one in DRAFTED ships copperhead's draft, which needs `copperhead` and
+    `kicad-cli`. Without them those files are left out and every other output
+    is still checked. One that carries a bench ships what ngspice measured,
+    and nothing of that can be checked without `ngspice`."""
     if simulated(name) and not NgspiceBackend().available():
         pytest.skip("ngspice is not installed here")
-    return not schematic_of(name) or KicadRenderer().available()
+    return KicadRenderer().available(), CopperheadDrafter().available()
+
+
+def _expected(name, tools):
+    render_here, draft_here = tools
+    return render(name, with_render=render_here, with_draft=draft_here)
 
 
 @pytest.fixture
@@ -136,20 +167,74 @@ def test_an_example_builds_identically_twice(example):
     assert first.hash == second.hash
 
 
-def test_an_example_ships_the_outputs_it_documents(example, name, renderable):
+def test_an_example_ships_the_outputs_it_documents(example, name, tools):
     """A folder with no out/ is a folder that documents nothing."""
     out = example.parent / "out"
     committed = {
         path.relative_to(out).as_posix() for path in out.rglob("*") if path.is_file()
     }
-    if not renderable:
+    render_here, draft_here = tools
+    if not render_here:
         committed.discard(RENDER)
-    assert committed == set(render(name, with_render=renderable))
+    if not draft_here:
+        committed = {relative for relative in committed if not _drafted(relative)}
+    assert committed == set(_expected(name, tools))
 
 
-def test_a_committed_output_still_matches_the_program(example, name, renderable):
+def test_a_committed_output_still_matches_the_program(example, name, tools):
     """Regenerate every output and compare; `python examples/regenerate.py`
     is the fix when this fails."""
     out = example.parent / "out"
-    for relative, text in sorted(render(name, with_render=renderable).items()):
+    for relative, text in sorted(_expected(name, tools).items()):
+        if relative == VERIFICATION:
+            continue
         assert stable((out / relative).read_text(encoding="utf-8")) == stable(text), relative
+
+
+def test_the_sensor_node_names_its_controllers_routes_its_pins_and_decides_its_address():
+    """What `sensor_node/README.md` says the graph holds, it holds."""
+    from fang.compatibility import compatibility_check
+    from fang.entities import Connection, Evidence, Port
+
+    snapshot = build(ROOT / "sensor_node" / "sensor_node.py").snapshot
+    entities = snapshot.entities
+    ports = {str(e.identity.path): e for e in entities.values() if isinstance(e, Port)}
+    assert ports["system.mcu.i2c1"].peripheral == "I2C1"
+    assert ports["system.mcu.usart2"].peripheral == "USART2"
+
+    def pin(entity_id):
+        return entities[entity_id].vendor_name
+
+    routed = {}
+    for connection in entities.values():
+        if isinstance(connection, Connection):
+            for pin_id, entry in connection.selectors.items():
+                assert isinstance(entities[entry["evidence"]], Evidence)
+                routed[pin(pin_id)] = entry["selector"]
+    assert routed == {"PB8": "AF4", "PB9": "AF4", "PA2": "AF7", "PA3": "AF7"}
+
+    addressing = [r for r in compatibility_check(snapshot) if "address" in r.message]
+    assert [r.status for r in addressing] == [CheckStatus.PASS]
+    assert "0x44" in addressing[0].message
+    assert ports["system.env.i2c"].id in addressing[0].message
+    assert ports["system.mcu.i2c1"].id not in addressing[0].message
+
+
+#: The examples that declare a verification question, and so ship a listing.
+QUESTIONED = [name for name, path in zip(NAMES, EXAMPLES) if questions(build(path).snapshot)]
+
+
+@pytest.mark.parametrize("name", QUESTIONED, ids=QUESTIONED)
+def test_a_committed_verification_still_matches_the_program(name):
+    """What `fang verify` finds, compared where its tool is installed."""
+    result = build(ROOT / name / f"{Path(name).name}.py")
+    missing = sorted(
+        tool for tool in verification_tools(result) if not answerable(TOOLS.get(tool))
+    )
+    if missing:
+        pytest.skip(
+            f"{', '.join(missing)} is not installed here at a version it accepts, "
+            f"so {VERIFICATION} is not compared"
+        )
+    committed = (ROOT / name / "out" / VERIFICATION).read_text(encoding="utf-8")
+    assert stable(committed) == stable(render(name)[VERIFICATION])

@@ -3,7 +3,7 @@
   (design
     (source "divider.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:07eac3f59cbba41abc53ab7ae1a5c2003c11286ad597530b4c4930dee2cdb407")
+    (snapshot "sha256:b9a24e84abebf4babb93d22dc622212f4474a266e4aece5ab4a8ff9395205c21")
     (project "PRJ-EXAMPLES")
   )
   (components

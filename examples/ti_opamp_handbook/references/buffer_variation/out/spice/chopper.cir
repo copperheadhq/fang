@@ -1,5 +1,5 @@
 * buffer_variation: chopper
-* plan for ngspice over sha256:2fe471893a6fa0a173596832dcfdb6fd8ab48a9739649b77f0228398e3563e07
+* plan for ngspice over sha256:da447c3c5a68c37e20e7e375fff6f37d311e22a5e1954b92f0a7bb91aa5ab370
 * GND1 abstracted; no device emitted
 * TP1 abstracted; no device emitted
 * TP2 abstracted; no device emitted

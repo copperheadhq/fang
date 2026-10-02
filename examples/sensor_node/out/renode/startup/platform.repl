@@ -1,0 +1,25 @@
+using "stm32f401re.repl"
+
+recorder: Fang.EventRecorder @ gpioPortA
+
+fang_system_env: Fang.I2CProbe @ i2c1 0x44
+    recorder: recorder
+    model: "Antmicro.Renode.Peripherals.Sensors.HS3001"
+    source: "CMP-af1a30935ce8"
+
+fang_i2c1_warnings: Fang.WarningProbe @ gpioPortA
+    recorder: recorder
+    target: i2c1
+    source: "PORT-e0e83c20e09e"
+
+fang_mcu_status: Fang.GpioProbe @ gpioPortA
+    recorder: recorder
+    source: "PORT-1eda100512ed"
+
+gpioPortA:
+    5 -> fang_mcu_status@0
+
+fang_mcu_usart2: Fang.UartProbe @ gpioPortA
+    recorder: recorder
+    uart: usart2
+    source: "PORT-7ae7fd3e57cc"

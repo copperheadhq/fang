@@ -1,5 +1,5 @@
 * voltage_summer: all_three
-* plan for ngspice over sha256:6fbb4fa6196eda8de1193ef04d6547fa5738379d802ee5eeb261e8cece3b9457
+* plan for ngspice over sha256:16fe87a4d76917e44c633d56c67ca05ee6c7365f132d2c72d0f8dd8655bdab02
 * GND1 abstracted; no device emitted
 R1 2 3 10k
 R2 4 3 20k

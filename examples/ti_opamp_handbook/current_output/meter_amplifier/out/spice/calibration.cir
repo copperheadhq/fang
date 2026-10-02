@@ -1,5 +1,5 @@
 * meter_amplifier: calibration
-* plan for ngspice over sha256:9a3be49982d91790cf74efaea2e2992d669cc468f76f63b0c1614fda19b7f57b
+* plan for ngspice over sha256:e7303b8c6d06066da08676b15d67bccb4c1cac79da6c5cb799190d5c54c13b36
 C1 1 2 1u
 C2 3 4 10u
 C3 5 4 10u

@@ -11,6 +11,11 @@ it.
     python examples/regenerate.py           # rewrite every example's out/
     python examples/regenerate.py divider   # just one
 
+An example that declares a verification question also ships
+`verification.txt`, what `fang verify` finds; writing it runs the tool the
+question routes to, so regenerating that example needs the tool -- ngspice --
+on the path, and the suite compares the file only where the tool is installed.
+
 Everything here is written by calling the same functions the CLI calls, on a
 program elaborated in the ``PRJ-EXAMPLES`` project. The project namespace is
 part of every derived identifier, so the identifiers in these files are the
@@ -33,12 +38,16 @@ ROOT = Path(__file__).resolve().parent
 if __name__ == "__main__" and str(ROOT.parent) not in sys.path:
     sys.path.insert(0, str(ROOT.parent))
 
+from fang.checks import DEFAULT_CHECKS
 from fang.cli import cmd_check, cmd_export, cmd_graph, cmd_netlist, load_system
-from fang.elaborate import elaborate
+from fang.copperhead import CopperheadDrafter, compile_intent
+from fang.elaborate import EPOCH, elaborate
+from fang.entities import Pin
+from fang.graph import KernelGraph
 from fang.layout import PlacementSeeds, place
 from fang.render import to_svg
 from fang.schematic import KicadRenderer, compile_schematic
-from fang.entities import Pin
+from fang.verification import questions, report, route, verify
 from fang.views import view
 
 PROJECT = "PRJ-EXAMPLES"
@@ -52,18 +61,34 @@ VIEWS: dict[str, tuple[str, ...]] = {
     "equations": ("interconnect",),
     "sensor_board": ("interfaces", "ground"),
     "i2c_bus": ("interfaces", "interconnect"),
+    "sensor_node": ("interfaces", "power"),
     "usb_uart_bridge": ("interfaces", "power"),
     "buck_regulator": ("power", "system"),
     "servo_drive": ("system", "power", "safety"),
     "jee_advanced/problem_1": ("interconnect",),
     "jee_advanced/problem_2": ("interconnect",),
     "noninverting_amp": ("interconnect",),
+    "rc_filter": ("interconnect",),
+    "antenna_match": ("interconnect",),
 }
 
 #: The examples that ship a schematic. A schematic is the picture an engineer
 #: recognizes, and it is KiCad that draws it, so regenerating one of these needs
 #: `kicad-cli` on the path.
 SCHEMATICS: frozenset[str] = frozenset({"noninverting_amp"})
+
+#: The examples that also ship copperhead's draft of the same circuit, placed
+#: and wired rather than laid on a grid, under out/copperhead/. copperhead draws
+#: it and KiCad renders it, so regenerating one of these needs `copperhead` on
+#: the path as well as `kicad-cli`. The textbook figures are drafted by
+#: copperhead too, but by `draw_figures.py` into `figure/` (`FIGURES`, below).
+DRAFTED: frozenset[str] = frozenset({"noninverting_amp"})
+
+#: The examples whose firmware runs in Renode. For each emulation question the
+#: plan, the platform description and the script are written under
+#: out/renode/<question>/, here and on every machine: lowering a plan needs no
+#: emulator, so these are compared like any other output.
+EMULATED: frozenset[str] = frozenset({"sensor_node"})
 
 #: Groups whose every example is a textbook figure, and ships the
 #: interconnect view to set beside the page it came from. Naming the folder
@@ -334,18 +359,91 @@ def _rationale(name: str, snapshot) -> str | None:
 
 
 # --------------------------------------------------------------------------
+# The verification listing
+# --------------------------------------------------------------------------
+
+
+def verification_tools(result) -> set[str]:
+    """The tools an example's questions route to, so a reader of the suite
+    can say which binary an example's verification.txt needs."""
+    return {
+        routed.tool
+        for question in questions(result.snapshot)
+        for routed in (route(result.snapshot, question),)
+        if routed.routed and not routed.decided
+    }
+
+
+def answerable(tool) -> bool:
+    """Whether a tool can answer here: installed, at a version it accepts.
+    An installed Renode of a version the lowering was not checked against
+    reports unsupported, and a listing written there would say only that."""
+    from fang.verification import ToolUnavailable
+
+    if not tool.available():
+        return False
+    try:
+        tool.version()
+    except ToolUnavailable:
+        return False
+    return True
+
+
+def _verification(result) -> str | None:
+    """What `fang verify` finds, run twice: on the elaborated program, and on
+    the head the first run's measurements were committed to.
+
+    Numbers are at three significant figures and no tool version appears, so
+    a simulator release that moves a number in its fourth figure moves nothing
+    here; the evidence keeps every figure and the version. An example with no
+    question gets no listing.
+    """
+    if not questions(result.snapshot):
+        return None
+    graph = KernelGraph(result.snapshot, checks=DEFAULT_CHECKS)
+    with TemporaryDirectory() as scratch:
+        first = verify(graph, traits=result.traits, workspace=Path(scratch), record_time=EPOCH)
+        out = ["On the elaborated program:", ""] + report(first, versions=False)
+        if graph.head.hash != result.snapshot.hash:
+            again = verify(graph, traits=result.traits, workspace=Path(scratch), record_time=EPOCH)
+            out += ["", "Again, on the head that run committed:", ""]
+            out += report(again, versions=False)
+    return "\n".join(out) + "\n"
+
+
+# --------------------------------------------------------------------------
 # The output set
 # --------------------------------------------------------------------------
 
 
-def render(name: str, *, with_render: bool = True) -> dict[str, str]:
+def _emulation_bundles(result) -> dict[str, str]:
+    """Each emulation question's plan, platform description and script."""
+    from fang.emulation import RENODE
+    from fang.verification import questions
+
+    files = {}
+    for question in questions(result.snapshot):
+        if question.method != "emulation":
+            continue
+        job = RENODE.prepare(result.snapshot, question, traits=result.traits)
+        folder = f"renode/{question.label.rsplit('.', 1)[-1]}"
+        for file in ("plan.json", "platform.repl", "run.resc"):
+            content = job.files[file]
+            files[f"{folder}/{file}"] = content.decode("utf-8") if isinstance(content, bytes) else content
+    return files
+
+
+def render(name: str, *, with_render: bool = True, with_draft: bool = True) -> dict[str, str]:
     """Every output file for one example, as relative path to text.
 
     The name is a path relative to examples/, so a grouped example is
     `jee_advanced/problem_1`. Files inside its own out/ are named after the
     leaf, because that is the name the program has. `with_render=False`
-    leaves out KiCad's render of a schematic, the one output that needs
-    `kicad-cli`, so everything else can still be checked without it.
+    leaves out KiCad's render of a schematic, which needs `kicad-cli`, and
+    `with_draft=False` copperhead's draft and its render, which need
+    `copperhead` as well, so everything else can still be checked without
+    them. The intent copperhead drafts from needs no tool and is always
+    written.
     """
     stem = Path(name).name
     system = load_system(_program(name))
@@ -375,13 +473,44 @@ def render(name: str, *, with_render: bool = True) -> dict[str, str]:
             files["schematic.svg"] = KicadRenderer().to_svg(
                 schematic, workspace=Path(scratch), name=stem
             )
+    if name in DRAFTED:
+        intent = compile_intent(result.snapshot, traits=result.traits, group=stem)
+        # An example is drafted to show the whole circuit drawn; one that
+        # would lose a part or a net is not quietly committed with the gap.
+        if intent.losses:
+            raise ValueError(f"{name} is in DRAFTED but its intent loses: {'; '.join(intent.losses)}")
+        files["copperhead/schematic.intent.json"] = intent.text()
+    if name in DRAFTED and with_draft:
+        with TemporaryDirectory() as scratch:
+            drafted = CopperheadDrafter().draft(
+                intent, workspace=Path(scratch) / "draft", name=stem
+            )
+            files[f"copperhead/{stem}.kicad_sch"] = drafted
+            files["copperhead/schematic.svg"] = KicadRenderer().to_svg(
+                drafted, workspace=Path(scratch) / "render", name=stem
+            )
+    if name in EMULATED:
+        files.update(_emulation_bundles(result))
     bench = bench_of(system)
     if bench is not None:
         files.update(bench.render(result, system, stem))
     rationale = _rationale(stem, result.snapshot)
     if rationale is not None:
         files["rationale.md"] = rationale
+    verification = _verification(result)
+    if verification is not None:
+        files["verification.txt"] = verification
     return files
+
+
+def _missing_tools(name: str) -> list[str]:
+    """The tools an example's questions route to that cannot answer here."""
+    from fang.verification import TOOLS
+
+    result = elaborate(load_system(_program(name)), project_id=PROJECT)
+    return sorted(
+        tool for tool in verification_tools(result) if not answerable(TOOLS.get(tool))
+    )
 
 
 def bench_of(system):
@@ -401,10 +530,22 @@ def simulated(name: str) -> bool:
 
 
 def write(name: str) -> list[Path]:
-    """Write one example's outputs, replacing whatever is there."""
+    """Write one example's outputs, replacing whatever is there.
+
+    A verification listing is not rewritten where its tool is missing: it
+    would record only that the tool is absent, over the answer it gave.
+    """
     out = ROOT / name / "out"
     written = []
+    missing = _missing_tools(name)
     for relative, text in sorted(render(name).items()):
+        if relative == "verification.txt" and missing:
+            print(
+                f"regenerate: {', '.join(missing)} is not installed; "
+                f"{name}/out/{relative} is left as it is",
+                file=sys.stderr,
+            )
+            continue
         path = out / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")

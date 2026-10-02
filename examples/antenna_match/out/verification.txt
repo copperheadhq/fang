@@ -1,0 +1,17 @@
+On the elaborated program:
+
+system.matched (VER-24067c6b485f)
+  equation level, touchstone
+  return_loss = 38.5 dB
+  assumption: return_loss: the port is driven against 50 Ohm, through shunt_c, series_l, into system.antenna's model at 2.44 GHz
+  coverage gap: each matching part is an ideal element: no parasitic resistance, no self-resonance, and no trace or pad between them
+  coverage gap: system.antenna's model is interpolated linearly between the file's points
+  confidence 0.5
+  PASS
+
+Again, on the head that run committed:
+
+system.matched (VER-24067c6b485f)
+  equation level, by the constraint evaluator; nothing runs
+  current: already answered at the equation level by touchstone
+  PASS

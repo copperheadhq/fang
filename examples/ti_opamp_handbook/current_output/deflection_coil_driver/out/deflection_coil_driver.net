@@ -3,7 +3,7 @@
   (design
     (source "deflection_coil_driver.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:fb04da5a11dbeaf8e8cf271a4700eccd26a4a9054ca9aaff3081319d98d64939")
+    (snapshot "sha256:86d15ad0efc75f7b9a8090d83c25bdf3698cd9a7b5edc6f0feb190f186610fc9")
     (project "PRJ-EXAMPLES")
   )
   (components

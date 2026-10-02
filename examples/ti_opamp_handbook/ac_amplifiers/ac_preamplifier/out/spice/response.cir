@@ -1,5 +1,5 @@
 * ac_preamplifier: response
-* plan for ngspice over sha256:614d9814628fee7e7fb51686c65f26bde65009c33ce2fc7ee0503ecda2c5d754
+* plan for ngspice over sha256:4ff23d07c39ec07f82599a1ba528ba52c2d60d25acc127680711382a68edec2f
 C1 1 2 1000u
 C2 3 4 1u
 C3 5 6 10u

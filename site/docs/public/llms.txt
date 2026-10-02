@@ -39,7 +39,7 @@ https://fang.copperhead.sh/llms-full.txt.
 
 - [Introduction](https://fang.copperhead.sh/start/introduction/): What fang is and what it won't guess.
 - [Installation](https://fang.copperhead.sh/start/installation/): Install fang and build your first board.
-- [Examples](https://fang.copperhead.sh/start/examples/): Eleven programs in the repository, smallest first.
+- [Examples](https://fang.copperhead.sh/start/examples/): Fourteen programs in the repository, smallest first.
 
 ## Concepts
 
@@ -49,10 +49,14 @@ https://fang.copperhead.sh/llms-full.txt.
 - [The commit gate](https://fang.copperhead.sh/concepts/the-commit-gate/): The six conditions every change passes before it reaches canonical state.
 - [Interfaces and lowering](https://fang.copperhead.sh/concepts/interfaces-and-lowering/): How a typed connection lowers to pins, and what that decides.
 - [Rationale](https://fang.copperhead.sh/concepts/rationale/): Why a value is what it is, as entities rather than prose.
+- [Verification](https://fang.copperhead.sh/concepts/verification/): How an undecided constraint gets decided by a tool, without a second way in.
+- [Firmware against the board](https://fang.copperhead.sh/concepts/firmware-emulation/): Why emulation is a verification question, and why the board, not a second wiring description, decides what the emulator sees.
 
 ## Examples
 
 - [Divider](https://fang.copperhead.sh/examples/divider/): A voltage divider with a capacitor across its output: two resistors, one cap and nothing else. It is here to show the shape of a Fang program and no more than that.
+- [Antenna match](https://fang.copperhead.sh/examples/antenna_match/): A 2.4 GHz chip antenna behind an L match, and the question of whether it is matched. It is the example of a part carrying its behaviour as data: a Touchstone file, read in-tree and composed in closed form. There is nothing to simulate, so the question is answered at the equation level.
+- [Rc filter](https://fang.copperhead.sh/examples/rc_filter/): A first-order RC low-pass ahead of an ADC, and one question about it, asked twice. It is the smallest board that shows a constraint nobody can decide getting decided: by a simulator, through the commit gate, and then by nothing more than the evaluator.
 - [Texas Instruments: Handbook of Operational Amplifier Applications](https://fang.copperhead.sh/examples/ti_opamp_handbook/index/): Every circuit in Texas Instruments' Handbook of Operational Amplifier Applications (SBOA092B, Carter and Brown, revised 2016), written in fang and simulated in ngspice through fang.simulation.
 - [Voltage follower](https://fang.copperhead.sh/examples/ti_opamp_handbook/buffers/voltage_follower/): SBOA092B page 49, The Voltage Follower: EI on the non-inverting input, the output wired straight back to the inverting input.
 - [Gain control](https://fang.copperhead.sh/examples/ti_opamp_handbook/dc_amplifiers/gain_control/): SBOA092B page 73, Gain Control: EI on the + input, a 10 kΩ potentiometer from the output to ground, and its wiper on the - input.
@@ -134,6 +138,7 @@ https://fang.copperhead.sh/llms-full.txt.
 - [Time delay relay](https://fang.copperhead.sh/examples/ti_opamp_handbook/additional/time_delay_relay/): SBOA092B page 90, Time Delay: a reset integrator that ramps down from half the supply and, when it runs out, drops its output onto a clamp and pulls in a 6 V, 1 kΩ relay.
 - [Meter amplifier](https://fang.copperhead.sh/examples/ti_opamp_handbook/current_output/meter_amplifier/): SBOA092B page 80, Meter Amplifier, \"fully developed average reading meter\": a follower whose feedback current runs through a bridge of two diodes and two 10 µF capacitors, with the meter across it.
 - [Clamped comparator](https://fang.copperhead.sh/examples/ti_opamp_handbook/comparators/clamped_comparator/): SBOA092B page 47, Figure 54, Fully Clamped Voltage Comparator: EI through R1 (100 kΩ) and a -15 V reference through R2 (1 MΩ) into the inverting input; CR1 (1N4148) from there to the tap of Ra/Rb (15 kΩ / 10 kΩ, from +15 V to the output); CR2 from the tap of Rb'/Ra' (3 kΩ / 15 kΩ, from the output to -15 V) back to it.
+- [Sensor node](https://fang.copperhead.sh/examples/sensor_node/): An STM32F401RE reading an HS3001 humidity sensor over I2C1, with a serial console on USART2 and a status LED on PA5. Read it after sensorboard/ and i2cbus/: it adds the two facts those boards leave to the firmware, which controller a port is and the address a device answers on. Then it runs the firmware: the board's own bare-metal firmware, in firmware/, executes in Renode against this board, and two requirements over what it does are decided by the run, through the commit gate.
 - [Regenerative integrator](https://fang.copperhead.sh/examples/ti_opamp_handbook/integrators/regenerative_integrator/): SBOA092B page 57, the integrator page 56 introduces with \"Regeneration may be used to increase open loop DC gain to infinity\". There is no formula, only a four-step procedure for trimming the zero control R8 and the regeneration control R5.
 - [Rate limiter](https://fang.copperhead.sh/examples/ti_opamp_handbook/additional/rate_limiter/): SBOA092B page 89, Rate Limiter: an op amp with no feedback of its own comparing EI + EO (summed at its + input through R1 and R0, both 100 kΩ) against ground, a diode bridge fed from ±15 V through R3 and R4 (100 kΩ), and an integrator (R5 100 kΩ, C0 10 µF) whose output is EO and closes the loop.
 - [USB UART bridge](https://fang.copperhead.sh/examples/usb_uart_bridge/): USB to serial: the interface board on nearly every desk. What it adds over the other examples is part selection, the difference between what the design needs and what was bought.
@@ -147,6 +152,8 @@ https://fang.copperhead.sh/llms-full.txt.
 - [Parts](https://fang.copperhead.sh/reference/parts/): The standard library and what a generic part deliberately lacks.
 - [Views](https://fang.copperhead.sh/reference/views/): Six required views, each answering one engineering question.
 - [Simulation](https://fang.copperhead.sh/reference/simulation/): Explicit plans and what happens when the simulator is missing.
+- [Verification](https://fang.copperhead.sh/reference/verification/): Questions, benches, measures, the tools that answer them, and fang verify.
+- [Emulation](https://fang.copperhead.sh/reference/emulation/): Running a board's compiled firmware in Renode, and what a run can and cannot show.
 - [Workspace](https://fang.copperhead.sh/reference/workspace/): What `.copperhead/` holds and what may be deleted.
 - [Diagnostics](https://fang.copperhead.sh/reference/diagnostics/): Every code fang emits, by area.
 

@@ -706,7 +706,8 @@ class KicadRenderer:
                 f"{self.executable} is not installed; the schematic compiled but "
                 "no render was made and no picture is fabricated"
             )
-        workspace = Path(workspace)
+        # Absolute, because kicad-cli is run from inside it and named it too.
+        workspace = Path(workspace).resolve()
         workspace.mkdir(parents=True, exist_ok=True)
         source = workspace / f"{name}.kicad_sch"
         source.write_text(schematic, encoding="utf-8")

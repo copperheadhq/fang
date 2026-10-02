@@ -1,5 +1,5 @@
 * balanced_output: sine_10v_peak
-* plan for ngspice over sha256:a9558038cc9027002f2d5fea1407bc42164103d6ec8c6999042a087a461140af
+* plan for ngspice over sha256:7c476fbdfc9a37117bf9c1afaedcb129a5cf2faeeaa4ac7609be6414b8873244
 * GND1 abstracted; no device emitted
 R1 2 3 10k
 R2 4 5 10k

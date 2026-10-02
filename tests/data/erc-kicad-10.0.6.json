@@ -1,0 +1,113 @@
+{
+  "$schema": "https://schemas.kicad.org/erc.v1.json",
+  "coordinate_units": "mm",
+  "date": "2026-10-02T14:34:39",
+  "ignored_checks": [
+    {
+      "description": "Global label only appears once in the schematic",
+      "key": "single_global_label"
+    },
+    {
+      "description": "Four connection points are joined together",
+      "key": "four_way_junction"
+    },
+    {
+      "description": "SPICE model issue",
+      "key": "simulation_model_issue"
+    },
+    {
+      "description": "Assigned footprint doesn't match footprint filters",
+      "key": "footprint_filter"
+    }
+  ],
+  "included_severities": [
+    "error",
+    "warning",
+    "exclusion"
+  ],
+  "kicad_version": "10.0.6",
+  "sheets": [
+    {
+      "path": "/",
+      "uuid_path": "/6639392d-fd46-5c17-9892-531f105aacf3",
+      "violations": [
+        {
+          "description": "Pin not connected",
+          "items": [
+            {
+              "description": "Symbol U1 Pin 6 [EN, Passive, Line]",
+              "pos": {
+                "x": 1.53478,
+                "y": 1.0725
+              },
+              "uuid": "c5521896-0c08-5eca-bc31-066309def60a"
+            }
+          ],
+          "severity": "error",
+          "type": "pin_not_connected"
+        },
+        {
+          "description": "Symbol pin or wire end off connection grid",
+          "items": [
+            {
+              "description": "Symbol C1 Pin 1 [1, Passive, Line]",
+              "pos": {
+                "x": 0.44258,
+                "y": 0.2851
+              },
+              "uuid": "2e722910-9a3e-5350-9f52-b69573cd859c"
+            }
+          ],
+          "severity": "warning",
+          "type": "endpoint_off_grid"
+        },
+        {
+          "description": "Symbol pin or wire end off connection grid",
+          "items": [
+            {
+              "description": "Horizontal Wire, length 0.0508 mm",
+              "pos": {
+                "x": 0.44258,
+                "y": 0.2851
+              },
+              "uuid": "f5cdbc8c-d60f-502a-8f8a-d16e423e0d7d"
+            }
+          ],
+          "severity": "warning",
+          "type": "endpoint_off_grid"
+        },
+        {
+          "description": "The current configuration does not include the symbol library 'fang'",
+          "items": [
+            {
+              "description": "Symbol C1 [Box_C1]",
+              "pos": {
+                "x": 0.56958,
+                "y": 0.2851
+              },
+              "uuid": "97046d39-fb2b-5882-9602-6c32c2467dd7"
+            }
+          ],
+          "severity": "warning",
+          "type": "lib_symbol_issues"
+        },
+        {
+          "description": "Unconnected wire endpoint",
+          "items": [
+            {
+              "description": "Horizontal Wire, length 0.0508 mm",
+              "pos": {
+                "x": 1.53478,
+                "y": 1.0725
+              },
+              "uuid": "11456c5a-9ab4-509d-a407-69673119544f"
+            }
+          ],
+          "severity": "warning",
+          "type": "unconnected_wire_endpoint"
+        }
+      ]
+    }
+  ],
+  "source": "buck_regulator.kicad_sch"
+}

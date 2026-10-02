@@ -3,7 +3,7 @@
   (design
     (source "equations.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:fdff84b909b437bdbe0baec561d568ee1954e6e7d43ce3f89877df03df7657f5")
+    (snapshot "sha256:2c5c70a2cb2fc5cbddd9d7c98ff1050f605243738b1f7370a03a829a91eb4161")
     (project "PRJ-EXAMPLES")
   )
   (components

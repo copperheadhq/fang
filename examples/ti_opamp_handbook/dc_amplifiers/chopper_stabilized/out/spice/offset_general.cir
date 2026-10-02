@@ -1,5 +1,5 @@
 * chopper_stabilized: offset_general
-* plan for ngspice over sha256:8ccab848199e9fec70a8269bacfdf894545dd68c1dbd696a3b1b6be2cdd582a1
+* plan for ngspice over sha256:25b388b1c6bf7dcb6f59d325eb7c983674249f30cd2f2b648dbeeb38b1d32eb4
 * GND1 abstracted; no device emitted
 R1 2 3 1k
 R2 3 4 100k

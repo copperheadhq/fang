@@ -1,5 +1,5 @@
 * subtractor: common_mode
-* plan for ngspice over sha256:90f47a3704a04182a14689579dbbe374d7247c08e4d75b63638e71910c89d0f0
+* plan for ngspice over sha256:d53408bb388f09984f7a3dd043386ff6cd40bcfcbd18a6f6b7f39af636526968
 * GND1 abstracted; no device emitted
 R1 2 3 10k
 R2 4 5 10k

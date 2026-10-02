@@ -1,5 +1,5 @@
 * reference_voltage_supply: outputs
-* plan for ngspice over sha256:f6fa92d69a424fa00e38cdeea104b90727022ae78fba3f93ec4a126cef320ad2
+* plan for ngspice over sha256:3981944e7f74f9894b31bfb9a1f432faf96f00c292d1e3daacbca8694e72ce39
 * GND1 abstracted; no device emitted
 R1 2 3 100k
 R2 4 2 10k

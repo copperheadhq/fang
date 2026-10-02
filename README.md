@@ -54,6 +54,8 @@ fang netlist board.py     # components and nets
 fang export  board.py -o board.net   # a KiCad netlist
 fang view    board.py ground -o ground.svg
 fang sim     board.py --analysis transient --probe "V(1)"
+fang verify  board.py     # answer every declared question; --commit persists
+fang emulate board.py     # run the board's firmware in Renode
 fang mcp     board.py     # serve the agent surface over stdio
 ```
 
@@ -70,7 +72,9 @@ fang mcp     board.py     # serve the agent surface over stdio
 | Tool plan | Handles as symbolic conditions, the tool contract, the operation phase, realizations |
 | Views | Six required views, the layout boundary, SVG rendering, placement seeds |
 | Simulation | Models as traits, explicit plans, SPICE lowering, the ngspice backend, normalized results |
+| Emulation | Compiled firmware run against the board in Renode: plans resolved from the graph, probes, measures over events, answers through the gate |
 | Rationale | Requirements, assumptions, decisions, evidence, calculations, the verification graph, impact propagation |
+| Verification | Questions declared beside requirements, explicit benches and measures, routing to the cheapest level, measurements re-entering through the gate; ngspice, Xyce, KiCad ERC and Touchstone |
 | CLI | The `.copperhead/` workspace, the manifest and the commands above |
 
 ## The specification
@@ -122,6 +126,11 @@ fang/
   layout.py         the layout boundary
   render.py         SVG rendering
   simulation.py     plans, SPICE lowering, backends, normalized results
+  verification.py   questions, the tool protocol, routing, re-entry through the gate
+  rulecheck.py      KiCad's electrical rules check as a question
+  rf.py             Touchstone models and return loss in closed form
+  emulation.py      firmware questions, the plan resolved from the graph, measures over events
+  renode/           the Renode lowering, backend, probes and model descriptors
   rationale.py      requirements, decisions, evidence, calculations, coverage
   workspace.py      the .copperhead/ workspace and its manifest
   cli.py            the fang command line
@@ -146,11 +155,14 @@ pip install -e ".[dev,analysis,mcp]"
 python -m pytest
 ```
 
-Pure Python 3.11+, and the core install has no dependencies at all. Three things
-are optional and none is required: NetworkX, an extra used for graph *analysis*;
-the MCP SDK, the extra behind `fang mcp`; and ngspice, an external simulator
-reached across a process boundary. When any of them is absent the toolchain says
-so rather than substituting anything.
+Pure Python 3.11+, and the core install has no dependencies at all. Everything
+else is optional and none of it is required: NetworkX, an extra used for graph
+*analysis*; the MCP SDK, the extra behind `fang mcp`; and five external tools
+reached across a process boundary: ngspice and Xyce, which simulate,
+`kicad-cli`, which renders schematics and checks their electrical rules,
+copperhead, which drafts a placed and wired schematic, and Renode, which runs a
+board's firmware. When any of them is absent the toolchain
+says so rather than substituting anything.
 
 ## Invariants the tests hold
 
@@ -171,14 +183,18 @@ so rather than substituting anything.
 ## Tests
 
 ```bash
-python -m pytest          # 604 tests; those needing a binary skip by name
+python -m pytest          # 1602 tests; those needing a binary skip by name
 python -m pytest -rs      # names each environment-dependent skip
 ```
 
-The suite includes one test per acceptance criterion (AT-R1 to AT-R13 and AT-K1
-to AT-K10). **All 23 pass.** The only skips name what is missing: the NetworkX
-and MCP extras, and the ngspice binary. One example ships a KiCad schematic and
-KiCad's render of it, so rebuilding that one needs `kicad-cli` on the path.
+The suite includes one test per acceptance criterion (AT-R1 to AT-R13, AT-K1
+to AT-K10, AT-V1, AT-F1 and AT-F2). **All 26 pass**; AT-V1 runs a circuit
+simulation and needs ngspice, and AT-F1 and AT-F2 run firmware and need Renode
+1.17.0. The only skips name what is missing: the NetworkX and MCP extras, and
+the ngspice, kicad-cli, copperhead and Renode binaries. The examples that ship a
+KiCad schematic need `kicad-cli` to rebuild, and the ones with questions
+compare their `verification.txt` only where the tools those questions route to
+are installed.
 
 ## Examples
 
@@ -189,6 +205,11 @@ checks and exports. The suite rebuilds the committed outputs and compares them
 in [tests/test_examples.py](https://github.com/copperheadhq/fang/blob/main/tests/test_examples.py).
 
 - [examples/divider/](https://github.com/copperheadhq/fang/tree/main/examples/divider/): a voltage divider with a filter cap
+- [examples/rc_filter/](https://github.com/copperheadhq/fang/tree/main/examples/rc_filter/): an RC low-pass whose corner is a
+  question: ngspice answers it, the number enters through the gate, and asked
+  again it is answered at the equation level
+- [examples/antenna_match/](https://github.com/copperheadhq/fang/tree/main/examples/antenna_match/): a chip antenna's
+  Touchstone model through an L match, its return loss composed in closed form
 - [examples/blinky/](https://github.com/copperheadhq/fang/tree/main/examples/blinky/): an MCU pin, a resistor
   and an LED, showing the shape of a program with nothing else in the way
 - [examples/equations/](https://github.com/copperheadhq/fang/tree/main/examples/equations/): a divider written as the ratio it
@@ -198,11 +219,17 @@ in [tests/test_examples.py](https://github.com/copperheadhq/fang/blob/main/tests
   thresholds are an assumption rather than a number
 - [examples/sensor_board/](https://github.com/copperheadhq/fang/tree/main/examples/sensor_board/): a regulated board with an
   MCU and an I2C sensor, showing pin lowering and recorded decisions
+- [examples/sensor_node/](https://github.com/copperheadhq/fang/tree/main/examples/sensor_node/): an STM32F401RE and an
+  HS3001, with ports that name their controller, alternate functions cited from
+  ST's table on the lowered pins, the sensor's address read by the check, and
+  its firmware run in Renode against the board, two requirements decided by the
+  run through the commit gate
 - [examples/usb_uart_bridge/](https://github.com/copperheadhq/fang/tree/main/examples/usb_uart_bridge/): USB to serial, with
   chosen vendor parts, a crystal and a UART crossover named wire by wire
 - [examples/buck_regulator/](https://github.com/copperheadhq/fang/tree/main/examples/buck_regulator/): 12 V to 3.3 V, with the
-  requirement, the part decision, the datasheet citations, the two calculations
-  and the verification in the same graph as the inductor
+  requirement, the part decision, the datasheet citations and the two
+  calculations in the same graph as the inductor, and a question ngspice
+  answers under full load
 - [examples/servo_drive/](https://github.com/copperheadhq/fang/tree/main/examples/servo_drive/): three half-bridges, CAN and a
   quadrature encoder, from one block declaration instantiated three times
 - [examples/jee_advanced/](https://github.com/copperheadhq/fang/tree/main/examples/jee_advanced/): two exam

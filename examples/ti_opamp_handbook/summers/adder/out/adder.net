@@ -3,7 +3,7 @@
   (design
     (source "adder.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:010d7a344379e34ebe3655d8231dffe2f285ab1304c0bb21ffdf1ff90f4c9447")
+    (snapshot "sha256:415d4b23c1033a4299b2789cea9ad7184c14ebbf53f9e59aa580b9f457dbb862")
     (project "PRJ-EXAMPLES")
   )
   (components

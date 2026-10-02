@@ -1,5 +1,5 @@
 * isolated_standard_cell: loaded
-* plan for ngspice over sha256:09d506ae97913ce476769b460407a319942e3bb1e3f68598abe528563314c098
+* plan for ngspice over sha256:417c3f76b39a5186c91dd50d48b80b612bfaf7aceee4630512281d722bfeeaae
 * GND1 abstracted; no device emitted
 R1 2 0 20k
 * TP1 abstracted; no device emitted

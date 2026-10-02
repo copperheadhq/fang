@@ -3,7 +3,7 @@
   (design
     (source "buffer_variation.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:2fe471893a6fa0a173596832dcfdb6fd8ab48a9739649b77f0228398e3563e07")
+    (snapshot "sha256:da447c3c5a68c37e20e7e375fff6f37d311e22a5e1954b92f0a7bb91aa5ab370")
     (project "PRJ-EXAMPLES")
   )
   (components

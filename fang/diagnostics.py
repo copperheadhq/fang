@@ -43,6 +43,10 @@ class SourceLocation:
             out["column"] = self.column
         return out
 
+    @classmethod
+    def from_dict(cls, payload) -> "SourceLocation":
+        return cls(payload["file"], payload["line"], payload.get("column"))
+
 
 @dataclass(frozen=True)
 class Code:
@@ -168,6 +172,51 @@ IFACE_UNSATISFIABLE_SIGNAL = _allocate(
 )
 IFACE_MEMBERSHIP_DISAGREEMENT = _allocate(
     "IFACE-0002", "two interfaces disagree on membership"
+)
+IFACE_SELECTOR_WITHOUT_EVIDENCE = _allocate(
+    "IFACE-0003", "a pin selector cites no evidence the part declares"
+)
+IFACE_STRAP_UNKNOWN_PIN = _allocate(
+    "IFACE-0004", "an address strap names a pin the part does not have"
+)
+
+# Simulation and verification conditions. A question is refused here, by name,
+# rather than run with something assumed in place of what it left out.
+SIM_UNDECLARED_PARAMETER = _allocate(
+    "SIM-0001", "a question measures into a parameter its module does not declare"
+)
+SIM_QUESTION_RESULT = _allocate("SIM-0002", "a question states its own result")
+SIM_UNRESOLVED_SURFACE = _allocate(
+    "SIM-0003", "a question names a surface or part that resolves to no pins"
+)
+SIM_MISSING_BENCH = _allocate("SIM-0004", "a circuit question names no bench")
+SIM_LOAD_DIMENSION = _allocate("SIM-0005", "a load is neither a current nor a resistance")
+SIM_MODEL_PORT_UNREACHED = _allocate(
+    "SIM-0006", "a model port the part's pin map does not reach"
+)
+SIM_OUTSIDE_MODEL_RANGE = _allocate("SIM-0007", "a frequency outside a model's range")
+SIM_EXCLUSION_WITHOUT_REASON = _allocate(
+    "SIM-0008", "a rule-check exclusion gives no reason"
+)
+SIM_EMULATION_MODEL = _allocate(
+    "SIM-0009", "an emulation model names a descriptor the toolchain does not ship"
+)
+SIM_EMULATION_SCOPE = _allocate(
+    "SIM-0010", "a component in an emulation's scope has neither a model nor an abstraction"
+)
+SIM_EMULATION_FAULT = _allocate("SIM-0011", "a fault its emulation model does not support")
+SIM_EMULATION_STIMULUS = _allocate(
+    "SIM-0012", "a stimulus names an input its model lacks, or a quantity of the wrong dimension"
+)
+SIM_EMULATION_PIN = _allocate("SIM-0013", "a pin the platform emulation model does not map")
+SIM_EMULATION_DURATION = _allocate(
+    "SIM-0014", "an emulation question names no run duration, or one that is not positive"
+)
+SIM_EMULATION_FIRMWARE = _allocate(
+    "SIM-0015", "no firmware is bound, or it was built for a target the platform does not describe"
+)
+SIM_EMULATION_BUS = _allocate(
+    "SIM-0016", "an emulated bus device's controller or address cannot be resolved"
 )
 
 # Import conditions.

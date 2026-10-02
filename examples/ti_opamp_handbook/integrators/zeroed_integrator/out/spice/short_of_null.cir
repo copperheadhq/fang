@@ -1,5 +1,5 @@
 * zeroed_integrator: short_of_null
-* plan for ngspice over sha256:6924d586c9c54465f8bc46b207f4ed5f7593c1519aea30c4ac62f9206d3ec030
+* plan for ngspice over sha256:ae5c00af0068a80df1e1b939c69051ce685708baaed2e95681df48edbd08400b
 C1 1 2 1u
 * GND1 abstracted; no device emitted
 R1 4 1 100k

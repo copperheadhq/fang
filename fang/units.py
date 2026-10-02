@@ -161,12 +161,30 @@ UNITS: Mapping[str, _UnitDef] = {
     "rad": _d(DIMENSIONLESS, prefixable=False),
     "percent": _d(DIMENSIONLESS, "0.01", prefixable=False),
     "ppm": _d(DIMENSIONLESS, "0.000001", prefixable=False),
+    # A ratio on a logarithmic scale. Dimensionless by the seven bases, and
+    # still converted and compared only with other decibels (see LOGARITHMIC):
+    # the factor is 1 because nothing converts a decibel into a linear ratio
+    # here, and a constraint in dB is written in dB.
+    "dB": _d(DIMENSIONLESS, prefixable=False),
     # accepted non-SI
     "min": _d(_T, "60", prefixable=False),
     "h": _d(_T, "3600", prefixable=False),
     "L": _d(_L**3, "0.001"),
     "eV": _d(_L**2 * _M / _T**2, "1.602176634E-19"),
 }
+
+#: The units on a logarithmic scale. The dimension model has no base for a
+#: scale, and needs none: such a unit is dimensionless, and is kept apart
+#: from every linear dimensionless unit by this set. A decibel converts only
+#: to a decibel, so 10 dB is never 1000 percent, and an expression mixing the
+#: two is refused where it is written.
+LOGARITHMIC = frozenset({"dB"})
+
+#: Why a decibel is refused beside a linear ratio, in every refusal.
+SCALE_MISMATCH = (
+    "a decibel is a ratio on a logarithmic scale, and converts and compares "
+    "only with decibels, never with a linear ratio"
+)
 
 #: Metric prefixes. A prefix is permitted on input; canonical form keeps it.
 PREFIXES: Mapping[str, str] = {
@@ -267,6 +285,13 @@ class Unit:
     @property
     def affine(self) -> bool:
         return self.offset != 0
+
+    @property
+    def logarithmic(self) -> bool:
+        """Whether the unit is a ratio on a logarithmic scale: a decibel."""
+        return any(
+            term.split("^", 1)[0] in LOGARITHMIC for term in re.split(r"[*/]", self.symbol)
+        )
 
     def as_dict(self) -> dict:
         return {"symbol": self.symbol, "dimension": self.dimension.as_list()}
@@ -432,6 +457,11 @@ class Quantity:
                 f"cannot convert {self.unit} to {target}: "
                 f"{self.dimension} is not {target.dimension}",
             )
+        if target.logarithmic != self.unit.logarithmic:
+            raise error(
+                UNIT_DIMENSION_MISMATCH,
+                f"cannot convert {self.unit} to {target}: {SCALE_MISMATCH}",
+            )
 
         def convert(magnitude: Decimal | None) -> tuple[Decimal | None, bool]:
             if magnitude is None:
@@ -465,6 +495,31 @@ class Quantity:
                 **fields,
             ),
             exact,
+        )
+
+    @classmethod
+    def from_dict(cls, payload: Mapping) -> "Quantity":
+        """Read a quantity back from its record. The inverse of `as_dict`."""
+
+        def magnitude(key: str) -> Decimal | None:
+            text = payload.get(key)
+            return None if text is None else Decimal(str(text))
+
+        tolerance = payload.get("tolerance")
+        return cls(
+            payload["kind"],
+            Unit.parse(payload["unit"]),
+            value=magnitude("value"),
+            minimum=magnitude("min"),
+            maximum=magnitude("max"),
+            typical=magnitude("typical"),
+            nominal=magnitude("nominal"),
+            tolerance=(
+                Tolerance(tolerance["kind"], Decimal(str(tolerance["value"])))
+                if tolerance is not None
+                else None
+            ),
+            conditions=dict(payload.get("conditions", {})),
         )
 
     def as_dict(self) -> dict:
@@ -513,7 +568,16 @@ def _decimal_str(value: Decimal) -> str:
 
     Normalizes away exponent notation for ordinary magnitudes so that the same
     number always serializes the same way, without changing its value.
+
+    An infinite bound is a magnitude too: an event observed not to occur before
+    a run's end is the range from that end to infinity, and it serializes as
+    ``Infinity`` so that ``Decimal`` reads it back unchanged. A NaN is not a
+    magnitude of anything and has no canonical form.
     """
+    if value.is_nan():
+        raise ValueError("NaN is not a magnitude and has no canonical form")
+    if value.is_infinite():
+        return "Infinity" if value > 0 else "-Infinity"
     if value == value.to_integral_value() and abs(value.as_tuple().exponent) < 20:
         text = str(value.quantize(Decimal(1)))
     else:
@@ -522,10 +586,24 @@ def _decimal_str(value: Decimal) -> str:
 
 
 def require_same_dimension(left: Quantity, right: Quantity, operation: str) -> None:
-    """Reject operands of unequal dimension where the operation is written."""
+    """Reject operands of unequal dimension, or a decibel beside a linear
+    ratio, where the operation is written."""
     if left.dimension != right.dimension:
         raise error(
             UNIT_DIMENSION_MISMATCH,
             f"{operation} requires operands of equal dimension: "
             f"{left.unit} is {left.dimension}, {right.unit} is {right.dimension}",
         )
+    if left.unit.logarithmic != right.unit.logarithmic:
+        raise error(
+            UNIT_DIMENSION_MISMATCH,
+            f"{operation} mixes {left.unit} with {right.unit}: {SCALE_MISMATCH}",
+        )
+
+
+def scale_of(unit: Unit) -> bool | None:
+    """Whether a unit is a decibel (True), a linear dimensionless ratio
+    (False), or neither, where the question does not arise (None)."""
+    if unit.logarithmic:
+        return True
+    return False if unit.dimension.dimensionless else None

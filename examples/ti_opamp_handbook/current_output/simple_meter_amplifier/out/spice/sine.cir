@@ -1,5 +1,5 @@
 * simple_meter_amplifier: sine
-* plan for ngspice over sha256:21522b7bf20d0705029f3b7fbcfe8174ac2019811f8c0a41c11cd390b63530d9
+* plan for ngspice over sha256:15d6277cef85bcb7f90d135e2a9eb5b6a3b1583f84a84eb784d3a541cad5f1be
 * D1 abstracted; no device emitted
 * D2 abstracted; no device emitted
 * GND1 abstracted; no device emitted

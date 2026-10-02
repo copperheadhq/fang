@@ -3,7 +3,7 @@
   (design
     (source "single_supply.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:a7bc3cafa9f5db735164b561241c4d635ef8d5c211454f58c6a09570602ac2af")
+    (snapshot "sha256:302584e608538e755a2c9aab860b8b7b5ab684658c137b02b4d24137ab1875ec")
     (project "PRJ-EXAMPLES")
   )
   (components

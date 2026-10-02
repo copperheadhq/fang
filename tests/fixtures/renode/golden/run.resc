@@ -1,0 +1,15 @@
+emulation SetSeed 42
+include $ORIGIN/fang_probes.cs
+mach create "sensor_node"
+machine LoadPlatformDescription $ORIGIN/platform.repl
+sysbus.gpioPortA.recorder Open $ORIGIN/events.jsonl
+sysbus.gpioPortA.recorder WatchWrites "mcu" "gpioPortB" "MODER" 0x40020400
+sysbus.gpioPortA.recorder WatchWrites "mcu" "gpioPortB" "OTYPER" 0x40020404
+sysbus.gpioPortA.recorder WatchWrites "mcu" "gpioPortB" "AFRH" 0x40020424
+sysbus LoadELF $ORIGIN/firmware.elf
+sysbus.i2c1.env SetInput "Temperature" "25"
+emulation RunFor "2"
+sysbus.gpioPortA.recorder Snapshot "mcu" "gpioPortB" "MODER" 0x40020400
+sysbus.gpioPortA.recorder Snapshot "mcu" "gpioPortB" "AFRH" 0x40020424
+sysbus.gpioPortA.recorder Finish "completed"
+quit

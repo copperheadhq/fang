@@ -1,5 +1,5 @@
 * constant_current_generator: past_limit
-* plan for ngspice over sha256:f06a992d882b155d58c6256c2584be6ebe87e1636b3d9354860e0242212207e5
+* plan for ngspice over sha256:a4e0a0da5548c4fa72ddeb903105d35c6fd4d44c19c0266879c7833196263074
 * D1 abstracted; no device emitted
 * GND1 abstracted; no device emitted
 R1 3 2 330

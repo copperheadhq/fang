@@ -3,7 +3,7 @@
   (design
     (source "simple_oscillator.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:ebb565d5f20503b94741ae7b185a68856e3b4b656a0637692eaaf8dd8758544a")
+    (snapshot "sha256:74bb0b9883944fdc28a6f5c5fc1dcb9700858563a981400a16ec047350be02ed")
     (project "PRJ-EXAMPLES")
   )
   (components

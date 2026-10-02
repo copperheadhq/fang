@@ -1,0 +1,15 @@
+emulation SetSeed 0
+include $ORIGIN/fang_probes.cs
+mach create "board"
+machine LoadPlatformDescription $ORIGIN/platform.repl
+sysbus.gpioPortA.recorder Open $ORIGIN/events.jsonl
+sysbus.gpioPortA.recorder WatchWrites "CMP-91431a8f1d4e" "gpioPortB" "AFRH" 0x40020424
+sysbus.gpioPortA.recorder WatchWrites "CMP-91431a8f1d4e" "gpioPortB" "MODER" 0x40020400
+sysbus.gpioPortA.recorder WatchWrites "CMP-91431a8f1d4e" "gpioPortB" "OTYPER" 0x40020404
+sysbus LoadELF $ORIGIN/firmware.elf
+sysbus.i2c1.fang_system_env SetInput "Temperature" "25"
+emulation RunFor "2"
+sysbus.gpioPortA.recorder Snapshot "CMP-91431a8f1d4e" "gpioPortB" "AFRH" 0x40020424
+sysbus.gpioPortA.recorder Snapshot "CMP-91431a8f1d4e" "gpioPortB" "MODER" 0x40020400
+sysbus.gpioPortA.recorder Finish "completed"
+quit

@@ -3,7 +3,7 @@
   (design
     (source "averager.py")
     (tool "fang 0.1.0")
-    (snapshot "sha256:379360277b11b971f445fb9e0292dfbeedfd1498fa57b4ebc6f3cdc8378397e7")
+    (snapshot "sha256:0f8827f07b5a05680dba014eb88ec90912d0f16e105cb8dea83a92944bd8653e")
     (project "PRJ-EXAMPLES")
   )
   (components

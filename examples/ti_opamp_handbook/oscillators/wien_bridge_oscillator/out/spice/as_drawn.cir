@@ -1,5 +1,5 @@
 * wien_bridge_oscillator: as_drawn
-* plan for ngspice over sha256:f6de442046722b3f601b40b5cd508d31e26580953d4d8b003a696f2fccf6ff75
+* plan for ngspice over sha256:8494709fc01d2bd30ae38b0ffb59c84ebbfdf6c5cd1a775e276231bde6247722
 C1 1 2 15.9n
 C2 2 0 15.9n
 * GND1 abstracted; no device emitted

@@ -1,0 +1,11 @@
+{"seq":0,"t_ns":0,"source":"","type":"run.start","payload":{}}
+{"seq":1,"t_ns":190,"source":"mcu","type":"register.write","payload":{"address":"0x40020400","peripheral":"gpioPortB","register":"MODER","value":"0x000A0280"}}
+{"seq":2,"t_ns":450,"source":"mcu","type":"register.write","payload":{"address":"0x40020404","peripheral":"gpioPortB","register":"OTYPER","value":"0x00000300"}}
+{"seq":3,"t_ns":480,"source":"mcu","type":"register.write","payload":{"address":"0x40020424","peripheral":"gpioPortB","register":"AFRH","value":"0x00000044"}}
+{"seq":4,"t_ns":570,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x1C. Unhandled bits: [4, 6] when writing value 0x50. Tags: CCR (0x50)."}}
+{"seq":5,"t_ns":570,"source":"mcu.i2c1","type":"model.warning","payload":{"text":"Unhandled write to offset 0x20. Unhandled bits: [0, 4] when writing value 0x11. Tags: TRISE (0x11)."}}
+{"seq":6,"t_ns":2020,"source":"mcu.usart2","type":"uart.line","payload":{"text":"sensor_node boot"}}
+{"seq":7,"t_ns":2300,"source":"mcu.i2c1","type":"i2c.nack","payload":{"address":68}}
+{"seq":8,"t_ns":2000000000,"source":"mcu","type":"register.snapshot","payload":{"address":"0x40020400","peripheral":"gpioPortB","register":"MODER","value":"0x000A0280"}}
+{"seq":9,"t_ns":2000000000,"source":"mcu","type":"register.snapshot","payload":{"address":"0x40020424","peripheral":"gpioPortB","register":"AFRH","value":"0x00000044"}}
+{"seq":10,"t_ns":2000000000,"source":"","type":"run.end","payload":{"reason":"completed"}}

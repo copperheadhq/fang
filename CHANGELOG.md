@@ -11,6 +11,52 @@ tracked separately and moves only when the serialized form changes.
 
 ### Added
 
+- Verification questions (`fang-verification`, copperhead RFC 12 version 1.3,
+  Sections 12.7 to 12.10). `Simulates`, `Checks` and `Evaluates` declare a
+  question beside the requirement it serves: the parameters it measures into,
+  the measures that produce them, and for a circuit question the bench in full.
+  Each elaborates to a `Verification` whose result is `UNKNOWN`, and none
+  accepts a result; a program that gives a measured parameter a value is
+  refused (`SIM-0002`). `route()` answers at the equation level only when every
+  measured parameter holds a value and every constraint over them is decided,
+  and otherwise picks the first registered tool at the level the method names;
+  a missing tool is reported unsupported, by name, and nothing stands in for
+  it.
+- Measurements re-enter through the commit gate: each measured parameter set to
+  an inferred value whose source is the run's `Evidence`, that evidence
+  carrying the measurement record of RFC 3 version 1.5 Section 14, and the
+  verification replaced under its own identifier with its result, level and
+  tool. A measured value that fails a hard constraint never reaches the head;
+  the failure is recorded as evidence and a `FAIL` verification instead.
+  Re-elaborating a program keeps what runs measured while it is current, that
+  is while preparing the same question again gives the same job: a changed
+  circuit, model file or firmware drops the measurement and the question runs
+  again. A run already recorded for the same job and tool version is not run
+  again; its recorded measurements go back through the gate, so a relaxed or
+  tightened constraint is judged afresh. Every record says where it ran.
+- Four tools behind one protocol: ngspice (operating point, transient and AC,
+  measured through a `.control` block), Xyce (the same circuit with `.MEASURE`
+  lines, unsupported where not installed), KiCad's electrical rules check over
+  the schematic fang draws, with exclusions declared and recorded with their
+  reasons, and Touchstone models read in-tree for return loss through a
+  matching network, in closed form. Model and Touchstone files are named in a
+  run's bundle by their relative path, or by their content where two different
+  files share one; two models declaring one subcircuit, pins on different nets
+  reaching one model port (`SIM-0006`), an ERC report of another schema, and
+  matching parts that do not form the ladder a return loss names are refused
+  rather than run.
+- `fang verify`, which routes and runs every declared question and persists
+  the measurements only with `--commit`, through the gate; `--commit` refuses a
+  program changed since its last build, which is `fang build`'s to persist.
+- `examples/rc_filter/` and `examples/antenna_match/`, and `verification.txt`
+  among the outputs an example with a question ships. `buck_regulator/`'s
+  hand-asserted `Verifies(..., result="PASS")` is now a question ngspice
+  answers under full load, on an ideal power stage whose provenance is an
+  assumption.
+- Diagnostic codes `SIM-0001` to `SIM-0008`, a `dB` unit, and the `GHz`, `nH`
+  and `dB` literals. A decibel compares and converts only with decibels, and a
+  return loss measures only into a parameter declared in dB (`UNIT-0001`).
+
 - Six worked examples beyond the divider and the sensor board: `blinky/`, `equations/`,
   `i2c_bus/`, `usb_uart_bridge/`, `buck_regulator/`, and `servo_drive/`,
   covering the ground atopile's own example set covers — a first board, design by
@@ -34,16 +80,95 @@ tracked separately and moves only when the serialized form changes.
   evidence the design records. `python examples/regenerate.py` rewrites them,
   and `tests/test_examples.py` rebuilds and compares them, so a committed output
   cannot drift from the program beside it.
-- `examples/README.md`, indexing the eight programs and saying what is in an
+- `examples/README.md`, indexing the programs and saying what is in an
   `out/` and how it got there.
 - A regression test that two hard constraints bounding *different* parameters of
   one target are not read as a contradiction — the grouping this relies on has
   always been keyed by parameter, and nothing said so.
 - [site/docs/](site/docs/), an Astro + Starlight documentation site for
   `fang.copperhead.sh`, pinned to the versions `docs.copperhead.sh` runs.
+- A port can name the peripheral instance it is,
+  `I2CPort(peripheral="I2C1")`, recorded on the port entity. A part with I2C on
+  two controllers declares two ports, and a connection lowers only onto the
+  named one's pins.
+- A candidate pin can carry the selector that routes the signal to it:
+  `PinMap({"i2c1.scl": {"PB8": AF(4), "PB6": AF(4)}}, evidence="af_table")`,
+  with `Selector(text)` as the general form. A map with selectors names the
+  `Cites` declaration they were read from, or elaboration refuses it
+  (`IFACE-0003`). The lowering records the chosen pin's selector and the
+  evidence on the pin connection, as `selectors`.
+- An addressed bus device's port carries its address: a dimensionless `address`
+  on the I2C interface, or `Strap(pin, {device pin: address})`, whose pin names
+  are resolved at elaboration (`IFACE-0004` for one the part does not have).
+  `fang.compatibility.resolve_address` reads either, resolving a strap from the
+  inferred nets, and the addressing rule now uses it for every participant and
+  compares addresses by overlap: two devices at one address fail naming both,
+  overlapping addresses and an unresolved strap or conflict are undecided, a
+  controller with no address is not reported, and a bus passes only when every
+  address is known and none overlap. A fixed address given as a range or a
+  tolerance is refused (`UNIT-0001`), and the rule's scope covers the strap
+  pin's net, so re-tying a strap brings the rule into the gate.
+- [examples/sensor_node/](examples/sensor_node/): an STM32F401RE reading an
+  HS3001 on I2C1, with a console on USART2 and an LED on PA5. Every pad number,
+  alternate function and address is cited by table and page from ST's and
+  Renesas's datasheets.
+- Firmware emulation in Renode (`fang.emulation`, `fang.renode`). `Emulates`
+  declares a question beside its requirement: a run's virtual duration,
+  stimuli (`At`), faults (`Absent`), abstracted parts and measures (`FirstAt`,
+  `Count`, `Latency`, `UartValue`, `PinConfig` over `I2CRead`, `I2CWrite`,
+  `Rises`, `Falls` and `UartLine`), routed at the behavioural level to the
+  `renode` tool. Its plan resolves every bus, pin, alternate function and
+  address from the graph before anything runs; the lowering writes Renode's own
+  platform description and script; C# probes record what devices, pins and
+  UARTs were observed doing; and the measurements re-enter through the commit
+  gate. `EmulationModel` and `Firmware` bind the models and the ELF, whose
+  digest is recorded on evidence and never in the snapshot; the path resolves
+  against the program that declares the part. Refusals are `SIM-0009` to
+  `SIM-0016`, among them a pin configuration over a port with no bus, a match
+  detail nothing reads, a window that is not a time or is reversed, an
+  observation of a device a fault removes, a stimulus outside the run, a run of
+  no time or less, an address that is not a whole number, a pin selector the
+  platform does not read, a model descriptor fang does not ship (naming the
+  part), and two probes that would share a name. A model warning is matched
+  only against the expected warnings of the descriptor of the model that
+  raised it. A Renode installed at a version the lowering was not checked
+  against, or a temporary directory whose path has a space, is reported
+  unsupported, by reason.
+- `fang emulate`, the low-level emulation command, with `-o` and
+  `--bundle-only`, which fails when a run times out or crashes; `fang verify` reports a verification whose evidence names a
+  firmware the bound file no longer is as stale, and runs it again. Under
+  `fang verify --commit` each run keeps its bundle, events, log and outcome in
+  the workspace.
+- `fang schematic --drafter copperhead`, a second schematic lowering:
+  `fang.copperhead` writes copperhead's netlist intent from a snapshot and runs
+  `copperhead draft schematic` across a process boundary, and the sheet is read
+  back with `kicad-cli` and returned only if its nets are exactly the design's.
+  A part is drawn with the KiCad symbol its designator prefix names or the one
+  it declares as `symbol = "library:name"`, which also reaches the netlist as
+  its `libsource`. A part with no symbol, or a net with fewer than two drawn
+  pins, is reported as a loss. `noninverting_amp/` ships its draft.
+- `examples/sensor_node/firmware/`: bare-metal firmware for the board, with
+  three deliberately broken builds, committed with the toolchain that builds
+  them byte for byte. The board's two requirements are decided by running it.
+- Acceptance tests AT-F1 and AT-F2, run where Renode 1.17.0 is installed.
 
 ### Changed
 
+- The gate takes a check class's scope over the head as well as the candidate
+  when deciding which checks a transaction requires, so a removal still brings
+  in the check that covered what it removed. Condition 5 does not count a
+  constraint undecided only because a declared verification question has not
+  yet measured, or failed to measure, its parameter.
+- `SCHEMA_VERSION` is 1.2. Port records gain optional `peripheral` and
+  `address_strap` keys and connection records an optional `selectors` key, each
+  omitted when absent, which the spec counts as an additive change.
+- An interface parameter given as a bare number is refused with `UNIT-0001`
+  naming the parameter, as a module parameter already was, rather than raising
+  `AttributeError`.
+- `Value.unknown` takes an optional reason, kept as the value's rationale.
+- The constraint check's scope includes every entity a constraint's expression
+  reads, not only its targets, so setting a parameter that another module
+  constrains brings the check into the gate.
 - Views are drawn to be read. A node carries the name it has in the program
   rather than its class — `bridge_u.high`, not a third box saying `Transistor` —
   with the class underneath; rows within a layer are ordered to reduce crossings
@@ -76,6 +201,10 @@ tracked separately and moves only when the serialized form changes.
 
 - `examples/sensor_board/` declared a bulk capacitor and two pull-up resistors
   and never connected them.
+- `fang sim` reported every run as failed: it handed ngspice a relative
+  workspace, and ngspice, run from inside it, looked for the deck relative to
+  itself. The
+  backend now resolves the workspace first.
 
 ## [0.1.0] - 2026-09-08
 

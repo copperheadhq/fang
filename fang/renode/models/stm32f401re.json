@@ -1,0 +1,593 @@
+{
+  "core_clock_hz": 16000000,
+  "expected_warnings": [
+    {
+      "gap": "I2C bus timing (CCR, TRISE)",
+      "pattern": "Unhandled write to offset 0x1C\\."
+    },
+    {
+      "gap": "I2C bus timing (CCR, TRISE)",
+      "pattern": "Unhandled write to offset 0x20\\."
+    },
+    {
+      "gap": "I2C acknowledgement bits beyond an absent target",
+      "pattern": "Unhandled write to offset 0x0\\..*Tags: (ACK|POS)"
+    },
+    {
+      "gap": "I2C status flags other than SB, ADDR, BTF, RXNE, TXE and AF",
+      "pattern": "Unhandled write to offset 0x14\\."
+    }
+  ],
+  "faults": [],
+  "gpio": {
+    "gpioPortA": {
+      "base": "0x40020000",
+      "registers": {
+        "AFRH": {
+          "offset": "0x24",
+          "reset": "0x00000000",
+          "stored": true
+        },
+        "AFRL": {
+          "offset": "0x20",
+          "reset": "0x00000000",
+          "stored": true
+        },
+        "MODER": {
+          "offset": "0x00",
+          "reset": "0xA8000000",
+          "stored": true
+        },
+        "OTYPER": {
+          "offset": "0x04",
+          "reset": "0x00000000",
+          "stored": false
+        }
+      }
+    },
+    "gpioPortB": {
+      "base": "0x40020400",
+      "registers": {
+        "AFRH": {
+          "offset": "0x24",
+          "reset": "0x00000000",
+          "stored": true
+        },
+        "AFRL": {
+          "offset": "0x20",
+          "reset": "0x00000000",
+          "stored": true
+        },
+        "MODER": {
+          "offset": "0x00",
+          "reset": "0x00000280",
+          "stored": true
+        },
+        "OTYPER": {
+          "offset": "0x04",
+          "reset": "0x00000000",
+          "stored": false
+        }
+      }
+    },
+    "gpioPortC": {
+      "base": "0x40020800",
+      "registers": {
+        "AFRH": {
+          "offset": "0x24",
+          "reset": "0x00000000",
+          "stored": true
+        },
+        "AFRL": {
+          "offset": "0x20",
+          "reset": "0x00000000",
+          "stored": true
+        },
+        "MODER": {
+          "offset": "0x00",
+          "reset": "0x00000000",
+          "stored": true
+        },
+        "OTYPER": {
+          "offset": "0x04",
+          "reset": "0x00000000",
+          "stored": false
+        }
+      }
+    },
+    "gpioPortD": {
+      "base": "0x40020C00",
+      "registers": {
+        "AFRH": {
+          "offset": "0x24",
+          "reset": "0x00000000",
+          "stored": true
+        },
+        "AFRL": {
+          "offset": "0x20",
+          "reset": "0x00000000",
+          "stored": true
+        },
+        "MODER": {
+          "offset": "0x00",
+          "reset": "0x00000000",
+          "stored": true
+        },
+        "OTYPER": {
+          "offset": "0x04",
+          "reset": "0x00000000",
+          "stored": false
+        }
+      }
+    },
+    "gpioPortE": {
+      "base": "0x40021000",
+      "registers": {
+        "AFRH": {
+          "offset": "0x24",
+          "reset": "0x00000000",
+          "stored": true
+        },
+        "AFRL": {
+          "offset": "0x20",
+          "reset": "0x00000000",
+          "stored": true
+        },
+        "MODER": {
+          "offset": "0x00",
+          "reset": "0x00000000",
+          "stored": true
+        },
+        "OTYPER": {
+          "offset": "0x04",
+          "reset": "0x00000000",
+          "stored": false
+        }
+      }
+    },
+    "gpioPortH": {
+      "base": "0x40021C00",
+      "registers": {
+        "AFRH": {
+          "offset": "0x24",
+          "reset": "0x00000000",
+          "stored": true
+        },
+        "AFRL": {
+          "offset": "0x20",
+          "reset": "0x00000000",
+          "stored": true
+        },
+        "MODER": {
+          "offset": "0x00",
+          "reset": "0x00000000",
+          "stored": true
+        },
+        "OTYPER": {
+          "offset": "0x04",
+          "reset": "0x00000000",
+          "stored": false
+        }
+      }
+    }
+  },
+  "id": "fang:stm32f401re",
+  "kind": "renode_platform",
+  "not_modelled": [
+    "the clock tree: the core is taken to run at the 16 MHz HSI, and firmware clock configuration is not checked",
+    "I2C DMA",
+    "I2C acknowledgement bits beyond an absent target",
+    "I2C bus timing (CCR, TRISE)",
+    "the GPIO output-type register is not stored; it is judged by the firmware's writes",
+    "SPI4",
+    "I2C status flags other than SB, ADDR, BTF, RXNE, TXE and AF",
+    "after an address NACK the I2C controller keeps STOP set, where silicon clears it; firmware that sets START by read-modify-write of CR1 has its next transaction swallowed"
+  ],
+  "parts": [
+    "STM32F401RE"
+  ],
+  "peripherals": {
+    "I2C1": "i2c1",
+    "I2C2": "i2c2",
+    "I2C3": "i2c3",
+    "USART1": "usart1",
+    "USART2": "usart2",
+    "USART6": "usart6"
+  },
+  "pins": {
+    "PA0": {
+      "index": 0,
+      "port": "gpioPortA"
+    },
+    "PA1": {
+      "index": 1,
+      "port": "gpioPortA"
+    },
+    "PA10": {
+      "index": 10,
+      "port": "gpioPortA"
+    },
+    "PA11": {
+      "index": 11,
+      "port": "gpioPortA"
+    },
+    "PA12": {
+      "index": 12,
+      "port": "gpioPortA"
+    },
+    "PA13": {
+      "index": 13,
+      "port": "gpioPortA"
+    },
+    "PA14": {
+      "index": 14,
+      "port": "gpioPortA"
+    },
+    "PA15": {
+      "index": 15,
+      "port": "gpioPortA"
+    },
+    "PA2": {
+      "index": 2,
+      "port": "gpioPortA"
+    },
+    "PA3": {
+      "index": 3,
+      "port": "gpioPortA"
+    },
+    "PA4": {
+      "index": 4,
+      "port": "gpioPortA"
+    },
+    "PA5": {
+      "index": 5,
+      "port": "gpioPortA"
+    },
+    "PA6": {
+      "index": 6,
+      "port": "gpioPortA"
+    },
+    "PA7": {
+      "index": 7,
+      "port": "gpioPortA"
+    },
+    "PA8": {
+      "index": 8,
+      "port": "gpioPortA"
+    },
+    "PA9": {
+      "index": 9,
+      "port": "gpioPortA"
+    },
+    "PB0": {
+      "index": 0,
+      "port": "gpioPortB"
+    },
+    "PB1": {
+      "index": 1,
+      "port": "gpioPortB"
+    },
+    "PB10": {
+      "index": 10,
+      "port": "gpioPortB"
+    },
+    "PB11": {
+      "index": 11,
+      "port": "gpioPortB"
+    },
+    "PB12": {
+      "index": 12,
+      "port": "gpioPortB"
+    },
+    "PB13": {
+      "index": 13,
+      "port": "gpioPortB"
+    },
+    "PB14": {
+      "index": 14,
+      "port": "gpioPortB"
+    },
+    "PB15": {
+      "index": 15,
+      "port": "gpioPortB"
+    },
+    "PB2": {
+      "index": 2,
+      "port": "gpioPortB"
+    },
+    "PB3": {
+      "index": 3,
+      "port": "gpioPortB"
+    },
+    "PB4": {
+      "index": 4,
+      "port": "gpioPortB"
+    },
+    "PB5": {
+      "index": 5,
+      "port": "gpioPortB"
+    },
+    "PB6": {
+      "index": 6,
+      "port": "gpioPortB"
+    },
+    "PB7": {
+      "index": 7,
+      "port": "gpioPortB"
+    },
+    "PB8": {
+      "index": 8,
+      "port": "gpioPortB"
+    },
+    "PB9": {
+      "index": 9,
+      "port": "gpioPortB"
+    },
+    "PC0": {
+      "index": 0,
+      "port": "gpioPortC"
+    },
+    "PC1": {
+      "index": 1,
+      "port": "gpioPortC"
+    },
+    "PC10": {
+      "index": 10,
+      "port": "gpioPortC"
+    },
+    "PC11": {
+      "index": 11,
+      "port": "gpioPortC"
+    },
+    "PC12": {
+      "index": 12,
+      "port": "gpioPortC"
+    },
+    "PC13": {
+      "index": 13,
+      "port": "gpioPortC"
+    },
+    "PC14": {
+      "index": 14,
+      "port": "gpioPortC"
+    },
+    "PC15": {
+      "index": 15,
+      "port": "gpioPortC"
+    },
+    "PC2": {
+      "index": 2,
+      "port": "gpioPortC"
+    },
+    "PC3": {
+      "index": 3,
+      "port": "gpioPortC"
+    },
+    "PC4": {
+      "index": 4,
+      "port": "gpioPortC"
+    },
+    "PC5": {
+      "index": 5,
+      "port": "gpioPortC"
+    },
+    "PC6": {
+      "index": 6,
+      "port": "gpioPortC"
+    },
+    "PC7": {
+      "index": 7,
+      "port": "gpioPortC"
+    },
+    "PC8": {
+      "index": 8,
+      "port": "gpioPortC"
+    },
+    "PC9": {
+      "index": 9,
+      "port": "gpioPortC"
+    },
+    "PD0": {
+      "index": 0,
+      "port": "gpioPortD"
+    },
+    "PD1": {
+      "index": 1,
+      "port": "gpioPortD"
+    },
+    "PD10": {
+      "index": 10,
+      "port": "gpioPortD"
+    },
+    "PD11": {
+      "index": 11,
+      "port": "gpioPortD"
+    },
+    "PD12": {
+      "index": 12,
+      "port": "gpioPortD"
+    },
+    "PD13": {
+      "index": 13,
+      "port": "gpioPortD"
+    },
+    "PD14": {
+      "index": 14,
+      "port": "gpioPortD"
+    },
+    "PD15": {
+      "index": 15,
+      "port": "gpioPortD"
+    },
+    "PD2": {
+      "index": 2,
+      "port": "gpioPortD"
+    },
+    "PD3": {
+      "index": 3,
+      "port": "gpioPortD"
+    },
+    "PD4": {
+      "index": 4,
+      "port": "gpioPortD"
+    },
+    "PD5": {
+      "index": 5,
+      "port": "gpioPortD"
+    },
+    "PD6": {
+      "index": 6,
+      "port": "gpioPortD"
+    },
+    "PD7": {
+      "index": 7,
+      "port": "gpioPortD"
+    },
+    "PD8": {
+      "index": 8,
+      "port": "gpioPortD"
+    },
+    "PD9": {
+      "index": 9,
+      "port": "gpioPortD"
+    },
+    "PE0": {
+      "index": 0,
+      "port": "gpioPortE"
+    },
+    "PE1": {
+      "index": 1,
+      "port": "gpioPortE"
+    },
+    "PE10": {
+      "index": 10,
+      "port": "gpioPortE"
+    },
+    "PE11": {
+      "index": 11,
+      "port": "gpioPortE"
+    },
+    "PE12": {
+      "index": 12,
+      "port": "gpioPortE"
+    },
+    "PE13": {
+      "index": 13,
+      "port": "gpioPortE"
+    },
+    "PE14": {
+      "index": 14,
+      "port": "gpioPortE"
+    },
+    "PE15": {
+      "index": 15,
+      "port": "gpioPortE"
+    },
+    "PE2": {
+      "index": 2,
+      "port": "gpioPortE"
+    },
+    "PE3": {
+      "index": 3,
+      "port": "gpioPortE"
+    },
+    "PE4": {
+      "index": 4,
+      "port": "gpioPortE"
+    },
+    "PE5": {
+      "index": 5,
+      "port": "gpioPortE"
+    },
+    "PE6": {
+      "index": 6,
+      "port": "gpioPortE"
+    },
+    "PE7": {
+      "index": 7,
+      "port": "gpioPortE"
+    },
+    "PE8": {
+      "index": 8,
+      "port": "gpioPortE"
+    },
+    "PE9": {
+      "index": 9,
+      "port": "gpioPortE"
+    },
+    "PH0": {
+      "index": 0,
+      "port": "gpioPortH"
+    },
+    "PH1": {
+      "index": 1,
+      "port": "gpioPortH"
+    },
+    "PH10": {
+      "index": 10,
+      "port": "gpioPortH"
+    },
+    "PH11": {
+      "index": 11,
+      "port": "gpioPortH"
+    },
+    "PH12": {
+      "index": 12,
+      "port": "gpioPortH"
+    },
+    "PH13": {
+      "index": 13,
+      "port": "gpioPortH"
+    },
+    "PH14": {
+      "index": 14,
+      "port": "gpioPortH"
+    },
+    "PH15": {
+      "index": 15,
+      "port": "gpioPortH"
+    },
+    "PH2": {
+      "index": 2,
+      "port": "gpioPortH"
+    },
+    "PH3": {
+      "index": 3,
+      "port": "gpioPortH"
+    },
+    "PH4": {
+      "index": 4,
+      "port": "gpioPortH"
+    },
+    "PH5": {
+      "index": 5,
+      "port": "gpioPortH"
+    },
+    "PH6": {
+      "index": 6,
+      "port": "gpioPortH"
+    },
+    "PH7": {
+      "index": 7,
+      "port": "gpioPortH"
+    },
+    "PH8": {
+      "index": 8,
+      "port": "gpioPortH"
+    },
+    "PH9": {
+      "index": 9,
+      "port": "gpioPortH"
+    }
+  },
+  "platform_file": "platforms/stm32f401re.repl",
+  "provenance": {
+    "derived_from": "Renode platforms/cpus/stm32f4.repl",
+    "engine": "Renode 1.17.0 (1.17.0+20260907gitf1dd1b4af)",
+    "licence": "MIT, Copyright (c) Antmicro"
+  },
+  "qualification": "tested in emulation",
+  "recorder_port": "gpioPortA",
+  "schema": "fang.emulation-model/v1",
+  "target": "stm32f401re"
+}

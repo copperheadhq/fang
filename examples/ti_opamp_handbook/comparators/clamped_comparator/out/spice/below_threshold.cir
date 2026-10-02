@@ -1,5 +1,5 @@
 * clamped_comparator: below_threshold
-* plan for ngspice over sha256:6a176c8e200136013ae2b2d022c5b1e6609c9317eabee55e824d1ea6b2569a91
+* plan for ngspice over sha256:61babec069b4eb318fd3a920c796d0225b9a5ae9bbfff65f6a742d69ee837319
 * D1 abstracted; no device emitted
 * D2 abstracted; no device emitted
 * GND1 abstracted; no device emitted

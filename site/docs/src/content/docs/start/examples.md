@@ -1,6 +1,6 @@
 ---
 title: Examples
-description: Eleven programs in the repository, smallest first.
+description: Fourteen programs in the repository, smallest first.
 sidebar:
   order: 3
   attrs:
@@ -17,12 +17,15 @@ program that has since changed.
 | Example | Shows |
 | --- | --- |
 | [`divider/`](/examples/divider/) | The smallest real board: two resistors and a capacitor |
+| [`rc_filter/`](/examples/rc_filter/) | One question, answered by ngspice and then at the equation level |
+| [`antenna_match/`](/examples/antenna_match/) | A Touchstone model through an L match, answered in closed form |
 | [`blinky/`](/examples/blinky/) | Declared surfaces, connections and a constraint stating intent rather than the answer |
 | [`equations/`](/examples/equations/) | Values chosen by equation and reuse by inheritance |
 | [`sensor_board/`](/examples/sensor_board/) | Interfaces lowering to pins, a recorded decision, a check left undecided |
 | [`i2c_bus/`](/examples/i2c_bus/) | A multi-drop bus, addresses as constrained parameters |
+| [`sensor_node/`](/examples/sensor_node/) | Ports that name their controller, cited pin selectors, an address the check reads |
+| [`buck_regulator/`](/examples/buck_regulator/) | Requirement, decision, calculations, and a question ngspice answers under load |
 | [`usb_uart_bridge/`](/examples/usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet |
-| [`buck_regulator/`](/examples/buck_regulator/) | Requirement, decision, calculations and verification beside the circuit |
 | [`servo_drive/`](/examples/servo_drive/) | Composition: one `HalfBridge` block instantiated three times |
 | [`jee_advanced/problem_1/`](/examples/jee_advanced/problem_1/) | Not a board: four claimed currents, all four decided |
 | [`jee_advanced/problem_2/`](/examples/jee_advanced/problem_2/) | Not a board either: one claimed current, and the two branches that carry none |
@@ -48,6 +51,7 @@ fang view    examples/sensor_board/sensor_board.py ground -o ground.svg
 | `graph.txt` | What the elaborated graph contains, by entity kind | `fang graph` |
 | `views/*.svg` | The views worth looking at for that board | `fang view` |
 | `rationale.md` | The requirements, decisions, calculations and evidence in the graph | none |
+| `verification.txt` | What each declared question's tool found, at three significant figures | `fang verify` |
 
 `python examples/regenerate.py` rewrites them. They are built in the project
 namespace `PRJ-EXAMPLES`, which is where the identifiers in them come from. A
@@ -57,6 +61,17 @@ local `fang build` defaults to `PRJ-LOCAL` and derives its own.
 
 **`divider/`** is the smallest thing worth calling a board. Read it to learn
 the shape of a program and nothing else.
+
+**`rc_filter/`** is the smallest board with a question on it. The corner is a
+parameter with no value and the constraint over it is undecided, until ngspice
+measures it in an AC sweep and the number comes back through the gate. Asked
+again on the committed head, the same question is answered at the equation
+level and nothing runs.
+
+**`antenna_match/`** carries its antenna as data: a Touchstone file, synthetic
+and saying so. Its return loss through the L match is read and composed in
+closed form, with the matching values the graph holds, and the confidence is
+halved because the model is an assumption.
 
 **`blinky/`** adds the point about constraints. The series resistor is not
 written as a number that someone computed offstage. The LED current is written
@@ -77,15 +92,23 @@ to the same address" is a constraint the kernel decides rather than a linter
 rule. And the RTC's thresholds are recorded as an assumption, which leaves that
 link undecided rather than passed.
 
+**`sensor_node/`** puts on the board what the firmware otherwise holds alone.
+The STM32F401RE's `i2c1` port names I2C1, and each candidate pin carries the
+alternate function that routes the signal to it, cited from ST's table. The
+lowered pin connections carry AF4. The HS3001's port carries its address,
+0x44, and the compatibility check decides the addressing rule from it.
+
 **`usb_uart_bridge/`** shows part selection landing on the instance rather
 than the class template. The logical part stays "a 3.3 V regulator". Which one
 was bought is a separate, cited fact.
 
 **`buck_regulator/`** puts the reasoning in the graph. The requirement, the
-part decision, the datasheet numbers behind it, two calculations and the
-verification that closes the requirement are all entities beside the inductor.
-`fang` can answer "why is this 4.7 µH?" without anyone writing a design
-document.
+part decision, the datasheet numbers behind it and two calculations are all
+entities beside the inductor, so `fang` can answer "why is this 4.7 µH?"
+without anyone writing a design document. The requirement is verified by a
+question rather than asserted: ngspice runs the rail under full load on an
+ideal power stage whose provenance is an assumption, and measures 3.29 V and
+1.90 mV of ripple.
 
 **`servo_drive/`** is composition at size. A `HalfBridge` owns its interior:
 its transistors, its shunt and its own constraints. The drive instantiates three

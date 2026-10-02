@@ -1,0 +1,15 @@
+using "stm32f401re.repl"
+
+recorder: Fang.EventRecorder @ gpioPortA
+
+fang_i2c1_warnings: Fang.WarningProbe @ gpioPortA
+    recorder: recorder
+    target: i2c1
+    source: "PORT-e0e83c20e09e"
+
+fang_mcu_status: Fang.GpioProbe @ gpioPortA
+    recorder: recorder
+    source: "PORT-1eda100512ed"
+
+gpioPortA:
+    5 -> fang_mcu_status@0

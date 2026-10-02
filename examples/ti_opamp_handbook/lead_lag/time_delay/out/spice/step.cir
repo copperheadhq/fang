@@ -1,5 +1,5 @@
 * time_delay: step
-* plan for ngspice over sha256:b9496646325e3757497cd6ea91d22c959604db509a3acce603bf8b18ff9d69ba
+* plan for ngspice over sha256:deae09cdcd73047907f46b680f850ac0e3c89b1a27ef6896b862bbfb89e50ad9
 C1 1 2 8n
 C2 2 3 8n
 C3 4 0 36n

@@ -40,11 +40,16 @@ rejected rather than merged.
 4. **Required checks have run.** Every `CheckClass` the policy requires has
    actually produced a result. Absent a project policy, the required set is
    structural validation plus every check class whose scope intersects the
-   affected entities. A check class is therefore defined by its scope as well as
-   by what it evaluates.
+   affected entities, taken over the head as well as the candidate, so that a
+   removal still brings in the checks whose scope held what it removed. A check
+   class is therefore defined by its scope as well as by what it evaluates.
 5. **No blocking result.** No check reported a blocking severity, or `TXN-0002`.
 6. **No undecided over a must-be-decided requirement**, or `TXN-0003`, and
-   policy approvals satisfied, or `TXN-0004`.
+   policy approvals satisfied, or `TXN-0004`. A constraint left undecided only
+   because a [verification question](/concepts/verification/) has not yet
+   measured its parameter, or because its measurement failed, does not block
+   here: the requirement's verification state already says so. A run that
+   answers and still leaves the constraint undecided does block.
 
 Only `commit()` advances the head. Rejection is correct by construction: the
 candidate copy is discarded, and canonical state was never touched.
