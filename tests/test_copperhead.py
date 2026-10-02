@@ -9,15 +9,17 @@ from fang.copperhead import (
     CopperheadDrafter,
     DraftRefused,
     DrafterUnavailable,
+    Intent,
     compile_intent,
     drawn_connections,
     intended_connections,
+    short_value,
 )
 from fang.elaborate import elaborate
 from fang.interfaces import Pin, PinMap
 from fang.lang import Electrical, Parameter, Part, System, V, kOhm, uF
 from fang.netlist import compile_netlist
-from fang.parts import Capacitor, Resistor, TwoPin
+from fang.parts import Capacitor, Diode, Resistor, TestPoint, TwoPin
 
 PROJECT = "PRJ-COPPERHEAD"
 
@@ -111,13 +113,45 @@ def test_a_part_is_drawn_with_the_symbol_its_prefix_names(intent):
     assert library["V1"] == "Device:Battery_Cell"
 
 
-def test_a_ground_marker_is_a_ground_net_rather_than_a_part(intent):
-    """copperhead draws the ground symbol on the net; a part drawn there too
-    would be a second ground symbol with nothing behind it."""
-    assert not any(ref.startswith("GND") for ref in _refs(intent))
+def test_a_ground_marker_is_drawn_with_kicads_ground_symbol_on_a_ground_net(intent):
+    """The marker is a part of the netlist, so it is in the intent, drawn with
+    the symbol KiCad draws ground with; copperhead draws that symbol at each
+    pin of the net rather than the part itself."""
+    marker = {part["ref"]: part for part in intent.document["parts"]}["GND1"]
+    assert marker["libId"] == "power:GND"
+    assert marker["value"] == "GND"
     grounds = [net for net in intent.document["nets"] if net.get("kind") == "ground"]
     assert len(grounds) == 1
-    assert not any(pin.startswith("GND") for pin in grounds[0]["pins"])
+    assert "GND1.1" in grounds[0]["pins"]
+
+
+def test_a_power_symbol_is_left_out_of_the_connections_a_draft_must_have(intent):
+    """KiCad names the power symbols copperhead draws `#PWR...` and the read
+    back leaves them out, so the intent's own power part is left out too."""
+    wanted = intended_connections(intent)
+    assert not any(pin.startswith("GND1.") for net in wanted for pin in net)
+    assert frozenset({"C1.2", "R1.2", "V1.2"}) in wanted
+
+
+def test_a_net_from_a_ground_marker_to_one_pin_is_drawn():
+    """A resistor to ground is a net of two pins, one of them the marker's:
+    copperhead draws it as a ground symbol on the resistor, not a loss."""
+
+    class Pulldown(System):
+        load = Resistor(resistance=10 * kOhm, package="R_0603")
+        cap = Capacitor(capacitance=100 * uF, package="C_0805")
+        reference = Marker(package="GND")
+
+        def architecture(self):
+            self.load.p1 >> self.cap.p1
+            self.load.p2 >> self.reference.node
+
+    result = elaborate(Pulldown, project_id=PROJECT)
+    assert result.ok, [d.message for d in result.diagnostics]
+    intent = compile_intent(result.snapshot, traits=result.traits)
+    assert intent.losses == ()
+    grounds = [net for net in intent.document["nets"] if net.get("kind") == "ground"]
+    assert [net["pins"] for net in grounds] == [["GND1.1", "R1.2"]]
 
 
 def test_an_endpoint_is_named_by_pin_number(intent):
@@ -164,6 +198,199 @@ def test_a_net_that_reaches_one_drawn_pin_is_reported():
 
 def test_the_title_block_date_is_not_invented(intent):
     assert intent.document["hints"]["date"] == ""
+
+
+def test_the_title_block_date_is_the_one_the_caller_names(built):
+    intent = compile_intent(built.snapshot, traits=built.traits, date="2026-01-01")
+    assert intent.document["hints"]["date"] == "2026-01-01"
+
+
+# -- symbols chosen by type, and where the pins land -------------------------
+
+
+class OpAmp(Part):
+    """An ideal op amp, numbered as the single-op-amp 8-pin pinout is."""
+
+    designator_prefix = "U"
+
+    inverting = Electrical()
+    non_inverting = Electrical()
+    output = Electrical()
+    IN_MINUS = Pin("IN-", role="analog", number="2")
+    IN_PLUS = Pin("IN+", role="analog", number="3")
+    OUT = Pin("OUT", role="analog", number="6")
+    pinmap = PinMap(
+        {"inverting.line": "IN-", "non_inverting.line": "IN+", "output.line": "OUT"}
+    )
+
+
+class DrawnOpAmp(OpAmp):
+    """The same op amp, naming the symbol whose pins its own numbers are."""
+
+    symbol = "Amplifier_Operational:LM741"
+
+
+def _follower(amplifier):
+    class Follower(System):
+        amp = amplifier(package="DIP-8")
+        e_in = TestPoint(package="TP")
+        e_out = TestPoint(package="TP")
+        load = Resistor(resistance=10 * kOhm, package="R_0603")
+        reference = Marker(package="GND")
+
+        def architecture(self):
+            self.e_in.probe >> self.amp.non_inverting
+            self.amp.output >> self.amp.inverting
+            self.amp.output >> self.e_out.probe
+            self.amp.output >> self.load.p1
+            self.load.p2 >> self.reference.node
+
+    result = elaborate(Follower, project_id=PROJECT)
+    assert result.ok, [d.message for d in result.diagnostics]
+    return result
+
+
+def _pins(intent):
+    return sorted(pin for net in intent.document["nets"] for pin in net["pins"])
+
+
+def test_an_op_amp_is_drawn_by_its_type_on_the_pins_its_symbol_numbers():
+    """No prefix picks out an op amp, since `U` covers every integrated part;
+    its type does, and KiCad's generic op amp numbers + 1, - 2 and out 5."""
+    result = _follower(OpAmp)
+    intent = compile_intent(result.snapshot, traits=result.traits)
+    amp = {part["ref"]: part for part in intent.document["parts"]}["U1"]
+    assert amp["libId"] == "Simulation_SPICE:OPAMP"
+    assert amp["value"] == "OPAMP"
+    assert {"U1.1", "U1.2", "U1.5"} <= set(_pins(intent))
+    assert not {"U1.3", "U1.6"} & set(_pins(intent))
+    assert intent.losses == ()
+
+
+def test_a_part_naming_its_own_symbol_is_drawn_with_it_by_its_own_numbers():
+    result = _follower(DrawnOpAmp)
+    intent = compile_intent(result.snapshot, traits=result.traits)
+    amp = {part["ref"]: part for part in intent.document["parts"]}["U1"]
+    assert amp["libId"] == "Amplifier_Operational:LM741"
+    assert amp["value"] == "DrawnOpAmp"
+    assert {"U1.2", "U1.3", "U1.6"} <= set(_pins(intent))
+
+
+def test_a_pin_its_symbol_has_no_place_for_is_reported_rather_than_moved():
+    """An op amp type with a supply pin: drawn by number, V+ (7) would land on
+    nothing, and drawn without it, the part would show unconnected a pin the
+    design connects."""
+
+    # Named OpAmp, the type the table draws; its base is the module's OpAmp.
+    class OpAmp(globals()["OpAmp"]):
+        supply = Electrical()
+        VCC = Pin("V+", role="power", number="7")
+        pinmap = PinMap(
+            {
+                "inverting.line": "IN-",
+                "non_inverting.line": "IN+",
+                "output.line": "OUT",
+                "supply.line": "V+",
+            }
+        )
+
+    result = _follower(OpAmp)
+    intent = compile_intent(result.snapshot, traits=result.traits)
+    assert "U1" not in _refs(intent)
+    assert any(
+        loss.startswith("U1 is not drawn") and "V+" in loss for loss in intent.losses
+    )
+
+
+def test_a_diode_is_drawn_with_its_cathode_on_kicads_pin_1():
+    """A fang diode numbers its anode 1, and KiCad's diode its cathode 1: drawn
+    by number, every diode would be drawn backwards."""
+
+    class Clamp(System):
+        diode = Diode(package="SOD-123")
+        load = Resistor(resistance=10 * kOhm, package="R_0603")
+        reference = Marker(package="GND")
+
+        def architecture(self):
+            self.diode.p1 >> self.load.p1
+            self.diode.p2 >> self.reference.node
+            self.load.p2 >> self.reference.node
+
+    result = elaborate(Clamp, project_id=PROJECT)
+    assert result.ok, [d.message for d in result.diagnostics]
+    intent = compile_intent(result.snapshot, traits=result.traits)
+    nets = {net["name"]: net for net in intent.document["nets"]}
+    ground = next(net for net in nets.values() if net.get("kind") == "ground")
+    assert "D1.1" in ground["pins"]
+    assert any("D1.2" in net["pins"] and "R1.1" in net["pins"] for net in nets.values())
+
+
+# -- labelling: options every caller passes or leaves alike -------------------
+
+
+def test_the_ground_net_keeps_the_netlists_name_unless_one_is_given(built):
+    netlist = compile_netlist(built.snapshot, traits=built.traits)
+    plain = compile_intent(built.snapshot, traits=built.traits)
+    named = compile_intent(built.snapshot, traits=built.traits, ground="GND")
+
+    def ground(intent):
+        return next(net for net in intent.document["nets"] if net.get("kind") == "ground")
+
+    assert ground(plain)["name"] in {net.name for net in netlist.nets}
+    assert ground(named)["name"] == "GND"
+    assert ground(named)["pins"] == ground(plain)["pins"]
+
+
+def test_a_terminal_is_labelled_and_names_its_net_when_asked():
+    result = _follower(OpAmp)
+    plain = compile_intent(result.snapshot, traits=result.traits)
+    named = compile_intent(result.snapshot, traits=result.traits, terminal_names=True)
+    values = {part["ref"]: part["value"] for part in named.document["parts"]}
+    assert values["TP1"] == "E_IN" and values["TP2"] == "E_OUT"
+    assert {part["ref"]: part["value"] for part in plain.document["parts"]}["TP1"] == "TestPoint"
+    by_pin = {pin: net["name"] for net in named.document["nets"] for pin in net["pins"]}
+    assert by_pin["U1.1"] == "E_IN"
+    assert by_pin["U1.5"] == "E_OUT"
+    assert [net["pins"] for net in named.document["nets"]] == [
+        net["pins"] for net in plain.document["nets"]
+    ]
+
+
+def test_a_value_is_printed_short_when_asked(built):
+    plain = compile_intent(built.snapshot, traits=built.traits)
+    short = compile_intent(built.snapshot, traits=built.traits, short_values=True)
+    assert {p["ref"]: p["value"] for p in plain.document["parts"]}["R1"] == "4.7 kOhm"
+    assert {p["ref"]: p["value"] for p in short.document["parts"]}["R1"] == "4.7k"
+    assert {p["ref"]: p["value"] for p in short.document["parts"]}["C1"] == "100uF"
+
+
+def test_a_short_value_drops_the_ohm_and_the_spaces():
+    assert short_value("4.7 kOhm") == "4.7k"
+    assert short_value("1 MOhm") == "1M"
+    assert short_value("330 Ohm") == "330"
+    assert short_value("15.9 nF") == "15.9nF"
+    assert short_value("OPAMP") == "OPAMP"
+
+
+def test_a_name_given_to_two_nets_is_refused():
+    """KiCad joins nets drawn under one name, so the drawing would not be the
+    netlist; the intent is refused before copperhead is asked."""
+    result = _follower(OpAmp)
+    with pytest.raises(ValueError, match="E_OUT"):
+        compile_intent(result.snapshot, traits=result.traits, ground="E_OUT", terminal_names=True)
+
+
+def test_every_option_left_alone_is_the_same_intent_for_every_caller(built):
+    """There is one lowering: the defaults are the defaults, not a caller's."""
+    assert compile_intent(built.snapshot, traits=built.traits).text() == compile_intent(
+        built.snapshot,
+        traits=built.traits,
+        group="fang",
+        ground=None,
+        terminal_names=False,
+        short_values=False,
+        date="",
+    ).text()
 
 
 # -- drafting ---------------------------------------------------------------
@@ -240,5 +467,7 @@ def test_a_draft_is_byte_identical_wherever_it_is_made(intent, tmp_path):
     first = CopperheadDrafter().draft(intent, workspace=tmp_path / "a", name="divider")
     second = CopperheadDrafter().draft(intent, workspace=tmp_path / "b", name="divider")
     assert first == second
-    for ref in _refs(intent):
-        assert f'"{ref}"' in first
+    # A power part is drawn as copperhead's own symbol at each pin of its net.
+    for part in intent.document["parts"]:
+        if not part["libId"].startswith("power:"):
+            assert f'"{part["ref"]}"' in first
