@@ -1627,8 +1627,16 @@ def test_a_plan_is_read_back_by_its_schema():
     assert "snapshot" not in written
     assert plan_from_dict(written).hash == plan().hash
 
-    older = dict(written, schema="fang.emulation/v1", snapshot="sha256:" + "0" * 64)
-    assert plan_from_dict(older).hash == plan().hash
+    # A v1 plan keeps the schema it was written in, so its identity and hash
+    # are the ones its bundle recorded, not those of the v2 plan it resembles.
+    from dataclasses import replace
+
+    v1 = replace(plan(), schema="fang.emulation/v1")
+    older = dict(v1.as_dict(), snapshot="sha256:" + "0" * 64)
+    read = plan_from_dict(older)
+    assert read.schema == "fang.emulation/v1"
+    assert read.hash == v1.hash == older["plan"]
+    assert read.hash != plan().hash
 
     with pytest.raises(ValueError, match="fang.emulation/v3"):
         plan_from_dict(dict(written, schema="fang.emulation/v3"))

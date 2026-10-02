@@ -255,6 +255,14 @@ class PlanStimulus:
         }
 
 
+#: The schema a plan is written in. v2 dropped the snapshot from the plan
+#: (it changed with every unrelated design change, and the plan is hashed into
+#: the job); a consumer of v1 refuses a v2 plan by this label instead of failing
+#: on the missing field.
+PLAN_SCHEMA = "fang.emulation/v2"
+READABLE_PLAN_SCHEMAS = frozenset({"fang.emulation/v1", PLAN_SCHEMA})
+
+
 @dataclass(frozen=True)
 class EmulationPlan:
     """An emulation question compiled against a snapshot, with every reference
@@ -287,11 +295,15 @@ class EmulationPlan:
     assumptions: tuple[str, ...] = ()
     coverage_gaps: tuple[str, ...] = ()
     expected_warnings: tuple[Mapping[str, str], ...] = ()
+    #: The schema the plan was written in: the current one for a plan fang
+    #: compiles, and whatever a bundle's plan says for one read back, so a
+    #: v1 plan keeps the identity and hash it was written with.
+    schema: str = PLAN_SCHEMA
 
     def identity(self) -> dict:
         """The plan without the snapshot hash: what its identity covers."""
         return {
-            "schema": PLAN_SCHEMA,
+            "schema": self.schema,
             "question": self.question,
             "requirement": self.requirement,
             "machine": self.machine,
@@ -1678,14 +1690,6 @@ QUALIFICATION_CONFIDENCE: Mapping[str, Decimal] = {
 }
 
 
-#: The schema a plan is written in. v2 dropped the snapshot from the plan
-#: (it changed with every unrelated design change, and the plan is hashed into
-#: the job); a consumer of v1 refuses a v2 plan by this label instead of failing
-#: on the missing field.
-PLAN_SCHEMA = "fang.emulation/v2"
-READABLE_PLAN_SCHEMAS = frozenset({"fang.emulation/v1", PLAN_SCHEMA})
-
-
 def plan_from_dict(payload: Mapping[str, Any]) -> EmulationPlan:
     """A plan read back from its canonical form, as a bundle carries it.
 
@@ -1708,6 +1712,7 @@ def plan_from_dict(payload: Mapping[str, Any]) -> EmulationPlan:
         return PlanDevice(d["component"], d["probe"], d["model"], d["renode_type"], int(d["address"]), d["absent"])
 
     return EmulationPlan(
+        schema=schema,
         question=payload["question"],
         requirement=payload["requirement"],
         # A bundle's plan names no snapshot; one written before it stopped
