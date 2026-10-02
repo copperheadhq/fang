@@ -170,14 +170,16 @@ The number is fang's own, and it diverges from RFC 3's. RFC 3 version 1.5
 numbers schema 1.2 as the import schema of its version 1.4 and schema 1.3 as
 the one adding these port elements, the firmware binding and the verification
 record. Fang cannot claim 1.3, because a 1.3 record is a 1.2 record, and two of
-schema 1.2's additions are mandatory and fang does not write them: a trait MUST
-be serialized inside the record of its entity, under a `traits` key (RFC 3
-Section 5), and fang keeps traits in a registry beside the root; and a
-provenance record that changes an existing entity MUST carry a `fields` list
-(Section 14), and fang's records have none, though verification re-entry
-appends one to the verification it answers. Fang's 1.2 is therefore 1.1 with
-these port keys, which is neither RFC 3's 1.2 nor its 1.3. It moves to RFC 3's
-numbering in the change that writes traits and the fields list.
+schema 1.2's additions are mandatory. One is now written: a provenance record
+that changes an existing entity carries a `fields` list (Section 14), on every
+record fang appends to one, which are the records of verification re-entry, of
+a recorded failure and of an equation-level answer (fang-verification task
+12.3). The other is not: a trait MUST be serialized inside the record of its
+entity, under a `traits` key (RFC 3 Section 5), and fang keeps traits in a
+registry beside the root, which is the subject of the open fang-state-persistence
+change (#6). Fang's 1.2 is therefore 1.1 with these port keys and the fields list,
+which is neither RFC 3's 1.2 nor its 1.3. It moves to RFC 3's numbering in the
+change that writes traits.
 
 ## Implementation notes
 

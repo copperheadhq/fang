@@ -229,3 +229,10 @@ change.
       record for record what `failure_transaction` leaves; verify through the
       CLI that a PASS whose constraint is tightened builds, reads FAIL with
       the corner unknown, runs nothing again, and passes once relaxed.
+- [x] 12.3 Give every provenance record the runner appends to an existing
+      entity a sorted `fields` list (RFC 3 section 14): the run's record on
+      the part whose measured value it set, naming `parameters.<name>.value`,
+      and on the verification, naming `evidence`, `level`, `result` and
+      `tool`, for a measurement, a failure, a re-entry and an equation-level
+      answer; carry the value-setting record with the value across
+      re-elaboration; verify each, and that the record reads back.

@@ -262,9 +262,17 @@ class Connect(Operation):
 
 @dataclass(frozen=True)
 class SetParameter(Operation):
+    """Set one parameter of an existing entity.
+
+    `record`, where given, is the provenance record the change appends to
+    the entity, its `fields` naming what it set, so the entity's own history
+    says who set the fact (RFC 3 section 14). A record never replaces one.
+    """
+
     target: str = ""
     name: str = ""
     value: Parameter | None = None
+    record: ProvenanceRecord | None = None
 
     @property
     def op(self) -> str:
@@ -281,7 +289,10 @@ class SetParameter(Operation):
                 f"{self.target} does not exist",
                 entities=[self.target],
             )
-        entities[self.target] = entity.with_parameter(self.name, self.value)
+        changed = entity.with_parameter(self.name, self.value)
+        if self.record is not None:
+            changed = replace(changed, provenance=changed.provenance.append(self.record))
+        entities[self.target] = changed
 
     def as_dict(self) -> dict:
         out = super().as_dict()
@@ -291,6 +302,8 @@ class SetParameter(Operation):
                 "value": self.value.as_dict() if self.value is not None else None,
             }
         )
+        if self.record is not None:
+            out["provenance"] = self.record.as_dict()
         return out
 
 

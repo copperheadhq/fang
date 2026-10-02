@@ -213,7 +213,12 @@ transaction, citing its evidence as it stands rather than adding it again, and
 the result SHALL be what the gate decides on the head now. The constraint over a measured parameter SHALL be decided by the
 gate's existing constraint check and by nothing else. A committed measurement
 SHALL be kept across re-elaboration only while it is current: while preparing
-its question afresh gives the job its evidence records.
+its question afresh gives the job its evidence records. Every provenance record
+the runner appends to an existing entity, in a measurement, a failure or an
+answer at the equation level, SHALL carry a fields list naming each fact it set
+there: a measured value by its parameter's path followed by `value`, and on the
+verification its result, evidence, level and tool. A measured value kept
+across re-elaboration SHALL keep the record that set it.
 
 #### Scenario: A measured parameter is an inferred value with its evidence
 
@@ -243,6 +248,16 @@ its question afresh gives the job its evidence records.
 - **WHEN** a question is answered
 - **THEN** the verification entity has the identifier it was declared with, its
   result, the evidence, and a provenance record for the run
+
+#### Scenario: A record that changes an entity names what it set
+
+- **WHEN** a run's measurements are committed
+- **THEN** the part holding a measured parameter gains the run's provenance
+  record, its fields list naming the measured value, such as
+  `parameters.ripple.value`, and nothing else of the part
+- **AND** the verification gains the run's record naming its result, evidence,
+  level and tool
+- **AND** the evidence the run adds, which the record creates, names no fields
 
 #### Scenario: A recorded run re-enters rather than running again
 
