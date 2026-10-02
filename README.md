@@ -83,10 +83,10 @@ The contract is one document:
 [openspec/specs/fang-kernel/spec.md](https://github.com/copperheadhq/fang/blob/main/openspec/specs/fang-kernel/spec.md).
 It is self-contained and normative. It covers the terminology, the design
 principles, the layers of representation, the kernel architecture and the
-project root. Then come 87 requirements over 238 scenarios, spanning the
+project root. Then come 111 requirements over 373 scenarios, spanning the
 Engineering Intermediate Representation (identity, quantities, constraints,
 provenance, serialization, diff) and the kernel and language over it, with all
-23 acceptance criteria. RFC 2119 keywords in it are normative.
+26 acceptance criteria. RFC 2119 keywords in it are normative.
 
 Delivery is staged in
 [openspec/ROADMAP.md](https://github.com/copperheadhq/fang/blob/main/openspec/ROADMAP.md)

@@ -205,7 +205,7 @@ so that a missing key identifies an artifact produced under an older schema
 rather than an empty layer. There is exactly one `constraints` key.
 
 ```yaml
-schema_version: 1.1
+schema_version: 1.2
 project_id: PRJ-...
 revision_id: REV-...
 requirements: []
@@ -686,8 +686,17 @@ apply, are satisfied.
 
 Absent a project policy, the required set SHALL be structural validation
 together with every check class whose scope intersects the transaction's
-affected entities. A policy narrows or widens that set but never removes the
-structural check.
+affected entities, the scope being taken over the head the transaction is based
+on as well as over the candidate, so that a removal still requires the check
+whose scope held what it removed. A policy narrows or widens that set but never
+removes the structural check.
+
+An undecided result SHALL NOT count against a must-be-decided requirement when
+every operand that leaves it undecided is a parameter a declared verification
+question measures into and that holds no value: the verification's own result
+states that constraint, whether the question is unanswered, failed, or answered
+without a value (copperhead RFC 12 version 1.3, Sections 9.3 and 12.9). An
+undecided result over any other unknown operand still blocks.
 
 #### Scenario: Downstream artifacts are materialized only after commit
 
@@ -701,6 +710,33 @@ structural check.
 - **WHEN** a transaction commits and an external rule check subsequently runs
 - **THEN** its results are ingested as evidence
 - **AND** they were not consulted before the gate
+
+#### Scenario: A removal brings in the check that covered what it removed
+
+- **WHEN** a transaction removes an entity that only the head's scope of a check
+  class held, such as the connection tying an address strap pin
+- **THEN** that check class is required and runs
+- **AND** a result it reports blocks the transaction as any other would
+
+#### Scenario: A question awaiting its answer does not block a must-be-decided requirement
+
+- **WHEN** a program declares a verification question whose measured parameters
+  hold no value, under a requirement the policy marks must-be-decided
+- **THEN** the program commits, with the constraints over those parameters
+  reported undecided
+
+#### Scenario: A recorded failure is not blocked by what it leaves undecided
+
+- **WHEN** a measurement fails a hard constraint and the failed verification is
+  recorded by a transaction that sets no parameter
+- **THEN** that transaction commits under a must-be-decided requirement
+
+#### Scenario: Another unknown operand still blocks
+
+- **WHEN** a constraint is undecided because of a parameter no declared question
+  measures into, under a requirement the policy marks must-be-decided
+- **THEN** the transaction is rejected with the undecided-blocked code, naming
+  that constraint
 
 ### Requirement: Semantic Diff Classification
 
@@ -772,6 +808,11 @@ optional key or a new entity collection, increment the minor version. The
 schema version names the data schema and not the specification document; the
 two version lines SHALL NOT be conflated.
 
+The data schema this specification defines is version 1.2, and a
+machine-generated root SHALL carry it as `schema_version: 1.2` in the shape
+The Project Root gives. Version 1.2 adds, to version 1.1, a port's optional
+peripheral instance and address strap and a connection's optional selectors.
+
 The kernel SHALL record, with every snapshot, the schema version, the compiler
 version, the dependency lock identity, and the identifiers of any extracted
 upstream code in use.
@@ -788,6 +829,13 @@ upstream code in use.
 - **WHEN** a reader encounters fields it does not know
 - **THEN** it SHOULD preserve them, so that newer producers interoperate with
   older tooling without destructive rewriting
+
+#### Scenario: A snapshot carries the schema version this specification defines
+
+- **WHEN** the kernel serializes a snapshot's logical root
+- **THEN** its `schema_version` is 1.2
+- **AND** a port or connection that holds none of the keys version 1.2 added
+  serializes exactly as it did under version 1.1
 
 ### Requirement: Structural Validation
 
@@ -2383,3 +2431,1141 @@ plausible result in place of the work it did not do.
 - **WHEN** the bound program fails to elaborate
 - **THEN** the agent receives every diagnostic with its code and source location
 - **AND** it receives no snapshot, partial or otherwise
+
+### Requirement: Verification Questions Are Declared
+
+A Fang program SHALL be able to declare a verification question beside the
+requirement it serves: the parameters it measures into, the measures that
+produce them, the method, and for a circuit question the bench. The question
+SHALL elaborate to a verification entity whose result is unknown, carrying its
+source location. A program SHALL NOT be able to declare a computed result for a
+question; a result is produced only by a run. A parameter a question measures
+into SHALL be declared without a value, and a program that gives it one, by a
+default or an assignment, SHALL fail elaboration.
+
+#### Scenario: A declared question becomes an unanswered verification
+
+- **WHEN** a program declares a simulation question against a requirement
+- **THEN** a verification entity exists naming that requirement, the method, the
+  measured parameters, and the bench
+- **AND** its result is unknown
+
+#### Scenario: A question cannot state its own answer
+
+- **WHEN** a program declares a question and supplies a result
+- **THEN** the declaration is refused
+
+#### Scenario: A measure names a declared parameter
+
+- **WHEN** a question measures into a name that is not a declared parameter of
+  the module declaring it
+- **THEN** elaboration fails with a diagnostic naming the parameter
+
+#### Scenario: A measured parameter is declared without a value
+
+- **WHEN** a program gives a value to a parameter one of its questions measures
+  into
+- **THEN** elaboration fails with a diagnostic naming the parameter
+
+#### Scenario: A verification by inspection is still declarable
+
+- **WHEN** a program records a verification by inspection or test with its
+  result
+- **THEN** it elaborates as before, and is not routed to any tool
+
+### Requirement: The Bench Is Explicit
+
+A circuit question SHALL name every source and load applied and the analysis
+window, each source and load at a part surface a pin map resolves. The runner
+SHALL NOT supply a default source, load, or window. Every bench item SHALL be
+recorded on the run as an assumption, and every part the bench abstracts SHALL
+be recorded as a coverage gap. A measure's window SHALL be along the analysis's
+axis and SHALL start before it ends; a window that does not SHALL be refused
+where it is declared, and never lowered to a measurement over nothing.
+
+#### Scenario: A question without a bench does not run
+
+- **WHEN** a circuit question names no supply
+- **THEN** the question is reported as not runnable, naming what is missing
+- **AND** no source is assumed
+
+#### Scenario: A bench item is recorded as an assumption
+
+- **WHEN** a question applies a supply and a load and is prepared
+- **THEN** the prepared run names each as an assumption with its surface and
+  quantity
+
+#### Scenario: An abstracted part is a coverage gap
+
+- **WHEN** a bench abstracts a part
+- **THEN** the prepared run names that part among its coverage gaps
+
+#### Scenario: A surface no pin map resolves is refused
+
+- **WHEN** a bench or a measure names a surface that resolves to no pins
+- **THEN** preparation is refused naming the surface
+
+#### Scenario: A load is a current or a resistance by its dimension
+
+- **WHEN** one load is given in amperes and another in ohms
+- **THEN** the first lowers to a current sink and the second to a resistor
+- **AND** a load of any other dimension is refused
+
+#### Scenario: A window that does not start before it ends is refused
+
+- **WHEN** a question averages a surface after 2 ms and until 1 ms, or takes
+  any statistic over a window whose start is not before its end
+- **THEN** the declaration is refused naming the statistic, the window and the
+  surface, with the code an emulation count's empty window is refused with
+- **AND** no measurement over the window is lowered
+
+### Requirement: The Cheapest Verification Level Is Chosen And Recorded
+
+The runner SHALL route a question to the cheapest level that can decide it. A
+question every one of whose measured parameters holds a value, and whose
+constraints the kernel's own evaluator already decides, SHALL be answered at the
+equation level with no tool run. A measured parameter with no value SHALL NOT
+let the evaluator answer. The chosen level and tool SHALL be recorded on the
+verification entity. A question no registered tool covers SHALL be reported
+unroutable rather than answered by a tool at another level.
+
+#### Scenario: A question the evaluator decides runs no tool
+
+- **WHEN** every parameter a question measures into holds a value and every
+  constraint over them already evaluates to a decided status
+- **THEN** the question is routed to the equation level
+- **AND** no tool is prepared or run
+
+#### Scenario: A measure nobody took is not decided by the evaluator
+
+- **WHEN** a question measures into a parameter that holds no value and no
+  constraint reads, while the constraints over its other parameters are decided
+- **THEN** the question is routed to its tool rather than to the evaluator
+- **AND** while nothing measures that parameter, the result is unknown, naming
+  the missing measure
+
+#### Scenario: An undecided circuit question routes to a circuit simulator
+
+- **WHEN** a simulation question's constraint is undecided
+- **THEN** it is routed to the circuit level and names the simulator
+
+#### Scenario: The level is recorded with the answer
+
+- **WHEN** a question is answered
+- **THEN** the verification entity names the level and the tool that answered it
+
+#### Scenario: A question nothing covers is unroutable
+
+- **WHEN** a question names a method no registered tool covers
+- **THEN** it is reported unroutable
+- **AND** it is not answered by a tool at another level
+
+### Requirement: Verification Tools Sit Behind One Protocol
+
+Every verification tool SHALL say which questions it covers, whether it is
+available, and its version; SHALL prepare its native input deterministically
+from the snapshot and the question; SHALL run across a process boundary or read
+a declared model file; and SHALL read its output into decimal measurements
+containing nothing the output did not. A tool that is not installed SHALL report
+unsupported by name and SHALL NOT be substituted. Every file a run reads beside
+its native input SHALL be named in the run's bundle by a name that holds no
+machine-specific path and that no other file of the run shares; the same file
+read twice SHALL be one entry.
+
+#### Scenario: Preparation is deterministic
+
+- **WHEN** the same question is prepared twice over the same snapshot
+- **THEN** the two native inputs are byte-identical
+
+#### Scenario: A modelled part is instantiated from its model
+
+- **WHEN** a part carrying a subcircuit model is in scope of a circuit question
+- **THEN** the native input instantiates that subcircuit with the part's pins
+  mapped onto the model's ports in the model's declared order
+- **AND** the model is referenced rather than inlined
+
+#### Scenario: Two model files at one relative path stay two files
+
+- **WHEN** two parts declared in different folders name different model files
+  by the same relative path
+- **THEN** the run's bundle names each file apart, from its content
+- **AND** each part is instantiated from its own file
+- **AND** two different files declaring one subcircuit are refused, naming the
+  parts, since a deck holds one definition of a subcircuit
+
+#### Scenario: Pins on different nets landing on one model port are refused
+
+- **WHEN** a part's pin map lands several pins on one model port and those
+  pins are on different nets
+- **THEN** the question is not runnable, naming the part, the port and the nets
+- **AND** pins landing on one port that share a node are one terminal
+
+#### Scenario: A measure lowers to a measurement directive
+
+- **WHEN** a question asks for a peak-to-peak over a window at a surface
+- **THEN** the native input carries a measurement over that window between the
+  surface's node and its return
+
+#### Scenario: Output is read into decimal measurements
+
+- **WHEN** a tool's output reports a measured number
+- **THEN** the measurement carries it as a decimal quantity in the measured
+  parameter's unit, with the tool and its version
+
+#### Scenario: A measure the output does not report is not invented
+
+- **WHEN** a requested measure is absent from the tool's output or reported as
+  failed
+- **THEN** no measurement is produced for it
+- **AND** the question's result is unknown, naming the missing measure
+
+#### Scenario: A missing tool reports unsupported by name
+
+- **WHEN** the tool a question routes to is not installed
+- **THEN** the question is reported unsupported, naming the tool
+- **AND** no other tool answers it and no result is fabricated
+
+#### Scenario: A second simulator shares the lowering
+
+- **WHEN** the same question is prepared for two SPICE-compatible simulators
+- **THEN** the devices and bench are identical and only each simulator's own
+  analysis and measurement conventions differ
+
+### Requirement: Measurements Re-enter Through The Commit Gate
+
+A measurement SHALL enter canonical state only as a transaction against the
+committed head that sets each measured parameter to an inferred value whose
+source is the run's evidence, adds that evidence carrying the structured
+measurement record, and replaces the declared verification under its original
+identity. A run already recorded for the same job and the same tool version
+SHALL NOT be run again: its recorded measurements SHALL re-enter by the same
+transaction, citing its evidence as it stands rather than adding it again, and
+the result SHALL be what the gate decides on the head now. The constraint over a measured parameter SHALL be decided by the
+gate's existing constraint check and by nothing else. A committed measurement
+SHALL be kept across re-elaboration only while it is current: while preparing
+its question afresh gives the job its evidence records. Every provenance record
+the runner appends to an existing entity, in a measurement, a failure or an
+answer at the equation level, SHALL carry a fields list naming each fact it set
+there: a measured value by its parameter's path followed by `value`, and on the
+verification its result, evidence, level and tool. A measured value kept
+across re-elaboration SHALL keep the record that set it.
+
+#### Scenario: A measured parameter is an inferred value with its evidence
+
+- **WHEN** a run's measurements are committed
+- **THEN** each measured parameter holds an inferred value whose source is the
+  evidence entity and whose confidence is the run's
+- **AND** it is never recorded as an explicit value
+
+#### Scenario: The undecided constraint is decided by the gate
+
+- **WHEN** the measurement transaction is proposed
+- **THEN** the constraint over the measured parameter is evaluated by the
+  constraint check and reports a decided status
+
+#### Scenario: The evidence carries the whole record
+
+- **WHEN** a run's evidence is read
+- **THEN** it names the tool and its version, the level, a hash of the native
+  input, the run's terminal status, whether it ran locally or on a hosted
+  runner, the run's confidence, each measure with its quantity or the reason it
+  has none, the assumptions, and the coverage gaps
+- **AND** it names the digest of every input file the run read that the
+  snapshot does not hold, such as a model file
+
+#### Scenario: The verification keeps its identity
+
+- **WHEN** a question is answered
+- **THEN** the verification entity has the identifier it was declared with, its
+  result, the evidence, and a provenance record for the run
+
+#### Scenario: A record that changes an entity names what it set
+
+- **WHEN** a run's measurements are committed
+- **THEN** the part holding a measured parameter gains the run's provenance
+  record, its fields list naming the measured value, such as
+  `parameters.ripple.value`, and nothing else of the part
+- **AND** the verification gains the run's record naming its result, evidence,
+  level and tool
+- **AND** the evidence the run adds, which the record creates, names no fields
+
+#### Scenario: A recorded run re-enters rather than running again
+
+- **WHEN** a question is asked again with the same job on the same tool
+  version as a completed run its verification already cites, after a change
+  to the constraints over its measured parameters
+- **THEN** no tool runs and no evidence is added
+- **AND** the run's recorded measurements re-enter through the gate, and the
+  verification's result is what the gate now decides, so a failure whose
+  constraint was relaxed passes and a pass whose constraint became undecided is
+  unknown
+- **AND** the question is reported current only when the gate decides what the
+  head already holds
+
+#### Scenario: Measurements against a stale head are refused
+
+- **WHEN** a run was prepared against a snapshot that is no longer the head
+- **THEN** its measurements are refused rather than applied
+
+#### Scenario: Re-elaboration does not withdraw a measured value
+
+- **WHEN** a program whose measured parameter holds a committed measurement is
+  elaborated again into the same workspace, unchanged
+- **THEN** the parameter keeps the measured value and the evidence that is its
+  source
+- **AND** the program, which declared the parameter without a value, is not
+  recorded as having changed it
+
+#### Scenario: A measurement is kept only while it is current
+
+- **WHEN** a program whose measured parameter holds a committed measurement is
+  elaborated again with a change to anything the run rested on, such as a part
+  in the circuit, a model file, or the firmware image, while the question
+  itself is unchanged
+- **THEN** preparing the question again gives a job other than the one the
+  evidence records, and the measured value and the verification answered from
+  it are not kept
+- **AND** the question is answered again rather than reported current
+- **AND** whether a measurement is kept does not depend on whether the tool is
+  installed, or which version is
+
+#### Scenario: Confidence is bounded by model provenance
+
+- **WHEN** a run rests on a model whose provenance is assumed
+- **THEN** the measurement's confidence is lower than that of a run over
+  primitives and cited models
+
+### Requirement: A Failing Measurement Is Recorded And Not Applied
+
+WHEN the measurement transaction is rejected because a hard constraint over a
+measured value failed, the head SHALL NOT move, the rejection SHALL be returned
+with its diagnostics, and the runner SHALL record the evidence and the
+verification with a failed result in a transaction that sets no parameter. A
+rejection for any other reason SHALL record nothing. A committed measurement
+carried across re-elaboration that a hard constraint the program now states
+fails SHALL NOT be carried into the design: its verification SHALL be carried
+with a failed result and its evidence, and the measured parameter without a
+value, as the transaction recording the failure leaves them.
+
+#### Scenario: A value that breaks a hard constraint never reaches the head
+
+- **WHEN** a measured value violates a hard constraint
+- **THEN** the measured parameter is still unknown on the head
+- **AND** the rejection names the constraint that failed
+
+#### Scenario: The failure is recorded as knowledge
+
+- **WHEN** a measured value violates a hard constraint
+- **THEN** the head holds the run's evidence and the verification with a failed
+  result naming that evidence
+
+#### Scenario: A constraint tightened past a committed measurement records its failure
+
+- **WHEN** a measurement committed as a pass is still current, and the program
+  is rebuilt with a hard constraint over it tightened past the measured value
+- **THEN** the rebuilt design is persisted, holding the run's evidence and the
+  verification with a failed result naming that evidence
+- **AND** the measured parameter is unknown in it, and nothing runs again
+- **AND** with the constraint relaxed again, the recorded run re-enters and the
+  verification passes
+
+#### Scenario: An unrelated rejection records nothing
+
+- **WHEN** the measurement transaction is rejected for a reason other than a
+  failed constraint over a measured value
+- **THEN** the head is unchanged and no evidence is added
+
+#### Scenario: A run that measured nothing is recorded under a must-be-decided requirement
+
+- **WHEN** a run produces no value for a measure, and the policy marks the
+  requirement the question serves must-be-decided
+- **THEN** the run's evidence is recorded and the verification reads unknown
+- **AND** the constraints the run left undecided do not block that
+  transaction, because the verification's own result states them
+
+#### Scenario: Two questions measuring into one constraint are both answered
+
+- **WHEN** a hard constraint reads parameters measured by two questions under a
+  must-be-decided requirement
+- **THEN** the first question's measurements enter although the constraint is
+  still undecided for the other's parameter
+- **AND** the second question's measurements decide it
+
+### Requirement: Rule Checks Are Evidence
+
+A rule-check question SHALL run the external checker over the artifact the
+kernel lowers, SHALL record every violation the checker reports with its rule,
+severity, and the items it names, and SHALL record each excluded rule with its
+declared reason. A violation of error severity SHALL make the verification
+fail; a warning SHALL NOT. A report of a schema the reader is not written for,
+or one lacking a field the reader reads, SHALL fail the run with the reason and
+leave the verification unknown; it SHALL NOT be read as a report of no
+violations.
+
+#### Scenario: A violation is recorded with its rule and items
+
+- **WHEN** the checker reports a violation
+- **THEN** the evidence names the rule, the severity, and the items
+
+#### Scenario: An excluded rule is recorded with its reason
+
+- **WHEN** a question excludes a rule with a reason
+- **THEN** violations of that rule do not affect the result
+- **AND** the evidence names the rule, the reason, and how many were excluded
+
+#### Scenario: An exclusion without a reason is refused
+
+- **WHEN** a question excludes a rule and gives no reason
+- **THEN** the declaration is refused
+
+#### Scenario: Errors fail and warnings do not
+
+- **WHEN** the checker reports only warnings
+- **THEN** the verification passes and the warnings are recorded
+- **AND** one violation of error severity makes it fail
+
+#### Scenario: A report the reader is not written for is not a pass
+
+- **WHEN** the checker writes a report of another schema, or one without its
+  sheets
+- **THEN** the run fails with the reason and no verdict is drawn
+- **AND** the verification stays unknown
+
+### Requirement: A Touchstone Model Is Data
+
+A part MAY carry a Touchstone model as a trait with its provenance. An RF
+question over it SHALL be answered by reading the file and composing the named
+matching parts in closed form, at the equation level, and the measurement's
+confidence SHALL be bounded by the model's provenance. The named parts SHALL
+form, in the order named, the ladder the graph connects from the port to the
+model, each series part joining one node to the next and each shunt part
+joining its node to ground, and a part that does not SHALL be refused by name.
+A frequency outside the file's range SHALL be refused rather than
+extrapolated, and the file's frequencies SHALL be scaled and compared exactly,
+so that a frequency the file names is inside its range. A return loss is in
+decibels, and SHALL be measured only into a parameter declared in decibels; a
+decibel SHALL NOT convert to, or be compared or combined with, any other
+dimensionless unit.
+
+#### Scenario: A one-port file answers a return-loss question
+
+- **WHEN** a question asks the return loss of a part carrying a one-port model
+  at a frequency inside the file's range
+- **THEN** the measurement is the return loss interpolated at that frequency, in
+  decibels
+
+#### Scenario: A matching network is composed from the graph's values
+
+- **WHEN** the question names a series and a shunt part between the port and the
+  model
+- **THEN** the measurement accounts for both, using the values the graph holds
+
+#### Scenario: Matching parts out of their ladder are refused
+
+- **WHEN** the question names its matching parts in an order the graph does not
+  connect them in, or names a part off the chain between the port and the model
+- **THEN** the question is refused, naming the part that breaks the chain
+- **AND** nothing is composed
+
+#### Scenario: A matching part with an unknown value leaves the question unanswered
+
+- **WHEN** a named matching part's value is unknown
+- **THEN** no measurement is produced and the result is unknown, naming the part
+
+#### Scenario: A frequency outside the file is refused
+
+- **WHEN** the question's frequency lies outside the file's range
+- **THEN** the question is refused naming the range
+- **AND** nothing is extrapolated
+
+#### Scenario: A frequency the file names is inside its range
+
+- **WHEN** the question's frequency is the file's last point, written in the
+  file's own frequency unit
+- **THEN** the question is answered at that point and not refused
+
+#### Scenario: A return loss goes only into a decibel parameter
+
+- **WHEN** a question measures a return loss into a parameter declared in a
+  dimensionless unit other than decibels, such as percent
+- **THEN** elaboration fails with a unit diagnostic
+- **AND** a constraint comparing a decibel parameter with such a unit is refused
+  where it is written
+
+#### Scenario: The file's format options are honoured
+
+- **WHEN** two files describe the same network in different units, formats, and
+  reference resistances
+- **THEN** they give the same measurement
+
+### Requirement: The Verify Command
+
+The `verify` command SHALL route and run every declared question, print each
+question's level, tool, measurements, and result or the reason it did not run,
+exit non-zero when any verification failed, and persist measurements only when
+asked to commit into an existing workspace. It SHALL persist measurements and
+nothing else: where the program's design differs from the one persisted, the
+commit SHALL be refused before anything runs, saying to run `build` first, and
+nothing SHALL be written. A measurement made stale by a file the program reads
+but does not hold, a model or a firmware image, is not a change to the design:
+its question SHALL run again and its answer SHALL be committed. What it persists
+SHALL first pass the commit gate whole, as what `build` persists does; a design
+the gate rejects SHALL NOT be written, and the command SHALL report the gate's
+diagnostics and exit non-zero.
+
+#### Scenario: Verify reports each question
+
+- **WHEN** `verify` runs against a program with declared questions
+- **THEN** each question is printed with its level, its tool, its measurements,
+  and its result
+
+#### Scenario: A failed verification exits non-zero
+
+- **WHEN** any question's verification fails
+- **THEN** the command exits non-zero
+
+#### Scenario: An unsupported question is reported and is not a failure
+
+- **WHEN** a question's tool is not installed
+- **THEN** the command names the tool as unsupported
+- **AND** that alone does not make the exit non-zero
+
+#### Scenario: Nothing persists without a commit
+
+- **WHEN** `verify` runs without being asked to commit
+- **THEN** the workspace is unchanged
+
+#### Scenario: A program changed since its build is not committed
+
+- **WHEN** `verify` is asked to commit, and the program has changed since its
+  design was persisted, such as a part retuned or a constraint tightened
+- **THEN** the command refuses, saying to run `build` first, and exits non-zero
+- **AND** nothing runs and nothing is written to the workspace
+
+#### Scenario: A measurement made stale outside the program is committed
+
+- **WHEN** `verify` is asked to commit, the program is unchanged, and a model
+  file a committed measurement rests on has changed
+- **THEN** the question runs again
+- **AND** its answer is committed
+
+#### Scenario: A commit the gate rejects writes nothing
+
+- **WHEN** `verify` is asked to commit a design the commit gate rejects
+- **THEN** nothing is written to the workspace
+- **AND** the command reports the gate's diagnostics and exits non-zero
+
+#### Scenario: A program with no questions says so
+
+- **WHEN** `verify` runs against a program declaring no question
+- **THEN** the command says there is nothing to verify and exits zero
+
+### Requirement: Verification Acceptance Test
+
+A conforming implementation SHALL demonstrate the verification-layer acceptance
+test.
+
+#### Scenario: AT-V1 an undecided constraint is decided by a run that entered through the gate
+
+- **WHEN** a program declares a parameter with no value, a hard constraint over
+  it, and a circuit question measuring into it with an explicit bench, and
+  verification runs with the simulator installed
+- **THEN** the constraint that was undecided is decided on the committed head
+- **AND** the parameter's value is inferred with the run's evidence as its
+  source
+- **AND** the verification names its level and tool, and the evidence names the
+  tool's version
+- **AND** with the constraint tightened past the measured value, the head does
+  not move and the verification reads failed with its evidence
+
+### Requirement: A Port May Be One Peripheral Instance
+
+A part's interface port SHALL be able to name the peripheral instance it is,
+and the instance SHALL be recorded on the port entity. Each candidate pin of a
+port SHALL be able to carry the selector that routes the port's signal to that
+pin, and a part that declares any selector SHALL name the evidence its
+selectors were taken from. When a lowering chooses a pin that carries a
+selector, the pin connection it records SHALL carry that selector and the
+evidence for it. A lowering SHALL assign the signals of one connection only
+from the candidates of the port that connection names. A package pad number
+SHALL NOT be used as, or used to derive, a port pin index.
+
+#### Scenario: The instance is recorded on the port
+
+- **WHEN** a part declares an I2C port as the peripheral instance `I2C1`
+- **THEN** the port entity in the snapshot names `I2C1`
+
+#### Scenario: Two controllers are two ports
+
+- **WHEN** a part offers I2C on two controllers, declared as two ports, and a
+  connection names one of them
+- **THEN** every pin the lowering assigns for that connection is a candidate
+  of the named port
+
+#### Scenario: The chosen pin's selector reaches the graph
+
+- **WHEN** a lowering assigns `i2c1.scl` to a candidate declared with selector
+  `AF4`
+- **THEN** the pin connection it records carries `AF4` for that pin
+- **AND** it names the evidence entity the part cited for its selectors
+
+#### Scenario: A selector without evidence is refused
+
+- **WHEN** a part declares selectors on its candidates and names no evidence
+  for them
+- **THEN** elaboration fails with an `IFACE` diagnostic naming the part
+
+#### Scenario: Candidates without selectors lower as before
+
+- **WHEN** a part declares its candidates as a list of pin names
+- **THEN** the lowering, the pin connections and the decisions it records are
+  identical to those of the previous release
+
+### Requirement: An Addressed Bus Device Carries Its Address
+
+The port of an addressed bus device SHALL be able to carry its address, either
+as a fixed dimensionless value or as a strap: one of the device's pins together
+with the address each of the device's own pins selects when the strap is tied
+to it. A strapped address SHALL be resolved from the board's nets, by the
+device pin that shares the strap pin's net. The compatibility check's
+addressing rule SHALL read these addresses for every participant of a
+multi-drop bus. A port that declares no address SHALL NOT be treated as
+addressed.
+
+#### Scenario: Two devices at one address fail
+
+- **WHEN** two devices on one I2C bus declare the fixed address 0x48
+- **THEN** the compatibility check fails and names both ports
+
+#### Scenario: A strap tied to ground selects its address
+
+- **WHEN** a device's strap pin shares a net with the device's own ground pin,
+  and the strap maps that pin to 0x48
+- **THEN** the device's address is resolved as 0x48, and the addressing rule
+  compares it like a fixed address
+
+#### Scenario: A strap on no net is reported, not resolved
+
+- **WHEN** a device's strap pin is on no net, or on a net none of the pins in
+  its strap map shares
+- **THEN** the device's address is unknown
+- **AND** the addressing rule returns undecided naming the strap pin
+
+#### Scenario: An ambiguous strap is reported
+
+- **WHEN** a device's strap pin shares a net with two pins of its strap map
+- **THEN** the device's address is unknown
+- **AND** the addressing rule returns undecided naming the strap pin and both
+  pins
+
+#### Scenario: A controller with no address is not reported
+
+- **WHEN** a bus controller's port declares no address
+- **THEN** the addressing rule neither fails nor returns undecided on its
+  account
+
+#### Scenario: An address is not a bare number
+
+- **WHEN** a port is given an address as a plain integer rather than a
+  dimensionless quantity or a strap
+- **THEN** elaboration fails with a diagnostic naming the parameter
+
+### Requirement: Firmware Is Bound And Its Digest Is Evidence
+
+A Fang program SHALL be able to bind a firmware file, named relative to the
+program that declares the component, and the target it was built for, to the
+component that runs it, as a trait of that component. The binding SHALL NOT
+carry the file's digest. Every emulation run SHALL record the digest of the
+firmware it ran on its evidence, and a verification whose evidence names a
+digest other than the current digest of the file the run resolved SHALL be
+reported stale, the file being resolved for that check exactly as it was for
+the run. A question SHALL be able to name a firmware file of its own, relative
+to the program that declares the question.
+
+#### Scenario: Rebuilding firmware does not change the snapshot
+
+- **WHEN** the bound firmware file is rebuilt with different contents and the
+  program is elaborated again
+- **THEN** the snapshot is byte-identical to the one before the rebuild
+
+#### Scenario: Evidence names the firmware it ran
+
+- **WHEN** an emulation run completes
+- **THEN** its evidence names the firmware file and its digest
+
+#### Scenario: A verification over an older build is stale
+
+- **WHEN** a verification's evidence names a firmware digest and the bound file
+  now has a different one
+- **THEN** the verify command reports the verification as stale and names the
+  file
+
+#### Scenario: Staleness reads the file the run read
+
+- **WHEN** a question is declared in a program in another directory from the
+  one that declares the component, and names no firmware of its own
+- **THEN** the run and the staleness check both resolve the bound firmware
+  relative to the program that declares the component
+- **AND** a rebuild of that file reports the verification stale, and nothing
+  else does
+
+#### Scenario: A question names its own build
+
+- **WHEN** a question names a firmware file other than the component's binding
+- **THEN** the run uses that file and its evidence names it
+
+### Requirement: Emulation Models Declare What They Cover
+
+The component that runs firmware and the devices around it SHALL reach the
+emulator through models naming a descriptor the toolchain ships. A descriptor
+SHALL state the part it stands for, the inputs it accepts with their units, the
+faults it supports, the events it can produce, what it does not model, the
+warnings the model is expected to report with the coverage gap each stands for,
+its provenance and its qualification state: experimental, tested in
+emulation, or hardware-correlated. A platform descriptor SHALL map the component's ports and
+pins to the emulator's. A model naming no descriptor SHALL be refused, and no
+part SHALL fall back to a generic model.
+
+#### Scenario: An unknown model is refused
+
+- **WHEN** a part's emulation model names a descriptor the toolchain does not
+  ship
+- **THEN** the plan is refused naming the part and the descriptor
+- **AND** no substitute model is used
+
+#### Scenario: What a model does not cover is a coverage gap
+
+- **WHEN** a run uses a model whose descriptor lists behaviour it does not
+  model
+- **THEN** every listed behaviour is a coverage gap on the run's evidence
+
+#### Scenario: A pin's emulator port is the descriptor's, not a guess
+
+- **WHEN** an observation names a pin the platform descriptor does not map
+- **THEN** the plan is refused naming the pin
+- **AND** no port is derived from the pin's name or pad number
+
+### Requirement: Emulation Questions Are Declared
+
+A Fang program SHALL be able to declare an emulation question beside the
+requirement it serves, naming the run's virtual duration, its stimuli, its
+faults, the parts it abstracts and its measures, each by part surface. The
+question SHALL elaborate to a verification with result unknown and method
+`emulation`, routed at the behavioural level. A program SHALL NOT be able to
+declare a computed result for it.
+
+#### Scenario: A question elaborates to an unanswered verification
+
+- **WHEN** a program declares an emulation question
+- **THEN** the snapshot holds a verification with result unknown, method
+  `emulation`, the requirement it serves, and the question's stimuli, faults,
+  measures and duration
+
+#### Scenario: A question routes to the emulator
+
+- **WHEN** an emulation question's measured parameters are not already decided
+- **THEN** it is routed at the behavioural level to the emulation tool
+
+#### Scenario: A question cannot state its result
+
+- **WHEN** an emulation question is declared with a result
+- **THEN** elaboration fails with a `SIM` diagnostic
+
+### Requirement: The Emulation Plan Resolves Everything Before Anything Runs
+
+Compiling an emulation question SHALL resolve, or refuse naming what is
+missing: the target component with its platform model and firmware; the scope,
+being the target and every component sharing a net with a pin the question
+touches, each carrying a peripheral model or listed as abstracted; each bus in
+scope with its controller instance, its chosen pins and their selectors, each
+a selector the platform descriptor reads, the electrical requirements of its signals, and each device's address, a whole
+number the emulator is given as the graph holds it; each
+observation point, a signal with several loads being observed on its one pin;
+each stimulus and fault against its model's declarations, a stimulus setting an
+input to one value at a time within the run, on a device present in the run;
+each measure against what the probes can record; and the run's virtual
+duration, which has no default and SHALL be positive. A measure that would read the same whatever the
+firmware did SHALL be refused rather than measured: a pin-configuration measure
+over a port that is no bus in scope with pins of the target, a match naming a
+detail its measure does not filter on, a count over a window that is empty or
+not bounded by times, and a bus match over a device a fault removes. Every
+abstracted part SHALL be a coverage gap. The plan SHALL be canonical and
+identified by the hash of its canonical form.
+
+#### Scenario: A component with no model and no abstraction refuses the plan
+
+- **WHEN** a component in scope carries no peripheral model and is not listed as
+  abstracted
+- **THEN** the plan is refused naming the component and nothing runs
+
+#### Scenario: An unsupported fault refuses the plan
+
+- **WHEN** a question declares a fault its model does not support
+- **THEN** the plan is refused naming the fault and the model
+
+#### Scenario: A stimulus of the wrong dimension refuses the plan
+
+- **WHEN** a stimulus sets a model input to a quantity whose dimension the input
+  does not accept
+- **THEN** the plan is refused naming the input
+
+#### Scenario: A plan without a duration is refused
+
+- **WHEN** a question names no run duration
+- **THEN** the plan is refused rather than given a default
+
+#### Scenario: A run of no time or less is refused
+
+- **WHEN** a question names a run duration that is zero or negative
+- **THEN** the declaration is refused with the duration's `SIM` diagnostic
+- **AND** a plan carrying such a duration is neither compiled nor lowered,
+  since its script would run nothing and still finish as completed
+
+#### Scenario: A stimulus that cannot be applied is refused
+
+- **WHEN** a stimulus sets an input to a range or a tolerance, falls before the
+  run starts or after it ends, or sets an input of a device a fault removes
+- **THEN** the plan is refused naming the input
+
+#### Scenario: A pin configuration over no bus is refused
+
+- **WHEN** a pin-configuration measure names a port that is not an I2C bus of
+  the target with a device on it
+- **THEN** the plan is refused naming the port, rather than measuring zero
+  having checked no pin
+
+#### Scenario: A match detail no measure reads is refused
+
+- **WHEN** a match names a detail its measure does not filter on, such as a
+  register for an I2C read
+- **THEN** the plan is refused naming the detail, rather than counting every
+  event of the match's kind
+
+#### Scenario: An empty or untimed count window is refused
+
+- **WHEN** a count's window ends before it starts, or is bounded by anything
+  but times
+- **THEN** the declaration is refused
+
+#### Scenario: A bus match over an absent device is refused
+
+- **WHEN** a measure matches reads or writes of a device the question's fault
+  makes absent
+- **THEN** the plan is refused naming the measure, because an absent device
+  records nothing and the measure would read the same whatever the firmware did
+
+#### Scenario: A signal with several loads is observed on its one pin
+
+- **WHEN** an edge is measured on a signal of the target that drives two loads
+- **THEN** the plan observes the one pin the signal lands on
+
+#### Scenario: An address that is no whole number is refused
+
+- **WHEN** a device on a bus in scope declares an address that is not a whole
+  number
+- **THEN** the plan is refused naming the device and the address, rather than
+  giving the emulator another address in its place
+
+#### Scenario: The plan carries the board's facts
+
+- **WHEN** the demo board's startup question is compiled
+- **THEN** the plan names I2C1 as the sensor's controller, the chosen pins with
+  their selectors, open drain on both signals, and the address 0x44
+
+#### Scenario: The same question compiles to the same plan
+
+- **WHEN** a question is compiled twice from the same snapshot, on two machines
+- **THEN** the two plans are byte-identical and have the same hash
+
+### Requirement: The Emulator Script Carries Only What The Lowering Writes
+
+The emulator's native input SHALL be a function of the plan alone. The script
+SHALL contain only commands from the lowering's fixed set, SHALL fix the
+emulator's random seed before anything else, SHALL apply every stimulus at its
+virtual time from within the script, and SHALL take no input from the host once
+the run starts. No text from a Fang program SHALL reach the emulator's monitor
+or scripting language. Every duration SHALL be written in a form the emulator
+reads as the duration the plan means. Every probe SHALL have a name of its own,
+derived from the whole path of the entity it observes, and a lowering that
+would give two probes one name SHALL be refused.
+
+#### Scenario: The seed comes first
+
+- **WHEN** a plan is lowered
+- **THEN** the script's first command fixes the seed the plan records
+
+#### Scenario: Durations are written as the emulator reads them
+
+- **WHEN** a stimulus is at 100 ms
+- **THEN** the script advances to it with the duration 0.1 s, in a form that
+  cannot be read as 100 s
+
+#### Scenario: Program text does not reach the script
+
+- **WHEN** a program names a surface or a string containing characters the
+  monitor would interpret
+- **THEN** the plan is refused, or the text never appears in the script
+
+#### Scenario: Two devices whose paths end alike get two probes
+
+- **WHEN** a plan holds two devices whose paths share their last segment
+- **THEN** their probes have different names, and a plan in which two probes
+  would share a name is refused by the lowering
+
+#### Scenario: Lowering is deterministic
+
+- **WHEN** the same plan is lowered twice
+- **THEN** the platform description and the script are byte-identical
+
+### Requirement: Observation Comes From Probes, Not From The Firmware's Report
+
+Bus and pin events SHALL be recorded by probes in the emulated platform, each
+event carrying a sequence number, its virtual time in integer nanoseconds, the
+entity it came from, a type and a payload. A value read from the firmware's
+serial output SHALL be recorded as the firmware's report and SHALL NOT satisfy a
+measure stated at the bus.
+
+#### Scenario: An I2C transaction is recorded at the device
+
+- **WHEN** the firmware reads the sensor
+- **THEN** the event record holds the transaction with its virtual time and the
+  sensor's entity identifier
+
+#### Scenario: A pin edge is recorded on the pin the board assigns
+
+- **WHEN** the firmware drives the pin the board assigns to the status signal
+- **THEN** the event record holds the edge, attributed to that signal
+
+#### Scenario: A printed value is the firmware's report
+
+- **WHEN** a measure reads a number from the firmware's serial output
+- **THEN** the evidence records it as the firmware's report
+- **AND** it cannot be the measure for a requirement stated at the bus
+
+### Requirement: Pin Configuration Is Measured
+
+Where the emulator does not route a peripheral through its pins'
+configuration, the run SHALL record the configuration the firmware gives the
+pins each bus in scope uses — every write to their configuration registers,
+and the registers' values at the end of the run where the model stores them —
+and a measure SHALL compare the result with the mode, selector and output type
+the board requires, measuring the number of pins that differ. A register the
+model accepts without storing SHALL be judged by the firmware's writes to it,
+never by a read-back. A probe SHALL NOT read a register that has read side
+effects. A selector the platform cannot read SHALL refuse the plan, and a
+pin-configuration measure over a pin whose selector it cannot read SHALL
+produce no value, so that no pin is counted as configured with its selector
+unchecked.
+
+#### Scenario: Correctly configured pins measure zero
+
+- **WHEN** the firmware configures the I2C pins in alternate-function mode at
+  the board's selector, open drain
+- **THEN** the pin-configuration measure is zero
+
+#### Scenario: A push-pull build is caught
+
+- **WHEN** the firmware configures the I2C pins push-pull
+- **THEN** the pin-configuration measure counts both pins, though every bus
+  transaction succeeded
+
+#### Scenario: An unstored register is judged by its writes
+
+- **WHEN** the model accepts writes to the output-type register without storing
+  them, and the firmware writes open drain for both I2C pins
+- **THEN** the measure counts neither pin, although the register reads back 0
+
+#### Scenario: A selector the platform does not read is refused
+
+- **WHEN** a bus pin's selector is not one the platform descriptor reads, such
+  as `AF_4` on a platform that reads `AF0` to `AF15`
+- **THEN** the plan is refused naming the pin and the selector
+- **AND** a pin-configuration measure over such a pin has no value, rather
+  than a count that skipped its selector
+
+### Requirement: Absence Is An Observation; An Incomplete Run Is Not
+
+In a run that completed, an event that did not occur SHALL be measured as not
+having occurred before the run's end, so that a constraint bounding its time
+from above is decided. In a run that ended on a timeout or a crash, a measure
+SHALL produce no value. A measure over a model that reported a warning its
+descriptor does not expect SHALL produce no value, and the evidence SHALL name
+the warning. A warning the model's descriptor expects SHALL NOT withdraw a
+measure; it SHALL be recorded on the evidence as the coverage gap the
+descriptor says it stands for. A warning SHALL be matched only against the
+expected warnings of the descriptor of the model that reported it.
+
+#### Scenario: A read that never happens fails its bound
+
+- **WHEN** a completed two-second run contains no read of the sensor and a
+  constraint requires the first read within 200 ms
+- **THEN** the constraint is decided as failed
+
+#### Scenario: A short run cannot fail a later bound
+
+- **WHEN** a completed 100 ms run contains no read of the sensor and a
+  constraint requires the first read within 200 ms
+- **THEN** the constraint stays undecided
+
+#### Scenario: A timed-out run decides nothing
+
+- **WHEN** a run is ended by its wall-clock limit
+- **THEN** none of its measures has a value and their constraints stay
+  undecided
+
+#### Scenario: An unexpected model warning withdraws its measures
+
+- **WHEN** the sensor's model reports an access it does not implement, and its
+  descriptor does not expect that warning
+- **THEN** every measure over the sensor's events has no value
+- **AND** the evidence names the warning
+
+#### Scenario: An expected warning is a coverage gap
+
+- **WHEN** the I2C controller's model warns of a write to a timing register its
+  descriptor lists as an expected warning
+- **THEN** the measures over the bus keep their values
+- **AND** the evidence lists the coverage gap the descriptor names for it
+
+#### Scenario: A warning is expected only by its own model's descriptor
+
+- **WHEN** the sensor's model reports a warning that the platform's descriptor
+  lists as expected and the sensor's descriptor does not
+- **THEN** every measure over the sensor's events has no value
+- **AND** a warning only the sensor's descriptor expects, reported by the
+  platform's I2C controller, withdraws the measures over the bus
+
+### Requirement: Emulation Runs Are Deterministic And Identified
+
+The evidence of every run SHALL record the emulator's version and build, the
+firmware digest, the plan hash, the seed, and the digest of every file the run
+was given. Repeated runs of one plan on one emulator build SHALL produce
+byte-identical event records; a run that cannot SHALL report the difference
+rather than choose one record. A run SHALL leave its bundle, its event record,
+the emulator's log and its outcome in the workspace it is given, whatever
+directory the emulator itself ran from, so that a run whose evidence is
+committed keeps them beside it. No file of a run's bundle, and nothing else
+its job's hash covers, SHALL carry the hash of the snapshot the job was
+prepared against: the job names that snapshot beside its identity, so a change
+to anything the run does not read leaves the job, and a measurement of it
+current, as it was.
+
+#### Scenario: Ten runs give one record
+
+- **WHEN** the demo's startup plan is run ten times on one emulator build
+- **THEN** the ten event records are byte-identical
+
+#### Scenario: Evidence identifies every input
+
+- **WHEN** a run's evidence is read
+- **THEN** it names the emulator version and build, the firmware digest, the
+  plan hash, the seed and the digest of every bundle file
+
+#### Scenario: An unrelated change leaves the job as it was
+
+- **WHEN** the demo's startup question is prepared against two snapshots that
+  differ only in an entity the run does not read, or only in the checkout the
+  program sits in
+- **THEN** the two jobs have the same hash, and the plan in each bundle names
+  no snapshot
+- **AND WHEN** the firmware is rebuilt and the question prepared again
+- **THEN** the job's hash differs
+
+#### Scenario: A committed run keeps its files
+
+- **WHEN** `verify --commit` runs an emulation question, whether or not the
+  run completes
+- **THEN** the workspace's simulations directory holds the run's bundle, its
+  event record, the emulator's log and its outcome
+- **AND WHEN** `verify` runs the question without `--commit`
+- **THEN** nothing is written into the workspace
+
+### Requirement: The Emulator Is Reported, Never Substituted
+
+A missing emulator, or one outside the versions the lowering was checked
+against, SHALL report unsupported naming what is missing: an installed
+emulator of another version SHALL be reported by its version, not as missing.
+A run that the emulator cannot make on the host, such as from a temporary
+directory whose path it cannot read, SHALL be reported unsupported naming the
+reason before the emulator starts, never as a crashed run. A run that exceeds
+its wall-clock limit SHALL be ended with its whole process group, its partial
+events kept, and the run reported failed with the verification left unknown.
+
+#### Scenario: A missing emulator reports unsupported
+
+- **WHEN** an emulation question is verified and the emulator is not installed
+- **THEN** the question is reported unsupported naming the emulator
+- **AND** no result is fabricated
+
+#### Scenario: An unchecked emulator version reports unsupported
+
+- **WHEN** the installed emulator reports a version the lowering was not
+  checked against
+- **THEN** the question is reported unsupported naming that version and the
+  versions the lowering was checked against
+
+#### Scenario: A temporary path the emulator cannot read reports unsupported
+
+- **WHEN** the temporary directory a run would be made in has a space in its
+  path
+- **THEN** the question is reported unsupported naming the directory, and the
+  emulator is not started
+
+#### Scenario: A hung run is ended whole
+
+- **WHEN** a run exceeds its wall-clock limit
+- **THEN** no process of the run survives, its partial events are kept, and the
+  verification stays unknown
+
+### Requirement: The Emulate Command
+
+`fang emulate` SHALL compile each emulation question's plan, write its bundle,
+run the emulator where it is installed, and print each measure's value or the
+reason it has none. With `--bundle-only` it SHALL write the bundle and run
+nothing. It SHALL NOT change a workspace. It SHALL exit non-zero when a
+question is not runnable or a run did not complete, and an emulator that is
+not installed SHALL NOT by itself make it fail.
+
+#### Scenario: A bundle is written without an emulator
+
+- **WHEN** `fang emulate --bundle-only` runs on the demo board
+- **THEN** it writes the plan, the platform description, the script, the probes
+  and the manifest, and runs nothing
+
+#### Scenario: Emulate prints what it measured
+
+- **WHEN** `fang emulate` runs on the demo board with the emulator installed
+- **THEN** it prints each question's measures and leaves any workspace
+  untouched
+
+#### Scenario: A run that does not complete fails the command
+
+- **WHEN** `fang emulate` runs a question and the run ends on a timeout or a
+  crash
+- **THEN** it prints how the run ended and that its measures have no value,
+  and exits non-zero
+
+### Requirement: Emulation Acceptance Tests
+
+The suite SHALL hold one test per emulation acceptance criterion, AT-F1 and
+AT-F2, each skipped by name where the emulator is absent.
+
+#### Scenario: AT-F1, a requirement over firmware behaviour is decided through the gate
+
+- **WHEN** `verify` runs the demo's startup question with the emulator
+  installed
+- **THEN** the constraints over its measures are decided on the committed head,
+  each measured parameter is inferred with the run's evidence as its source,
+  and the evidence names the emulator version, the firmware digest and the plan
+  hash
+- **AND WHEN** the same question runs against the wrong-address build
+- **THEN** the head does not move and the verification reads failed, with the
+  first read observed absent
+
+#### Scenario: AT-F2, what cannot be modelled cannot pass
+
+- **WHEN** the sensor's model is removed and the sensor is not abstracted, or a
+  fault its model does not support is declared
+- **THEN** the plan is refused naming the sensor or the fault, and nothing runs
+- **AND WHEN** the startup plan runs ten times
+- **THEN** the ten event records are byte-identical
