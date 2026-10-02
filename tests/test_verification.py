@@ -775,7 +775,9 @@ def buffered(model: Path, *, provenance=None, pin_map=None):
 @pytest.fixture
 def follower(tmp_path) -> Path:
     path = tmp_path / "follower.sub"
-    path.write_text(FOLLOWER)
+    # As bytes, so the file is the same on every machine and its digest is the
+    # digest of FOLLOWER; write_text would end Windows lines with \r\n.
+    path.write_bytes(FOLLOWER.encode())
     return path
 
 
