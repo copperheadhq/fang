@@ -211,6 +211,14 @@ An answer enters as one transaction against the committed head:
 - the declared `Verification`, replaced under its own identifier with its
   result, the evidence, the level and the tool.
 
+The run's provenance record is appended to each entity the transaction changes,
+with a `fields` list naming what it set there (RFC 3 section 14): the measured
+value on the part that holds it, as `parameters.corner.value`, which is a fact
+apart from the parameter the program declares, and `evidence`, `level`,
+`result` and `tool` on the verification. A failure and an answer at the
+equation level name the verification's four the same way, and a rebuild that
+keeps a measured value keeps the record that set it.
+
 The gate's constraint check decides the constraint. If a hard constraint over a
 measured value fails, the head does not move; the evidence and the verification
 with result `FAIL` are recorded by a second transaction that sets no parameter.

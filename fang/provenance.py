@@ -60,7 +60,16 @@ class Input:
 
 @dataclass(frozen=True)
 class ProvenanceRecord:
-    """One immutable provenance record."""
+    """One immutable provenance record.
+
+    `fields` names each fact of an existing entity the record set or changed,
+    as a path into the entity's record: `result`, `parameters.vout`, or for a
+    measured value, which is a fact apart from its parameter,
+    `parameters.ripple.value` (RFC 3 section 14). The record that creates an
+    entity leaves it empty and covers every fact the entity was created with.
+    It is kept sorted and without repeats, so the same facts always read the
+    same way.
+    """
 
     origin: ProvenanceOrigin
     activity: str
@@ -71,6 +80,7 @@ class ProvenanceRecord:
     inputs: tuple[Input, ...] = ()
     source_location: SourceLocation | None = None
     confidence: Confidence | None = None
+    fields: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if self.origin is ProvenanceOrigin.INFERRED and self.confidence is None:
@@ -78,6 +88,7 @@ class ProvenanceRecord:
                 "an inferred provenance record carries a confidence; an "
                 "inference is never recorded as an asserted fact"
             )
+        object.__setattr__(self, "fields", tuple(sorted(set(self.fields))))
 
     def as_dict(self) -> dict:
         out: dict = {
@@ -95,6 +106,8 @@ class ProvenanceRecord:
             out["source_location"] = self.source_location.as_dict()
         if self.confidence is not None:
             out["confidence"] = self.confidence.value
+        if self.fields:
+            out["fields"] = list(self.fields)
         return out
 
     @classmethod
@@ -118,6 +131,7 @@ class ProvenanceRecord:
                 SourceLocation.from_dict(location) if location is not None else None
             ),
             confidence=Confidence(confidence) if confidence is not None else None,
+            fields=tuple(payload.get("fields", ())),
         )
 
 

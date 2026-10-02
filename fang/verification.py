@@ -1928,6 +1928,19 @@ def measurement_evidence(
     )
 
 
+#: The facts of a verification an answer sets, as its provenance record
+#: names them (RFC 3 section 14): the record that answers a question owns
+#: these and none of the facts the program declared.
+ANSWER_FIELDS = ("evidence", "level", "result", "tool")
+
+
+def measured_value_field(attr: str) -> str:
+    """How a provenance record names the measured value of a parameter: a
+    fact apart from the parameter, which the program that declares it owns
+    (RFC 3 section 14, RFC 12 section 9.5)."""
+    return f"parameters.{attr}.value"
+
+
 def _replaced(verification: Verification, *, result: str, evidence: tuple[str, ...], level: Level, tool: str, record) -> Verification:
     from dataclasses import replace
 
@@ -1937,7 +1950,7 @@ def _replaced(verification: Verification, *, result: str, evidence: tuple[str, .
         evidence=evidence,
         level=level.label,
         tool=tool,
-        provenance=verification.provenance.append(record),
+        provenance=verification.provenance.append(replace(record, fields=ANSWER_FIELDS)),
     )
 
 
@@ -1953,8 +1966,13 @@ def measurement_transaction(
     evidence, the level and the tool. Evidence already on the head, that of
     a run already recorded whose measurements re-enter, is cited as it
     stands and not added again, and `record` is the provenance the
-    verification gains in place of the run's own.
+    verification gains in place of the run's own. The record is appended to
+    each entity the transaction changes, naming what it set there: the
+    measured value on the part that holds it, and the answer on the
+    verification.
     """
+    from dataclasses import replace
+
     from .graph import AddEntity, RemoveEntity, SetParameter, Transaction
     from .values import Value
 
@@ -1971,6 +1989,7 @@ def measurement_transaction(
                 target=measurement.entity,
                 name=measurement.attr,
                 value=Value.inferred(measurement.quantity, evidence.id, measurement.confidence),
+                record=replace(record, fields=(measured_value_field(measurement.attr),)),
             )
         )
     if evidence.id not in head.entities:
@@ -2467,14 +2486,23 @@ def verify(
 # --------------------------------------------------------------------------
 
 
+def _value_records(provenance: Provenance, attrs) -> tuple:
+    """The records in a chain that set one of the measured values named,
+    oldest first."""
+    named = {measured_value_field(attr) for attr in attrs}
+    return tuple(record for record in provenance.records if named & set(record.fields))
+
+
 @dataclass(frozen=True)
 class MeasuredFacts:
     """What a run wrote that a program does not: answered verifications,
-    their evidence, and the values whose source that evidence is."""
+    their evidence, the values whose source that evidence is, and the
+    provenance records that set those values, by the entity holding them."""
 
     verifications: Mapping[str, Verification] = field(default_factory=dict)
     evidence: Mapping[str, Any] = field(default_factory=dict)
     values: Mapping[tuple[str, str], Any] = field(default_factory=dict)
+    records: Mapping[str, tuple] = field(default_factory=dict)
 
     @staticmethod
     def _answered(verification) -> bool:
@@ -2503,7 +2531,13 @@ class MeasuredFacts:
                 value = resolve(entity_id, attr)
                 if isinstance(value, Value) and value.source in evidence:
                     values[(entity_id, attr)] = value
-        return cls(verifications, evidence, values)
+        records = {}
+        for entity_id in sorted({entity_id for entity_id, _ in values}):
+            attrs = [attr for held, attr in values if held == entity_id]
+            found = _value_records(snapshot.entities[entity_id].provenance, attrs)
+            if found:
+                records[entity_id] = found
+        return cls(verifications, evidence, values, records)
 
     @classmethod
     def from_records(cls, records: Sequence[Mapping]) -> "MeasuredFacts":
@@ -2565,7 +2599,14 @@ class MeasuredFacts:
                 value = Value.from_dict(payload)
                 if value.source in evidence:
                     values[(entity_id, attr)] = value
-        return cls(verifications, evidence, values)
+        records = {}
+        for entity_id in sorted({entity_id for entity_id, _ in values}):
+            attrs = [attr for held, attr in values if held == entity_id]
+            chain = Provenance.from_list(by_id[entity_id].get("provenance", ()))
+            found = _value_records(chain, attrs)
+            if found:
+                records[entity_id] = found
+        return cls(verifications, evidence, values, records)
 
 
 def _answers(evidence) -> str | None:
@@ -2664,6 +2705,10 @@ def carry_measurements(
     constraints are judged as the gate's constraint check judges them, in
     identifier order with what is carried before, as `verify` answers them.
 
+    A carried value takes with it, onto the part that holds it, the
+    provenance records that set it, in the order they were written; the
+    program's own records come first, as a fresh elaboration writes them.
+
     `current` says whether one run's evidence is still current, and is
     `Currency` over the elaboration unless given. One that keeps every run
     asks only whether the program has changed: carried that way, an
@@ -2676,6 +2721,7 @@ def carry_measurements(
 
     entities = dict(elaborated.entities)
     current = current or Currency(elaborated, traits=traits, tools=tools)
+    carried: dict[str, set[str]] = {}
     for verification_id, answered in sorted(facts.verifications.items()):
         declared = entities.get(verification_id)
         if not isinstance(declared, Verification):
@@ -2710,6 +2756,14 @@ def carry_measurements(
                 entities.setdefault(ref, facts.evidence[ref])
         for (entity_id, attr), value in values.items():
             entities[entity_id] = entities[entity_id].with_parameter(attr, value)
+            carried.setdefault(entity_id, set()).add(attr)
+    for entity_id, attrs in sorted(carried.items()):
+        setters = _value_records(Provenance(facts.records.get(entity_id, ())), attrs)
+        if setters:
+            target = entities[entity_id]
+            entities[entity_id] = replace(
+                target, provenance=Provenance(target.provenance.records + setters)
+            )
     return elaborated.with_entities(entities, elaborated.revision_id)
 
 

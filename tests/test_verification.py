@@ -1514,6 +1514,7 @@ def test_a_carried_pass_a_tightened_constraint_breaks_is_carried_as_the_failure(
     assert verification.result == "FAIL" and verification.evidence == (passed.evidence,)
     assert passed.evidence in tightened.entities
     assert not tightened.entities[SYSTEM].parameters["corner"].known
+    assert all(not record.fields for record in tightened.entities[SYSTEM].provenance.records)
     assert KernelGraph(tightened, checks=DEFAULT_CHECKS).propose(
         Transaction(tightened.hash, ())
     ).accepted
@@ -1561,6 +1562,117 @@ def test_an_unrelated_rejection_records_nothing(tmp_path):
     assert len(graph.history) == 1
     assert not any(e.kind == "evidence" and "measurement" in e.extensions
                    for e in graph.head.entities.values())
+
+
+# -- a record that changes an entity names what it changed (RFC 3 section 14) --
+
+ANSWERED_FIELDS = ("evidence", "level", "result", "tool")
+CORNER_VALUE = ("parameters.corner.value",)
+
+
+def appended(before, after) -> dict[str, list]:
+    """The provenance records `after` holds on each entity `before` already
+    held, beyond those it held there; what was there is never rewritten."""
+    out = {}
+    for entity_id, entity in after.entities.items():
+        was = before.entities.get(entity_id)
+        if was is None:
+            continue
+        old, new = was.provenance.records, entity.provenance.records
+        assert new[: len(old)] == old
+        if len(new) > len(old):
+            out[entity_id] = list(new[len(old):])
+    return out
+
+
+def named(records: dict[str, list]) -> dict[str, list]:
+    return {entity_id: [(r.activity, r.fields) for r in chain] for entity_id, chain in records.items()}
+
+
+def test_a_run_names_the_measured_value_and_the_answer_it_set(tmp_path):
+    """The run's record is appended to the part whose parameter it set,
+    naming the measured value apart from the parameter, and to the
+    verification, naming the facts of the answer; the evidence it creates
+    names nothing, since a creating record covers everything."""
+    graph, outcome = answered(tmp_path)
+    assert named(appended(graph.history[0], graph.head)) == {
+        SYSTEM: [("verification_run", CORNER_VALUE)],
+        outcome.question.id: [("verification_run", ANSWERED_FIELDS)],
+    }
+    record = graph.head.entities[SYSTEM].provenance.records[-1]
+    assert record.actor.id == "ngspice" and record.derived_from == (outcome.question.id,)
+    serialized = json.loads(canonical_dumps(graph.head.entities[SYSTEM].as_dict()))
+    assert serialized["provenance"][-1]["fields"] == ["parameters.corner.value"]
+    assert graph.head.entities[outcome.evidence].provenance.records[-1].fields == ()
+
+
+def test_a_recorded_failure_names_only_the_answer(tmp_path):
+    """The failure sets no parameter, so no part gains a record."""
+    graph, outcome = answered(tmp_path, Tightened)
+    assert outcome.status == FAILED
+    assert named(appended(graph.history[0], graph.head)) == {
+        outcome.question.id: [("verification_run", ANSWERED_FIELDS)],
+    }
+
+
+def test_a_re_entered_run_and_an_equation_level_answer_name_their_fields(tmp_path):
+    graph, failed = answered(tmp_path, Tightened)
+    relaxed = _carried_into(Filter, graph)
+    before = relaxed.head
+    tool, tools = canned()
+    outcome = answer(relaxed, questions(before)[0], tools=tools, workspace=tmp_path, record_time=FIXED_TIME)
+    assert outcome.status == ANSWERED
+    assert named(appended(before, relaxed.head)) == {
+        SYSTEM: [("verification_reentry", CORNER_VALUE)],
+        failed.question.id: [("verification_reentry", ANSWERED_FIELDS)],
+    }
+
+    result, graph = graph_of()
+    graph.apply(
+        Transaction(
+            graph.head.hash,
+            (
+                SetParameter(
+                    target=SYSTEM, name="corner",
+                    value=Value.inferred(Quantity.scalar("1600", "Hz"), "SRC-HAND-CALC", "1"),
+                ),
+            ),
+        )
+    )
+    before = graph.head
+    decided = answer(graph, questions(before)[0], tools=ToolRegistry(()), workspace=tmp_path)
+    assert decided.status == DECIDED
+    assert named(appended(before, graph.head)) == {
+        decided.question.id: [("equation_check", ANSWERED_FIELDS)],
+    }
+
+
+def test_a_records_fields_are_sorted_and_read_back():
+    record = ProvenanceRecord(
+        ProvenanceOrigin.GENERATED, "verification_run", Actor(ActorKind.TOOL, "ngspice", "45.2"),
+        "REV-000001", FIXED_TIME, fields=("tool", "result", "evidence", "result"),
+    )
+    assert record.fields == ("evidence", "result", "tool")
+    assert record.as_dict()["fields"] == ["evidence", "result", "tool"]
+    assert ProvenanceRecord.from_dict(json.loads(canonical_dumps(record.as_dict()))) == record
+    unnamed = ProvenanceRecord(
+        ProvenanceOrigin.GENERATED, "elaboration", Actor(ActorKind.TOOL, "fang"), "REV-000001", FIXED_TIME,
+    )
+    assert "fields" not in unnamed.as_dict()
+
+
+def test_a_rebuild_carries_the_record_that_set_a_measured_value(tmp_path):
+    """Carried onto a fresh elaboration, a measured value brings the record
+    that set it, after the program's own; a value not carried brings none."""
+    graph, outcome = answered(tmp_path)
+    records = read_record_stream(canonical_record_stream(graph.head.records()))
+    rebuilt = carry_measurements(build().snapshot, MeasuredFacts.from_records(records))
+    chain = rebuilt.entities[SYSTEM].provenance.records
+    assert [r.fields for r in chain][-1] == CORNER_VALUE
+    assert chain[:-1] == build().snapshot.entities[SYSTEM].provenance.records
+
+    retuned = carry_measurements(build(Retuned).snapshot, MeasuredFacts.from_records(records))
+    assert all(not r.fields for r in retuned.entities[SYSTEM].provenance.records)
 
 
 # -- condition 5 excepts a question's measured parameters while it awaits ----
