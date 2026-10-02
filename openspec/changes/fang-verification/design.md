@@ -433,7 +433,11 @@ rare disagreement with the gate's check results, which decide.
 **Evidence identity** is derived from the verification's path and a digest of
 the job's hash, the tool and its version: the same run is the same evidence, so
 asking again with the same job and version is `current` rather than a duplicate,
-and a tightened constraint fails on the same evidence the passing run had. The
+and a tightened constraint fails on the same evidence the passing run had. A
+run that did not complete is tried again when asked, each attempt recorded as
+evidence of its own (`run_<digest>_retryN`), so a crash does not stand in for
+an answer. A tool that turns out to be missing only when it is run is reported
+unsupported, like one missing before. The
 measurement record follows RFC 3 Section 14 and adds the run's terminal status,
 exit status, confidence and message; a measure with no value appears in
 `measures` with its `reason` in place of a value, and a tool's `extra` fields

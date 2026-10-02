@@ -1501,23 +1501,35 @@ RECORD_FIELDS = frozenset(
 )
 
 
-def evidence_identity(snapshot, question: Question, job: Job, version: str):
+def evidence_identity(snapshot, question: Question, job: Job, version: str, *, attempt: int = 0):
     """The identity of one run's evidence.
 
     A function of the job and the tool's version, and nothing else, so the
     same run is the same evidence and two versions of a tool are two pieces
-    of evidence, not one.
+    of evidence, not one. A run that did not complete may be tried again; each
+    later attempt at the same job is its own evidence, numbered.
     """
     from .identity import derive
 
     digest = hashlib.sha256(f"{job.hash}\n{job.tool}\n{version}".encode()).hexdigest()[:12]
     base = question.path or f"verification.{question.id.replace('-', '_')}"
+    suffix = f"_retry{attempt}" if attempt else ""
     return derive(
         snapshot.project_id,
         "evidence",
-        f"{base}.run_{digest}",
+        f"{base}.run_{digest}{suffix}",
         display_name=f"{base.rsplit('.', 1)[-1]} run",
     )
+
+
+def _attempts(snapshot, question: Question, job: Job, version: str) -> list[str]:
+    """The evidence already recorded for this job on this version, in order."""
+    found = []
+    while True:
+        identity = evidence_identity(snapshot, question, job, version, attempt=len(found))
+        if identity.id not in snapshot.entities:
+            return found
+        found.append(identity.id)
 
 
 def measurement_record(job: Job, raw: RawRun, measurements: Sequence[Measurement], level: Level) -> dict:
@@ -1585,8 +1597,9 @@ def measurement_evidence(
             f"{m.name} ({m.reason})" for m in missing
         )
     claim += f" for {question.label}, at the {level.label} level"
+    attempt = len(_attempts(head, question, job, raw.version))
     return Evidence(
-        evidence_identity(head, question, job, raw.version),
+        evidence_identity(head, question, job, raw.version, attempt=attempt),
         claim=claim,
         provenance=Provenance().append(_run_record(head, question, job, raw.version, record_time)),
         source_location=question.source_location,
@@ -1948,35 +1961,41 @@ def answer(
             question, route_, NOT_RUNNABLE, verification.result, message=str(exc),
             verification=verification,
         )
-    if not tool.available():
+
+    def unsupported(message: str) -> Outcome:
         return Outcome(
-            question, route_, UNSUPPORTED, verification.result,
-            message=(
-                f"{tool.name} is not installed; nothing else answers the question "
-                "and no result is fabricated"
-            ),
+            question, route_, UNSUPPORTED, verification.result, message=message,
             job=job, verification=verification,
+        )
+
+    if not tool.available():
+        return unsupported(
+            f"{tool.name} is not installed; nothing else answers the question "
+            "and no result is fabricated"
         )
     try:
         version = tool.version()
-        evidence = evidence_identity(head, question, job, version).id
-        if evidence in head.entities and evidence in verification.evidence:
+    except ToolUnavailable as exc:
+        return unsupported(str(exc))
+
+    # The same job on the same version is the same run: once it has completed
+    # and answered this verification, asking again changes nothing. A run that
+    # did not complete is tried again, as evidence of its own.
+    recorded = _attempts(head, question, job, version)
+    if recorded and recorded[-1] in verification.evidence:
+        last = head.entities[recorded[-1]]
+        if last.extensions.get("measurement", {}).get("status") == Status.SUCCEEDED.value:
             return Outcome(
                 question, route_, UP_TO_DATE, verification.result,
-                message=f"this run is already recorded, on {evidence}",
-                job=job, evidence=evidence, verification=verification,
+                message=f"this run is already recorded, on {last.id}",
+                job=job, evidence=last.id, verification=verification,
             )
-        try:
-            raw = tool.run(job, workspace=Path(workspace) / f"{tool.name}-{job.hash[7:19]}")
-        except ToolUnavailable:
-            raise
-        except Exception as exc:          # a tool's failure is data, not a crash
-            raw = RawRun(tool.name, version, -1, status=Status.FAILED, message=str(exc))
+    try:
+        raw = tool.run(job, workspace=Path(workspace) / f"{tool.name}-{job.hash[7:19]}")
     except ToolUnavailable as exc:
-        return Outcome(
-            question, route_, UNSUPPORTED, verification.result, message=str(exc),
-            job=job, verification=verification,
-        )
+        return unsupported(str(exc))
+    except Exception as exc:          # a tool's failure is data, not a crash
+        raw = RawRun(tool.name, version, -1, status=Status.FAILED, message=str(exc))
     measurements = tool.read(job, raw)
     return reenter(
         graph, question, job, raw, measurements, level=route_.level, route_=route_,

@@ -619,6 +619,8 @@ def test_a_question_naming_a_tool_routes_only_to_that_tool():
 def test_method_routing_is_extended_by_registering_a_method(monkeypatch):
     from dataclasses import replace
 
+    # Another module may already have registered the method; start without it.
+    monkeypatch.delitem(METHOD_LEVELS, "emulation", raising=False)
     snapshot = build().snapshot
     question = replace(questions(snapshot)[0], method="emulation")
     assert "no verification level" in route(snapshot, question).reason
@@ -910,6 +912,56 @@ def test_a_measure_the_output_does_not_report_leaves_the_result_unknown(tmp_path
     measures = head.entities[outcome.evidence].extensions["measurement"]["measures"]
     assert {"name": "floor", "parameter": f"{SYSTEM}.floor",
             "reason": "ngspice reported the measure as failed"} in measures
+
+
+def test_a_run_that_does_not_complete_leaves_the_result_unknown_with_its_evidence(tmp_path):
+    """A failed run is data: its evidence records why nothing was measured,
+    the verification stays UNKNOWN, and no parameter is set."""
+
+    class Crashing(CannedBackend):
+        def run(self, netlist, *, workspace, timeout=60):
+            raise RuntimeError("the simulator crashed")
+
+    result, graph = graph_of()
+    tool = SpiceTool("ngspice", NgspiceDialect(), Crashing())
+    outcome = answer(
+        graph, questions(graph.head)[0], traits=result.traits, tools=ToolRegistry((tool,)),
+        workspace=tmp_path, record_time=FIXED_TIME,
+    )
+    assert outcome.status == ANSWERED and outcome.result == "UNKNOWN"
+    record = graph.head.entities[outcome.evidence].extensions["measurement"]
+    assert record["status"] == "failed"
+    assert "the simulator crashed" in record["measures"][0]["reason"]
+    assert not graph.head.entities[SYSTEM].parameters["corner"].known
+    assert graph.head.entities[outcome.question.id].evidence == (outcome.evidence,)
+
+    # A run that did not complete is tried again, as evidence of its own.
+    retried = answer(
+        graph, questions(graph.head)[0], traits=result.traits, tools=ToolRegistry((tool,)),
+        workspace=tmp_path, record_time=FIXED_TIME,
+    )
+    assert retried.status == ANSWERED and retried.evidence != outcome.evidence
+    assert outcome.evidence in graph.head.entities
+
+
+def test_a_tool_gone_at_run_time_is_unsupported_and_records_nothing(tmp_path):
+    """Installed when asked, gone when run: reported unsupported, by name."""
+    from fang.verification import ToolUnavailable
+
+    result, graph = graph_of()
+    tool = SpiceTool("ngspice", NgspiceDialect(), CannedBackend())
+
+    def vanish(job, *, workspace):
+        raise ToolUnavailable("ngspice is not installed any more")
+
+    tool.run = vanish
+    before = graph.head.hash
+    outcome = answer(
+        graph, questions(graph.head)[0], traits=result.traits, tools=ToolRegistry((tool,)),
+        workspace=tmp_path,
+    )
+    assert outcome.status == UNSUPPORTED and "not installed any more" in outcome.message
+    assert graph.head.hash == before
 
 
 @pytest.mark.skipif(not NGSPICE.available(), reason="ngspice is not installed here")
