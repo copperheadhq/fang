@@ -502,6 +502,23 @@ on a measure file written in the guide's documented form, not one captured from
 a run; `RawResult` gains `outputs` so a backend can return the files a run
 wrote. The first run on a machine with Xyce is the check this cannot make.
 
+**Rule checks answer with a verdict, not a measurement.** A rule check writes
+no parameter, so its result cannot come from a constraint. A tool may define
+`verdict(job, raw) -> Verdict` beside `read`: the result, the fields its
+evidence carries beside the measurement record's own, and the lines a listing
+shows. The runner asks for it when the tool has one; for a question with no
+measured parameters the verdict is the result, and for one with parameters the
+constraints still decide and a failing verdict can only make it worse. The
+ERC verdict records every violation with its rule, severity, description and
+items, each declared exclusion with its reason and count, and the error and
+warning totals; errors fail and warnings do not. The ERC job carries the sheet
+fang draws with the snapshot's hash replaced -- the job names its snapshot
+beside itself -- so the job is the same wherever the program was read from.
+The report format was captured from kicad-cli 10.0.6, as the risk note below
+asks, and a trimmed capture is the parser's fixture. `Checks` defaults to no
+named tool and routes by method; the built-in tools load on first use of the
+registry, because `rulecheck.py` imports `verification.py`.
+
 **Infinity.** A quantity bound may be infinite; it serializes as `Infinity`,
 which `Decimal` reads back, and compares under interval semantics. A NaN is
 refused.

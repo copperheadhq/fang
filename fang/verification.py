@@ -41,6 +41,7 @@ from typing import Any, ClassVar, Iterator, Mapping, Protocol, Sequence, runtime
 
 from .constraints import CheckStatus, Constraint, Node, Ref
 from .diagnostics import (
+    SIM_EXCLUSION_WITHOUT_REASON,
     SIM_LOAD_DIMENSION,
     SIM_MISSING_BENCH,
     SIM_QUESTION_RESULT,
@@ -626,6 +627,60 @@ class Simulates(QuestionDeclaration):
         return {"bench": bench}
 
 
+class Checks(QuestionDeclaration):
+    """A rule-check question: an external checker over an artifact the kernel
+    lowers -- the schematic it draws.
+
+    Nothing is measured into a parameter; the checker's report is the answer.
+    A violation of error severity fails the verification and a warning does
+    not. A rule may be excluded, and only with a reason: the evidence records
+    the rule, the reason and how many violations it excluded, so an exclusion
+    is a stated decision rather than a hidden one.
+    """
+
+    fixed_method = "rule check"
+
+    def __init__(
+        self,
+        verifies: str,
+        *,
+        tool: str | None = None,
+        artifact: str = "schematic",
+        excluded: Mapping[str, str] | None = None,
+        result: object = _NO_RESULT,
+    ) -> None:
+        super().__init__(verifies, measures={}, tool=tool, result=result)
+        if excluded is not None and not isinstance(excluded, Mapping):
+            rules = ", ".join(sorted(str(rule) for rule in excluded))
+            raise error(
+                SIM_EXCLUSION_WITHOUT_REASON,
+                f"{type(self).__name__} excludes {rules} without reasons; an "
+                "exclusion maps each rule to why it does not apply",
+                location=self._source,
+            )
+        self.excluded = dict(excluded or {})
+        for rule, reason in sorted(self.excluded.items()):
+            if not isinstance(reason, str) or not reason.strip():
+                raise error(
+                    SIM_EXCLUSION_WITHOUT_REASON,
+                    f"{type(self).__name__} excludes {rule!r} without a reason; "
+                    "a rule is set aside only with the reason it does not apply",
+                    location=self._source,
+                )
+        self.artifact = artifact
+
+    def question_fields(self, module) -> dict:
+        return {
+            "check": {
+                "artifact": self.artifact,
+                "excluded": [
+                    {"rule": rule, "reason": reason.strip()}
+                    for rule, reason in sorted(self.excluded.items())
+                ],
+            }
+        }
+
+
 # --------------------------------------------------------------------------
 # A question, read from the graph
 # --------------------------------------------------------------------------
@@ -906,6 +961,23 @@ class Measurement:
         return out
 
 
+@dataclass(frozen=True)
+class Verdict:
+    """A tool's own judgement of a question that measures nothing.
+
+    A rule checker answers with what it found rather than with a number: its
+    result, the fields its evidence carries beside the measurement record's
+    own -- the violations, the exclusions and their counts -- and the lines
+    a listing shows. A tool offers one by defining `verdict(job, raw)`; for a
+    question with measured parameters, the constraints over them still decide,
+    and a failing verdict can only make the result worse.
+    """
+
+    result: str
+    record: Mapping[str, Any] = field(default_factory=dict)
+    summary: tuple[str, ...] = ()
+
+
 @runtime_checkable
 class Tool(Protocol):
     """A verification tool, behind the one protocol every tool sits behind.
@@ -1016,16 +1088,28 @@ class ToolRegistry:
     rather than replaced.
     """
 
-    def __init__(self, tools: Sequence[Tool] = ()) -> None:
+    def __init__(self, tools: Sequence[Tool] = (), *, builtins=None) -> None:
         self._tools: list[Tool] = []
+        # The built-in tools live in modules that import this one, so a
+        # registry may name them by a function it calls the first time it is
+        # used; they always come first, before anything registered later.
+        self._builtins = builtins
         for tool in tools:
             self.register(tool)
+
+    def _load(self) -> list[Tool]:
+        if self._builtins is not None:
+            builtins, self._builtins = self._builtins, None
+            for tool in builtins():
+                self.register(tool)
+        return self._tools
 
     def register(self, tool: Tool, *, before: str | None = None) -> Tool:
         """Add a tool after those already registered, or before a named one.
 
         A tool registered again under its name replaces the first in place.
         """
+        self._load()
         for index, existing in enumerate(self._tools):
             if existing.name == tool.name:
                 self._tools[index] = tool
@@ -1040,20 +1124,20 @@ class ToolRegistry:
         return tool
 
     def get(self, name: str) -> Tool | None:
-        return next((tool for tool in self._tools if tool.name == name), None)
+        return next((tool for tool in self._load() if tool.name == name), None)
 
     def names(self) -> list[str]:
         """The tools in routing order."""
-        return [tool.name for tool in self._tools]
+        return [tool.name for tool in self._load()]
 
     def __iter__(self) -> Iterator[Tool]:
-        return iter(list(self._tools))
+        return iter(list(self._load()))
 
     def __contains__(self, name: object) -> bool:
-        return any(tool.name == name for tool in self._tools)
+        return any(tool.name == name for tool in self._load())
 
     def __len__(self) -> int:
-        return len(self._tools)
+        return len(self._load())
 
 
 #: The tool name recorded for an answer the constraint evaluator gave.
@@ -1480,21 +1564,29 @@ NGSPICE = SpiceTool("ngspice", NgspiceDialect(), NgspiceBackend())
 XYCE = SpiceTool("xyce", XyceDialect(), XyceBackend())
 
 
+def builtin_tools() -> tuple[Tool, ...]:
+    """The tools fang ships, in their documented routing order: ngspice and
+    xyce at the circuit level, then kicad-erc at the external level."""
+    from .rulecheck import KICAD_ERC
+
+    return (NGSPICE, XYCE, KICAD_ERC)
+
+
 def default_tools() -> ToolRegistry:
-    """The tools a project starts with, in routing order: ngspice, xyce."""
-    return ToolRegistry((NGSPICE, XYCE))
+    """A registry holding the built-in tools and nothing else."""
+    return ToolRegistry(builtin_tools())
 
 
 #: The registry `route` and the runner use unless handed another. A module
 #: that brings a tool adds it here with `register_tool` when it is imported.
-TOOLS = default_tools()
+TOOLS = ToolRegistry(builtins=builtin_tools)
 
 
 def register_tool(tool: Tool, *, before: str | None = None, registry: ToolRegistry | None = None) -> Tool:
     """Make a tool available to routing, after the tools already registered.
 
-    The documented order is the built-ins first -- ngspice, then xyce -- and
-    then each tool in the order it registers; `before` names a tool to
+    The documented order is the built-ins first -- ngspice, xyce, kicad-erc --
+    and then each tool in the order it registers; `before` names a tool to
     precede instead.
     """
     return (TOOLS if registry is None else registry).register(tool, before=before)
@@ -1545,7 +1637,10 @@ def _attempts(snapshot, question: Question, job: Job, version: str) -> list[str]
         found.append(identity.id)
 
 
-def measurement_record(job: Job, raw: RawRun, measurements: Sequence[Measurement], level: Level) -> dict:
+def measurement_record(
+    job: Job, raw: RawRun, measurements: Sequence[Measurement], level: Level,
+    *, verdict: Verdict | None = None,
+) -> dict:
     """The measurement record a run's evidence carries.
 
     The tool and its version, the level, the job's hash, each measure with its
@@ -1553,11 +1648,12 @@ def measurement_record(job: Job, raw: RawRun, measurements: Sequence[Measurement
     and the digest of every input the snapshot does not hold -- with the
     tool's own fields beside them.
     """
-    clashes = sorted(RECORD_FIELDS & set(job.extra))
+    judged = dict(verdict.record) if verdict is not None else {}
+    clashes = sorted((RECORD_FIELDS & (set(job.extra) | set(judged))) | (set(job.extra) & set(judged)))
     if clashes:
         raise ValueError(
-            f"{job.tool}'s extra record fields {', '.join(clashes)} would overwrite "
-            "fields the measurement record defines"
+            f"{job.tool}'s record fields {', '.join(clashes)} would overwrite "
+            "fields the measurement record already holds"
         )
     record: dict = {
         "tool": {"name": job.tool, "version": raw.version},
@@ -1574,6 +1670,7 @@ def measurement_record(job: Job, raw: RawRun, measurements: Sequence[Measurement
     if raw.message:
         record["message"] = raw.message
     record.update(job.extra)
+    record.update(judged)
     return canonical(record)
 
 
@@ -1595,7 +1692,7 @@ def _run_record(head, question: Question, job: Job, version: str, record_time):
 
 def measurement_evidence(
     head, question: Question, job: Job, raw: RawRun, measurements: Sequence[Measurement],
-    level: Level, record_time,
+    level: Level, record_time, *, verdict: Verdict | None = None,
 ):
     """One evidence entity for a run, carrying its measurement record."""
     from .entities import Evidence
@@ -1609,6 +1706,8 @@ def measurement_evidence(
         claim += ("; " if measured else " ") + "did not measure " + ", ".join(
             f"{m.name} ({m.reason})" for m in missing
         )
+    if verdict is not None and verdict.summary:
+        claim += ("; " if measurements else " ") + "; ".join(verdict.summary)
     claim += f" for {question.label}, at the {level.label} level"
     attempt = len(_attempts(head, question, job, raw.version))
     return Evidence(
@@ -1616,7 +1715,9 @@ def measurement_evidence(
         claim=claim,
         provenance=Provenance().append(_run_record(head, question, job, raw.version, record_time)),
         source_location=question.source_location,
-        extensions={"measurement": measurement_record(job, raw, measurements, level)},
+        extensions={
+            "measurement": measurement_record(job, raw, measurements, level, verdict=verdict)
+        },
     )
 
 
@@ -1771,6 +1872,7 @@ class Outcome:
     recorded: Any = None            # the failure's proposal, when one was made
     evidence: str | None = None
     verification: Verification | None = None
+    verdict: Verdict | None = None
 
     @property
     def failed(self) -> bool:
@@ -1779,7 +1881,7 @@ class Outcome:
 
 def reenter(
     graph, question: Question, job: Job, raw: RawRun, measurements: Sequence[Measurement], *,
-    level: Level, route_: Route | None = None, record_time=None,
+    level: Level, route_: Route | None = None, record_time=None, verdict: Verdict | None = None,
 ) -> Outcome:
     """Return a run's measurements through the commit gate.
 
@@ -1805,7 +1907,9 @@ def reenter(
         )
     route_ = route_ or Route(question.id, level, job.tool, "")
     record_time = record_time or datetime.now(timezone.utc)
-    evidence = measurement_evidence(head, question, job, raw, measurements, level, record_time)
+    evidence = measurement_evidence(
+        head, question, job, raw, measurements, level, record_time, verdict=verdict
+    )
 
     # The result written on the verification is what the gate's constraint
     # check decides. It is predicted with the same evaluator, and the proposal
@@ -1822,14 +1926,23 @@ def reenter(
         return base(entity_id, attr)
 
     missing = [m.name for m in measurements if not m.measured]
-    result = _result(constraint_statuses(head, question, resolve), missing)
+
+    def judged(statuses) -> str:
+        result = _result(statuses, missing)
+        if verdict is None:
+            return result
+        if verdict.result == "FAIL" or result == "FAIL":
+            return "FAIL"
+        return verdict.result if not question.parameters else result
+
+    result = judged(constraint_statuses(head, question, resolve))
     proposal = graph.propose(
         measurement_transaction(head, question, evidence, measurements, result=result, level=level)
     )
     if proposal.accepted:
         decided = _gate_statuses(proposal, question)
-        if decided and _result(decided, missing) != result:
-            result = _result(decided, missing)
+        if decided and judged(decided) != result:
+            result = judged(decided)
             proposal = graph.propose(
                 measurement_transaction(
                     head, question, evidence, measurements, result=result, level=level
@@ -1837,14 +1950,16 @@ def reenter(
             )
     common = dict(
         question=question, route=route_, job=job, raw=raw, measurements=tuple(measurements),
-        evidence=evidence.id,
+        evidence=evidence.id, verdict=verdict,
     )
     if proposal.accepted:
         graph.commit(proposal)
-        message = (
-            "not measured: " + ", ".join(missing) if missing
-            else "" if result != "UNKNOWN" else "no constraint over its parameters decides it"
-        )
+        if missing:
+            message = "not measured: " + ", ".join(missing)
+        elif result != "UNKNOWN" or verdict is not None:
+            message = ""
+        else:
+            message = "no constraint over its parameters decides it"
         return Outcome(
             status=ANSWERED, result=result, message=message, proposal=proposal,
             verification=graph.head.entities[question.id], **common,
@@ -2010,9 +2125,10 @@ def answer(
     except Exception as exc:          # a tool's failure is data, not a crash
         raw = RawRun(tool.name, version, -1, status=Status.FAILED, message=str(exc))
     measurements = tool.read(job, raw)
+    judge = getattr(tool, "verdict", None)
     return reenter(
         graph, question, job, raw, measurements, level=route_.level, route_=route_,
-        record_time=record_time,
+        record_time=record_time, verdict=judge(job, raw) if judge is not None else None,
     )
 
 
@@ -2266,6 +2382,8 @@ def report(outcomes: Sequence[Outcome], *, versions: bool = True, figures: int =
                 )
             else:
                 lines.append(f"  {measurement.name}: not measured ({measurement.reason})")
+        if outcome.verdict is not None:
+            lines.extend(f"  {line}" for line in outcome.verdict.summary)
         if outcome.job is not None and outcome.status in (ANSWERED, FAILED):
             lines.extend(f"  assumption: {item}" for item in outcome.job.assumptions)
             lines.extend(f"  coverage gap: {item}" for item in outcome.job.coverage_gaps)

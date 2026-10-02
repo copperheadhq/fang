@@ -124,15 +124,15 @@ change.
 
 ## 9. Rule checks
 
-- [ ] 9.1 Add the `Checks` declaration, refusing a `result`, and refuse an
+- [x] 9.1 Add the `Checks` declaration, refusing a `result`, and refuse an
       exclusion with no reason; verify both with tests.
-- [ ] 9.2 Add `fang/rulecheck.py`: run `kicad-cli sch erc --format json` over a
+- [x] 9.2 Add `fang/rulecheck.py`: run `kicad-cli sch erc --format json` over a
       scratch copy of the compiled schematic and parse violations; verify the
       parser against JSON captured from the installed kicad-cli, and that an
       absent `kicad-cli` reports unsupported by name.
-- [ ] 9.3 Apply declared exclusions, recording rule, reason and count; verify
+- [x] 9.3 Apply declared exclusions, recording rule, reason and count; verify
       errors fail, warnings do not, and excluded rules do neither.
-- [ ] 9.4 Add `tests/test_rulecheck.py` covering the delta spec's rule-check
+- [x] 9.4 Add `tests/test_rulecheck.py` covering the delta spec's rule-check
       scenarios; verify it passes with `PATH` stripped of kicad-cli.
 
 ## 10. Touchstone
