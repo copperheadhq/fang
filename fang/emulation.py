@@ -982,13 +982,15 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
             owner = pins[pin].owner if pin in pins else None
             if owner and owner != target:
                 in_scope.add(owner)
-    for component in sorted(in_scope):
-        if component not in modelled and component not in abstracted:
-            raise _refuse(
-                f"{_path(entities, component)} shares a net with a pin the question touches, "
-                "carries no emulation model, and is not listed as abstracted",
-                "scope",
-            )
+    unaccounted = sorted(
+        _path(entities, c) for c in in_scope if c not in modelled and c not in abstracted
+    )
+    if unaccounted:
+        raise _refuse(
+            f"{', '.join(unaccounted)}: each shares a net with a pin the question "
+            "touches, carries no emulation model, and is not listed as abstracted",
+            "scope",
+        )
 
     # -- registers, watches, stimuli -----------------------------------------
     registers: dict[tuple[str, str], PlanRegister] = {}
@@ -1641,3 +1643,42 @@ class RenodeTool:
 RENODE = RenodeTool()
 register_method("emulation", Level.BEHAVIOURAL)
 register_tool(RENODE)
+
+
+def stale(snapshot) -> tuple[tuple[str, str, str, str], ...]:
+    """Emulation verifications whose evidence names a firmware the bound file
+    no longer is: (verification, path, recorded digest, current digest).
+
+    Rebuilding firmware is not a design change, so the snapshot does not move
+    when the file does; the evidence's digest is how the change is seen.
+    """
+    import hashlib
+    from pathlib import Path
+
+    from .entities import Evidence, Verification
+
+    found = []
+    for verification in sorted(
+        (e for e in snapshot.entities.values() if isinstance(e, Verification)), key=lambda v: v.id
+    ):
+        if verification.method != "emulation":
+            continue
+        for evidence_id in verification.evidence:
+            evidence = snapshot.entities.get(evidence_id)
+            if not isinstance(evidence, Evidence):
+                continue
+            record = evidence.extensions.get("measurement", {})
+            for entry in record.get("inputs", ()):
+                origin = verification.source_location
+                location = Path(entry["path"])
+                if not location.is_absolute() and origin is not None:
+                    location = Path(origin.file).parent / location
+                current = (
+                    "sha256:" + hashlib.sha256(location.read_bytes()).hexdigest()
+                    if location.is_file()
+                    else "missing"
+                )
+                if current != entry["hash"]:
+                    label = str(verification.identity.path or verification.id)
+                    found.append((label, entry["path"], entry["hash"], current))
+    return tuple(found)

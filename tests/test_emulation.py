@@ -474,3 +474,218 @@ def test_the_lowering_reproduces_the_spikes_hand_written_files():
     golden = ROOT / "tests" / "fixtures" / "renode" / "golden"
     assert platform_description(plan()) == (golden / "platform.repl").read_text()
     assert script(plan()) == (golden / "run.resc").read_text()
+
+
+# -- declaring, routing and answering an emulation question -------------------
+
+import importlib.util
+import subprocess
+
+from fang.checks import DEFAULT_CHECKS
+from fang.entities import Evidence, Verification
+from fang.graph import KernelGraph
+from fang.simulation import Level
+from fang.verification import NotRunnable, answer, questions, route
+
+
+def _sensor_node_module():
+    spec = importlib.util.spec_from_file_location(
+        "sensor_node_for_tests", ROOT / "examples" / "sensor_node" / "sensor_node.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+SENSOR_NODE = _sensor_node_module()
+
+
+def _elaborate(system):
+    from fang.elaborate import elaborate
+
+    result = elaborate(system, project_id="PRJ-EXAMPLES")
+    assert result.ok, [d.message for d in result.diagnostics]
+    return result
+
+
+def _question(snapshot, attribute):
+    return next(q for q in questions(snapshot) if q.label.endswith(f".{attribute}"))
+
+
+def test_an_emulation_question_elaborates_to_an_unanswered_verification():
+    result = _elaborate(SENSOR_NODE.SensorNode)
+    question = _question(result.snapshot, "startup")
+    verification = result.snapshot.entities[question.id]
+    assert isinstance(verification, Verification)
+    assert (verification.method, verification.result) == ("emulation", "UNKNOWN")
+    scenario = question.data["scenario"]
+    assert scenario["run_until"]["value"] == "2" and scenario["stimuli"][0]["input"] == "temperature"
+    assert {entry.record["kind"] for entry in question.measures} == {
+        "emulation.first_at", "emulation.uart_value", "emulation.count", "emulation.pin_config",
+    }
+
+
+def test_an_emulation_question_cannot_state_its_result():
+    from fang.diagnostics import FangError
+    from fang.emulation import Emulates, FirstAt, I2CRead
+
+    with pytest.raises(FangError) as raised:
+        Emulates("sensor_ready", measures={"first_read": FirstAt(I2CRead("env"))}, result="PASS")
+    assert raised.value.diagnostic.code == "SIM-0002"
+
+
+def test_an_emulation_question_routes_to_renode_at_the_behavioural_level():
+    result = _elaborate(SENSOR_NODE.SensorNode)
+    routed = route(result.snapshot, _question(result.snapshot, "startup"))
+    assert (routed.level, routed.tool) == (Level.BEHAVIOURAL, "renode")
+
+
+def test_preparing_a_job_records_the_firmware_and_the_plan():
+    from fang.emulation import RENODE
+
+    result = _elaborate(SENSOR_NODE.SensorNode)
+    question = _question(result.snapshot, "startup")
+    first = RENODE.prepare(result.snapshot, question, traits=result.traits)
+    second = RENODE.prepare(result.snapshot, question, traits=result.traits)
+    assert first.hash == second.hash
+    assert set(first.inputs) == {"firmware/elf/sensor_node.elf"}
+    assert first.extra["ran"] == "local" and first.extra["plan"].startswith("sha256:")
+    assert first.extra["firmware_reports"] == "reported"
+    assert first.confidence == Decimal("0.8")
+
+
+def test_a_plan_the_board_cannot_satisfy_is_not_runnable_and_names_its_code():
+    from fang.emulation import RENODE, Emulates, FirstAt, I2CRead
+
+    class Unabstracted(SENSOR_NODE.SensorNode):
+        startup = Emulates(
+            "sensor_ready", run_until=2 * SENSOR_NODE.s,
+            measures={"first_read": FirstAt(I2CRead("env"))},
+        )
+        sensor_missing = None
+
+    result = _elaborate(Unabstracted)
+    with pytest.raises(NotRunnable) as raised:
+        RENODE.prepare(result.snapshot, _question(result.snapshot, "startup"), traits=result.traits)
+    assert raised.value.code == "SIM-0010"
+    assert "scl_pullup" in str(raised.value)
+
+
+def _answered(system, attribute, tmp_path):
+    result = _elaborate(system)
+    graph = KernelGraph(result.snapshot, checks=DEFAULT_CHECKS)
+    outcome = answer(graph, _question(graph.head, attribute), traits=result.traits, workspace=tmp_path)
+    return graph, outcome
+
+
+def _startup_with(firmware: str):
+    from fang.emulation import Emulates
+
+    original = SENSOR_NODE.SensorNode.startup
+
+    class Variant(SENSOR_NODE.SensorNode):
+        startup = Emulates(
+            "sensor_ready", run_until=original.run_until, stimuli=original.stimuli,
+            measures=original.measures, abstracted=original.abstracted, firmware=firmware,
+        )
+        sensor_missing = None
+
+    return Variant
+
+
+@needs_renode
+def test_the_startup_question_passes_through_the_gate(tmp_path):
+    class StartupOnly(SENSOR_NODE.SensorNode):
+        sensor_missing = None
+
+    graph, outcome = _answered(StartupOnly, "startup", tmp_path)
+    assert outcome.status == "answered"
+    verification = graph.head.entities[outcome.question.id]
+    assert verification.result == "PASS" and verification.tool == "renode"
+
+
+@needs_renode
+def test_the_wrong_address_build_fails_on_its_first_read(tmp_path):
+    graph, outcome = _answered(_startup_with(str(ELF / "wrong_address.elf")), "startup", tmp_path)
+    assert outcome.status == "failed"
+    verification = graph.head.entities[outcome.question.id]
+    assert verification.result == "FAIL"
+    evidence = graph.head.entities[verification.evidence[0]]
+    first_read = next(m for m in evidence.extensions["measurement"]["measures"] if m["name"] == "first_read")
+    assert first_read["max"] == "Infinity"
+
+
+@needs_renode
+def test_the_push_pull_build_fails_on_pin_configuration(tmp_path):
+    graph, outcome = _answered(_startup_with(str(ELF / "push_pull.elf")), "startup", tmp_path)
+    evidence = graph.head.entities[graph.head.entities[outcome.question.id].evidence[0]]
+    mux = next(m for m in evidence.extensions["measurement"]["measures"] if m["name"] == "mux_mismatches")
+    assert outcome.status == "failed" and mux["value"] == "2"
+
+
+@needs_renode
+def test_the_led_on_another_pin_fails_its_blink_count(tmp_path):
+    from fang.interfaces import Pin, PinMap
+
+    class Rewired(SENSOR_NODE.STM32F401RE):
+        PA6 = Pin("PA6", role="data", number="22")
+        pinmap = PinMap(
+            {"power.vcc": "VDD", "power.gnd": "VSS", "status.line": "PA6"}, evidence="pinout"
+        )
+
+    # The firmware path resolves against the program that declares the part,
+    # which here is this test, so the build is named by its absolute path.
+    class MovedLed(_startup_with(str(ELF / "sensor_node.elf"))):
+        mcu = Rewired(package="LQFP-64")
+
+    graph, outcome = _answered(MovedLed, "startup", tmp_path)
+    evidence = graph.head.entities[graph.head.entities[outcome.question.id].evidence[0]]
+    blinks = next(m for m in evidence.extensions["measurement"]["measures"] if m["name"] == "slow_blinks")
+    assert outcome.status == "failed" and blinks["value"] == "0"
+
+
+@needs_renode
+def test_the_no_timeout_build_fails_the_missing_sensor_question(tmp_path):
+    from fang.emulation import Emulates
+
+    original = SENSOR_NODE.SensorNode.sensor_missing
+
+    class NoTimeout(SENSOR_NODE.SensorNode):
+        startup = None
+        sensor_missing = Emulates(
+            "survives_missing_sensor", run_until=original.run_until, faults=original.faults,
+            measures=original.measures, abstracted=original.abstracted,
+            firmware=str(ELF / "no_timeout.elf"),
+        )
+
+    graph, outcome = _answered(NoTimeout, "sensor_missing", tmp_path)
+    assert outcome.status == "failed"
+
+
+@needs_renode
+def test_a_rebuilt_firmware_makes_its_verification_stale(tmp_path):
+    import shutil as _shutil
+
+    from fang.cli import load_system
+    from fang.emulation import stale
+
+    copy = tmp_path / "sensor_node"
+    _shutil.copytree(ROOT / "examples" / "sensor_node", copy, ignore=_shutil.ignore_patterns("out"))
+    system = load_system(copy / "sensor_node.py")
+    graph, outcome = _answered(system, "startup", tmp_path / "runs")
+    assert outcome.status == "answered" and stale(graph.head) == ()
+    firmware = copy / "firmware" / "elf" / "sensor_node.elf"
+    firmware.write_bytes(firmware.read_bytes() + b"\0")
+    (label, path, recorded, current) = next(s for s in stale(graph.head) if s[0].endswith("startup"))
+    assert path == "firmware/elf/sensor_node.elf" and recorded != current
+
+
+@needs_renode
+def test_a_hung_run_is_ended_whole_and_keeps_its_partial_events():
+    p = plan(run_until_ns=3_600_000_000_000)
+    run = RenodeBackend().run(bundle(p, (ELF / "sensor_node.elf").read_bytes()), timeout=12)
+    assert run.outcome == "timeout" and run.exit_status is None
+    survivors = subprocess.run(["pgrep", "-f", "fang-renode-"], capture_output=True, text=True).stdout
+    assert survivors.strip() == ""
+    measured_run = measure(p, run_record(run.events, run.outcome))
+    assert all(m.quantity is None for m in measured_run)
