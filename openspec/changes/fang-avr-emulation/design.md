@@ -173,7 +173,7 @@ A platform kind is any kind ending `_platform`; the target search accepts both.
 Fuses are stated on `Firmware(path, target=, fuses=)` or
 `Emulates(..., fuses=)`, the question's winning, as `"factory"` or a mapping
 of `"low"`, `"high"`, `"extended"` to integers; a byte left out of a mapping is
-the factory value. The plan refuses, with the new `SIM-0017`, a platform whose
+the factory value. The plan refuses, with the new `SIM-0021`, a platform whose
 descriptor declares `clock` and a question and binding that state no fuses; a
 clock select with no oscillator in the table; a bit outside `modelled` that
 differs from the factory value; and a fuse name the part does not have. It
@@ -322,7 +322,7 @@ plan and the engine's own input: `platform.repl` and `run.resc` for Renode,
 
 ### Diagnostics
 
-`SIM-0017`, allocated after SIM-0016: the clock cannot be resolved from the
+`SIM-0021`, leaving SIM-0017 to SIM-0020 to the field questions in flight beside this change: the clock cannot be resolved from the
 binding's fuses — none stated, a clock source the model does not cover, or an
 unmodelled bit that differs from the part's shipped value.
 

@@ -219,7 +219,7 @@ SIM_EMULATION_BUS = _allocate(
     "SIM-0016", "an emulated bus device's controller or address cannot be resolved"
 )
 SIM_EMULATION_CLOCK = _allocate(
-    "SIM-0017", "an emulated part's clock cannot be resolved from the fuses its binding states"
+    "SIM-0021", "an emulated part's clock cannot be resolved from the fuses its binding states"
 )
 
 # Import conditions.

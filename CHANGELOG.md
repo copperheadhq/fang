@@ -174,7 +174,7 @@ tracked separately and moves only when the serialized form changes.
 - Fuses are part of the firmware binding: `Firmware(..., fuses=)` and
   `Emulates(..., fuses=)` state them, as `"factory"` or by byte, and a part
   whose clock they set refuses a plan that states none, or a value its model
-  does not cover (`SIM-0017`). The runner models the system clock prescaler the
+  does not cover (`SIM-0021`). The runner models the system clock prescaler the
   firmware may change, and watches registers its engine does not model, whose
   writes withdraw every measure of the run, as any unexpected warning from a
   platform model now does.

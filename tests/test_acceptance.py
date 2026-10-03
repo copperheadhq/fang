@@ -867,5 +867,5 @@ def test_at_f3_a_part_whose_fuses_set_its_clock_on_a_second_emulator(tmp_path):
     result = elaborate(ExternalClock, project_id="PRJ-AT-F3")
     with pytest.raises(NotRunnable) as refused:
         SIMAVR.prepare(result.snapshot, _asked(result.snapshot, "orbit"), traits=result.traits)
-    assert refused.value.code == "SIM-0017"
+    assert refused.value.code == "SIM-0021"
     assert "low fuse" in str(refused.value) and "clock-select bits" in str(refused.value)

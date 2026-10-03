@@ -242,10 +242,10 @@ def test_fuses_are_stated_as_factory_or_by_byte():
 def test_a_fuse_no_avr_part_has_or_no_byte_is_refused_where_declared(fuses):
     with pytest.raises(FangError) as refused:
         Firmware("f.elf", target="attiny84a", fuses=fuses)
-    assert refused.value.diagnostic.code == "SIM-0017"
+    assert refused.value.diagnostic.code == "SIM-0021"
     with pytest.raises(FangError) as refused:
         Emulates("blinks", run_until=100 * ms, fuses=fuses, measures={})
-    assert refused.value.diagnostic.code == "SIM-0017"
+    assert refused.value.diagnostic.code == "SIM-0021"
 
 
 def test_a_question_records_the_fuses_it_states():

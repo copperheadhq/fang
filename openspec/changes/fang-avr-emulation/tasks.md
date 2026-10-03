@@ -52,7 +52,7 @@ needs simavr 1.8 and a C compiler for its live tests.
 - [x] 3.2 Add `fuses=` to `Firmware` and `Emulates` (`"factory"` or a mapping
       of `low`, `high`, `extended`), carried into the question's scenario;
       verify a fuse name the part lacks is refused where it is declared.
-- [x] 3.3 Allocate `SIM-0017` and resolve the clock in `compile_plan`: the
+- [x] 3.3 Allocate `SIM-0021` and resolve the clock in `compile_plan`: the
       question's fuses over the binding's; refuse none stated, an unmodelled
       clock source, and an unmodelled bit off its factory value; record the
       clock and the assumptions; verify each refusal names the fuse and bits,

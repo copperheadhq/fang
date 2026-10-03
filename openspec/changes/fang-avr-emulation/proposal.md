@@ -110,7 +110,7 @@ None. The project holds one capability and this change extends it.
   flash image), the backend (find, build, run), and as package data the
   runner's C source and the ATtiny84A descriptor. `pyproject.toml` and
   `MANIFEST.in` ship them.
-- `fang/diagnostics.py` gains `SIM-0017` for a clock that cannot be resolved
+- `fang/diagnostics.py` gains `SIM-0021` for a clock that cannot be resolved
   from the binding's fuses.
 - `fang/cli.py` (`emulate`), `examples/regenerate.py` and
   `tests/test_examples.py` dispatch by engine; the new example ships its plans
