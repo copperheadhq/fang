@@ -66,6 +66,9 @@ fang = ["py.typed"]
 # The emulator's platform description, its probes and the model descriptors are
 # data the lowering copies into every bundle.
 "fang.renode" = ["platforms/*.repl", "probes/*.cs", "models/*.json"]
+# simavr's runner is source fang ships and the host builds; the descriptors
+# are data, as Renode's are.
+"fang.simavr" = ["runner/*.c", "models/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

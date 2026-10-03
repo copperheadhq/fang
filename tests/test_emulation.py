@@ -116,7 +116,7 @@ def measured(p: EmulationPlan, record: RunRecord) -> dict:
 
 
 def test_the_shipped_descriptors_load():
-    assert set(descriptors()) == {"fang:stm32f401re", "renode:Sensors.HS3001"}
+    assert set(descriptors()) == {"fang:attiny84a", "fang:stm32f401re", "renode:Sensors.HS3001"}
     assert descriptor("renode:Sensors.HS3001").faults == ("absent",)
 
 

@@ -1047,10 +1047,15 @@ class Job:
             data = content.encode("utf-8") if isinstance(content, str) else content
             return "sha256:" + hashlib.sha256(data).hexdigest()
 
+        # The emulator an emulation question recorded is the tool this job is
+        # for -- routing chose the tool by it, and the plan refuses any other --
+        # so it is named once, as the tool, and a job keeps the hash it had
+        # before questions recorded their emulator.
+        asks = {key: value for key, value in self.question.data.items() if key != "engine"}
         return {
             "tool": self.tool,
             "question": self.question.id,
-            "asks": dict(self.question.data),
+            "asks": asks,
             "files": {path: digest(content) for path, content in sorted(self.files.items())},
             "inputs": dict(sorted(self.inputs.items())),
             "assumptions": list(self.assumptions),

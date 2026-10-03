@@ -18,7 +18,7 @@ it is never a persisted or public representation — and the MCP SDK, which only
 
 ```bash
 pip install -e ".[dev]"          # add ",analysis" for the NetworkX-backed queries, ",mcp" for `fang mcp`
-python -m pytest                 # whole suite (1639 tests): ~85s; ~7 min where Renode runs the emulations live
+python -m pytest                 # whole suite (1728 tests): ~85s; ~9 min where Renode and simavr run the emulations live
 fang build examples/sensor_board/sensor_board.py   # the console script, after an editable install
 python -m pytest -rs             # also lists the acceptance tests deferred to later phases
 python -m pytest tests/test_graph.py::test_name -x
@@ -146,13 +146,22 @@ part with no symbol, a pin its symbol has no place for, or a net left with fewer
 pins, is reported as a loss.
 
 **Firmware emulation.** [fang/emulation.py](fang/emulation.py) runs a board's compiled firmware
-against the board in Renode, as one more verification question: `Emulates` sits on the question
+against the board in an emulator, as one more verification question: `Emulates` sits on the question
 base in [fang/verification.py](fang/verification.py), and importing `fang.emulation` registers the
-`emulation` method at the behavioural level and the `renode` tool after ngspice. `compile_plan`
+`emulation` method at the behavioural level and the `renode` and `simavr` tools after ngspice. A
+platform descriptor names its engine, `Emulates` records that engine in the question at
+elaboration (the module tree is in hand then; routing sees only the question), and each tool
+covers only its engine's questions, a question that records none being Renode's. The job's
+manifest leaves the recorded engine out of `asks`, since it names the tool already, so recording
+it moved no Renode job. `compile_plan`
 resolves everything from the snapshot and the traits before anything runs: the target and its
 firmware, each I2C bus's controller (the port's `peripheral`), pins and selectors (the lowered
 connections), open drain (the interface), addresses (`resolve_address`), observed pins (the
-platform descriptor's own pin table, never a pin's name). Otherwise it refuses with `SIM-0009`..`SIM-0016`.
+platform descriptor's own pin table, never a pin's name), and, for a descriptor that declares a
+`clock`, the clock from the fuses the question or the `Firmware` binding states (`"factory"` or
+bytes by name; none stated is refused, as is a bit the descriptor does not model). Otherwise it
+refuses with `SIM-0009`..`SIM-0016` or, for the clock, `SIM-0021`. A plan with a clock is schema `fang.emulation/v3`; one
+without stays v2, byte for byte, so Renode plans kept their hashes.
 [fang/renode/](fang/renode/) lowers the plan to Renode's own `.repl` and `.resc` and runs it on a
 temporary copy in its own process group; its package data is the F401 platform description, the
 C# probes (`probes/fang_probes.cs`) and the model descriptors (`models/*.json`), which say what
@@ -173,6 +182,21 @@ The bundle's plan names no snapshot, so an unrelated design change leaves the jo
 firmware's digest goes on evidence, never in the snapshot; `stale()` resolves the bound path
 exactly as a run does (`_firmware_location`, against the program that declares the part) and
 compares the digest with the file.
+[fang/simavr/](fang/simavr/) runs AVR cores, starting with the ATtiny84A (`fang:attiny84a`).
+simavr is GPL-3.0 and its native input is a program linked against its library, so fang ships
+the source of one, `runner/fang_runner.c`, and the backend builds it on the host for each run
+against the installation beside the `simavr` executable (headers in `include/simavr`, the
+library under `lib`), never linking simavr into fang. The lowering cuts the flash image from
+the ELF in Python and writes `run.cfg`, lines of a fixed set the runner re-checks. The runner
+bounds the run in virtual time kept in segments, models `CLKPR`'s timed sequence (simavr models
+no prescaler and no fuses), records a pin only while its DDR bit is set (`gpio.release` when
+cleared), watches the registers the descriptor names (`OSCCAL`, `PRR`'s unmodelled bits) and
+turns simavr's own error and warning lines into `model.warning`s from the target, which withdraw
+every measure of the run. It seeds `random()` and simavr's serial number from the plan's seed. A
+core that halts ends the run `halted`, which has not completed. Checked against simavr 1.8;
+1.6, which distributions package, wires the ATtiny x4 compare outputs to the wrong pins and is
+refused by name. `Duty(surface, level=, within=)` is engine-neutral: the fraction of a window at
+a level, an interval where part of the window was not observed.
 Emulation models are `EmulationModel` traits, not `Simulatable`, because the trait registry holds
 one trait per protocol per entity.
 
@@ -246,8 +270,9 @@ design was checked against go in the change's `design.md`, which is informative;
 keeps no separate RFC or design-note directory.
 
 [tests/test_acceptance.py](tests/test_acceptance.py) holds exactly one test per acceptance
-criterion, AT-R1..AT-R13, AT-K1..AT-K10, AT-V1, AT-F1 and AT-F2, and all 26 pass. The only skips in the suite are for optional binaries
-that may not be installed (NetworkX, the MCP SDK, ngspice, Xyce, kicad-cli, copperhead, renode); each names what is missing. If a
+criterion, AT-R1..AT-R13, AT-K1..AT-K10, AT-V1 and AT-F1..AT-F3, and all 27 pass. The only skips in the suite are for optional binaries
+that may not be installed (NetworkX, the MCP SDK, ngspice, Xyce, kicad-cli, copperhead, renode, simavr or a C compiler to build
+its runner); each names what is missing. If a
 criterion ever has to be deferred again, skip it with the reason named rather than weakening the
 assertion, so the suite reports what is actually demonstrated.
 
@@ -274,7 +299,8 @@ regenerating or testing that one needs `kicad-cli` on the path; without it the t
 still check every one of its outputs but the render. One named in
 `regenerate.DRAFTED` also ships copperhead's draft under `out/copperhead/`, and
 needs `copperhead` there too; one named in `regenerate.EMULATED` ships each emulation question's
-plan, platform description and script under `out/renode/`, which need no emulator. The textbook
+plan and its engine's own input under `out/<engine>/` (Renode's platform description and script,
+simavr's `run.cfg`), which need no emulator. The textbook
 groups in `regenerate.FIGURES` are drafted by copperhead too, but by `examples/draw_figures.py`
 into each example's `figure/`, which neither `regenerate.py` nor the suite runs. A program that
 declares a module-level `BENCH` (the circuits under `examples/ti_opamp_handbook/`

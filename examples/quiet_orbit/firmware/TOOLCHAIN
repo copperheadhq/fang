@@ -1,0 +1,16 @@
+The ELF in elf/ was built with `make` from this folder, from qo-r1/ as
+copperheadhq/copperhead-quiet-orbit publishes it at 056933b (2026-09-23), by
+Ubuntu's AVR toolchain:
+
+  avr-gcc (GCC) 14.3.0          gcc-avr 1:14.2.0-2build1
+    sha256 6f644fa0af6803bc03a3202a5db121fea8e6fe8413e5ce88223ad9af54a83c7f
+  avr-libc 2.2.1                avr-libc 1:2.2.1-1build1
+    sha256 daae655e7ba56cf0c16c808219b520cd5a7a29f6dae304864a27015ef5af784f
+  binutils 2.43.50              binutils-avr 2.43.50.20250108-1build1
+    sha256 115494ad6cf37188ec6704ce99dc7e925b96f84f0e3d2712fc277df3edac603f
+
+It was the firmware's first compile: it builds under its own
+-Wall -Wextra -Werror into 246 bytes of flash. The build embeds no path or
+date, so the same toolchain rebuilds it byte for byte from any directory:
+
+  5655a35a168aeadf6c527fa031081a9a53aa524ba48229e42230e8e9aa01b57e  elf/quiet-orbit-qo-r1.elf

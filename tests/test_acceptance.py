@@ -2,7 +2,8 @@
 
 One test per acceptance criterion. AT-R1 to AT-R13 are the representation tests;
 AT-K1 to AT-K10 are the kernel tests; AT-V1 is the verification test, which
-needs ngspice, and AT-F1 and AT-F2 the emulation tests, which need Renode 1.17.0;
+needs ngspice, AT-F1 and AT-F2 the emulation tests, which need Renode 1.17.0,
+and AT-F3 the second emulator's, which needs simavr 1.8 and a C compiler;
 each is skipped, naming its tool, where that tool is not installed. A criterion whose subject is not built yet
 is skipped with the delivery phase that owns it named, so the suite reports what
 is actually demonstrated rather than implying more.
@@ -768,3 +769,103 @@ def test_at_f2_what_cannot_be_modelled_cannot_pass(tmp_path):
         for n in range(10)
     }
     assert len(records) == 1
+
+
+# -- AT-F3: a second emulator ---------------------------------------------------
+
+
+def _quiet_orbit():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "quiet_orbit_for_acceptance", EXAMPLES / "quiet_orbit" / "quiet_orbit.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _simavr_installed() -> bool:
+    """simavr is on the path at a version the lowering was checked against,
+    with a C compiler to build the runner against it."""
+    import os
+    import shutil
+
+    from fang.emulation import SIMAVR
+    from fang.verification import ToolUnavailable
+
+    if not SIMAVR.available() or shutil.which(os.environ.get("CC") or "cc") is None:
+        return False
+    try:
+        SIMAVR.version()
+    except ToolUnavailable:
+        return False
+    return True
+
+
+@pytest.mark.skipif(not _simavr_installed(), reason="simavr 1.8, or a C compiler, is not installed here")
+def test_at_f3_a_part_whose_fuses_set_its_clock_on_a_second_emulator(tmp_path):
+    """AT-F3: the Quiet Orbit board's fade question, its fuses stated as
+    programmed for the 8 MHz clock, routes to simavr, the emulator the
+    ATtiny84A's platform model names, and its measurements decide every
+    constraint over them on the committed head, the evidence naming simavr,
+    the firmware and the plan. The same firmware on a part with the fuses it
+    ships with leaves its parameters unset and reads failed, its PWM measured
+    at an eighth of the rate. And a low fuse that selects an external clock is
+    refused naming the fuse, with nothing run."""
+    from fang.checks import DEFAULT_CHECKS
+    from fang.elaborate import elaborate
+    from fang.emulation import RENODE, SIMAVR, Emulates
+    from fang.values import ValueStatus
+    from fang.verification import NotRunnable, answer, constraint_statuses, route
+
+    board = _quiet_orbit()
+
+    result = elaborate(board.QuietOrbit, project_id="PRJ-AT-F3")
+    graph = KernelGraph(result.snapshot, checks=DEFAULT_CHECKS)
+    question = _asked(graph.head, "orbit")
+    assert route(graph.head, question).tool == "simavr" and not RENODE.covers(question)
+    assert set(constraint_statuses(graph.head, question).values()) == {CheckStatus.UNKNOWN}
+
+    outcome = answer(graph, question, traits=result.traits, workspace=tmp_path / "pass")
+
+    head = graph.head
+    assert set(constraint_statuses(head, question).values()) == {CheckStatus.PASS}
+    for entity, attr in question.parameters:
+        value = head.entities[entity].parameters[attr]
+        assert value.status is ValueStatus.INFERRED and value.source == outcome.evidence
+    verification = head.entities[question.id]
+    assert (verification.result, verification.level, verification.tool) == ("PASS", "behavioural", "simavr")
+    record = head.entities[outcome.evidence].extensions["measurement"]
+    assert record["tool"] == {"name": "simavr", "version": SIMAVR.version()}
+    assert record["inputs"][0]["path"] == "firmware/elf/quiet-orbit-qo-r1.elf"
+    assert record["inputs"][0]["hash"].startswith("sha256:")
+    assert record["plan"].startswith("sha256:")
+
+    shipped = _asked(graph.head, "as_shipped")
+    before = {entity: graph.head.entities[entity].as_dict() for entity, _ in shipped.parameters}
+    failed = answer(graph, shipped, traits=result.traits, workspace=tmp_path / "fail")
+    assert failed.status == "failed"
+    for entity, attr in shipped.parameters:
+        assert not graph.head.entities[entity].parameters[attr].known
+        assert graph.head.entities[entity].as_dict() == before[entity]
+    assert graph.head.entities[shipped.id].result == "FAIL"
+    measures = graph.head.entities[failed.evidence].extensions["measurement"]["measures"]
+    rises = {m["name"]: m for m in measures}
+    shipped_rate = int(rises["shipped_pwm_rises"]["value"])
+    fused_rate = int(next(m for m in record["measures"] if m["name"] == "pwm_rises")["value"])
+    assert round(fused_rate / shipped_rate) == 8
+
+    original = board.QuietOrbit.orbit
+
+    class ExternalClock(board.QuietOrbit):
+        orbit = Emulates(
+            "fades", run_until=original.run_until, fuses={"low": 0xE0},
+            measures=original.measures, abstracted=original.abstracted,
+        )
+
+    result = elaborate(ExternalClock, project_id="PRJ-AT-F3")
+    with pytest.raises(NotRunnable) as refused:
+        SIMAVR.prepare(result.snapshot, _asked(result.snapshot, "orbit"), traits=result.traits)
+    assert refused.value.code == "SIM-0021"
+    assert "low fuse" in str(refused.value) and "clock-select bits" in str(refused.value)

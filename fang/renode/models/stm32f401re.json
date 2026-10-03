@@ -1,5 +1,6 @@
 {
   "core_clock_hz": 16000000,
+  "engine": "renode",
   "expected_warnings": [
     {
       "gap": "I2C bus timing (CCR, TRISE)",

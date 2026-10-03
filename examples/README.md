@@ -18,6 +18,7 @@ them is a sketch that no longer works.
 | [`sensor_node/`](sensor_node/) | Ports that name their controller, cited pin selectors, an address the check reads, and its firmware run in Renode | 11 | 9 |
 | [`buck_regulator/`](buck_regulator/) | Requirement, decision, calculations, and a question ngspice answers under load | 11 | 9 |
 | [`usb_uart_bridge/`](usb_uart_bridge/) | Part selection: manufacturer, MPN, distributor and datasheet | 16 | 11 |
+| [`quiet_orbit/`](quiet_orbit/) | copperhead's QO-R1 lamp: an ATtiny84A whose fuses set its clock, its own firmware run in simavr, and the defect that finds | 23 | 16 |
 | [`servo_drive/`](servo_drive/) | Composition: one `HalfBridge` instantiated three times | 23 | 26 |
 | [`jee_advanced/problem_1/`](jee_advanced/problem_1/) | Not a board: four claimed currents, all four decided | 11 | 7 |
 | [`jee_advanced/problem_2/`](jee_advanced/problem_2/) | Not a board either: one claimed current, and the two branches that carry none | 12 | 7 |
@@ -61,7 +62,7 @@ record any reasoning get one. A divider has nothing to explain.
 `verification.txt` is what `fang verify` finds, run twice: on the elaborated
 program, and again on the head the first run's measurements were committed to.
 Only an example that declares a question gets one: `rc_filter/`,
-`antenna_match/`, `buck_regulator/` and `sensor_node/`. It gives three
+`antenna_match/`, `buck_regulator/`, `sensor_node/` and `quiet_orbit/`. It gives three
 significant figures and no tool version, so a simulator release that moves a
 number in its fourth figure moves nothing here.
 
@@ -89,7 +90,8 @@ textbook figures under `ti_opamp_handbook/` and `jee_advanced/` are drafted by
 copperhead too, from the intent the same lowering writes, but by
 `draw_figures.py` into each one's `figure/`: it needs a copperhead checkout,
 so neither `regenerate.py` nor the suite runs it. An example whose questions route to a tool that is not installed
-(ngspice for `rc_filter/` and `buck_regulator/`, Renode for `sensor_node/`)
+(ngspice for `rc_filter/` and `buck_regulator/`, Renode for `sensor_node/`,
+simavr for `quiet_orbit/`)
 keeps its committed `verification.txt`, and the suite skips comparing it,
 naming the tool.
 

@@ -62,6 +62,7 @@ VIEWS: dict[str, tuple[str, ...]] = {
     "sensor_board": ("interfaces", "ground"),
     "i2c_bus": ("interfaces", "interconnect"),
     "sensor_node": ("interfaces", "power"),
+    "quiet_orbit": ("interfaces", "power"),
     "usb_uart_bridge": ("interfaces", "power"),
     "buck_regulator": ("power", "system"),
     "servo_drive": ("system", "power", "safety"),
@@ -84,11 +85,12 @@ SCHEMATICS: frozenset[str] = frozenset({"noninverting_amp"})
 #: copperhead too, but by `draw_figures.py` into `figure/` (`FIGURES`, below).
 DRAFTED: frozenset[str] = frozenset({"noninverting_amp"})
 
-#: The examples whose firmware runs in Renode. For each emulation question the
-#: plan, the platform description and the script are written under
-#: out/renode/<question>/, here and on every machine: lowering a plan needs no
-#: emulator, so these are compared like any other output.
-EMULATED: frozenset[str] = frozenset({"sensor_node"})
+#: The examples whose firmware runs in an emulator: Renode for sensor_node,
+#: simavr for quiet_orbit. For each emulation question the plan and the
+#: engine's own input (ENGINE_INPUTS) are written under
+#: out/<engine>/<question>/, here and on every machine: lowering a plan needs
+#: no emulator, so these are compared like any other output.
+EMULATED: frozenset[str] = frozenset({"quiet_orbit", "sensor_node"})
 
 #: Groups whose every example is a textbook figure, and ships the
 #: interconnect view to set beside the page it came from. Naming the folder
@@ -416,18 +418,30 @@ def _verification(result) -> str | None:
 # --------------------------------------------------------------------------
 
 
+#: What of each engine's bundle an example ships beside its plan: the
+#: engine's own input, which lowering writes and no emulator is needed for.
+#: The probes, the runner's source and the firmware are fang's or the
+#: example's already, and are not copied again.
+ENGINE_INPUTS = {
+    "renode": ("plan.json", "platform.repl", "run.resc"),
+    "simavr": ("plan.json", "run.cfg"),
+}
+
+
 def _emulation_bundles(result) -> dict[str, str]:
-    """Each emulation question's plan, platform description and script."""
-    from fang.emulation import RENODE
+    """Each emulation question's plan and its engine's own input, under
+    out/<engine>/<question>/."""
+    from fang.emulation import tool_for
     from fang.verification import questions
 
     files = {}
     for question in questions(result.snapshot):
         if question.method != "emulation":
             continue
-        job = RENODE.prepare(result.snapshot, question, traits=result.traits)
-        folder = f"renode/{question.label.rsplit('.', 1)[-1]}"
-        for file in ("plan.json", "platform.repl", "run.resc"):
+        tool = tool_for(question)
+        job = tool.prepare(result.snapshot, question, traits=result.traits)
+        folder = f"{tool.name}/{question.label.rsplit('.', 1)[-1]}"
+        for file in ENGINE_INPUTS[tool.name]:
             content = job.files[file]
             files[f"{folder}/{file}"] = content.decode("utf-8") if isinstance(content, bytes) else content
     return files

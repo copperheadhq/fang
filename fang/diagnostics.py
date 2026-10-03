@@ -218,6 +218,9 @@ SIM_EMULATION_FIRMWARE = _allocate(
 SIM_EMULATION_BUS = _allocate(
     "SIM-0016", "an emulated bus device's controller or address cannot be resolved"
 )
+SIM_EMULATION_CLOCK = _allocate(
+    "SIM-0021", "an emulated part's clock cannot be resolved from the fuses its binding states"
+)
 
 # Import conditions.
 IMPORT_LOSSY = _allocate("IMPORT-0001", "adapter could not represent a construct")

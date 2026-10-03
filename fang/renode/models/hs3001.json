@@ -1,5 +1,6 @@
 {
   "bus": "i2c",
+  "engine": "renode",
   "events": [
     "i2c.write",
     "i2c.read",
