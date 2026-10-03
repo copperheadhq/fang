@@ -216,11 +216,11 @@ def test_removing_a_trace_does_not_invalidate_an_electrical_check():
 # -- 1.7 the schema version ------------------------------------------------
 
 
-def test_a_one_point_one_artifact_still_reads_under_one_point_two():
+def test_a_one_point_one_artifact_still_reads_under_one_point_three():
     from fang import SCHEMA_VERSION
     from fang.validation import check_schema_version
 
-    assert SCHEMA_VERSION == "1.2"
+    assert SCHEMA_VERSION == "1.3"
     check_schema_version("1.1")  # additive minor: still readable
 
 

@@ -29,8 +29,9 @@ that can regress the gate; it lands alone.
       not electrical — the spec scenario's wording, and the right one: board
       position is not view presentation — and that removing a trace does not
       invalidate an electrical check.
-- [x] 1.7 Bump `SCHEMA_VERSION` to `1.2` and confirm it moves independently of
-      `__version__`; verify a 1.1 artifact still reads and that the major-version
+- [x] 1.7 Bump `SCHEMA_VERSION` (to `1.3`, since `1.2` was taken by the
+      verification layer while this change waited) and confirm it moves
+      independently of `__version__`; verify a 1.1 artifact still reads and that the major-version
       rejection path is untouched.
 - [x] 1.8 Regenerate every example with `python examples/regenerate.py` and
       commit the outputs; verify `python -m pytest tests/test_examples.py` is

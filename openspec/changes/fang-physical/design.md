@@ -105,7 +105,7 @@ it was computed from, so a re-route invalidates it visibly.
 inexpressible); resolving `EXPLICIT` (an aggregate computed from geometry is not
 a stated fact, and the distinction is the whole point of `ValueStatus`).
 
-### D3. The `physical` root key becomes a keyed mapping, and `SCHEMA_VERSION` goes to 1.2
+### D3. The `physical` root key becomes a keyed mapping, and `SCHEMA_VERSION` moves a minor
 
 `physical` stays a mapping and gains one key per physical kind:
 
@@ -128,7 +128,8 @@ even when empty, exactly as the root rule requires, so a project with no board
 serializes `physical` with nine empty lists rather than `{}` — **this changes the
 bytes of every existing snapshot**, which is what the version bump is for.
 
-`SCHEMA_VERSION` moves `1.1` → `1.2`: additive, minor, per the versioning
+`SCHEMA_VERSION` moves one minor (`1.2` → `1.3` after the rebase onto the
+verification layer, which took `1.2` first): additive, minor, per the versioning
 requirement. Committed example outputs under `examples/*/out/` are regenerated in
 the same change.
 
@@ -260,7 +261,7 @@ zone.
 
 ## Migration Plan
 
-1. Entities, identity, and root shape first, with `SCHEMA_VERSION` at 1.2 and
+1. Entities, identity, and root shape first, with `SCHEMA_VERSION` at 1.3 and
    the example outputs regenerated. Nothing references physical facts yet, so
    the suite stays green on structure alone.
 2. The resolver and `ROUTING_CHECK` next, including the narrowing of
