@@ -1,0 +1,508 @@
+(export
+  (version "E")
+  (design
+    (source "quiet_orbit.py")
+    (tool "fang 0.1.0")
+    (snapshot "sha256:6b0ffd3899c6c54220fe497412f41f71154baca4fc91f3ee961546e5bb9ff00c")
+    (project "PRJ-EXAMPLES")
+  )
+  (components
+    (comp
+      (ref "C1")
+      (value "100 nF")
+      (footprint "Package:C_0603_1608Metric")
+      (property
+        (name "fang_id")
+        (value "CMP-64288fd28572")
+      )
+    )
+    (comp
+      (ref "C2")
+      (value "4.7 uF")
+      (footprint "Package:C_0805_2012Metric")
+      (property
+        (name "fang_id")
+        (value "CMP-8efaeefcb4b3")
+      )
+    )
+    (comp
+      (ref "C3")
+      (value "1 uF")
+      (footprint "Package:C_0603_1608Metric")
+      (property
+        (name "fang_id")
+        (value "CMP-80ddc77eef74")
+      )
+    )
+    (comp
+      (ref "D1")
+      (value "Diode")
+      (footprint "Package:D_SOD-123")
+      (property
+        (name "fang_id")
+        (value "CMP-75e64e9bba8c")
+      )
+    )
+    (comp
+      (ref "DS1")
+      (value "LED")
+      (footprint "Package:LED_1206_3216Metric")
+      (property
+        (name "fang_id")
+        (value "CMP-4cae832d77fc")
+      )
+    )
+    (comp
+      (ref "DS2")
+      (value "LED")
+      (footprint "Package:LED_1206_3216Metric")
+      (property
+        (name "fang_id")
+        (value "CMP-8012648b7c8b")
+      )
+    )
+    (comp
+      (ref "DS3")
+      (value "LED")
+      (footprint "Package:LED_1206_3216Metric")
+      (property
+        (name "fang_id")
+        (value "CMP-19f4d2375c6c")
+      )
+    )
+    (comp
+      (ref "DS4")
+      (value "LED")
+      (footprint "Package:LED_1206_3216Metric")
+      (property
+        (name "fang_id")
+        (value "CMP-1f33f48f360f")
+      )
+    )
+    (comp
+      (ref "F1")
+      (value "100 mA")
+      (footprint "Package:Fuse_0603_1608Metric")
+      (property
+        (name "fang_id")
+        (value "CMP-217ab3f5ee51")
+      )
+    )
+    (comp
+      (ref "J1")
+      (value "IspHeader")
+      (footprint "Package:IDC-Header_2x03_P2.54mm_Vertical")
+      (property
+        (name "fang_id")
+        (value "CMP-3fc0bfe6b3a1")
+      )
+    )
+    (comp
+      (ref "J2")
+      (value "UsbCPowerReceptacle")
+      (footprint "Package:USB_C_Receptacle_GCT_USB4105-xx-A_16P_TopMnt_Horizontal")
+      (property
+        (name "fang_id")
+        (value "CMP-a1acbe0d28f8")
+      )
+    )
+    (comp
+      (ref "R1")
+      (value "5.1 kOhm")
+      (footprint "Package:R_0603_1608Metric")
+      (property
+        (name "fang_id")
+        (value "CMP-442a3fa489bb")
+      )
+    )
+    (comp
+      (ref "R2")
+      (value "5.1 kOhm")
+      (footprint "Package:R_0603_1608Metric")
+      (property
+        (name "fang_id")
+        (value "CMP-93847d254a94")
+      )
+    )
+    (comp
+      (ref "R3")
+      (value "680 Ohm")
+      (footprint "Package:R_0603_1608Metric")
+      (property
+        (name "fang_id")
+        (value "CMP-ad484fcd17b4")
+      )
+    )
+    (comp
+      (ref "R4")
+      (value "680 Ohm")
+      (footprint "Package:R_0603_1608Metric")
+      (property
+        (name "fang_id")
+        (value "CMP-4c946ac7302f")
+      )
+    )
+    (comp
+      (ref "R5")
+      (value "680 Ohm")
+      (footprint "Package:R_0603_1608Metric")
+      (property
+        (name "fang_id")
+        (value "CMP-aaff11191358")
+      )
+    )
+    (comp
+      (ref "R6")
+      (value "680 Ohm")
+      (footprint "Package:R_0603_1608Metric")
+      (property
+        (name "fang_id")
+        (value "CMP-7f3afe857911")
+      )
+    )
+    (comp
+      (ref "R7")
+      (value "10 kOhm")
+      (footprint "Package:R_0603_1608Metric")
+      (property
+        (name "fang_id")
+        (value "CMP-da2da9f3b2a0")
+      )
+    )
+    (comp
+      (ref "TP1")
+      (value "TestPoint")
+      (footprint "Package:TestPoint_Pad_D1.5mm")
+      (property
+        (name "fang_id")
+        (value "CMP-38b7249ce8e5")
+      )
+    )
+    (comp
+      (ref "TP2")
+      (value "TestPoint")
+      (footprint "Package:TestPoint_Pad_D1.5mm")
+      (property
+        (name "fang_id")
+        (value "CMP-e6768974b740")
+      )
+    )
+    (comp
+      (ref "TP3")
+      (value "TestPoint")
+      (footprint "Package:TestPoint_Pad_D1.5mm")
+      (property
+        (name "fang_id")
+        (value "CMP-b6356007c5d4")
+      )
+    )
+    (comp
+      (ref "TP4")
+      (value "TestPoint")
+      (footprint "Package:TestPoint_Pad_D1.5mm")
+      (property
+        (name "fang_id")
+        (value "CMP-95f12470158d")
+      )
+    )
+    (comp
+      (ref "U1")
+      (value "ATtiny84A")
+      (footprint "Package:SOIC-14_3.9x8.7mm_P1.27mm")
+      (fields
+        (field "Microchip"
+          (name "Manufacturer")
+        )
+        (field "ATTINY84A-SSU"
+          (name "MPN")
+        )
+      )
+      (property
+        (name "fang_id")
+        (value "CMP-91431a8f1d4e")
+      )
+    )
+  )
+  (nets
+    (net
+      (code "1")
+      (name "Net-(C1-Pad1)")
+      (node
+        (ref "C1")
+        (pin "1")
+      )
+      (node
+        (ref "C2")
+        (pin "1")
+      )
+      (node
+        (ref "D1")
+        (pin "K")
+      )
+      (node
+        (ref "J1")
+        (pin "VCC")
+      )
+      (node
+        (ref "R3")
+        (pin "1")
+      )
+      (node
+        (ref "R4")
+        (pin "1")
+      )
+      (node
+        (ref "R5")
+        (pin "1")
+      )
+      (node
+        (ref "R6")
+        (pin "1")
+      )
+      (node
+        (ref "R7")
+        (pin "1")
+      )
+      (node
+        (ref "TP4")
+        (pin "1")
+      )
+      (node
+        (ref "U1")
+        (pin "VCC")
+      )
+    )
+    (net
+      (code "2")
+      (name "Net-(C1-Pad2)")
+      (node
+        (ref "C1")
+        (pin "2")
+      )
+      (node
+        (ref "C2")
+        (pin "2")
+      )
+      (node
+        (ref "C3")
+        (pin "2")
+      )
+      (node
+        (ref "J1")
+        (pin "GND")
+      )
+      (node
+        (ref "J2")
+        (pin "GND")
+      )
+      (node
+        (ref "R1")
+        (pin "2")
+      )
+      (node
+        (ref "R2")
+        (pin "2")
+      )
+      (node
+        (ref "TP1")
+        (pin "1")
+      )
+      (node
+        (ref "U1")
+        (pin "GND")
+      )
+    )
+    (net
+      (code "3")
+      (name "Net-(C3-Pad1)")
+      (node
+        (ref "C3")
+        (pin "1")
+      )
+      (node
+        (ref "F1")
+        (pin "1")
+      )
+      (node
+        (ref "J2")
+        (pin "VBUS")
+      )
+      (node
+        (ref "TP3")
+        (pin "1")
+      )
+    )
+    (net
+      (code "4")
+      (name "Net-(D1-PadA)")
+      (node
+        (ref "D1")
+        (pin "A")
+      )
+      (node
+        (ref "F1")
+        (pin "2")
+      )
+    )
+    (net
+      (code "5")
+      (name "Net-(DS1-PadA)")
+      (node
+        (ref "DS1")
+        (pin "A")
+      )
+      (node
+        (ref "R3")
+        (pin "2")
+      )
+    )
+    (net
+      (code "6")
+      (name "Net-(DS1-PadK)")
+      (node
+        (ref "DS1")
+        (pin "K")
+      )
+      (node
+        (ref "U1")
+        (pin "PA7")
+      )
+    )
+    (net
+      (code "7")
+      (name "Net-(DS2-PadA)")
+      (node
+        (ref "DS2")
+        (pin "A")
+      )
+      (node
+        (ref "R4")
+        (pin "2")
+      )
+    )
+    (net
+      (code "8")
+      (name "Net-(DS2-PadK)")
+      (node
+        (ref "DS2")
+        (pin "K")
+      )
+      (node
+        (ref "U1")
+        (pin "PB2")
+      )
+    )
+    (net
+      (code "9")
+      (name "Net-(DS3-PadA)")
+      (node
+        (ref "DS3")
+        (pin "A")
+      )
+      (node
+        (ref "R5")
+        (pin "2")
+      )
+    )
+    (net
+      (code "10")
+      (name "Net-(DS3-PadK)")
+      (node
+        (ref "DS3")
+        (pin "K")
+      )
+      (node
+        (ref "J1")
+        (pin "MOSI")
+      )
+      (node
+        (ref "U1")
+        (pin "PA6")
+      )
+    )
+    (net
+      (code "11")
+      (name "Net-(DS4-PadA)")
+      (node
+        (ref "DS4")
+        (pin "A")
+      )
+      (node
+        (ref "R6")
+        (pin "2")
+      )
+    )
+    (net
+      (code "12")
+      (name "Net-(DS4-PadK)")
+      (node
+        (ref "DS4")
+        (pin "K")
+      )
+      (node
+        (ref "J1")
+        (pin "MISO")
+      )
+      (node
+        (ref "U1")
+        (pin "PA5")
+      )
+    )
+    (net
+      (code "13")
+      (name "Net-(J1-PadRESET)")
+      (node
+        (ref "J1")
+        (pin "RESET")
+      )
+      (node
+        (ref "R7")
+        (pin "2")
+      )
+      (node
+        (ref "TP2")
+        (pin "1")
+      )
+      (node
+        (ref "U1")
+        (pin "PB3")
+      )
+    )
+    (net
+      (code "14")
+      (name "Net-(J1-PadSCK)")
+      (node
+        (ref "J1")
+        (pin "SCK")
+      )
+      (node
+        (ref "U1")
+        (pin "PA4")
+      )
+    )
+    (net
+      (code "15")
+      (name "Net-(J2-PadCC1)")
+      (node
+        (ref "J2")
+        (pin "CC1")
+      )
+      (node
+        (ref "R1")
+        (pin "1")
+      )
+    )
+    (net
+      (code "16")
+      (name "Net-(J2-PadCC2)")
+      (node
+        (ref "J2")
+        (pin "CC2")
+      )
+      (node
+        (ref "R2")
+        (pin "1")
+      )
+    )
+  )
+)

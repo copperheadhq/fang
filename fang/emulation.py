@@ -31,7 +31,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from functools import lru_cache
 from importlib import resources
-from typing import Any, Mapping, Sequence
+from typing import Any, ClassVar, Mapping, Sequence
 
 from .provenance import Provenance
 from .serialization import content_hash
@@ -66,6 +66,16 @@ class Descriptor:
     document: Mapping[str, Any]
 
     @property
+    def engine(self) -> str:
+        """The emulator that runs this model: a question on it runs there."""
+        return self.document["engine"]
+
+    @property
+    def is_platform(self) -> bool:
+        """Whether this is a platform model, one firmware runs on."""
+        return self.kind.endswith("_platform")
+
+    @property
     def qualification(self) -> str:
         return self.document["qualification"]
 
@@ -90,16 +100,32 @@ class Descriptor:
         return self.document.get("provenance", {})
 
 
+#: The packages whose `models/` hold the descriptors each emulator runs.
+ENGINE_PACKAGES = ("fang.renode", "fang.simavr")
+
+
 @lru_cache(maxsize=1)
 def descriptors() -> Mapping[str, Descriptor]:
-    """Every descriptor fang ships, by its id."""
+    """Every descriptor fang ships, by its id, from every engine's package."""
+    return read_descriptors(resources.files(p).joinpath("models") for p in ENGINE_PACKAGES)
+
+
+def read_descriptors(folders) -> dict[str, Descriptor]:
+    """The descriptors in `folders`, refusing an id shipped twice: a model
+    named by its id must name one model, whichever package it came from."""
     found: dict[str, Descriptor] = {}
-    folder = resources.files("fang.renode").joinpath("models")
-    for entry in sorted(folder.iterdir(), key=lambda e: e.name):
-        if not entry.name.endswith(".json"):
-            continue
-        document = json.loads(entry.read_text(encoding="utf-8"))
-        found[document["id"]] = Descriptor(document["id"], document["kind"], document)
+    for folder in folders:
+        for entry in sorted(folder.iterdir(), key=lambda e: e.name):
+            if not entry.name.endswith(".json"):
+                continue
+            document = json.loads(entry.read_text(encoding="utf-8"))
+            if document["id"] in found:
+                raise EmulationError(
+                    f"two emulation model descriptors are shipped as {document['id']!r}; "
+                    "a model is named by its id, so the id names one",
+                    code="model",
+                )
+            found[document["id"]] = Descriptor(document["id"], document["kind"], document)
     return found
 
 
@@ -260,7 +286,14 @@ class PlanStimulus:
 #: the job); a consumer of v1 refuses a v2 plan by this label instead of failing
 #: on the missing field.
 PLAN_SCHEMA = "fang.emulation/v2"
-READABLE_PLAN_SCHEMAS = frozenset({"fang.emulation/v1", PLAN_SCHEMA})
+
+#: The schema of a plan that carries a clock, which v3 added for a part whose
+#: fuses set it. A plan is written in the oldest schema that carries it, so a
+#: plan with no clock is v2, byte for byte and hash for hash as before, and a
+#: v2 consumer refuses a v3 plan by its label rather than run it at the wrong
+#: clock.
+CLOCKED_PLAN_SCHEMA = "fang.emulation/v3"
+READABLE_PLAN_SCHEMAS = frozenset({"fang.emulation/v1", PLAN_SCHEMA, CLOCKED_PLAN_SCHEMA})
 
 
 @dataclass(frozen=True)
@@ -295,6 +328,11 @@ class EmulationPlan:
     assumptions: tuple[str, ...] = ()
     coverage_gaps: tuple[str, ...] = ()
     expected_warnings: tuple[Mapping[str, str], ...] = ()
+    #: The clock, for a part whose fuses set it: the oscillator, the prescaler
+    #: the fuses set at reset, the fuses and where they came from, and the
+    #: register through which the firmware may change the prescaler. None for
+    #: a platform model that assumes one clock.
+    clock: Mapping[str, Any] | None = None
     #: The schema the plan was written in: the current one for a plan fang
     #: compiles, and whatever a bundle's plan says for one read back, so a
     #: v1 plan keeps the identity and hash it was written with.
@@ -331,7 +369,7 @@ class EmulationPlan:
             "assumptions": list(self.assumptions),
             "coverage_gaps": list(self.coverage_gaps),
             "expected_warnings": [dict(w) for w in self.expected_warnings],
-        }
+        } | ({"clock": dict(self.clock)} if self.clock is not None else {})
 
     @property
     def hash(self) -> str:
@@ -568,6 +606,11 @@ def measure(plan: EmulationPlan, record: RunRecord) -> tuple[Measured, ...]:
         )
         return tuple(Measured(name, None, reason) for name in sorted(plan.measures))
     withdrawn = withdrawals(record, plan)
+    if plan.target in withdrawn:
+        # Everything the run observed rests on the platform model, so a warning
+        # it does not expect withdraws every measure, whichever pin it is over.
+        reason = f"withdrawn: {plan.target} warned: {withdrawn[plan.target]}"
+        return tuple(Measured(name, None, reason) for name in sorted(plan.measures))
     out = []
     for name in sorted(plan.measures):
         spec = plan.measures[name]
@@ -584,9 +627,47 @@ def measure(plan: EmulationPlan, record: RunRecord) -> tuple[Measured, ...]:
     return tuple(out)
 
 
+def _duty(spec: Mapping[str, Any], record: RunRecord) -> Quantity:
+    """The fraction of a window a pin spent at a level, decided only over the
+    part of the window the run observed.
+
+    A pin's history is its `gpio.edge` events, each the level it was driven
+    to, and its `gpio.release` events, after which it is driven to neither.
+    Before its first event nothing says what it did, and after the run's end
+    nothing could, so those parts of the window are unobserved, and the
+    measure is the interval every level they could have held spans: a scalar
+    where the whole window was observed.
+    """
+    start, end = (int(bound) for bound in spec["within_ns"])
+    level, entity = int(spec["level"]), spec["entity"]
+    run_end = record.end_ns
+    changes = [
+        (event.t_ns, event.payload.get("level") if event.type == "gpio.edge" else None)
+        for event in record.events
+        if event.source == entity and event.type in ("gpio.edge", "gpio.release")
+    ]
+
+    def overlap(a: int, b: int) -> int:
+        return max(0, min(b, end) - max(a, start))
+
+    held = sum(
+        overlap(t, until)
+        for (t, state), (until, _) in zip(changes, changes[1:] + [(run_end, None)])
+        if state == level
+    )
+    first = changes[0][0] if changes else run_end
+    unobserved = overlap(start, first) + overlap(max(run_end, start), end)
+    length = Decimal(end - start)
+    if not unobserved:
+        return Quantity.scalar(Decimal(held) / length, "1")
+    return Quantity.range(Decimal(held) / length, Decimal(held + unobserved) / length, "1")
+
+
 def _measure_one(name: str, spec: Mapping[str, Any], plan: EmulationPlan, record: RunRecord) -> Measured:
     kind = spec["kind"]
     events = record.events
+    if kind == "duty":
+        return Measured(name, _duty(spec, record))
     if kind == "first_at":
         match = spec["matches"][0]
         hit = next((e for e in events if _matches(e, match)), None)
@@ -756,6 +837,68 @@ class Firmware(Trait):
     protocol = "firmware"
     path: str = ""
     target: str = ""
+    #: The fuses the part is programmed with, where its platform model says
+    #: they set its clock: `"factory"`, or the bytes by name. A question may
+    #: state its own, which win.
+    fuses: Any = None
+
+    def __post_init__(self) -> None:
+        from .lang import _caller_location
+
+        self.fuses = declared_fuses(self.fuses, location=_caller_location(3))
+
+    def as_dict(self) -> dict:
+        out = super().as_dict()
+        if self.fuses is None:
+            # Unstated is absent, not a value; a binding written before fuses
+            # existed serializes as it always has.
+            out.pop("fuses")
+        return out
+
+
+#: The fuse bytes of an AVR part, as a binding or a question names them.
+FUSE_BYTES = ("low", "high", "extended")
+
+#: Fuses stated as the values the part ships with, which its descriptor holds.
+FACTORY = "factory"
+
+
+def declared_fuses(fuses, *, location=None):
+    """Fuses as a binding or a question states them, as canonical data:
+    `"factory"`, or each byte named as `0xNN`; None where none are stated.
+
+    Refused where they are declared if they are neither, name a byte no AVR
+    part has, or give a value that is no byte. Which values a part's model
+    covers is the plan's to decide, against its descriptor.
+    """
+    from .diagnostics import SIM_EMULATION_CLOCK, error
+
+    if fuses is None or fuses == FACTORY:
+        return fuses
+    if not isinstance(fuses, Mapping) or not fuses:
+        raise error(
+            SIM_EMULATION_CLOCK,
+            f"fuses are {FACTORY!r}, or the bytes {', '.join(FUSE_BYTES)} by name, not {fuses!r}",
+            location=location,
+        )
+    stated = {}
+    for name, value in fuses.items():
+        if name not in FUSE_BYTES:
+            raise error(
+                SIM_EMULATION_CLOCK,
+                f"{name!r} is no fuse byte; an AVR part's are {', '.join(FUSE_BYTES)}",
+                location=location,
+            )
+        if isinstance(value, str) and re.fullmatch(r"0x[0-9A-Fa-f]{2}", value):
+            value = int(value, 16)       # the canonical form, read back
+        if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 0xFF:
+            raise error(
+                SIM_EMULATION_CLOCK,
+                f"the {name} fuse is {value!r}; a fuse byte is a whole number from 0x00 to 0xFF",
+                location=location,
+            )
+        stated[name] = f"0x{value:02X}"
+    return {name: stated[name] for name in FUSE_BYTES if name in stated}
 
 
 # --------------------------------------------------------------------------
@@ -837,7 +980,7 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
     platforms = []
     for entity_id in sorted(traits.entities_with("emulation_model")):
         model = model_of(entity_id)
-        if model.kind == "renode_platform":
+        if model.is_platform:
             platforms.append(entity_id)
     bound = set(traits.entities_with("firmware"))
     candidates = [p for p in platforms if p in bound] or platforms
@@ -851,6 +994,17 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
         )
     target = candidates[0]
     platform = model_of(target)
+    # The question was routed by the emulator it recorded at elaboration; the
+    # target resolved here must be one that emulator runs. A question recorded
+    # before emulators were is Renode's, as every such question was.
+    recorded = data.get("engine", "renode")
+    if recorded != platform.engine:
+        raise _refuse(
+            f"the question was recorded for {recorded}, and the platform model of "
+            f"{_path(entities, target)}, {platform.id}, runs on {platform.engine}; a "
+            "question runs only on the emulator its target's platform model names",
+            "target",
+        )
     binding = traits.get(target, "firmware")
     firmware_path = scenario.get("firmware") or (binding.path if binding else None)
     if not firmware_path:
@@ -862,6 +1016,19 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
             f"describes {platform.document['target']!r}",
             "firmware",
         )
+    # A part whose fuses set its clock runs at the clock its stated fuses give;
+    # any other platform model assumes one.
+    clock = None
+    if "clock" in platform.document:
+        clock = _resolve_clock(
+            platform,
+            scenario.get("fuses"),
+            binding.fuses if binding else None,
+            _path(entities, target),
+        )
+        core_clock_hz = clock["oscillator_hz"] // clock["prescaler"]
+    else:
+        core_clock_hz = int(platform.document["core_clock_hz"])
 
     # -- the graph, indexed -------------------------------------------------
     pins = {e.id: e for e in entities.values() if isinstance(e, Pin)}
@@ -955,6 +1122,9 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
             uart_surfaces[record["surface"]] = resolved(record["surface"])["port"]
         elif kind == "emulation.pin_config":
             pin_config_surfaces[record["surface"]] = resolved(record["surface"])["port"]
+        elif kind == "emulation.duty":
+            # A level is held on a pin, so the surface is observed as one.
+            signal_surfaces[record["surface"]] = resolved(record["surface"])["port"]
         else:
             raise _refuse(f"{entry['name']} is measured by {kind!r}, which no emulation measure is", "measure")
     for stimulus in scenario.get("stimuli", ()):
@@ -1185,7 +1355,9 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
         )
 
     stimuli = []
-    assumptions = [f"the core runs at {platform.document['core_clock_hz']} Hz, as the platform model assumes"]
+    assumptions = _clock_assumptions(clock) if clock is not None else [
+        f"the core runs at {core_clock_hz} Hz, as the platform model assumes"
+    ]
     for stimulus in scenario.get("stimuli", ()):
         component = resolved(stimulus["surface"])["component"]
         model = device_descriptors.get(component)
@@ -1246,6 +1418,20 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
         elif kind == "uart_value":
             out = {"kind": kind, "entity": resolved(record["surface"])["port"],
                    "prefix": record["prefix"], "unit": record["unit"]}
+        elif kind == "duty":
+            window = record.get("within_ns") or ()
+            start, end = (int(bound) for bound in window) if len(window) == 2 else (0, 0)
+            if not start < end:
+                raise _refuse(
+                    f"{name} is a fraction of [{start} ns, {end} ns), an empty window: "
+                    "it would read the same whatever the firmware did",
+                    "measure",
+                )
+            level = record.get("level")
+            if isinstance(level, bool) or level not in (0, 1):
+                raise _refuse(f"{name} names the level {level!r}; a pin's level is 0 or 1", "measure")
+            out = {"kind": kind, "entity": resolved(record["surface"])["port"], "level": level,
+                   "within_ns": [start, end]}
         else:
             out = {"kind": kind, "entity": resolved(record["surface"])["port"]}
         measures[name] = out
@@ -1266,12 +1452,15 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
         snapshot=snapshot.hash,
         machine="board",
         platform=platform.id,
-        platform_file=platform.document["platform_file"],
-        recorder_port=platform.document["recorder_port"],
+        # A platform whose emulator records everything itself, from a program
+        # built against its library, has neither a platform file nor a port
+        # to hang a recorder on.
+        platform_file=platform.document.get("platform_file", ""),
+        recorder_port=platform.document.get("recorder_port", ""),
         target=target,
         firmware_path=firmware_path,
         firmware_target=firmware_target,
-        core_clock_hz=int(platform.document["core_clock_hz"]),
+        core_clock_hz=core_clock_hz,
         seed=int(scenario.get("seed", 0)),
         run_until_ns=run_until_ns,
         buses=tuple(buses),
@@ -1287,7 +1476,105 @@ def compile_plan(snapshot, question, *, traits) -> EmulationPlan:
         assumptions=tuple(assumptions),
         coverage_gaps=tuple(sorted(gaps)),
         expected_warnings=tuple(expected),
+        clock=clock,
+        schema=CLOCKED_PLAN_SCHEMA if clock is not None else PLAN_SCHEMA,
     )
+
+
+#: Where a plan's fuses came from, as its assumptions say it.
+_FUSE_SOURCES = {
+    "factory": "the factory fuses, the values the part ships with",
+    "binding": "the fuses the firmware binding states",
+    "question": "the fuses the question states",
+}
+
+
+def _resolve_clock(platform: Descriptor, asked, bound, part: str) -> dict:
+    """The clock a part whose fuses set it starts at, from the fuses the
+    question states, else the binding's; refused, naming the fuse and the
+    bits, where none are stated or the platform model does not cover them.
+
+    A byte left out of a stated mapping is the value the part ships with. A
+    bit the model does not model must be the part's shipped value, so nothing
+    the fuses do is silently left out of the run. AVR fuses read 0 when
+    programmed.
+    """
+    spec = platform.document["clock"]
+    factory = {name: int(value, 16) for name, value in spec["fuses"].items()}
+    stated, source = (asked, "question") if asked is not None else (bound, "binding")
+    if stated is None:
+        raise _refuse(
+            f"the clock of {part} is set by its fuses, and neither its firmware binding nor "
+            f"the question states them; state them, or {FACTORY!r} for the values the part "
+            "ships with, rather than have the plan assume them",
+            "clock",
+        )
+    fuses = dict(factory)
+    if stated == FACTORY:
+        source = "factory"
+    else:
+        for name, value in stated.items():
+            if name not in factory:
+                raise _refuse(
+                    f"{part} has no {name} fuse; its model, {platform.id}, has "
+                    f"{', '.join(sorted(factory))}",
+                    "clock",
+                )
+            fuses[name] = int(value, 16)
+    for name, value in sorted(fuses.items()):
+        unmodelled = (value ^ factory[name]) & ~int(spec["modelled"][name], 16) & 0xFF
+        if unmodelled:
+            raise _refuse(
+                f"the {name} fuse of {part} is 0x{value:02X}: bits 0x{unmodelled:02X} differ "
+                f"from the 0x{factory[name]:02X} the part ships with, and {platform.id} does not "
+                "model them, so the run would leave out what they do",
+                "clock",
+            )
+    select = spec["clock_select"]
+    byte = fuses[select["fuse"]]
+    cksel = byte & int(select["mask"], 16)
+    oscillator = select["oscillators"].get(f"0x{cksel:X}")
+    if oscillator is None:
+        modelled = ", ".join(sorted(select["oscillators"]))
+        raise _refuse(
+            f"the {select['fuse']} fuse of {part} is 0x{byte:02X}, whose clock-select bits "
+            f"(CKSEL) are 0x{cksel:X}: a clock source {platform.id} does not model; it models "
+            f"CKSEL {modelled}",
+            "clock",
+        )
+    divide = spec["divide_by_8"]
+    prescaler = 1 if fuses[divide["fuse"]] >> divide["bit"] & 1 else 8
+    start = spec["start_up"]
+    mask = int(start["mask"], 16)
+    sut = (fuses[start["fuse"]] & mask) >> ((mask & -mask).bit_length() - 1)
+    delay = start["delays"].get(f"0x{sut:X}")
+    if delay is None:
+        raise _refuse(
+            f"the {start['fuse']} fuse of {part} is 0x{fuses[start['fuse']]:02X}, whose "
+            f"start-up bits (SUT) are 0x{sut:X}, which the part reserves",
+            "clock",
+        )
+    return {
+        "oscillator_hz": int(oscillator),
+        "prescaler": prescaler,
+        "fuses": {name: f"0x{fuses[name]:02X}" for name in FUSE_BYTES if name in fuses},
+        "source": source,
+        "start_up": delay,
+        "prescaler_register": spec["prescaler_register"],
+    }
+
+
+def _clock_assumptions(clock: Mapping[str, Any]) -> list[str]:
+    fuses = ", ".join(f"{name} {value}" for name, value in clock["fuses"].items())
+    hz = clock["oscillator_hz"] // clock["prescaler"]
+    return [
+        f"the core starts at {hz} Hz: the {clock['oscillator_hz']} Hz oscillator divided "
+        f"by {clock['prescaler']}, from {_FUSE_SOURCES[clock['source']]} ({fuses})",
+        "the oscillator runs at its nominal frequency; its calibration and tolerance are "
+        "not modelled",
+        f"time zero is the first instruction; the part starts {clock['start_up']} after "
+        "reset, which the run does not model",
+    ]
 
 
 def _path(entities, entity_id: str) -> str:
@@ -1311,6 +1598,7 @@ def _model_record(component: str, model: Descriptor) -> dict:
 
 from .diagnostics import (  # noqa: E402 - the question layer sits on the plan above
     SIM_EMULATION_BUS,
+    SIM_EMULATION_CLOCK,
     SIM_EMULATION_DURATION,
     SIM_EMULATION_FAULT,
     SIM_EMULATION_FIRMWARE,
@@ -1347,6 +1635,7 @@ _DIMENSIONLESS = Unit.parse("1").dimension
 
 #: The plan's refusal reasons, as the diagnostic code each is reported under.
 _CODES = {
+    "clock": SIM_EMULATION_CLOCK,
     "model": SIM_EMULATION_MODEL,
     "scope": SIM_EMULATION_SCOPE,
     "fault": SIM_EMULATION_FAULT,
@@ -1415,6 +1704,26 @@ class CountMeasure(Measure):
 
 
 @dataclass(frozen=True)
+class DutyMeasure(Measure):
+    """The fraction of a window of virtual time a pin spent at a level,
+    decided only over the part of the window the run observed."""
+
+    kind = "emulation.duty"
+    level: int = 0
+    within_ns: tuple[int, int] | None = None
+
+    def produces(self, analysis: str | None):
+        return _DIMENSIONLESS
+
+    def fields(self) -> dict:
+        return {"level": self.level, "within_ns": list(self.within_ns)}
+
+    @classmethod
+    def read(cls, payload: Mapping) -> "Measure":
+        return cls(payload["surface"], int(payload["level"]), tuple(payload["within_ns"]))
+
+
+@dataclass(frozen=True)
 class LatencyMeasure(Measure):
     """The time from the first `from_` event to the first `to` event after it."""
 
@@ -1478,38 +1787,41 @@ def FirstAt(match: Match) -> FirstAtMeasure:
     return FirstAtMeasure(match.surface, match)
 
 
-def _window_ns(within: Sequence[Quantity] | None, location=None) -> tuple[int, int] | None:
-    """A count's window as integer nanoseconds: two single times, the start
-    before the end. Anything else is refused where it is declared, because
-    an empty window counts 0 whatever the firmware does, and a window in
-    volts would be read as seconds."""
+def _window_ns(
+    within: Sequence[Quantity] | None, location=None, *, what: str = "Count", empty: str = "count 0"
+) -> tuple[int, int] | None:
+    """A window as integer nanoseconds: two single times, the start before
+    the end. Anything else is refused where it is declared, because an empty
+    window reads the same whatever the firmware does, and a window in volts
+    would be read as seconds. `what` names the measure and `empty` what an
+    empty window would give it."""
     if within is None:
         return None
     bounds = tuple(within)
     if len(bounds) != 2:
         raise error(
             SIM_UNRESOLVED_SURFACE,
-            f"a Count window is a start and an end, not {len(bounds)} values",
+            f"a {what} window is a start and an end, not {len(bounds)} values",
             location=location,
         )
     for bound in bounds:
         if not isinstance(bound, Quantity) or bound.dimension != _TIME:
             raise error(
                 UNIT_DIMENSION_MISMATCH,
-                f"a Count window is bounded by times, and {bound} is not one",
+                f"a {what} window is bounded by times, and {bound} is not one",
                 location=location,
             )
         low, high = bound.interval()
         if low != high:
             raise error(
-                SIM_UNRESOLVED_SURFACE, f"a Count window's bound is one time, not {bound}", location=location
+                SIM_UNRESOLVED_SURFACE, f"a {what} window's bound is one time, not {bound}", location=location
             )
     start, end = (int((Decimal(b.interval()[0]) * _NS).to_integral_value()) for b in bounds)
     if not start < end:
         raise error(
             SIM_UNRESOLVED_SURFACE,
-            f"the Count window ({bounds[0]}, {bounds[1]}) is empty: its start is not "
-            "before its end, so it would count 0 whatever the firmware did",
+            f"the {what} window ({bounds[0]}, {bounds[1]}) is empty: its start is not "
+            f"before its end, so it would {empty} whatever the firmware did",
             location=location,
         )
     return (start, end)
@@ -1531,6 +1843,20 @@ def UartValue(uart: str, *, prefix: str, unit: Any) -> UartValueMeasure:
 
 def PinConfig(port: str) -> PinConfigMeasure:
     return PinConfigMeasure(port)
+
+
+def Duty(surface: str, *, level: int, within: Sequence[Quantity]) -> DutyMeasure:
+    """The fraction of `within` the pin at `surface` spent at `level`, 0 or 1."""
+    location = _caller_location(2)
+    if isinstance(level, bool) or level not in (0, 1):
+        raise error(
+            SIM_UNRESOLVED_SURFACE, f"a pin's level is 0 or 1, not {level!r}", location=location
+        )
+    if within is None:
+        raise error(
+            SIM_UNRESOLVED_SURFACE, "a Duty is taken over a window, within=(start, end)", location=location
+        )
+    return DutyMeasure(surface, level, _window_ns(within, location, what="Duty", empty="read the same"))
 
 
 @dataclass(frozen=True)
@@ -1571,8 +1897,11 @@ class Emulates(QuestionDeclaration):
     Declared beside the requirement it serves, like `Simulates`: the run's
     virtual duration, its stimuli, its faults by mechanism, the parts it
     abstracts, and its measures over what the emulator's probes observe, each
-    named by part surface. It elaborates to a verification with method
-    `emulation`, routed at the behavioural level, and cannot state its result.
+    named by part surface; and, for a part whose fuses set its clock, the
+    fuses it is programmed with, where they differ from its binding's. It
+    elaborates to a verification with method `emulation`, records the
+    emulator its target's platform model names, is routed at the behavioural
+    level to that emulator, and cannot state its result.
     """
 
     fixed_method = "emulation"
@@ -1586,12 +1915,16 @@ class Emulates(QuestionDeclaration):
         stimuli: Sequence[At] = (),
         faults: Sequence[Fault] = (),
         firmware: str | None = None,
+        fuses: Any = None,
         seed: int = 0,
         abstracted: Sequence[str] = (),
         tool: str | None = None,
         result: object = _NO_RESULT,
     ) -> None:
         super().__init__(verifies, measures=measures, abstracted=abstracted, tool=tool, result=result)
+        # Validated here, where they are written; whether the part's model
+        # covers them is the plan's question.
+        fuses = declared_fuses(fuses, location=self._source)
         if run_until is not None and run_until.dimension != _TIME:
             raise error(
                 UNIT_DIMENSION_MISMATCH,
@@ -1619,6 +1952,7 @@ class Emulates(QuestionDeclaration):
         self.stimuli = tuple(stimuli)
         self.faults = tuple(faults)
         self.firmware = firmware
+        self.fuses = fuses
         self.seed = int(seed)
 
     def named_surfaces(self) -> tuple[str, ...]:
@@ -1674,11 +2008,44 @@ class Emulates(QuestionDeclaration):
             scenario["run_until"] = self.run_until.as_dict()
         if self.firmware is not None:
             scenario["firmware"] = self.firmware
-        return {"scenario": scenario}
+        if self.fuses is not None:
+            scenario["fuses"] = self.fuses
+        fields: dict = {"scenario": scenario}
+        engine = _platform_engine(module)
+        if engine is not None:
+            fields["engine"] = engine
+        return fields
+
+
+def _platform_engine(module) -> str | None:
+    """The emulator a module's firmware target runs on, recorded on its
+    questions so that routing, which sees only the question, sends each to
+    that emulator. The target is found as the plan finds it: the part whose
+    platform model has a firmware binding beside it, else the one part with a
+    platform model. None where no shipped platform model is found, or two name
+    different emulators; the plan then refuses the question, naming why."""
+    platforms: list[tuple[Any, Descriptor]] = []
+    bound: set[int] = set()
+
+    def visit(node) -> None:
+        for child in node.children().values():
+            for trait in child.traits:
+                if isinstance(trait, EmulationModel):
+                    model = descriptors().get(trait.source)
+                    if model is not None and model.is_platform:
+                        platforms.append((child, model))
+                elif isinstance(trait, Firmware):
+                    bound.add(id(child))
+            visit(child)
+
+    visit(module)
+    candidates = [model for part, model in platforms if id(part) in bound] or [m for _, m in platforms]
+    engines = {model.engine for model in candidates}
+    return engines.pop() if len(engines) == 1 else None
 
 
 # --------------------------------------------------------------------------
-# The renode tool
+# The emulation tools
 # --------------------------------------------------------------------------
 
 #: A model's qualification, as the confidence a run resting on it can claim:
@@ -1695,13 +2062,20 @@ def plan_from_dict(payload: Mapping[str, Any]) -> EmulationPlan:
 
     v2 is v1 without the snapshot, which stopped being part of the plan so an
     unrelated design change would leave the job current; a v1 plan still reads.
-    A plan of any other schema is refused by its label, not misread.
+    v3 is v2 with a clock, and only a plan with a clock is v3. A plan of any
+    other schema is refused by its label, not misread.
     """
     schema = payload.get("schema")
     if schema not in READABLE_PLAN_SCHEMAS:
         raise ValueError(
             f"a plan of schema {schema!r} is not one fang reads "
             f"({', '.join(sorted(READABLE_PLAN_SCHEMAS))})"
+        )
+    clock = payload.get("clock")
+    if (clock is not None) != (schema == CLOCKED_PLAN_SCHEMA):
+        raise ValueError(
+            f"a plan of schema {schema} {'carries' if clock is not None else 'lacks'} a clock; "
+            f"only a {CLOCKED_PLAN_SCHEMA} plan carries one, and it always does"
         )
 
     def pin(p):
@@ -1754,6 +2128,7 @@ def plan_from_dict(payload: Mapping[str, Any]) -> EmulationPlan:
         assumptions=tuple(payload["assumptions"]),
         coverage_gaps=tuple(payload["coverage_gaps"]),
         expected_warnings=tuple(dict(w) for w in payload["expected_warnings"]),
+        clock=dict(clock) if clock is not None else None,
     )
 
 
@@ -1779,44 +2154,59 @@ def _firmware_location(snapshot, question, path: str, target: str | None):
 
 
 @dataclass
-class RenodeTool:
-    """Renode answering emulation questions, at the behavioural level."""
+class EmulationTool:
+    """An emulator answering emulation questions, at the behavioural level.
 
-    name: str = "renode"
+    What every emulator shares. A question is covered only by the emulator it
+    recorded at elaboration, so one never stands in for another. Preparing
+    compiles the plan and lowers it into the engine's own bundle; running
+    crosses the engine's process boundary and keeps the bundle and what the
+    run left in the workspace; reading measures the event record, whose schema
+    every engine writes alike. An engine supplies its package -- a lowering
+    with `bundle` and `LoweringError`, the names of the files a run leaves,
+    and a `Backend` that raises `Unavailable` -- and nothing else.
+    """
+
+    name: str = ""
     level: Level = Level.BEHAVIOURAL
     backend: Any = None
     timeout: float = 300
 
+    #: The package holding the engine's lowering and backend.
+    package: ClassVar[str] = ""
+
     def __post_init__(self) -> None:
         if self.backend is None:
-            from .renode import RenodeBackend
+            self.backend = self._engine().Backend()
 
-            self.backend = RenodeBackend()
+    def _engine(self):
+        import importlib
+
+        return importlib.import_module(self.package)
 
     def covers(self, question) -> bool:
-        return question.method == "emulation"
+        # A question recorded before emulators were is Renode's: every one was.
+        return question.method == "emulation" and question.data.get("engine", "renode") == self.name
 
     def available(self) -> bool:
-        """Whether Renode is installed. A version the lowering was not checked
-        against is installed, and `version` refuses it naming the version, so
-        a question is reported unsupported for the reason it is."""
+        """Whether the emulator is installed. A version the lowering was not
+        checked against is installed, and `version` refuses it naming the
+        version, so a question is reported unsupported for the reason it is."""
         return self.backend.available()
 
     def version(self) -> str:
-        from .renode import RenodeUnavailable
-
         try:
             version, build = self.backend.check()
-        except RenodeUnavailable as exc:
+        except self._engine().Unavailable as exc:
             raise ToolUnavailable(str(exc)) from None
         return f"{version} (build {build})" if build else version
 
     def prepare(self, snapshot, question, *, traits=None) -> Job:
         import hashlib
 
-        from .renode import LoweringError, bundle
         from .traits import TraitRegistry
 
+        engine = self._engine()
         try:
             plan = compile_plan(snapshot, question, traits=traits or TraitRegistry())
         except EmulationError as exc:
@@ -1830,8 +2220,8 @@ class RenodeTool:
         firmware = location.read_bytes()
         digest = "sha256:" + hashlib.sha256(firmware).hexdigest()
         try:
-            files = bundle(plan, firmware)
-        except LoweringError as exc:
+            files = engine.bundle(plan, firmware)
+        except engine.LoweringError as exc:
             raise NotRunnable(f"{question.label}: {exc}", code=SIM_UNRESOLVED_SURFACE) from None
         reports = sorted(name for name, m in plan.measures.items() if m["kind"] == "uart_value")
         extra = {
@@ -1870,24 +2260,22 @@ class RenodeTool:
     def run(self, job: Job, *, workspace) -> RawRun:
         """Run the bundle, and keep it and what the run left in `workspace`.
 
-        Renode runs from the temporary copy the backend makes, since its
-        monitor cannot include a script from a path with a space in it and a
-        run should reach nothing but its own copy. The bundle, the event
-        record, Renode's log and the outcome are then written into
-        `workspace`: under `fang verify --commit` that is beside the run's
-        evidence, and otherwise a scratch directory. A run that could not be
-        made writes nothing.
+        The emulator runs from the temporary copy its backend makes, so a run
+        reaches nothing but its own copy. The bundle, the event record, the
+        emulator's log and the outcome are then written into `workspace`:
+        under `fang verify --commit` that is beside the run's evidence, and
+        otherwise a scratch directory. A run that could not be made writes
+        nothing.
         """
         from pathlib import Path
 
-        from .renode import RenodeUnavailable
-        from .renode.lowering import EVENTS, LOG, OUTCOME
         from .serialization import canonical_bytes
 
+        engine = self._engine()
         files = {name: (c.encode("utf-8") if isinstance(c, str) else c) for name, c in job.files.items()}
         try:
             run = self.backend.run(files, timeout=self.timeout)
-        except RenodeUnavailable as exc:
+        except engine.Unavailable as exc:
             raise ToolUnavailable(str(exc)) from None
         kept = Path(workspace)
         kept.mkdir(parents=True, exist_ok=True)
@@ -1895,16 +2283,20 @@ class RenodeTool:
             target = kept / name
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(content)
-        (kept / EVENTS).write_bytes(run.events)
-        (kept / LOG).write_text(run.log, encoding="utf-8")
+        (kept / engine.lowering.EVENTS).write_bytes(run.events)
+        (kept / engine.lowering.LOG).write_text(run.log, encoding="utf-8")
         ended = {
             "outcome": run.outcome,
-            "renode": {"version": run.version, "build": run.build},
+            self.name: {"version": run.version, "build": run.build},
             "arguments": list(run.arguments),
         }
         if run.exit_status is not None:
             ended["exit_status"] = run.exit_status
-        (kept / OUTCOME).write_bytes(canonical_bytes(ended))
+        # An engine whose native input is built on the host says what built it.
+        compiler = getattr(run, "compiler", None)
+        if compiler:
+            ended["compiler"] = compiler
+        (kept / engine.lowering.OUTCOME).write_bytes(canonical_bytes(ended))
         version = f"{run.version} (build {run.build})" if run.build else run.version
         succeeded = run.outcome == "completed"
         return RawRun(
@@ -1945,10 +2337,41 @@ class RenodeTool:
         return tuple(out)
 
 
-#: Renode, registered after the tools already there, at the behavioural level.
+@dataclass
+class RenodeTool(EmulationTool):
+    """Renode answering emulation questions on the platforms it models."""
+
+    name: str = "renode"
+    package: ClassVar[str] = "fang.renode"
+
+
+@dataclass
+class SimavrTool(EmulationTool):
+    """simavr answering emulation questions on the AVR cores it models."""
+
+    name: str = "simavr"
+    package: ClassVar[str] = "fang.simavr"
+
+
+def tool_for(question, tools=None):
+    """The registered emulation tool that covers a question: the emulator its
+    target's platform model names, installed or not. None where none does."""
+    from .verification import TOOLS
+
+    for tool in TOOLS if tools is None else tools:
+        if isinstance(tool, EmulationTool) and tool.covers(question):
+            return tool
+    return None
+
+
+#: Renode, registered after the tools already there, at the behavioural level,
+#: and simavr after it. Each covers only the questions whose target's platform
+#: model names it, so their order decides nothing between them.
 RENODE = RenodeTool()
+SIMAVR = SimavrTool()
 register_method("emulation", Level.BEHAVIOURAL)
 register_tool(RENODE)
+register_tool(SIMAVR)
 
 
 def stale(snapshot) -> tuple[tuple[str, str, str, str], ...]:

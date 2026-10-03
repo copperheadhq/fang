@@ -1,0 +1,14 @@
+{"seq":0,"t_ns":0,"source":"","type":"run.start","payload":{}}
+{"seq":1,"t_ns":7125,"source":"PORT-ca5520ec912c","type":"gpio.edge","payload":{"level":0}}
+{"seq":2,"t_ns":7875,"source":"PORT-ca5520ec912c","type":"gpio.edge","payload":{"level":1}}
+{"seq":3,"t_ns":1010500,"source":"PORT-ca5520ec912c","type":"gpio.edge","payload":{"level":0}}
+{"seq":4,"t_ns":1011125,"source":"CMP-91431a8f1d4e","type":"model.warning","payload":{"text":"OSCCAL written 0x01: the model does not model it"}}
+{"seq":5,"t_ns":2013375,"source":"PORT-ca5520ec912c","type":"gpio.edge","payload":{"level":1}}
+{"seq":6,"t_ns":3016000,"source":"PORT-ca5520ec912c","type":"gpio.edge","payload":{"level":0}}
+{"seq":7,"t_ns":4018625,"source":"PORT-ca5520ec912c","type":"gpio.edge","payload":{"level":1}}
+{"seq":8,"t_ns":5021250,"source":"PORT-ca5520ec912c","type":"gpio.edge","payload":{"level":0}}
+{"seq":9,"t_ns":6023875,"source":"PORT-ca5520ec912c","type":"gpio.edge","payload":{"level":1}}
+{"seq":10,"t_ns":7026500,"source":"PORT-ca5520ec912c","type":"gpio.edge","payload":{"level":0}}
+{"seq":11,"t_ns":8029125,"source":"PORT-ca5520ec912c","type":"gpio.edge","payload":{"level":1}}
+{"seq":12,"t_ns":9031750,"source":"PORT-ca5520ec912c","type":"gpio.edge","payload":{"level":0}}
+{"seq":13,"t_ns":10000000,"source":"","type":"run.end","payload":{"reason":"completed"}}

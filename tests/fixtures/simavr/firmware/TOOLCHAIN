@@ -1,0 +1,17 @@
+The ELFs in elf/ were built with `make` from this folder by Ubuntu's AVR
+toolchain, the one examples/quiet_orbit/firmware/TOOLCHAIN names:
+
+  avr-gcc (GCC) 14.3.0          gcc-avr 1:14.2.0-2build1
+  avr-libc 2.2.1                avr-libc 1:2.2.1-1build1
+  binutils 2.43.50              binutils-avr 2.43.50.20250108-1build1
+
+The build embeds no path or date, so the same toolchain rebuilds them byte for
+byte from any directory:
+
+  46144a9b143e07fb46515dd230a17437db3d54210048f63ecdc959d64c5f3ac5  elf/blink.elf
+  1e76b2ae304c5ae9e21b5e8f525d71cc35f3888f32b451c196f0563f4d304d77  elf/halt.elf
+  cd6bc61b23fa00ed827117321c235d0d0e34fdb3cec77498bd0aa611ab3d2178  elf/late.elf
+  0566230a7203147bc8332a0ab54ed08768eaadfc5d07b323052fab3382808217  elf/osccal.elf
+  bd2f5fb3a0235d45d3b8d4b32f37674a35aec2ea87efd928f93da8c41ca6d341  elf/pins.elf
+  6a3e280e29114743d8ae35c35c5a09082c77ad6abe02f1280233ffeed8eeaa69  elf/prescaler.elf
+  4ea138c12784d20d2ff4903a1163db88e0fa4ee2da085f1d7c0f65fab71bab9a  elf/prtim1.elf

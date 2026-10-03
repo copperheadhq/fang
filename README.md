@@ -55,7 +55,7 @@ fang export  board.py -o board.net   # a KiCad netlist
 fang view    board.py ground -o ground.svg
 fang sim     board.py --analysis transient --probe "V(1)"
 fang verify  board.py     # answer every declared question; --commit persists
-fang emulate board.py     # run the board's firmware in Renode
+fang emulate board.py     # run the board's firmware in its emulator
 fang mcp     board.py     # serve the agent surface over stdio
 ```
 
@@ -72,7 +72,7 @@ fang mcp     board.py     # serve the agent surface over stdio
 | Tool plan | Handles as symbolic conditions, the tool contract, the operation phase, realizations |
 | Views | Six required views, the layout boundary, SVG rendering, placement seeds |
 | Simulation | Models as traits, explicit plans, SPICE lowering, the ngspice backend, normalized results |
-| Emulation | Compiled firmware run against the board in Renode: plans resolved from the graph, probes, measures over events, answers through the gate |
+| Emulation | Compiled firmware run against the board in Renode, or simavr for AVR cores: plans resolved from the graph, clocks from stated fuses, probes, measures over events, answers through the gate |
 | Rationale | Requirements, assumptions, decisions, evidence, calculations, the verification graph, impact propagation |
 | Verification | Questions declared beside requirements, explicit benches and measures, routing to the cheapest level, measurements re-entering through the gate; ngspice, Xyce, KiCad ERC and Touchstone |
 | CLI | The `.copperhead/` workspace, the manifest and the commands above |
@@ -131,6 +131,7 @@ fang/
   rf.py             Touchstone models and return loss in closed form
   emulation.py      firmware questions, the plan resolved from the graph, measures over events
   renode/           the Renode lowering, backend, probes and model descriptors
+  simavr/           the simavr lowering, backend, runner source and model descriptors
   rationale.py      requirements, decisions, evidence, calculations, coverage
   workspace.py      the .copperhead/ workspace and its manifest
   cli.py            the fang command line
@@ -157,11 +158,14 @@ python -m pytest
 
 Pure Python 3.11+, and the core install has no dependencies at all. Everything
 else is optional and none of it is required: NetworkX, an extra used for graph
-*analysis*; the MCP SDK, the extra behind `fang mcp`; and five external tools
+*analysis*; the MCP SDK, the extra behind `fang mcp`; and six external tools
 reached across a process boundary: ngspice and Xyce, which simulate,
 `kicad-cli`, which renders schematics and checks their electrical rules,
-copperhead, which drafts a placed and wired schematic, and Renode, which runs a
-board's firmware. When any of them is absent the toolchain
+copperhead, which drafts a placed and wired schematic, and Renode and simavr,
+which run a board's firmware, simavr for the AVR cores Renode does not model.
+simavr's library is GPL-3.0, so fang ships the source of a small runner and
+builds it on the host against the installed simavr, which needs a C compiler;
+fang never links simavr. When any of them is absent the toolchain
 says so rather than substituting anything.
 
 ## Invariants the tests hold
@@ -183,15 +187,16 @@ says so rather than substituting anything.
 ## Tests
 
 ```bash
-python -m pytest          # 1639 tests; those needing a binary skip by name
+python -m pytest          # 1728 tests; those needing a binary skip by name
 python -m pytest -rs      # names each environment-dependent skip
 ```
 
 The suite includes one test per acceptance criterion (AT-R1 to AT-R13, AT-K1
-to AT-K10, AT-V1, AT-F1 and AT-F2). **All 26 pass**; AT-V1 runs a circuit
-simulation and needs ngspice, and AT-F1 and AT-F2 run firmware and need Renode
-1.17.0. The only skips name what is missing: the NetworkX and MCP extras, and
-the ngspice, Xyce, kicad-cli, copperhead and Renode binaries. The examples that ship a
+to AT-K10, AT-V1, AT-F1 to AT-F3). **All 27 pass**; AT-V1 runs a circuit
+simulation and needs ngspice, AT-F1 and AT-F2 run firmware and need Renode
+1.17.0, and AT-F3 runs AVR firmware and needs simavr 1.8 and a C compiler. The
+only skips name what is missing: the NetworkX and MCP extras, and the ngspice,
+Xyce, kicad-cli, copperhead, Renode and simavr binaries. The examples that ship a
 KiCad schematic need `kicad-cli` to rebuild, and the ones with questions
 compare their `verification.txt` only where the tools those questions route to
 are installed.
@@ -224,6 +229,11 @@ in [tests/test_examples.py](https://github.com/copperheadhq/fang/blob/main/tests
   ST's table on the lowered pins, the sensor's address read by the check, and
   its firmware run in Renode against the board, two requirements decided by the
   run through the commit gate
+- [examples/quiet_orbit/](https://github.com/copperheadhq/fang/tree/main/examples/quiet_orbit/): copperhead's
+  QO-R1 lamp, an ATtiny84A sinking four LEDs from its PWM outputs, and its own
+  firmware run in simavr: with the clock fuse set as its README directs the
+  lamp fades as designed, and on a part as it ships, which no step of its
+  build changes, its PWM runs at an eighth of the rate
 - [examples/usb_uart_bridge/](https://github.com/copperheadhq/fang/tree/main/examples/usb_uart_bridge/): USB to serial, with
   chosen vendor parts, a crystal and a UART crossover named wire by wire
 - [examples/buck_regulator/](https://github.com/copperheadhq/fang/tree/main/examples/buck_regulator/): 12 V to 3.3 V, with the

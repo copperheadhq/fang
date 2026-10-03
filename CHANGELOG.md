@@ -162,6 +162,30 @@ tracked separately and moves only when the serialized form changes.
   three deliberately broken builds, committed with the toolchain that builds
   them byte for byte. The board's two requirements are decided by running it.
 - Acceptance tests AT-F1 and AT-F2, run where Renode 1.17.0 is installed.
+- A second emulator, simavr, for the AVR cores Renode does not model
+  (`fang-avr-emulation`, copperhead RFC 12 version 1.5), starting with the
+  ATtiny84A (`fang:attiny84a`). A platform descriptor names its engine, a
+  question records it when it is elaborated, and each tool covers only its own
+  engine's questions, so one never stands in for another. simavr is reached
+  through a runner fang ships as C source and builds on the host against the
+  installed simavr for each run, never linking it; versions other than 1.8 are
+  refused, 1.6 by the fault it has (it wires the ATtiny x4 compare outputs to
+  the wrong pins).
+- Fuses are part of the firmware binding: `Firmware(..., fuses=)` and
+  `Emulates(..., fuses=)` state them, as `"factory"` or by byte, and a part
+  whose clock they set refuses a plan that states none, or a value its model
+  does not cover (`SIM-0017`). The runner models the system clock prescaler the
+  firmware may change, and watches registers its engine does not model, whose
+  writes withdraw every measure of the run, as any unexpected warning from a
+  platform model now does.
+- `Duty(surface, level=, within=)`: the fraction of a window a pin spent at a
+  level, an interval where part of the window was not observed. A pin made an
+  input again is recorded as released, at neither level.
+- `examples/quiet_orbit/`: copperhead's QO-R1 lamp and its own firmware
+  (GPL-3.0-only, vendored with its licence), run in simavr. With the clock fuse
+  set as its README directs the lamp fades as designed; on a part as it ships,
+  its PWM runs at an eighth of the rate, and the question fails.
+- Acceptance test AT-F3, run where simavr 1.8 and a C compiler are installed.
 
 ### Changed
 

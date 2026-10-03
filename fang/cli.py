@@ -437,19 +437,21 @@ def cmd_sim(args) -> int:
 
 
 def cmd_emulate(args) -> int:
-    """Run each emulation question's firmware in Renode and print what it measured.
+    """Run each emulation question's firmware in its emulator and print what
+    it measured.
 
     The low-level command, as `fang sim` is for SPICE: each question's plan is
-    compiled and lowered, its bundle written where asked, and the run made if
-    Renode is installed. Nothing goes through the gate and no workspace
+    compiled and lowered, its bundle written where asked, and the run made on
+    the emulator its target's platform model names -- Renode or simavr -- if
+    that emulator is installed. Nothing goes through the gate and no workspace
     changes; `fang verify` is the command that takes the answer back in. A
-    question left unrunnable, or a run that timed out or crashed, exits
-    non-zero; Renode not being installed is reported and is not by itself a
-    failure, as under `fang verify`.
+    question left unrunnable, or a run that timed out, crashed or halted early,
+    exits non-zero; an emulator not being installed is reported and is not by
+    itself a failure, as under `fang verify`.
     """
     from tempfile import TemporaryDirectory
 
-    from .emulation import RENODE
+    from .emulation import tool_for
     from .runtime import Status
     from .verification import NotRunnable, ToolUnavailable, _quantity_text, questions
 
@@ -462,8 +464,13 @@ def cmd_emulate(args) -> int:
     status = EXIT_OK
     for question in asked:
         print(f"{question.label} ({question.id})")
+        tool = tool_for(question)
+        if tool is None:
+            print(f"  not runnable: no emulator fang has covers it (recorded for {question.data.get('engine')})")
+            status = EXIT_FAILED
+            continue
         try:
-            job = RENODE.prepare(result.snapshot, question, traits=result.traits)
+            job = tool.prepare(result.snapshot, question, traits=result.traits)
         except NotRunnable as exc:
             print(f"  not runnable [{exc.code}]: {exc}")
             status = EXIT_FAILED
@@ -479,19 +486,19 @@ def cmd_emulate(args) -> int:
         if args.bundle_only:
             continue
         try:
-            if not RENODE.available():
-                raise ToolUnavailable("renode is not installed")
-            RENODE.version()
+            if not tool.available():
+                raise ToolUnavailable(f"{tool.name} is not installed")
+            tool.version()
             with TemporaryDirectory() as scratch:
-                raw = RENODE.run(job, workspace=Path(scratch))
+                raw = tool.run(job, workspace=Path(scratch))
         except ToolUnavailable as exc:
             print(f"  unsupported: {exc}; nothing ran and no result is fabricated")
             continue
-        print(f"  renode {raw.version}: the run {raw.outputs.get('outcome', 'ended')}")
+        print(f"  {tool.name} {raw.version}: the run {raw.outputs.get('outcome', 'ended')}")
         if raw.status is not Status.SUCCEEDED:
             # Its measures have no value, so nothing it was asked was observed.
             status = EXIT_FAILED
-        for measurement in RENODE.read(job, raw):
+        for measurement in tool.read(job, raw):
             if measurement.quantity is None:
                 print(f"  {measurement.name}: no value ({measurement.reason})")
             else:
@@ -694,7 +701,7 @@ def build_parser() -> argparse.ArgumentParser:
     view_command.set_defaults(handler=cmd_view)
 
     emulate = program_arguments(
-        subparsers.add_parser("emulate", help="run the firmware in Renode and print what it measured")
+        subparsers.add_parser("emulate", help="run the firmware in its emulator and print what it measured")
     )
     emulate.add_argument("-o", "--output", help="write each question's bundle into a folder here")
     emulate.add_argument("--bundle-only", action="store_true", help="write the bundles and run nothing")

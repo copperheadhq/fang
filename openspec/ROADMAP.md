@@ -40,6 +40,13 @@ acceptance tests (AT-V1, AT-F1, AT-F2) folded into the combined spec.
 | ✅ `fang-mcu-parts` | Ports that name their peripheral instance, cited alternate-function selectors on the lowered pins, and I2C addresses, fixed or strapped, that the compatibility check reads from the board |
 | ✅ `fang-emulation` | A board's compiled firmware run in Renode as a verification question: plans resolved from the graph, the Renode lowering and backend, probes, measures over events, `fang emulate`, and the `sensor_node` demo with its firmware |
 
+In flight, implementing copperhead RFC 12 version 1.5, whose revision is not
+yet adopted:
+
+| Change | Delivers |
+| --- | --- |
+| 🚧 `fang-avr-emulation` | A second emulator, simavr, for AVR cores: platform descriptors that name their engine and questions routed by it, fuses that set the clock, a runner built on the host, `Duty`, and the `quiet_orbit` example with AT-F3 |
+
 ## The vertical slice
 
 Stages 1 to 6 close the loop that makes the toolchain real:

@@ -1,0 +1,140 @@
+{
+  "clock": {
+    "clock_select": {
+      "fuse": "low",
+      "mask": "0x0F",
+      "oscillators": {
+        "0x2": 8000000,
+        "0x4": 128000
+      }
+    },
+    "divide_by_8": {
+      "bit": 7,
+      "fuse": "low"
+    },
+    "fuses": {
+      "extended": "0xFF",
+      "high": "0xDF",
+      "low": "0x62"
+    },
+    "modelled": {
+      "extended": "0x00",
+      "high": "0x00",
+      "low": "0xBF"
+    },
+    "prescaler_register": "0x46",
+    "start_up": {
+      "delays": {
+        "0x0": "14 CK",
+        "0x1": "14 CK + 4 ms",
+        "0x2": "14 CK + 64 ms"
+      },
+      "fuse": "low",
+      "mask": "0x30"
+    }
+  },
+  "compare_outputs": {
+    "OC0A": "PB2",
+    "OC0B": "PA7",
+    "OC1A": "PA6",
+    "OC1B": "PA5"
+  },
+  "engine": "simavr",
+  "expected_warnings": [
+    {
+      "gap": "a timer has no mode in simavr until its control register is first written, where the part resets to normal mode with its clock stopped; a compare register written before then is stored, as the part stores it, and simavr warns",
+      "pattern": "^TIMER: avr_timer_write_ocr-[01] mode 0 UNSUPPORTED$"
+    }
+  ],
+  "faults": [],
+  "flash_bytes": 8192,
+  "id": "fang:attiny84a",
+  "inputs": {},
+  "kind": "simavr_platform",
+  "mcu": "attiny84",
+  "not_modelled": [
+    "pulse-width compare registers: a write to OCR0A, OCR0B, OCR1A or OCR1B takes effect at once, where the part buffers it in every PWM mode and updates it at the end of the period",
+    "fast PWM with a compare value equal to TOP: the output is held at its compare-match level for the period, where the part holds it at its BOTTOM level",
+    "a change of the clock prescaler takes effect at the write, where the part switches between T1 + T2 and T1 + 2 T2 after it",
+    "a timer has no mode in simavr until its control register is first written, where the part resets to normal mode with its clock stopped; a compare register written before then is stored, as the part stores it, and simavr warns"
+  ],
+  "parts": [
+    "ATtiny84A"
+  ],
+  "peripherals": {},
+  "pins": {
+    "PA0": {
+      "index": 0,
+      "port": "A"
+    },
+    "PA1": {
+      "index": 1,
+      "port": "A"
+    },
+    "PA2": {
+      "index": 2,
+      "port": "A"
+    },
+    "PA3": {
+      "index": 3,
+      "port": "A"
+    },
+    "PA4": {
+      "index": 4,
+      "port": "A"
+    },
+    "PA5": {
+      "index": 5,
+      "port": "A"
+    },
+    "PA6": {
+      "index": 6,
+      "port": "A"
+    },
+    "PA7": {
+      "index": 7,
+      "port": "A"
+    },
+    "PB0": {
+      "index": 0,
+      "port": "B"
+    },
+    "PB1": {
+      "index": 1,
+      "port": "B"
+    },
+    "PB2": {
+      "index": 2,
+      "port": "B"
+    },
+    "PB3": {
+      "index": 3,
+      "port": "B"
+    }
+  },
+  "provenance": {
+    "datasheet": "Microchip DS40002269A, ATtiny24A/44A/84A Data Sheet Complete (2020)",
+    "engine": "simavr 1.8 (f44723e8c424)",
+    "licence": "the descriptor is fang's; simavr is GPL-3.0-or-later and is not distributed with fang",
+    "source": "simavr cores/sim_tinyx4.h and cores/sim_tn84.c at v1.8"
+  },
+  "qualification": "tested in emulation",
+  "schema": "fang.emulation-model/v1",
+  "target": "attiny84a",
+  "watched": [
+    {
+      "address": "0x51",
+      "every_write": true,
+      "gap": "the oscillator's calibration: a write to OSCCAL moves the RC oscillator's frequency on the part and nothing in the emulation",
+      "mask": "0xFF",
+      "register": "OSCCAL"
+    },
+    {
+      "address": "0x20",
+      "every_write": false,
+      "gap": "power reduction of Timer/Counter0, the USI and the ADC: the part stops their clocks and the emulation does not",
+      "mask": "0x07",
+      "register": "PRR"
+    }
+  ]
+}
