@@ -160,7 +160,7 @@ connections), open drain (the interface), addresses (`resolve_address`), observe
 platform descriptor's own pin table, never a pin's name), and, for a descriptor that declares a
 `clock`, the clock from the fuses the question or the `Firmware` binding states (`"factory"` or
 bytes by name; none stated is refused, as is a bit the descriptor does not model). Otherwise it
-refuses with `SIM-0009`..`SIM-0017`. A plan with a clock is schema `fang.emulation/v3`; one
+refuses with `SIM-0009`..`SIM-0016` or, for the clock, `SIM-0021`. A plan with a clock is schema `fang.emulation/v3`; one
 without stays v2, byte for byte, so Renode plans kept their hashes.
 [fang/renode/](fang/renode/) lowers the plan to Renode's own `.repl` and `.resc` and runs it on a
 temporary copy in its own process group; its package data is the F401 platform description, the
