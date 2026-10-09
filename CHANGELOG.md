@@ -165,6 +165,13 @@ tracked separately and moves only when the serialized form changes.
 
 ### Changed
 
+- A constraint's check result says what it read: the expression as written,
+  each reference named by its path, and the value each one holds, so
+  `system.bottom.resistance >= 1 kOhm, with system.bottom.resistance = 470 Ohm`
+  where it said `declared on BLK-…`. An undecided one names the operand that is
+  `unknown`. The gate's `TXN-0002` carries the failing entity's source
+  location, so `fang build` prints the file and line of the `require()` it
+  refused.
 - `fang-verification`, `fang-mcu-parts` and `fang-emulation` are archived now
   that copperhead RFC 12 1.3 is adopted: the combined spec gains 24
   requirements, the commit gate's two changes, the Project Root's

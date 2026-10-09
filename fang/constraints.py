@@ -148,6 +148,19 @@ class Interval:
 
 #: A resolver answers what an entity attribute currently holds.
 Resolver = Callable[[str, str], Value | None]
+# Names an entity identifier for a person reading a diagnostic.
+Namer = Callable[[str], str]
+
+_SYMBOLS = {
+    "add": "+", "sub": "-", "mul": "*", "div": "/",
+    "lt": "<", "le": "<=", "eq": "==", "ne": "!=", "ge": ">=", "gt": ">",
+}
+
+
+def _quantity_text(quantity: Quantity) -> str:
+    """A quantity as a diagnostic shows it: a count is a bare number."""
+    text = str(quantity)
+    return text.removesuffix(" 1") if quantity.unit.symbol == "1" else text
 
 
 class Node:
@@ -167,6 +180,10 @@ class Node:
         raise NotImplementedError
 
     def as_dict(self) -> dict:
+        raise NotImplementedError
+
+    def render(self, name: Namer) -> str:
+        """The expression as a person would write it, refs named by `name`."""
         raise NotImplementedError
 
     def references(self) -> tuple[str, ...]:
@@ -223,6 +240,15 @@ class Literal(Node):
             return {"node": "literal", "string": self.text}
         return {"node": "literal", "boolean": self.boolean}
 
+    def render(self, name: Namer) -> str:
+        if self.quantity is not None:
+            return _quantity_text(self.quantity)
+        if self.number is not None:
+            return _decimal_str(self.number)
+        if self.text is not None:
+            return repr(self.text)
+        return "true" if self.boolean else "false"
+
 
 @dataclass(frozen=True)
 class Ref(Node):
@@ -253,6 +279,9 @@ class Ref(Node):
 
     def references(self) -> tuple[str, ...]:
         return (self.ref,)
+
+    def render(self, name: Namer) -> str:
+        return f"{name(self.ref)}.{self.attr}"
 
     def as_dict(self) -> dict:
         return {
@@ -372,6 +401,16 @@ class Arithmetic(Node):
             out["exponent"] = str(self.exponent)
         return out
 
+    def render(self, name: Namer) -> str:
+        args = [a.render(name) for a in self.args]
+        if self.op in _SYMBOLS:
+            return "(" + f" {_SYMBOLS[self.op]} ".join(args) + ")"
+        if self.op == "pow":
+            return f"{args[0]}^{self.exponent}"
+        if self.op == "neg":
+            return f"-{args[0]}"
+        return f"{self.op}({', '.join(args)})"
+
 
 @dataclass(frozen=True)
 class Comparison(Node):
@@ -427,6 +466,10 @@ class Comparison(Node):
     def as_dict(self) -> dict:
         return {"node": "comparison", "op": self.op, "args": [a.as_dict() for a in self.args]}
 
+    def render(self, name: Namer) -> str:
+        left, right = (a.render(name) for a in self.args)
+        return f"{left} {_SYMBOLS[self.op]} {right}"
+
 
 @dataclass(frozen=True)
 class Logical(Node):
@@ -455,6 +498,12 @@ class Logical(Node):
 
     def as_dict(self) -> dict:
         return {"node": "logical", "op": self.op, "args": [a.as_dict() for a in self.args]}
+
+    def render(self, name: Namer) -> str:
+        args = [a.render(name) for a in self.args]
+        if self.op == "not":
+            return f"not ({args[0]})"
+        return "(" + f" {self.op} ".join(args) + ")"
 
 
 # -- construction helpers ---------------------------------------------------

@@ -1,5 +1,5 @@
-UNDECIDED constraint: declared on BLK-42978eb8675a
-UNDECIDED constraint: declared on BLK-42978eb8675a
-UNDECIDED constraint: declared on BLK-42978eb8675a
+UNDECIDED constraint: system.ripple <= 30 mV, with system.ripple = unknown
+UNDECIDED constraint: system.output >= 3.2 V, with system.output = unknown
+UNDECIDED constraint: system.output <= 3.4 V, with system.output = unknown
 UNDECIDED interface_compatibility: current capability is undecided on power_input: current_demand unknown
 18 checks, 0 failed, 4 undecided

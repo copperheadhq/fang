@@ -1,12 +1,14 @@
 """Spec: Transactions Are The Only Unit Of Mutation; Proposal Sandbox; The
 Commit Gate; Realizations Do Not Mutate Semantic State."""
 
+from dataclasses import replace
+
 import pytest
 
 from conftest import PROJECT, REGULATOR, WATTS, conductive
 
 from fang.constraints import CheckStatus, Constraint, Enforcement, Literal, Ref, le
-from fang.diagnostics import FangError
+from fang.diagnostics import FangError, SourceLocation
 from fang.entities import Component, ConnectionKind, Requirement, RequirementState
 from fang.graph import (
     AddEntity,
@@ -89,6 +91,29 @@ def test_a_rejected_proposal_leaves_canonical_state_unchanged_and_still_explains
     assert proposal.diagnostics
     assert len(proposal.diff) > 0
     assert any(d.code == "TXN-0002" for d in proposal.diagnostics)
+
+
+def test_a_failed_constraint_says_what_it_read_and_where_it_was_written(kernel, power_constraint):
+    written = SourceLocation("power/buck_3v3.py", 12)
+    transaction = Transaction(
+        kernel.head.hash,
+        (
+            AddEntity(entity=replace(power_constraint, source_location=written)),
+            SetParameter(
+                target=REGULATOR,
+                name="power_dissipation",
+                value=Value.explicit(Quantity.scalar("0.5", "W")),
+            ),
+        ),
+    )
+    (blocked,) = [d for d in kernel.propose(transaction).diagnostics if d.code == "TXN-0002"]
+
+    assert blocked.location == written
+    assert blocked.message == (
+        "constraint on RULE-PWR-1 failed: "
+        "system.power.buck_3v3.U1.power_dissipation <= 0.25 W, "
+        "with system.power.buck_3v3.U1.power_dissipation = 0.5 W"
+    )
 
 
 def test_committing_a_rejected_proposal_is_refused(kernel):

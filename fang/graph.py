@@ -15,7 +15,7 @@ from dataclasses import dataclass, field, replace
 from typing import Callable, Iterable, Mapping, Sequence
 
 from . import SCHEMA_VERSION, __version__
-from .constraints import CheckStatus, Constraint, Node, Ref, Resolver
+from .constraints import CheckStatus, Constraint, Node, Ref, Resolver, _quantity_text
 from .diagnostics import (
     Diagnostic,
     Severity,
@@ -369,10 +369,42 @@ def structural_constraint_check(snapshot: Snapshot) -> list[CheckResult]:
                     "constraint",
                     status,
                     entity.id,
-                    message=f"{entity.constraint_kind} on {', '.join(sorted(entity.targets))}",
+                    message=_explain(entity.expression, snapshot, resolve),
                 )
             )
     return results
+
+
+def _explain(expression: Node, snapshot: Snapshot, resolve: Resolver) -> str:
+    """The expression as written, then the value each of its refs holds, so a
+    failure or an undecided result says what it read without a lookup."""
+
+    def name(entity_id: str) -> str:
+        entity = snapshot.entities.get(entity_id)
+        path = entity.identity.path if entity is not None else None
+        return str(path) if path is not None else entity_id
+
+    readings = []
+    for ref in _refs(expression):
+        value = resolve(ref.ref, ref.attr)
+        if value is None:
+            shown = "no value"
+        elif value.known and value.quantity is not None:
+            shown = _quantity_text(value.quantity)
+        else:
+            shown = "unknown"
+        reading = f"{ref.render(name)} = {shown}"
+        if reading not in readings:
+            readings.append(reading)
+    rendered = expression.render(name)
+    return f"{rendered}, with {', '.join(readings)}" if readings else rendered
+
+
+def _refs(node: Node):
+    if isinstance(node, Ref):
+        yield node
+    for arg in getattr(node, "args", ()):
+        yield from _refs(arg)
 
 
 def _constraint_scope(snapshot: Snapshot) -> set[str]:
@@ -580,12 +612,14 @@ class KernelGraph:
         # Gate condition 4: no required check reports a blocking severity.
         blocking = [r for r in results if r.blocking]
         for result in blocking:
+            subject = candidate.entities.get(result.subject)
             diagnostics.append(
                 Diagnostic(
                     TXN_GATE_BLOCKED,
                     Severity.ERROR,
                     f"{result.check} on {result.subject} failed: {result.message}",
                     (result.subject,),
+                    getattr(subject, "source_location", None),
                 )
             )
 

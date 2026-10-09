@@ -1,9 +1,9 @@
-UNDECIDED constraint: declared on BLK-42978eb8675a
-UNDECIDED constraint: declared on BLK-42978eb8675a
-UNDECIDED constraint: declared on BLK-42978eb8675a
-UNDECIDED constraint: declared on BLK-42978eb8675a
-UNDECIDED constraint: declared on BLK-42978eb8675a
-UNDECIDED constraint: declared on BLK-42978eb8675a
+UNDECIDED constraint: system.first_read <= 200 ms, with system.first_read = unknown
+UNDECIDED constraint: system.reported >= 24.95 degC, with system.reported = unknown
+UNDECIDED constraint: system.reported <= 25.05 degC, with system.reported = unknown
+UNDECIDED constraint: system.slow_blinks == 1, with system.slow_blinks = unknown
+UNDECIDED constraint: system.mux_mismatches == 0, with system.mux_mismatches = unknown
+UNDECIDED constraint: system.fast_blinks >= 4, with system.fast_blinks = unknown
 UNDECIDED interface_compatibility: logic high margin is undecided on i2c: voh_min unknown
 UNDECIDED interface_compatibility: logic high margin is undecided on uart: vih_min unknown
 UNDECIDED interface_compatibility: logic high margin is undecided on uart: voh_min unknown
