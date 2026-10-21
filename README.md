@@ -138,13 +138,17 @@ fang/
 
 ## Install
 
+`copperhead-fang` is not yet published on PyPI; install from a local clone:
+
 ```bash
-pip install copperhead-fang               # the toolchain and the `fang` command
-pip install "copperhead-fang[analysis]"   # add NetworkX for the graph queries
-pip install "copperhead-fang[mcp]"        # add the agent surface, `fang mcp`
+git clone https://github.com/copperheadhq/fang
+cd fang
+pip install -e .               # the toolchain and the `fang` command
+pip install -e ".[analysis]"   # add NetworkX for the graph queries
+pip install -e ".[mcp]"        # add the agent surface, `fang mcp`
 ```
 
-The distribution is named `copperhead-fang`. The import name is `fang`.
+The distribution in `pyproject.toml` is named `copperhead-fang`. The import name is `fang`.
 
 To work on it:
 
