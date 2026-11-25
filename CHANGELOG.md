@@ -216,6 +216,17 @@ tracked separately and moves only when the serialized form changes.
 
 ### Fixed
 
+- Canonical serialization follows copperhead RFC 3 version 1.6 Section 17.1
+  (`fang-canonical-form`), so a content hash is the same in every encoder. An
+  item without an identifier sorts by its whole canonical serialization; before,
+  items sharing a `code`, `name` or `symbol` field kept their input order, and
+  one collection could hash two ways. A bare float is the shortest decimal
+  written positionally (`2`, not `2.0`; `0.0000001`, not `1e-07`), and a
+  non-finite one is refused. `outline`, `layers` and `preserved` are ordered
+  collections, as RFC 11 version 1.4 Section 6.13 has them. Bytes and hashes
+  change only for records holding such collections or floats; the rules match
+  the requirement's existing text, so `SCHEMA_VERSION` does not move. RFC 11's
+  example records are conformance fixtures under `tests/fixtures/rfc11/`.
 - Renode's bundle no longer carries the snapshot hash, so a change elsewhere
   in the design leaves an emulation job current (RFC 12 Section 12.8). The plan
   schema is `fang.emulation/v2` for it; a v1 plan still reads, and a consumer of
