@@ -9,6 +9,7 @@ rather than in every caller's discipline.
 from __future__ import annotations
 
 import hashlib
+import math
 import unicodedata
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -17,9 +18,10 @@ from typing import Any, Iterable, Mapping, Sequence
 from .units import _decimal_str
 
 #: Collections whose order carries engineering meaning and is therefore
-#: preserved rather than sorted. Everything else is sorted ascending by entity
-#: id. The schema states which collections these are, so this table is the
-#: schema's statement of it.
+#: preserved rather than sorted. Everything else is an unordered collection,
+#: sorted as ``_entity_sort_key`` says. The schema states which collections
+#: these are, so this table is the schema's statement of it; the layout
+#: records' ordered keys are those of copperhead RFC 11 Section 6.13.
 ORDERED_COLLECTIONS: frozenset[str] = frozenset(
     {
         "provenance",       # ordered oldest first; append-only
@@ -29,6 +31,9 @@ ORDERED_COLLECTIONS: frozenset[str] = frozenset(
         "branches",         # a topology constraint's ordered branches
         "calls",            # a tool plan's ordered calls
         "args",             # an expression's operand order is semantic
+        "outline",          # a ring's points run in order (RFC 11 6.13)
+        "layers",           # a stackup runs top to bottom (RFC 11 6.13)
+        "preserved",        # an adapter's verbatim records, in file order (RFC 11 6.8)
         "steps",
         "alternatives_rejected",
         "candidates",
@@ -83,15 +88,34 @@ def _sort_key(key: str) -> tuple[int, ...]:
 
 
 def _entity_sort_key(item: Any) -> tuple[int, ...]:
-    """Unordered collections sort ascending by entity id."""
-    if isinstance(item, Mapping):
-        for field in ("id", "code", "name", "symbol"):
-            if field in item and isinstance(item[field], str):
-                return _sort_key(item[field])
-        return _sort_key(canonical_dumps(item))
-    if isinstance(item, str):
-        return _sort_key(item)
-    return _sort_key(canonical_dumps(item))
+    """The sort key of an item in an unordered collection (RFC 3 Section 17.1).
+
+    An entity sorts by its identifier, and every other item, a string
+    included, by its canonical serialization. No other field is a sort key:
+    sorting by a shared ``code`` or ``name`` left equal keys in input order,
+    so one collection could serialize, and hash, two ways. Identifiers are
+    unique within a revision (RFC 3 Section 4.2), so an entity's key never
+    ties."""
+    payload = item.as_dict() if hasattr(item, "as_dict") else item
+    if isinstance(payload, Mapping) and isinstance(payload.get("id"), str):
+        return _sort_key(payload["id"])
+    return _sort_key(canonical_dumps(payload))
+
+
+def _encode_number(value: float) -> str:
+    """A bare number: the shortest decimal that round-trips to the same value,
+    written positionally, with no exponent, no trailing zeros after the point,
+    no point when the value is whole, and zero as 0 (RFC 3 Section 17.1).
+    ``repr`` gives the shortest digits; the notation is fixed so that an
+    encoder in any language writes the same bytes."""
+    if not math.isfinite(value):
+        raise NotCanonicalizable(f"{value!r} has no canonical serialization")
+    if value == 0:
+        return "0"
+    text = format(Decimal(repr(value)), "f")
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return text
 
 
 def _encode(value: Any, *, ordered: bool) -> str:
@@ -108,9 +132,8 @@ def _encode(value: Any, *, ordered: bool) -> str:
     if isinstance(value, int):
         return str(value)
     if isinstance(value, float):
-        # A bare number serializes as the shortest decimal that round-trips.
         # A physical magnitude never arrives here; it is a Decimal string.
-        return repr(value)
+        return _encode_number(value)
     if isinstance(value, datetime):
         return _encode_string(rfc3339(value))
     if isinstance(value, Mapping):
