@@ -52,10 +52,15 @@ the encoder rather than on the record:
 
 ## Impact
 
-- **Bytes and content hashes change** for three kinds of record: those holding
-  an id-less collection whose items share a `code`, `name` or `symbol`, those
-  holding a bare float, those holding an array under `outline`, `layers` or
-  `preserved`, and those holding a conflicting value's candidates.
+- **Bytes and content hashes change** for records holding any of these:
+  - an id-less collection whose items carry a `code`, `name` or `symbol`
+    field. Such items now sort by their whole serialization, so their order
+    can change even when those fields are all different: `[{"code": "B",
+    "a": 0}, {"code": "A", "a": 1}]` sorted by `code` before, and sorts by `a`
+    now.
+  - a bare float
+  - an array under `outline`, `layers` or `preserved`
+  - a conflicting value's candidates
 - **No schema version change.** The requirement already said "the shortest
   decimal" and "sorted ascending by entity identifier", so this is a
   conformance fix, and `SCHEMA_VERSION` does not move.

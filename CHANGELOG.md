@@ -227,7 +227,10 @@ tracked separately and moves only when the serialized form changes.
   and `preserved` are added from RFC 11 version 1.4 Section 6.13, and
   `sequence`, `steps` and `candidates`, which no standard orders, are dropped,
   so a conflicting value's candidates now sort like any unordered collection. Bytes and hashes
-  change only for records holding such collections or floats; the rules match
+  change for records holding an id-less collection whose items carry a `code`,
+  `name` or `symbol` field (they now sort by their whole serialization, so
+  their order can change even when those fields all differ), a bare float, an
+  array under the added ordered keys, or a conflicting value; the rules match
   the requirement's existing text, so `SCHEMA_VERSION` does not move. RFC 11's
   example records are conformance fixtures under `tests/fixtures/rfc11/`.
 - Renode's bundle no longer carries the snapshot hash, so a change elsewhere
