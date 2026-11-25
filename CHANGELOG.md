@@ -9,6 +9,8 @@ tracked separately and moves only when the serialized form changes.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-25
+
 ### Added
 
 - Verification questions (`fang-verification`, copperhead RFC 12 version 1.3,
@@ -287,5 +289,6 @@ acceptance criteria (AT-R1..AT-R13, AT-K1..AT-K10) are demonstrated by tests.
   simulator. When either is absent the toolchain says so rather than
   substituting anything.
 
-[Unreleased]: https://github.com/copperheadhq/fang/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/copperheadhq/fang/releases/tag/v0.1.0
+[Unreleased]: https://github.com/copperheadhq/fang/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/copperheadhq/fang/compare/4bd8423...v0.2.0
+[0.1.0]: https://github.com/copperheadhq/fang/tree/4bd8423
