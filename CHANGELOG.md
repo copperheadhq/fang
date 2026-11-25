@@ -220,8 +220,11 @@ tracked separately and moves only when the serialized form changes.
   items sharing a `code`, `name` or `symbol` field kept their input order, and
   one collection could hash two ways. A bare float is the shortest decimal
   written positionally (`2`, not `2.0`; `0.0000001`, not `1e-07`), and a
-  non-finite one is refused. `outline`, `layers` and `preserved` are ordered
-  collections, as RFC 11 version 1.4 Section 6.13 has them. Bytes and hashes
+  non-finite one is refused. The ordered collections are exactly the keys the
+  RFCs state (RFC 3 Section 17.1 declares order by key): `outline`, `layers`
+  and `preserved` are added from RFC 11 version 1.4 Section 6.13, and
+  `sequence`, `steps` and `candidates`, which no standard orders, are dropped,
+  so a conflicting value's candidates now sort like any unordered collection. Bytes and hashes
   change only for records holding such collections or floats; the rules match
   the requirement's existing text, so `SCHEMA_VERSION` does not move. RFC 11's
   example records are conformance fixtures under `tests/fixtures/rfc11/`.

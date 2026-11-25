@@ -11,7 +11,9 @@ Section 6.13
       shortcut.
 - [x] 1.2 `_encode_number`: shortest round-trip digits, written positionally;
       refuse non-finite values with `NotCanonicalizable`.
-- [x] 1.3 `ORDERED_COLLECTIONS`: add `outline`, `layers` and `preserved`.
+- [x] 1.3 `ORDERED_COLLECTIONS`: exactly the keys the standards declare.
+      - add `outline`, `layers` and `preserved`
+      - drop `sequence`, `steps` and `candidates`
 
 ## 2. Conformance
 
@@ -30,5 +32,5 @@ Section 6.13
 - [x] 3.1 CHANGELOG entry under Fixed.
 - [ ] 3.2 When #15 merges, recopy the fixtures if its examples changed, and
       archive this change.
-- [ ] 3.3 Raise the open question with RFC 3: publish the ordered collections
-      in the standard rather than only in this encoder.
+- [x] 3.3 Have the standards publish their ordered keys, which this encoder
+      used to hold alone: RFC 3 in copperhead-rfcs#15, RFC 12 in #11.

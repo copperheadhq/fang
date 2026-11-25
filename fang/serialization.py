@@ -24,19 +24,18 @@ from .units import _decimal_str
 #: records' ordered keys are those of copperhead RFC 11 Section 6.13.
 ORDERED_COLLECTIONS: frozenset[str] = frozenset(
     {
-        "provenance",       # ordered oldest first; append-only
-        "rationale",        # an argument, not a set
-        "sequence",         # power-up sequencing
-        "power_sequence",
-        "branches",         # a topology constraint's ordered branches
-        "calls",            # a tool plan's ordered calls
-        "args",             # an expression's operand order is semantic
-        "outline",          # a ring's points run in order (RFC 11 6.13)
-        "layers",           # a stackup runs top to bottom (RFC 11 6.13)
-        "preserved",        # an adapter's verbatim records, in file order (RFC 11 6.8)
-        "steps",
-        "alternatives_rejected",
-        "candidates",
+        # RFC 3 Section 17.1: order is declared by key, and the set is the
+        # union each standard states. An encoder orders exactly this set.
+        "provenance",              # RFC 3 14: oldest first; append-only
+        "rationale",               # RFC 3 13: a decision's argument
+        "alternatives_rejected",   # RFC 3 13: the options it set aside
+        "args",                    # RFC 3 11.3: an expression's operands
+        "power_sequence",          # RFC 3 9.2: a rail's power-up order
+        "branches",                # RFC 12: a topology constraint's branches
+        "calls",                   # RFC 12: a tool plan's calls
+        "outline",                 # RFC 11 6.13: a ring's points
+        "layers",                  # RFC 11 6.13: a stackup, top to bottom
+        "preserved",               # RFC 11 6.13: verbatim records, file order
     }
 )
 
