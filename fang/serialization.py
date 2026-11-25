@@ -33,6 +33,8 @@ ORDERED_COLLECTIONS: frozenset[str] = frozenset(
         "power_sequence",          # RFC 3 9.2: a rail's power-up order
         "branches",                # RFC 12: a topology constraint's branches
         "calls",                   # RFC 12: a tool plan's calls
+        "phases",                  # RFC 15 7.1: a placement plan's phases
+        "order",                   # RFC 15 6.6: a chain or loop, in order
         "outline",                 # RFC 11 6.13: a ring's points
         "layers",                  # RFC 11 6.13: a stackup, top to bottom
         "preserved",               # RFC 11 6.13: verbatim records, file order

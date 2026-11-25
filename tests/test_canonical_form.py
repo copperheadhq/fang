@@ -126,7 +126,7 @@ def test_a_non_finite_number_has_no_canonical_serialization(value):
         canonical_dumps({"metric": value})
 
 
-@pytest.mark.parametrize("key", ["outline", "layers", "preserved"])
+@pytest.mark.parametrize("key", ["outline", "layers", "preserved", "phases", "order"])
 def test_the_layout_records_ordered_collections_keep_their_order(key):
     forward = {key: [{"r": 2}, {"r": 1}]}
     backward = {key: [{"r": 1}, {"r": 2}]}
