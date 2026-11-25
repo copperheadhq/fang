@@ -2,7 +2,8 @@
 
 Copied unchanged from `schemas/rfc11/examples/` in
 [copperheadhq/copperhead-rfcs](https://github.com/copperheadhq/copperhead-rfcs),
-pull request #15 (RFC 11 version 1.4, RFC 3 version 1.6), at commit `c7f6643`.
+as adopted with RFC 11 version 1.4 and RFC 3 version 1.6 (pull request #15,
+merged as `8c91020`). They have not changed since commit `c7f6643`.
 
 The records cite one another by content hash, and the RFC repository's checker
 computed every cited hash. `tests/test_canonical_form.py` recomputes them with

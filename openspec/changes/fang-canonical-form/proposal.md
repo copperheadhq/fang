@@ -43,6 +43,7 @@ the encoder rather than on the record:
   - RFC 11 Section 6.13 states `outline`, `layers` and `preserved`, which are
     added here.
   - RFC 12 states `branches` and `calls`.
+  - RFC 15 states `phases` and `order` for its placement plans.
   - `sequence`, `steps` and `candidates` are dropped. No standard orders them,
     and `candidates` is unordered in RFC 11's records.
 - **Conformance fixtures.** RFC 11's example records are copied unchanged from
