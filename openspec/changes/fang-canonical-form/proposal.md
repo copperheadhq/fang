@@ -35,7 +35,16 @@ the encoder rather than on the record:
   written positionally: no exponent, no trailing zeros after the point, no point
   when the value is whole, and zero as `0`. A non-finite number raises
   `NotCanonicalizable`.
-- **`ORDERED_COLLECTIONS`** gains `outline`, `layers` and `preserved`.
+- **`ORDERED_COLLECTIONS`** is exactly the set the standards declare.
+  RFC 3 Section 17.1 now declares order by key name, as the union of the keys
+  each standard states:
+  - RFC 3 states `provenance`, `rationale`, `alternatives_rejected`, `args` and
+    `power_sequence`.
+  - RFC 11 Section 6.13 states `outline`, `layers` and `preserved`, which are
+    added here.
+  - RFC 12 states `branches` and `calls`.
+  - `sequence`, `steps` and `candidates` are dropped. No standard orders them,
+    and `candidates` is unordered in RFC 11's records.
 - **Conformance fixtures.** RFC 11's example records are copied unchanged from
   #15 at commit `c7f6643` into `tests/fixtures/rfc11/`.
   `tests/test_canonical_form.py` recomputes every hash those records cite to
@@ -45,8 +54,8 @@ the encoder rather than on the record:
 
 - **Bytes and content hashes change** for three kinds of record: those holding
   an id-less collection whose items share a `code`, `name` or `symbol`, those
-  holding a bare float, and those holding an array under `outline`, `layers` or
-  `preserved`.
+  holding a bare float, those holding an array under `outline`, `layers` or
+  `preserved`, and those holding a conflicting value's candidates.
 - **No schema version change.** The requirement already said "the shortest
   decimal" and "sorted ascending by entity identifier", so this is a
   conformance fix, and `SCHEMA_VERSION` does not move.
@@ -54,15 +63,16 @@ the encoder rather than on the record:
   `test_examples.py::test_a_committed_output_still_matches_the_program[noninverting_amp]`
   (paper size A4 against A5), fails the same way on main without this change.
 - **Merging with the physical-layer work.** That branch already orders
-  `layers`, `outline` and `path`. Merging it conflicts only on that set, which
-  resolves as the union of the two.
+  `layers`, `outline` and `path`. Merging it conflicts on that set, which
+  resolves to this change's set. `path` is not declared by any standard, so
+  the physical branch drops it, unless RFC 11 is revised to declare it.
 
-## Open Question
+## Resolved Question
 
-RFC 3 Section 17.1 says the schema MUST state which collections are ordered.
-No published RFC 3 schema states them: `ORDERED_COLLECTIONS` here is the only
-statement, and it lists `provenance`, `rationale`, `sequence`,
-`power_sequence`, `branches`, `calls`, `args`, `steps`,
-`alternatives_rejected` and `candidates`. That list belongs in RFC 3, or in a
-schema RFC 3 publishes, so that copperhead's encoder can follow it. Until then,
-the two encoders are only known to agree on records that use RFC 11's keys.
+RFC 3 Section 17.1 required the schema to state which collections are
+ordered, but no standard stated them; this encoder held the only list. RFC 3
+now publishes its keys and the rule that order is declared by key, in
+[copperhead-rfcs#15](https://github.com/copperheadhq/copperhead-rfcs/pull/15),
+and RFC 12 states `branches` and `calls` in
+[copperhead-rfcs#11](https://github.com/copperheadhq/copperhead-rfcs/pull/11).
+`ORDERED_COLLECTIONS` is that union.
